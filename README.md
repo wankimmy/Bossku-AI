@@ -88,20 +88,16 @@ bosskuAI/
 
 ## How To Use
 
-1. Copy this repo into a project, or copy the relevant files into an existing repo.
-2. Treat `AGENTS.md` as the source-of-truth instructions.
-3. Start in plan mode first for meaningful tasks.
-4. Ask the assistant to recommend the best AI model profile for the task before execution starts.
-5. Let the assistant load only the skills relevant to the task.
-6. Customize `.codex-assistant/memory/agent-profile.md` for your company, product, market, and operating style.
-7. Keep durable knowledge in `memory/`.
-8. Promote repeated lessons into checklists, pitfalls, playbooks, or skills.
+1. Put this starter at the root of the workspace you actually want the AI to work in.
+2. Treat `AGENTS.md` as the source-of-truth instructions for the repo.
+3. Use [WORKSPACE-ONBOARDING.md](WORKSPACE-ONBOARDING.md) for the actual setup flow after cloning.
+4. Let project understanding draft `.codex-assistant/memory/agent-profile.md` and `.codex-assistant/memory/project-understanding.md` from repo evidence, then refine them.
 
 ## Start Here
 
-- [QUICKSTART.md](QUICKSTART.md)
-- [examples/sample-agent-profile.md](examples/sample-agent-profile.md)
+- [WORKSPACE-ONBOARDING.md](WORKSPACE-ONBOARDING.md)
 - [examples/sample-prompts.md](examples/sample-prompts.md)
+- [examples/sample-agent-profile.md](examples/sample-agent-profile.md)
 
 ## Customization
 
@@ -109,11 +105,10 @@ This starter is meant to be remixed.
 
 - Rename the root folder if you want. The internal references are relative.
 - Edit `AGENTS.md` to change posture, priorities, or expert surfaces.
-- Fill in `.codex-assistant/memory/agent-profile.md` with your domain, product, audience, and constraints.
+- Fill in `.codex-assistant/memory/agent-profile.md` with your domain, product, audience, and constraints, or ask project understanding to draft it dynamically first.
 - Use `examples/sample-agent-profile.md` as a starting point if you want a filled example first.
 - Add or remove skills under `.codex-assistant/skills/`.
 - Extend playbooks and checklists under `.codex-assistant/references/`.
-- Use `examples/outputs/` to see the expected output quality and structure.
 
 ## Principles
 
