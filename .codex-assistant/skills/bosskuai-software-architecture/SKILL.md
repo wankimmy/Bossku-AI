@@ -12,8 +12,9 @@ Use this skill when the main question is structural rather than purely local.
 1. Identify the current architecture from code and docs.
 2. Map boundaries, dependencies, and side effects.
 3. Judge whether the proposed change fits the structure.
-4. Surface coupling, operability, and scaling tradeoffs.
-5. Recommend the strongest architecture direction with explicit tradeoffs.
+4. Separate what can stay a local minimal change from what truly needs a structural revamp.
+5. Surface coupling, operability, and scaling tradeoffs.
+6. Recommend the strongest architecture direction with explicit tradeoffs.
 
 ## Output expectation
 
@@ -21,6 +22,7 @@ Use this skill when the main question is structural rather than purely local.
 - structural concerns
 - tradeoffs
 - recommended direction
+- local fix versus revamp recommendation
 - residual risks
 
 ## References

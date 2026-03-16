@@ -11,6 +11,8 @@ A public, reusable agent setup for product-building teams who want one assistant
 - a bug-finding and code-review specialist
 - a software architect
 - a source-code analysis expert
+- a code revamp and refactor advisor
+- a coding best practices reviewer
 - a polyglot engineering advisor
 - a market and trends analyst
 - a marketing and growth strategist
@@ -39,6 +41,8 @@ Use this repo when you want an AI collaborator that can:
 - review security, abuse cases, privacy, and operational risk
 - read unfamiliar source code quickly and explain the real architecture
 - hunt bugs, regressions, logic flaws, and misuse paths
+- study a codebase first, understand its structure, and implement changes in the current style
+- apply coding best practices without fighting the existing project conventions
 - reason across programming languages and frameworks
 - analyze competitors, trends, positioning, and market opportunities
 - shape launch plans, roadmaps, and execution slices
@@ -56,6 +60,8 @@ Use this repo when you want an AI collaborator that can:
 - Bug finding and code review
 - Software architecture and system design
 - Source-code analysis and repository understanding
+- Code revamp and safe refactoring
+- Coding best practices and implementation quality
 - Polyglot engineering across languages and frameworks
 - Market research and competitive analysis
 - Marketing, growth, and go-to-market thinking
@@ -81,20 +87,18 @@ bosskuAI/
 
 1. Copy this repo into a project, or copy the relevant files into an existing repo.
 2. Treat `AGENTS.md` as the source-of-truth instructions.
-3. Let the assistant load only the skills relevant to the task.
-4. Customize `.codex-assistant/memory/agent-profile.md` for your company, product, market, and operating style.
-5. Keep durable knowledge in `memory/`.
-6. Promote repeated lessons into checklists, pitfalls, playbooks, or skills.
+3. Start in plan mode first for meaningful tasks.
+4. Ask the assistant to recommend the best AI model profile for the task before execution starts.
+5. Let the assistant load only the skills relevant to the task.
+6. Customize `.codex-assistant/memory/agent-profile.md` for your company, product, market, and operating style.
+7. Keep durable knowledge in `memory/`.
+8. Promote repeated lessons into checklists, pitfalls, playbooks, or skills.
 
 ## Start Here
 
 - [QUICKSTART.md](QUICKSTART.md)
-- [PUBLISH_CHECKLIST.md](PUBLISH_CHECKLIST.md)
 - [examples/sample-agent-profile.md](examples/sample-agent-profile.md)
 - [examples/sample-prompts.md](examples/sample-prompts.md)
-- [examples/outputs/product-review-output.md](examples/outputs/product-review-output.md)
-- [examples/outputs/codebase-analysis-output.md](examples/outputs/codebase-analysis-output.md)
-- [examples/outputs/gtm-plan-output.md](examples/outputs/gtm-plan-output.md)
 
 ## Customization
 
@@ -113,12 +117,15 @@ This starter is meant to be remixed.
 - Research first, then decide
 - Push for clarity over vague ambition
 - Prefer the smallest real step that reduces risk
+- Study the existing structure first, then implement in the current style when possible
+- Apply coding best practices in a way that fits the current project, not generic textbook rules
 - Treat business logic as seriously as code
 - Treat security, privacy, and abuse cases as first-class concerns
 - Treat UI fidelity and usability as part of correctness
 - Treat planning and execution sequencing as part of strategy, not admin work
 - Treat distribution, marketing, SEO, and GEO as part of product success
 - Start in a planning-first mode for meaningful tasks before implementation or strong conclusions
+- Recommend the best-fit AI model profile before execution starts on meaningful tasks
 - Verify market and trend claims with current sources when they matter
 
 ## Suggested Use Cases
