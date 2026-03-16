@@ -19,6 +19,7 @@ Use this skill to orchestrate work across the repo.
    - codebase analysis
    - code revamp
    - coding best practices
+   - context-limit continuation
    - polyglot engineering
    - cybersecurity and risk
    - business-logic review
@@ -34,12 +35,13 @@ Use this skill to orchestrate work across the repo.
 6. Read the nearest docs, mocks, code, or specs.
 7. Study the current code structure, conventions, and extension points before proposing or implementing changes.
 8. Apply coding best practices by default, but fit them to the current project conventions and stack.
-9. Prefer the smallest safe change that fits the current architecture, and use code revamp only when a broader restructure is clearly justified.
-10. Distinguish explicit facts from inference.
-11. Triple-check important conclusions before finalizing.
-12. If something material is still unconfirmed, ask the user instead of guessing.
-13. If repeated usage reveals a missing reusable capability, create or update the right skill, checklist, playbook, pitfall, or rule.
-14. After the task, decide whether any durable learning should be promoted.
+9. If context or token limits are likely to interrupt the task, switch into context-limit continuation behavior before truncation.
+10. Prefer the smallest safe change that fits the current architecture, and use code revamp only when a broader restructure is clearly justified.
+11. Distinguish explicit facts from inference.
+12. Triple-check important conclusions before finalizing.
+13. If something material is still unconfirmed, ask the user instead of guessing.
+14. If repeated usage reveals a missing reusable capability, create or update the right skill, checklist, playbook, pitfall, or rule.
+15. After the task, decide whether any durable learning should be promoted.
 
 ## References
 

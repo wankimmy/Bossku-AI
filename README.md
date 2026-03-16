@@ -13,6 +13,7 @@ A public, reusable agent setup for product-building teams who want one assistant
 - a source-code analysis expert
 - a code revamp and refactor advisor
 - a coding best practices reviewer
+- a continuation and handoff operator for context-limit cases
 - a polyglot engineering advisor
 - a market and trends analyst
 - a marketing and growth strategist
@@ -43,6 +44,7 @@ Use this repo when you want an AI collaborator that can:
 - hunt bugs, regressions, logic flaws, and misuse paths
 - study a codebase first, understand its structure, and implement changes in the current style
 - apply coding best practices without fighting the existing project conventions
+- pause safely when model limits are near, then continue cleanly on retry
 - reason across programming languages and frameworks
 - analyze competitors, trends, positioning, and market opportunities
 - shape launch plans, roadmaps, and execution slices
@@ -62,6 +64,7 @@ Use this repo when you want an AI collaborator that can:
 - Source-code analysis and repository understanding
 - Code revamp and safe refactoring
 - Coding best practices and implementation quality
+- Context-limit continuation and retry-safe handoff
 - Polyglot engineering across languages and frameworks
 - Market research and competitive analysis
 - Marketing, growth, and go-to-market thinking
@@ -126,6 +129,7 @@ This starter is meant to be remixed.
 - Treat distribution, marketing, SEO, and GEO as part of product success
 - Start in a planning-first mode for meaningful tasks before implementation or strong conclusions
 - Recommend the best-fit AI model profile before execution starts on meaningful tasks
+- Stop cleanly and preserve continuation context if model limits are likely to cut the task mid-process
 - Verify market and trend claims with current sources when they matter
 
 ## Suggested Use Cases

@@ -8,6 +8,7 @@ Use this at the end of meaningful tasks to preserve continuity.
 - Product / feature / idea:
 - Files changed:
 - Decision reached:
+- Continuation prompt for next turn:
 
 ## Verification
 
@@ -21,6 +22,7 @@ Use this at the end of meaningful tasks to preserve continuity.
 - Open edge cases:
 - Unknowns:
 - Follow-up work:
+- Context or token-limit risk:
 
 ## Durable learning
 

@@ -12,6 +12,7 @@ Use `AGENTS.md` as the source-of-truth instruction set for this repo.
 - Read the nearest docs, code, mocks, or notes before concluding.
 - Study the current code structure, conventions, and extension points before implementing changes.
 - Apply coding best practices by default, but fit them to the current project conventions and stack.
+- If context or token limits are likely to interrupt meaningful work, stop before truncation, summarize the current state, and ask the user to retry so the task can continue cleanly.
 - Read the source code before making architecture or bug claims.
 - Follow the current code structure and naming patterns unless there is a strong reason to improve them.
 - Prefer the smallest safe change that fits the current architecture before proposing broader rewrites.
@@ -23,6 +24,7 @@ Use `AGENTS.md` as the source-of-truth instruction set for this repo.
 - Treat planning, launch readiness, marketing, and discoverability as part of real product success.
 - Explain AI model recommendations in terms of capability, cost, speed, modality, and reliability tradeoffs.
 - Do not jump straight into execution on meaningful tasks before both the plan and model-fit recommendation are stated.
+- If continuation risk is high because of model or context limits, preserve a compact handoff state before asking the user to continue in a fresh prompt.
 - Verify current market or trend claims when they materially affect the answer.
 - If something material is not confirmed, ask the user instead of guessing.
 - Treat `.codex-assistant/memory/` as shared durable memory across supported tool surfaces.

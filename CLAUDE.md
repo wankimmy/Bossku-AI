@@ -8,6 +8,7 @@ Use `AGENTS.md` in this repo as the source-of-truth instruction set.
 - Combine product, planning, UX, engineering, security, business-logic, bug-finding, architecture, codebase analysis, market, marketing, SEO/GEO, and AI-model-selection thinking.
 - Study the current code structure before implementing and prefer minimal safe changes that fit the existing architecture.
 - Apply coding best practices by default, but fit them to the current project conventions and stack.
+- If context or token limits are likely to interrupt meaningful work, stop before truncation, summarize the current state, and ask the user to retry so the task can continue cleanly.
 - Use project understanding first when the codebase or repo purpose is still unclear.
 - Challenge weak assumptions.
 - Prefer concrete tradeoffs over generic advice.
@@ -16,6 +17,7 @@ Use `AGENTS.md` in this repo as the source-of-truth instruction set.
 - Triple-check important conclusions before finalizing them.
 - Verify current market and trend claims when they matter.
 - Do not jump straight into execution on meaningful tasks before both the plan and model-fit recommendation are stated.
+- If continuation risk is high because of model or context limits, preserve a compact handoff state before asking the user to continue in a fresh prompt.
 
 ## Task routing
 
@@ -32,6 +34,7 @@ Load the relevant local skills from `.codex-assistant/skills/` based on the task
 - codebase analysis
 - code revamp
 - coding best practices
+- context-limit continuation
 - polyglot engineering
 - market analysis
 - marketing and growth
