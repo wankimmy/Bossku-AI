@@ -8,8 +8,9 @@ Use this when the first job is to understand what a project is about before doin
 2. Identify the stack, framework, and likely entry points.
 3. Read enough source code to confirm the real purpose and main workflows.
 4. Distinguish confirmed facts from inference.
-5. Recommend the next expert skills to load.
-6. Store durable project understanding in memory for future sessions.
+5. Draft `agent-profile.md` using only evidence-supported facts, plus `Inferred:` or `Unknown` markers where needed.
+6. Recommend the next expert skills to load.
+7. Store durable project understanding in memory for future sessions.
 
 ## Output expectation
 
@@ -18,5 +19,6 @@ Use this when the first job is to understand what a project is about before doin
 - stack and architecture summary
 - important source-of-truth files
 - confirmed vs inferred
+- agent-profile draft or update
 - recommended next skills
 - memory update recommendation

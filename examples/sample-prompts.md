@@ -2,6 +2,22 @@
 
 Use these as starter prompts after cloning the repo.
 
+## Workspace onboarding
+
+```text
+Use bosskuai-workspace-assistant first.
+
+Classify the task, recommend the best model profile with a short tradeoff note, and if repo context is still unclear use bosskuai-project-understanding before anything else.
+
+Read the nearest README, manifests, docs, and enough source code to understand the project. Separate confirmed facts from inference.
+
+Then draft:
+- .codex-assistant/memory/agent-profile.md
+- .codex-assistant/memory/project-understanding.md
+
+Use Confirmed, Inferred, or Unknown where appropriate instead of guessing.
+```
+
 ## Product strategy
 
 ```text

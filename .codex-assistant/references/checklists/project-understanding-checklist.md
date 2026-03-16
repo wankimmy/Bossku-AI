@@ -6,5 +6,6 @@
 - What stack, framework, and architecture style are in use?
 - Which files look like source-of-truth docs, entry points, and core modules?
 - What is explicitly confirmed from code or docs versus inferred?
+- Which `agent-profile.md` fields can be filled from evidence now, and which remain `Inferred` or `Unknown`?
 - Which expert skills should be loaded next for the user’s task?
 - What durable understanding should be stored in memory for later sessions?

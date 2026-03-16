@@ -13,9 +13,11 @@ Use this skill when the first task is understanding the project itself before go
 2. Identify the stack, framework, entry points, architecture style, organizing conventions, and visible code quality norms.
 3. Read enough source code to confirm the main purpose, workflows, and how changes are usually added.
 4. Distinguish confirmed facts from inference.
-5. Recommend the most relevant expert skills for the next step.
-6. Store durable project understanding in memory.
-7. If material facts are still unclear after reading the available evidence, ask the user instead of guessing.
+5. Draft or update `../../memory/agent-profile.md` from the available evidence.
+6. For agent-profile fields that are not directly supported, mark them as `Inferred:` or `Unknown` instead of guessing.
+7. Recommend the most relevant expert skills for the next step.
+8. Store durable project understanding in memory.
+9. If material facts are still unclear after reading the available evidence, ask the user instead of guessing.
 
 ## Output expectation
 
@@ -26,6 +28,7 @@ Use this skill when the first task is understanding the project itself before go
 - code organization and extension patterns
 - code quality and style conventions
 - source-of-truth files
+- draft updates for `agent-profile.md`
 - recommended next skills
 - memory update recommendation
 
@@ -33,4 +36,5 @@ Use this skill when the first task is understanding the project itself before go
 
 - `../../references/playbooks/project-understanding-playbook.md`
 - `../../references/checklists/project-understanding-checklist.md`
+- `../../memory/agent-profile.md`
 - `../../memory/project-understanding.md`

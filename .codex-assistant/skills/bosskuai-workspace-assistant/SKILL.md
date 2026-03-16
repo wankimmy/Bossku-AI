@@ -31,7 +31,7 @@ Use this skill to orchestrate work across the repo.
 2. For meaningful tasks, start in plan mode before execution.
 3. Recommend the most suitable AI model profile for the task before execution starts, with a short tradeoff note and fallback if useful.
 4. Load only the relevant expert skills.
-5. If the repo or product context is unclear, use project understanding first.
+5. If the repo or product context is unclear, or `../../memory/agent-profile.md` is still sparse, use project understanding first.
 6. Read the nearest docs, mocks, code, or specs.
 7. Study the current code structure, conventions, and extension points before proposing or implementing changes.
 8. Apply coding best practices by default, but fit them to the current project conventions and stack.
@@ -42,6 +42,7 @@ Use this skill to orchestrate work across the repo.
 13. If something material is still unconfirmed, ask the user instead of guessing.
 14. If repeated usage reveals a missing reusable capability, create or update the right skill, checklist, playbook, pitfall, or rule.
 15. After the task, decide whether any durable learning should be promoted.
+16. When project understanding runs early, prefer drafting both `../../memory/agent-profile.md` and `../../memory/project-understanding.md` before narrower expert work begins.
 
 ## References
 

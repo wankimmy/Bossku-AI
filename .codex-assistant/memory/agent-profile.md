@@ -2,6 +2,24 @@
 
 Use this file to customize the starter for a specific company, product, or industry after cloning.
 
+This file can be filled in two ways:
+
+- manually by the user or team
+- dynamically by project-understanding after reading the repo, docs, and nearby evidence
+
+When the assistant drafts this file from project understanding:
+
+- prefer confirmed facts from code, docs, copy, manifests, and source-of-truth files
+- mark uncertain items as `Inferred:` or `Unknown`
+- do not invent business details that are not supported by evidence
+- ask the user only when the missing detail materially affects the next task
+
+Suggested drafting rule:
+
+- `Confirmed:` supported directly by repo evidence
+- `Inferred:` likely true based on evidence, naming, or workflow
+- `Unknown:` not yet supported by evidence
+
 ## Identity
 
 - Company or project name:
