@@ -1,0 +1,141 @@
+# BosskuAI
+
+A public, reusable agent setup for product-building teams who want one assistant package that can think like:
+
+- a product strategist
+- a planner and operator
+- a UI/UX expert
+- a design-to-code implementer
+- a cybersecurity and risk reviewer
+- a business-logic flaw hunter
+- a bug-finding and code-review specialist
+- a software architect
+- a source-code analysis expert
+- a polyglot engineering advisor
+- a market and trends analyst
+- a marketing and growth strategist
+- an SEO and GEO advisor
+- an AI model selection advisor
+
+This repo is tool-agnostic by default and includes ready-to-use guidance for:
+
+- Codex via `AGENTS.md`
+- Claude via `CLAUDE.md`
+- Claude rules via `.claude/rules/`
+- Cursor via `.cursor/rules/`
+
+It also includes local skills, checklists, templates, and memory scaffolding so the assistant can improve over time instead of only reacting per session.
+
+All repo references are relative, so anyone can clone this repo into any directory, rename the root folder, and customize it without rewriting absolute paths.
+
+## What This Agent Is For
+
+Use this repo when you want an AI collaborator that can:
+
+- shape product requirements
+- challenge weak assumptions
+- review business workflows and edge cases
+- turn screens or mockups into implementation-ready guidance
+- review security, abuse cases, privacy, and operational risk
+- read unfamiliar source code quickly and explain the real architecture
+- hunt bugs, regressions, logic flaws, and misuse paths
+- reason across programming languages and frameworks
+- analyze competitors, trends, positioning, and market opportunities
+- shape launch plans, roadmaps, and execution slices
+- think about growth, distribution, SEO, GEO, and marketing strategy
+- recommend the right AI model for a specific task, tradeoff, or workflow
+
+## Expert Surfaces Included
+
+- Product strategy and requirement shaping
+- Planning, roadmap slicing, and execution strategy
+- UI/UX and design systems thinking
+- Design-to-code translation
+- Cybersecurity and risk review
+- Business logic and workflow review
+- Bug finding and code review
+- Software architecture and system design
+- Source-code analysis and repository understanding
+- Polyglot engineering across languages and frameworks
+- Market research and competitive analysis
+- Marketing, growth, and go-to-market thinking
+- SEO and GEO strategy
+- AI model recommendation and task-to-model fit
+- Durable learning and promotion into stronger guidance
+
+## Repo Structure
+
+```text
+bosskuAI/
+├── AGENTS.md
+├── CLAUDE.md
+├── .claude/rules/
+├── .cursor/rules/
+└── .codex-assistant/
+    ├── skills/
+    ├── references/
+    └── memory/
+```
+
+## How To Use
+
+1. Copy this repo into a project, or copy the relevant files into an existing repo.
+2. Treat `AGENTS.md` as the source-of-truth instructions.
+3. Let the assistant load only the skills relevant to the task.
+4. Customize `.codex-assistant/memory/agent-profile.md` for your company, product, market, and operating style.
+5. Keep durable knowledge in `memory/`.
+6. Promote repeated lessons into checklists, pitfalls, playbooks, or skills.
+
+## Start Here
+
+- [QUICKSTART.md](QUICKSTART.md)
+- [PUBLISH_CHECKLIST.md](PUBLISH_CHECKLIST.md)
+- [examples/sample-agent-profile.md](examples/sample-agent-profile.md)
+- [examples/sample-prompts.md](examples/sample-prompts.md)
+- [examples/outputs/product-review-output.md](examples/outputs/product-review-output.md)
+- [examples/outputs/codebase-analysis-output.md](examples/outputs/codebase-analysis-output.md)
+- [examples/outputs/gtm-plan-output.md](examples/outputs/gtm-plan-output.md)
+
+## Customization
+
+This starter is meant to be remixed.
+
+- Rename the root folder if you want. The internal references are relative.
+- Edit `AGENTS.md` to change posture, priorities, or expert surfaces.
+- Fill in `.codex-assistant/memory/agent-profile.md` with your domain, product, audience, and constraints.
+- Use `examples/sample-agent-profile.md` as a starting point if you want a filled example first.
+- Add or remove skills under `.codex-assistant/skills/`.
+- Extend playbooks and checklists under `.codex-assistant/references/`.
+- Use `examples/outputs/` to see the expected output quality and structure.
+
+## Principles
+
+- Research first, then decide
+- Push for clarity over vague ambition
+- Prefer the smallest real step that reduces risk
+- Treat business logic as seriously as code
+- Treat security, privacy, and abuse cases as first-class concerns
+- Treat UI fidelity and usability as part of correctness
+- Treat planning and execution sequencing as part of strategy, not admin work
+- Treat distribution, marketing, SEO, and GEO as part of product success
+- Start in a planning-first mode for meaningful tasks before implementation or strong conclusions
+- Verify market and trend claims with current sources when they matter
+
+## Suggested Use Cases
+
+- "Review this PRD and turn it into implementation slices"
+- "Challenge this SaaS idea and tell me what is weak"
+- "Turn this Figma/screenshot into a delivery-ready engineering spec"
+- "Review this signup flow for abuse, fraud, and logic flaws"
+- "Research competitors and recommend a positioning strategy"
+- "Audit this feature for product, UX, security, and operational risk"
+- "Plan a 90-day launch roadmap for this product"
+- "Give me an SEO and GEO content strategy for this SaaS"
+- "Design a go-to-market motion for this niche"
+- "Read this codebase and explain the real architecture"
+- "Find likely bugs and logic flaws before we ship"
+- "Which AI model should I use for this exact task and why"
+
+## License
+
+This repo currently uses the MIT License. Review it before publishing if you want a different licensing model.
