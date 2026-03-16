@@ -17,6 +17,8 @@ Use this skill to orchestrate work across the repo.
    - bug finding
    - software architecture
    - codebase analysis
+   - code revamp
+   - coding best practices
    - polyglot engineering
    - cybersecurity and risk
    - business-logic review
@@ -25,14 +27,19 @@ Use this skill to orchestrate work across the repo.
    - SEO/GEO
    - AI model selection
    - mixed
-2. Load only the relevant expert skills.
-3. If the repo or product context is unclear, use project understanding first.
-4. Read the nearest docs, mocks, code, or specs.
-5. Distinguish explicit facts from inference.
-6. Triple-check important conclusions before finalizing.
-7. If something material is still unconfirmed, ask the user instead of guessing.
-8. If repeated usage reveals a missing reusable capability, create or update the right skill, checklist, playbook, pitfall, or rule.
-9. After the task, decide whether any durable learning should be promoted.
+2. For meaningful tasks, start in plan mode before execution.
+3. Recommend the most suitable AI model profile for the task before execution starts, with a short tradeoff note and fallback if useful.
+4. Load only the relevant expert skills.
+5. If the repo or product context is unclear, use project understanding first.
+6. Read the nearest docs, mocks, code, or specs.
+7. Study the current code structure, conventions, and extension points before proposing or implementing changes.
+8. Apply coding best practices by default, but fit them to the current project conventions and stack.
+9. Prefer the smallest safe change that fits the current architecture, and use code revamp only when a broader restructure is clearly justified.
+10. Distinguish explicit facts from inference.
+11. Triple-check important conclusions before finalizing.
+12. If something material is still unconfirmed, ask the user instead of guessing.
+13. If repeated usage reveals a missing reusable capability, create or update the right skill, checklist, playbook, pitfall, or rule.
+14. After the task, decide whether any durable learning should be promoted.
 
 ## References
 

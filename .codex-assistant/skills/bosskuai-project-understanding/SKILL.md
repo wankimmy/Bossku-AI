@@ -10,8 +10,8 @@ Use this skill when the first task is understanding the project itself before go
 ## Workflow
 
 1. Read the nearest README, docs, manifests, and top-level structure.
-2. Identify the stack, framework, entry points, and architecture style.
-3. Read enough source code to confirm the main purpose and workflows.
+2. Identify the stack, framework, entry points, architecture style, organizing conventions, and visible code quality norms.
+3. Read enough source code to confirm the main purpose, workflows, and how changes are usually added.
 4. Distinguish confirmed facts from inference.
 5. Recommend the most relevant expert skills for the next step.
 6. Store durable project understanding in memory.
@@ -23,6 +23,8 @@ Use this skill when the first task is understanding the project itself before go
 - likely users or customers
 - core workflows or business purpose
 - stack and architecture summary
+- code organization and extension patterns
+- code quality and style conventions
 - source-of-truth files
 - recommended next skills
 - memory update recommendation
