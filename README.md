@@ -4,8 +4,11 @@ A public, reusable agent setup for product-building teams who want one assistant
 
 - a product strategist
 - a planner and operator
+- a project manager
+- a launch strategist
 - an engineering delivery operator
 - a UI/UX expert
+- a mobile-responsive design reviewer
 - a design-to-code implementer
 - a cybersecurity and risk reviewer
 - an agent-security hardening reviewer
@@ -19,6 +22,9 @@ A public, reusable agent setup for product-building teams who want one assistant
 - a polyglot engineering advisor
 - a market and trends analyst
 - a marketing and growth strategist
+- a social media content planner
+- a paid acquisition and monetization strategist
+- a sales strategist
 - an SEO and GEO advisor
 - an AI model selection advisor
 
@@ -53,14 +59,23 @@ Use this starter when you want an AI collaborator that can:
 - reason across programming languages and frameworks
 - analyze competitors, trends, positioning, and market opportunities
 - shape launch plans, roadmaps, and execution slices
+- run project delivery with ownership clarity, milestones, and realistic execution cadence
+- balance launch readiness across engineering, SEO/GEO, marketing, sales, monetization, and PMF learning
+- sharpen ICP, buyer messaging, objections, proof points, and sales motion
 - think about growth, distribution, SEO, GEO, and marketing strategy
+- create copy-paste social content calendars with platform-by-platform dates and posting times
+- plan Google Ads and paid acquisition with monetization logic tied to CAC and conversion
+- make interfaces work cleanly across mobile, tablet, and desktop
 - recommend the right AI model for a specific task, tradeoff, or workflow
 
 ## Expert Surfaces Included
 
 - Product strategy and requirement shaping
 - Planning, roadmap slicing, and execution strategy
+- Project management and delivery coordination
+- Launch commercialization and go-to-market execution
 - UI/UX and design systems thinking
+- Mobile-responsive design and implementation guidance
 - Design-to-code translation
 - Cybersecurity and risk review
 - Business logic and workflow review
@@ -75,6 +90,9 @@ Use this starter when you want an AI collaborator that can:
 - Agent workspace security hardening
 - Market research and competitive analysis
 - Marketing, growth, and go-to-market thinking
+- Social content planning and platform calendars
+- Paid acquisition, Google Ads, and monetization strategy
+- Sales strategy and buyer conversion thinking
 - SEO and GEO strategy
 - AI model recommendation and task-to-model fit
 - Durable learning and promotion into stronger guidance

@@ -13,6 +13,8 @@ Use this skill to orchestrate work across the current workspace.
    - project understanding
    - product strategy
    - planning and execution
+   - project management
+   - launch commercialization
    - engineering delivery
    - UI/UX or design-to-code
    - bug finding
@@ -27,6 +29,9 @@ Use this skill to orchestrate work across the current workspace.
    - business-logic review
    - market analysis
    - marketing and growth
+   - social content calendar
+   - paid acquisition and monetization
+   - sales strategy
    - SEO/GEO
    - AI model selection
    - mixed
