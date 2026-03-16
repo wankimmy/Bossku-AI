@@ -17,15 +17,16 @@ Use this skill when the user wants to know which AI model fits a specific task.
    - multimodal input
    - long context
 2. Identify the most important failure mode if the wrong model is chosen.
-3. Recommend a primary model profile and fallback profile.
+3. Recommend a primary model by concrete model name if possible in the current tool, plus a fallback model.
 4. Explain the tradeoff in capability, latency, cost, and reliability terms.
-5. Make clear which claims are time-sensitive and should be re-verified.
+5. If exact version names are not stable or not visible in the current tool, say so and recommend the closest selectable model family available.
+6. Make clear which claims are time-sensitive and should be re-verified.
 
 ## Output expectation
 
 - task profile
-- primary recommendation
-- fallback recommendation
+- primary recommendation with concrete model name where possible
+- fallback recommendation with concrete model name where possible
 - tradeoff explanation
 - caveats
 

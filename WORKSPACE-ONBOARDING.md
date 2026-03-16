@@ -97,7 +97,7 @@ Then create or update [project-understanding.md](.codex-assistant/memory/project
 
 ## Suggested onboarding flow
 
-1. Ask the assistant to recommend the best model profile for the task.
+1. Ask the assistant to recommend the best AI model for the task by concrete model name, plus a fallback if useful.
 2. Ask it to use `bosskuai-workspace-assistant` and `bosskuai-project-understanding`.
 3. Make it read the nearest README, manifests, and source files first.
 4. Ask it to separate confirmed facts from inference.
@@ -114,7 +114,7 @@ Use this right after opening the project workspace in Cursor, Claude, or Codex.
 ```text
 Use the workspace instructions in AGENTS.md, CLAUDE.md, .claude/rules/, .cursor/rules/, and the relevant skills under .codex-assistant/skills/.
 
-Start with bosskuai-workspace-assistant. First classify this task, recommend the best AI model profile for it with a short tradeoff note, and then use bosskuai-project-understanding if the repo context is still unclear.
+Start with bosskuai-workspace-assistant. First classify this task, recommend the best AI model for it by concrete model name available in this tool with a short tradeoff note and fallback, and then use bosskuai-project-understanding if the repo context is still unclear.
 
 Read the nearest README, manifests, docs, and enough source code to understand the project before making recommendations. Distinguish confirmed facts from inference.
 
@@ -151,7 +151,7 @@ Use this to test whether the setup is actually following the rules instead of an
 ```text
 I want to test whether this workspace setup is working correctly.
 
-Follow the repo rules first. Classify the task, recommend the best model profile with tradeoffs, and explicitly name which local skills you are using before you do the work.
+Follow the repo rules first. Classify the task, recommend the best AI model by concrete model name available in this tool with tradeoffs, and explicitly name which local skills you are using before you do the work.
 
 Then review this project in three passes:
 1. project understanding
@@ -171,7 +171,7 @@ Constraints:
 If the setup is working well, the assistant should:
 
 - identify the task type first
-- recommend a model profile before execution
+- recommend a concrete model name before execution
 - mention the specific skills it is loading
 - read local evidence before making claims
 - separate confirmed facts from inference
@@ -189,7 +189,7 @@ Before doing anything else, tell me:
 1. which workspace rule files you are following
 2. which local skills you will use
 3. whether repo context is clear or whether project-understanding must run first
-4. which model profile you recommend for this task and why
+4. which concrete model name you recommend for this task and why
 ```
 
 If the answer does not explicitly reflect the local workspace files and skills, reopen the correct workspace root and retry.

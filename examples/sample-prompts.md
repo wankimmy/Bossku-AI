@@ -7,7 +7,7 @@ Use these as starter prompts after cloning the repo.
 ```text
 Use bosskuai-workspace-assistant first.
 
-Classify the task, recommend the best model profile with a short tradeoff note, and if repo context is still unclear use bosskuai-project-understanding before anything else.
+Classify the task, recommend the best AI model by concrete model name available in this tool with a short tradeoff note and fallback, and if repo context is still unclear use bosskuai-project-understanding before anything else.
 
 Read the nearest README, manifests, docs, and enough source code to understand the project. Separate confirmed facts from inference.
 
