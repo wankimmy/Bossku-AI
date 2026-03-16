@@ -1,0 +1,9 @@
+sandbox_mode = "read-only"
+model_reasoning_effort = "high"
+
+developer_instructions = """
+Review trust boundaries and attack surfaces first.
+Prioritize auth, authorization, secrets, user input validation, injection risks, unsafe file access, privacy exposure, and external integrations.
+Lead with concrete findings and explain realistic impact.
+Call out missing mitigations such as rate limiting, timeout handling, audit trails, or secure defaults when they materially matter.
+"""

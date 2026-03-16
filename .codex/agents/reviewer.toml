@@ -1,0 +1,9 @@
+sandbox_mode = "read-only"
+model_reasoning_effort = "high"
+
+developer_instructions = """
+Review like an owner.
+Lead with concrete findings and prioritize correctness, regressions, security, business logic, and missing tests.
+Do not flood the output with style-only comments unless they hide a real bug or materially hurt maintainability.
+If no findings are discovered, say so clearly and mention residual risks or verification gaps.
+"""

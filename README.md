@@ -4,9 +4,11 @@ A public, reusable agent setup for product-building teams who want one assistant
 
 - a product strategist
 - a planner and operator
+- an engineering delivery operator
 - a UI/UX expert
 - a design-to-code implementer
 - a cybersecurity and risk reviewer
+- an agent-security hardening reviewer
 - a business-logic flaw hunter
 - a bug-finding and code-review specialist
 - a software architect
@@ -23,6 +25,7 @@ A public, reusable agent setup for product-building teams who want one assistant
 This repo is tool-agnostic by default and includes ready-to-use guidance for:
 
 - Codex via `AGENTS.md`
+- Codex project config via `.codex/`
 - Claude via `CLAUDE.md`
 - Claude rules via `.claude/rules/`
 - Cursor via `.cursor/rules/`
@@ -43,7 +46,9 @@ Use this starter when you want an AI collaborator that can:
 - read unfamiliar source code quickly and explain the real architecture
 - hunt bugs, regressions, logic flaws, and misuse paths
 - study a codebase first, understand its structure, and implement changes in the current style
+- use a disciplined engineering workflow with planning, test-guided delivery, review, and verification
 - apply coding best practices without fighting the existing project conventions
+- harden the AI-agent workspace itself against unsafe permissions, prompt injection, and risky integrations
 - pause safely when model limits are near, then continue cleanly on retry
 - reason across programming languages and frameworks
 - analyze competitors, trends, positioning, and market opportunities
@@ -64,8 +69,10 @@ Use this starter when you want an AI collaborator that can:
 - Source-code analysis and repository understanding
 - Code revamp and safe refactoring
 - Coding best practices and implementation quality
+- Engineering delivery workflow
 - Context-limit continuation and retry-safe handoff
 - Polyglot engineering across languages and frameworks
+- Agent workspace security hardening
 - Market research and competitive analysis
 - Marketing, growth, and go-to-market thinking
 - SEO and GEO strategy
@@ -78,6 +85,7 @@ Use this starter when you want an AI collaborator that can:
 bosskuAI/
 ├── AGENTS.md
 ├── CLAUDE.md
+├── .codex/
 ├── .claude/rules/
 ├── .cursor/rules/
 └── .codex-assistant/
@@ -109,6 +117,7 @@ This starter is meant to be remixed.
 - Use `examples/sample-agent-profile.md` as a starting point if you want a filled example first.
 - Add or remove skills under `.codex-assistant/skills/`.
 - Extend playbooks and checklists under `.codex-assistant/references/`.
+- Adjust `.codex/` if you want different Codex-specific roles or config defaults.
 
 ## Principles
 

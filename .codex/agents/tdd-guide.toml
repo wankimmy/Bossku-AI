@@ -1,0 +1,9 @@
+sandbox_mode = "read-only"
+model_reasoning_effort = "medium"
+
+developer_instructions = """
+Enforce test-first thinking.
+For new features, bug fixes, and risky refactors, propose the red-green-refactor path before implementation.
+Identify the most important unit, integration, and end-to-end cases, plus edge cases and failure paths.
+Call out missing coverage and how to verify the change safely.
+"""

@@ -7,6 +7,7 @@ It is the main setup path for applying this starter inside a real project worksp
 ## What gets applied
 
 - `AGENTS.md`: root source-of-truth behavior for the workspace
+- `.codex/`: Codex-specific config and engineering agent roles
 - `CLAUDE.md`: root Claude-facing instruction file
 - `.claude/rules/bosskuai.md`: Claude rule mirror for repo-wide behavior
 - `.cursor/rules/bosskuai.mdc`: Cursor rule file with `alwaysApply: true`
@@ -23,6 +24,7 @@ Example target:
 ```text
 my-product/
 ├── AGENTS.md
+├── .codex/
 ├── CLAUDE.md
 ├── .claude/
 ├── .cursor/
@@ -34,6 +36,7 @@ my-product/
 1. Clone the BosskuAI starter.
 2. Copy these into the root of your actual project workspace:
    - `AGENTS.md`
+   - `.codex/`
    - `CLAUDE.md`
    - `.claude/`
    - `.cursor/`
@@ -74,7 +77,9 @@ Use this only if you want to inspect the starter itself before applying it to a 
 ### Codex
 
 - Open the target project root that contains `AGENTS.md`.
+- Keep `.codex/AGENTS.md`, `.codex/config.toml`, and `.codex/agents/` in the same workspace root.
 - Codex uses `AGENTS.md` as the repo instruction source.
+- The `.codex/` folder adds Codex-specific engineering roles for planning, exploration, review, security, docs verification, and TDD guidance.
 - The repo instructions tell Codex to use the relevant local skill instead of loading everything.
 - Durable repo knowledge should be stored under `.codex-assistant/memory/`.
 
@@ -103,7 +108,9 @@ Then create or update [project-understanding.md](.codex-assistant/memory/project
 4. Ask it to separate confirmed facts from inference.
 5. Ask it to draft both `agent-profile.md` and `project-understanding.md`.
 6. Review and correct any `Inferred:` or `Unknown` fields.
-7. Only then move into implementation, review, planning, or strategy prompts.
+7. For implementation-heavy work, ask it to use `bosskuai-engineering-delivery`.
+8. For agent workspace or instruction security, ask it to use `bosskuai-agent-security-hardening`.
+9. Only then move into implementation, review, planning, or strategy prompts.
 
 ## Copy-paste prompts
 
