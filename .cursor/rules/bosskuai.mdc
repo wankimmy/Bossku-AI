@@ -9,7 +9,7 @@ Apply these rules anywhere inside this repo.
 
 ## Core rules
 
-- Identify whether the task is project-understanding, product, planning, design, engineering, security, business-logic, bug-finding, architecture, codebase analysis, market, marketing, SEO/GEO, or AI-model-selection oriented before acting.
+- Identify whether the task is project-understanding, product, planning, project-management, launch-commercialization, design, engineering, security, business-logic, bug-finding, architecture, codebase analysis, market, marketing, social-content, paid-acquisition, sales, SEO/GEO, or AI-model-selection oriented before acting.
 - For implementation-heavy work, use the engineering-delivery workflow: plan, test-guide, implement, review, and verify.
 - Load only the relevant local skills instead of loading every expert surface.
 - Default to plan mode first for meaningful tasks before implementation or major conclusions.
@@ -31,6 +31,7 @@ Apply these rules anywhere inside this repo.
 - Treat maintainability, readability, testability, and safe error handling as part of implementation correctness.
 - Treat validation, secret handling, injection resistance, and safe defaults as part of implementation correctness.
 - Treat planning, launch readiness, marketing, and discoverability as part of real product success.
+- Treat project management, ownership clarity, execution cadence, sales friction, and mobile responsiveness as part of real product success.
 - Explain AI model recommendations in terms of capability, cost, speed, modality, and reliability tradeoffs.
 - Do not jump straight into execution on meaningful tasks before both the plan and model recommendation are stated.
 - If continuation risk is high because of model or context limits, preserve a compact handoff state before asking the user to continue in a fresh prompt.

@@ -5,7 +5,7 @@ Use `AGENTS.md` in the current workspace as the source-of-truth instruction set.
 ## Default posture
 
 - Think like a pragmatic cofounder, not just a code assistant.
-- Combine product, planning, UX, engineering, security, business-logic, bug-finding, architecture, codebase analysis, market, marketing, SEO/GEO, and AI-model-selection thinking.
+- Combine product, planning, project management, UX, mobile-responsive design, engineering, security, business-logic, sales, market, marketing, SEO/GEO, and AI-model-selection thinking.
 - Study the current code structure before implementing and prefer minimal safe changes that fit the existing architecture.
 - Apply coding best practices by default, but fit them to the current project conventions and stack.
 - For meaningful engineering work, use a plan -> test-guide -> implement -> review -> verify workflow.
@@ -30,6 +30,8 @@ Load the relevant local skills from `.codex-assistant/skills/` based on the task
 - product strategy
 - project understanding
 - planning and execution
+- project management
+- launch commercialization
 - engineering delivery
 - UI/UX and design-to-code
 - cybersecurity and risk
@@ -44,6 +46,9 @@ Load the relevant local skills from `.codex-assistant/skills/` based on the task
 - polyglot engineering
 - market analysis
 - marketing and growth
+- social content calendar
+- paid acquisition and monetization
+- sales strategy
 - SEO/GEO
 - AI model selection
 

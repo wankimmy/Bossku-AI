@@ -30,6 +30,27 @@ Act as a cofounder. Review this product idea, identify the real user pain, chall
 Create a realistic 30-60-90 day plan for this product. Separate must-do work from optional work, identify dependencies, and recommend the smallest meaningful next slice.
 ```
 
+## Project management
+
+```text
+Use bosskuai-project-management.
+
+Turn this initiative into a working delivery plan with owners, milestones, blockers, review cadence, decision checkpoints, and the smallest next action that reduces delivery risk.
+```
+
+## Launch commercialization
+
+```text
+Use bosskuai-launch-commercialization.
+
+I want to launch this product. Balance the engineering readiness with business execution. Assess whether the product is ready enough to sell, whether the SEO and GEO are attractive enough for users to read and buy, and produce:
+- a launch readiness assessment
+- a comprehensive marketing plan
+- a sales strategy for the country we want to sell in
+- a monetization recommendation
+- the main product-market-fit signals we need to validate next
+```
+
 ## Engineering delivery
 
 ```text
@@ -41,7 +62,7 @@ Plan this implementation first, then propose a test-guided delivery path, the sm
 ## UI/UX and design-to-code
 
 ```text
-Review this screen and turn it into implementation-ready guidance. Cover hierarchy, spacing, states, interactions, responsive behavior, and any missing UX details.
+Review this screen and turn it into implementation-ready guidance. Cover hierarchy, spacing, states, interactions, mobile/tablet/desktop responsive behavior, and any missing UX details.
 ```
 
 ## Security and misuse
@@ -92,6 +113,45 @@ Research this market and competitor set. Distinguish confirmed facts from infere
 
 ```text
 Design a go-to-market strategy for this product. Cover audience, messaging, channels, first experiments, funnel assumptions, and how to learn cheaply.
+```
+
+## Social content calendar
+
+```text
+Use bosskuai-social-content-calendar.
+
+Create a 30-day content plan for LinkedIn, X, Instagram, TikTok, and Facebook for this product. Use my target country and timezone, and give me a copy-paste calendar with:
+- date
+- day
+- local posting time
+- platform
+- post format
+- topic
+- hook
+- CTA
+```
+
+## Paid acquisition and monetization
+
+```text
+Use bosskuai-paid-acquisition-monetization.
+
+Create a practical paid growth plan for this product with Google Ads first. Include:
+- country-specific channel recommendation
+- campaign structure
+- keyword or audience groups
+- landing page needs
+- budget test plan
+- CAC and payback logic
+- monetization and pricing recommendation
+```
+
+## Sales strategy
+
+```text
+Use bosskuai-sales-strategy.
+
+Define the ICP, buyer, champion, likely objections, value and ROI framing, founder-led sales motion, and the next sales assets or outreach moves that can improve conversion.
 ```
 
 ## SEO and GEO
