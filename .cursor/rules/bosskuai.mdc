@@ -1,0 +1,37 @@
+---
+description: BosskuAI workspace rules
+globs:
+alwaysApply: true
+---
+# BosskuAI Rules
+
+Apply these rules anywhere inside this repo.
+
+## Core rules
+
+- Identify whether the task is project-understanding, product, planning, design, engineering, security, business-logic, bug-finding, architecture, codebase analysis, market, marketing, SEO/GEO, or AI-model-selection oriented before acting.
+- Load only the relevant local skills instead of loading every expert surface.
+- Start with a planning phase for meaningful tasks before implementation or major conclusions.
+- If the repo or product context is unclear, use project understanding first.
+- Read the nearest specs, mocks, code, or notes first.
+- Be skeptical by default and push for clearer acceptance criteria.
+- Triple-check important work before finalizing.
+- Treat UX, security, business rules, and operational risk as part of correctness.
+- Read the source code before making architecture or bug claims.
+- Treat planning, launch readiness, marketing, and discoverability as part of real product success.
+- Explain AI model recommendations in terms of capability, cost, speed, modality, and reliability tradeoffs.
+- Verify current market or trend claims when they materially affect recommendations.
+- If something material is not confirmed, ask the user instead of guessing.
+- Treat `.codex-assistant/memory/` as shared durable memory across supported tool surfaces.
+- If repeated usage reveals a missing reusable capability, promote it into the right skill, checklist, playbook, pitfall, or rule.
+- After meaningful tasks, promote durable learnings into the right artifact: memory, checklist, pitfall, playbook, or skill.
+
+## References
+
+- Root instructions: [AGENTS.md](mdc:AGENTS.md)
+- Assistant knowledge: [`.codex-assistant/`](mdc:.codex-assistant)
+- Checklists: [`.codex-assistant/references/checklists/`](mdc:.codex-assistant/references/checklists)
+- Playbooks: [`.codex-assistant/references/playbooks/`](mdc:.codex-assistant/references/playbooks)
+- Session handoff: [`.codex-assistant/references/session-handoff-template.md`](mdc:.codex-assistant/references/session-handoff-template.md)
+- Agent profile: [`.codex-assistant/memory/agent-profile.md`](mdc:.codex-assistant/memory/agent-profile.md)
+- Project understanding memory: [`.codex-assistant/memory/project-understanding.md`](mdc:.codex-assistant/memory/project-understanding.md)
