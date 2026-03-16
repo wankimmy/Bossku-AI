@@ -11,10 +11,12 @@ Use this skill when writing or reviewing code that should follow strong engineer
 
 1. Read the current project structure, local conventions, and nearby implementation patterns first.
 2. Identify the stack-specific best practices that matter most for this task.
-3. Apply best practices in a repo-consistent way for naming, cohesion, separation of concerns, error handling, validation, and testability.
+3. Apply best practices in a repo-consistent way for naming, cohesion, separation of concerns, error handling, validation, immutability when it fits the stack, and testability.
 4. Prefer simple, readable, and maintainable solutions over clever ones.
-5. Keep changes minimal unless a broader refactor is clearly justified.
-6. Call out when the current codebase pattern is weak and whether to follow it, improve it locally, or escalate to code revamp.
+5. Treat input validation, safe defaults, and explicit error handling as part of implementation correctness.
+6. Treat small functions, focused files, shallow nesting, and clear interfaces as quality defaults unless the repo strongly signals otherwise.
+7. Keep changes minimal unless a broader refactor is clearly justified.
+8. Call out when the current codebase pattern is weak and whether to follow it, improve it locally, or escalate to code revamp.
 
 ## Output expectation
 
@@ -28,3 +30,4 @@ Use this skill when writing or reviewing code that should follow strong engineer
 
 - `../../references/checklists/coding-best-practices-checklist.md`
 - `../../references/playbooks/coding-best-practices-playbook.md`
+- `../../references/checklists/engineering-delivery-checklist.md`

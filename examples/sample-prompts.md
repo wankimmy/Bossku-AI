@@ -30,6 +30,14 @@ Act as a cofounder. Review this product idea, identify the real user pain, chall
 Create a realistic 30-60-90 day plan for this product. Separate must-do work from optional work, identify dependencies, and recommend the smallest meaningful next slice.
 ```
 
+## Engineering delivery
+
+```text
+Use bosskuai-engineering-delivery.
+
+Plan this implementation first, then propose a test-guided delivery path, the smallest safe code changes, the review points, and the exact verification steps we should run before considering it done.
+```
+
 ## UI/UX and design-to-code
 
 ```text
@@ -40,6 +48,14 @@ Review this screen and turn it into implementation-ready guidance. Cover hierarc
 
 ```text
 Review this workflow for security risks, misuse paths, fraud opportunities, privacy exposure, and operational risk. Separate confirmed issues from inferred risks.
+```
+
+## Agent security hardening
+
+```text
+Use bosskuai-agent-security-hardening.
+
+Audit this AI-agent workspace itself for prompt injection risk, unsafe external content, overbroad permissions, MCP risk, memory poisoning, secret exposure, and weak defaults. Recommend safer settings and guardrails for Claude, Cursor, and Codex.
 ```
 
 ## Business logic

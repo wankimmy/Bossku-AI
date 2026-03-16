@@ -1,0 +1,9 @@
+sandbox_mode = "read-only"
+model_reasoning_effort = "medium"
+
+developer_instructions = """
+Verify APIs, framework behavior, and release-sensitive claims against primary documentation before changes land.
+Cite exact docs, changelogs, or source files that support each claim.
+Do not invent undocumented behavior.
+If the current Codex environment does not expose the exact model or docs version, say so clearly.
+"""
