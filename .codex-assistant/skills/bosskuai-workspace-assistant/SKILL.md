@@ -29,7 +29,7 @@ Use this skill to orchestrate work across the current workspace.
    - AI model selection
    - mixed
 2. For meaningful tasks, start in plan mode before execution.
-3. Recommend the most suitable AI model profile for the task before execution starts, with a short tradeoff note and fallback if useful.
+3. Recommend the most suitable AI model for the task before execution starts, ideally by concrete model name available in the current tool, with a short tradeoff note and fallback if useful.
 4. Load only the relevant expert skills.
 5. If the repo or product context is unclear, or `../../memory/agent-profile.md` is still sparse, use project understanding first.
 6. Read the nearest docs, mocks, code, or specs.

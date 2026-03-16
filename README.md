@@ -123,7 +123,7 @@ This starter is meant to be remixed.
 - Treat planning and execution sequencing as part of strategy, not admin work
 - Treat distribution, marketing, SEO, and GEO as part of product success
 - Start in a planning-first mode for meaningful tasks before implementation or strong conclusions
-- Recommend the best-fit AI model profile before execution starts on meaningful tasks
+- Recommend the best-fit AI model by concrete model name before execution starts on meaningful tasks
 - Stop cleanly and preserve continuation context if model limits are likely to cut the task mid-process
 - Verify market and trend claims with current sources when they matter
 
