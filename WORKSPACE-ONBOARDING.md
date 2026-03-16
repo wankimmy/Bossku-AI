@@ -1,8 +1,8 @@
 # Workspace Onboarding
 
-Use this guide after cloning BosskuAI.
+Use this guide after cloning the BosskuAI starter.
 
-It is the main setup path for applying BosskuAI inside a real project workspace and making it behave consistently in Cursor, Claude, and Codex.
+It is the main setup path for applying this starter inside a real project workspace and making it behave consistently in Cursor, Claude, and Codex.
 
 ## What gets applied
 
@@ -16,7 +16,7 @@ It is the main setup path for applying BosskuAI inside a real project workspace 
 
 ## Target workspace shape
 
-Use BosskuAI as a layer inside the actual project you want to work on.
+Use this starter as a layer inside the actual project you want to work on.
 
 Example target:
 
@@ -31,7 +31,7 @@ my-product/
 
 ## Fast path after `git clone`
 
-1. Clone BosskuAI.
+1. Clone the BosskuAI starter.
 2. Copy these into the root of your actual project workspace:
    - `AGENTS.md`
    - `CLAUDE.md`
@@ -47,7 +47,7 @@ my-product/
 
 ## Alternative: explore the starter itself
 
-Use this only if you want to inspect the starter repo before applying it to a real product workspace.
+Use this only if you want to inspect the starter itself before applying it to a real product workspace.
 
 1. Clone the repo.
 2. Open the `bosskuAI/` folder as the workspace root.
@@ -122,7 +122,7 @@ Then give me:
 1. what this project is
 2. the stack and architecture
 3. key source-of-truth files
-4. which BosskuAI skills should be used most often in this workspace
+4. which local skills should be used most often in this workspace
 5. a draft for .codex-assistant/memory/agent-profile.md using Confirmed, Inferred, or Unknown where appropriate
 6. what should be written into .codex-assistant/memory/project-understanding.md
 ```

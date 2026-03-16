@@ -5,7 +5,7 @@ description: Use this when reading a codebase or repository to understand what t
 
 # BosskuAI Project Understanding
 
-Use this skill when the first task is understanding the project itself before going deeper.
+Use this skill when the first task is understanding the current project or workspace before going deeper.
 
 ## Workflow
 

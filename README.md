@@ -29,11 +29,11 @@ This repo is tool-agnostic by default and includes ready-to-use guidance for:
 
 It also includes local skills, checklists, templates, and memory scaffolding so the assistant can improve over time instead of only reacting per session.
 
-All repo references are relative, so anyone can clone this repo into any directory, rename the root folder, and customize it without rewriting absolute paths.
+All repo references are relative, so anyone can clone this starter into any directory, rename the root folder, and customize it without rewriting absolute paths.
 
 ## What This Agent Is For
 
-Use this repo when you want an AI collaborator that can:
+Use this starter when you want an AI collaborator that can:
 
 - shape product requirements
 - challenge weak assumptions
@@ -89,7 +89,7 @@ bosskuAI/
 ## How To Use
 
 1. Put this starter at the root of the workspace you actually want the AI to work in.
-2. Treat `AGENTS.md` as the source-of-truth instructions for the repo.
+2. Treat `AGENTS.md` as the source-of-truth instructions for the active workspace.
 3. Use [WORKSPACE-ONBOARDING.md](WORKSPACE-ONBOARDING.md) for the actual setup flow after cloning.
 4. Let project understanding draft `.codex-assistant/memory/agent-profile.md` and `.codex-assistant/memory/project-understanding.md` from repo evidence, then refine them.
 

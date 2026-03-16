@@ -1,11 +1,11 @@
 ---
 name: bosskuai-workspace-assistant
-description: Use this for general work inside the BosskuAI repo or when a task spans multiple expert surfaces such as product, planning, UI/UX, bug-finding, software architecture, source-code analysis, security, business logic, marketing, and market analysis.
+description: Use this for general work in a workspace using this starter, or when a task spans multiple expert surfaces such as product, planning, UI/UX, bug-finding, software architecture, source-code analysis, security, business logic, marketing, and market analysis.
 ---
 
 # BosskuAI Workspace Assistant
 
-Use this skill to orchestrate work across the repo.
+Use this skill to orchestrate work across the current workspace.
 
 ## Workflow
 
