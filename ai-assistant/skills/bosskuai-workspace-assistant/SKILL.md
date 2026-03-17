@@ -9,32 +9,7 @@ Use this skill to orchestrate work across the current workspace.
 
 ## Workflow
 
-1. Classify the task:
-   - project understanding
-   - product strategy
-   - planning and execution
-   - project management
-   - launch commercialization
-   - engineering delivery
-   - UI/UX or design-to-code
-   - bug finding
-   - software architecture
-   - codebase analysis
-   - code revamp
-   - coding best practices
-   - context-limit continuation
-   - polyglot engineering
-   - cybersecurity and risk
-   - agent security hardening
-   - business-logic review
-   - market analysis
-   - marketing and growth
-   - social content calendar
-   - paid acquisition and monetization
-   - sales strategy
-   - SEO/GEO
-   - AI model selection
-   - mixed
+1. Classify the task and map to the **Skill roster** in root AGENTS.md by division (Orchestration, Product, Engineering, Design, Security, Quality, Architecture, Marketing, Sales, Continuation, AI ops). If the user **explicitly names an expert** (e.g. "work as the security reviewer", "focus on launch commercialization"), load that skill set first, then any other relevant skills. Task types include: project understanding, product strategy, planning and execution, project management, launch commercialization, engineering delivery, UI/UX or design-to-code, bug finding, software architecture, codebase analysis, code revamp, coding best practices, context-limit continuation, polyglot engineering, cybersecurity and risk, agent security hardening, business-logic review, market analysis, marketing and growth, social content calendar, paid acquisition and monetization, sales strategy, SEO/GEO, AI model selection, mixed.
 2. For meaningful tasks, start in plan mode before execution.
 3. Recommend the most suitable AI model for the task before execution starts, ideally by concrete model name available in the current tool, with a short tradeoff note and fallback if useful.
 4. Load only the relevant expert skills.

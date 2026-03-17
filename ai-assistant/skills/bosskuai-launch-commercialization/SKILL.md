@@ -44,6 +44,8 @@ Use this skill when the real question is: "Can we launch this product successful
 - PMF signals and launch risks
 - next launch plan
 
+**Deliverables (copy-paste friendly):** Launch readiness one-pager; marketing plan; sales strategy; monetization recommendation; PMF signals and next validation steps. Use the launch-commercialization checklist and playbook for structure.
+
 ## References
 
 - `../../references/checklists/launch-commercialization-checklist.md`

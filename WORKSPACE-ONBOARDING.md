@@ -15,6 +15,13 @@ It is the main setup path for applying this starter inside a real project worksp
 - `ai-assistant/memory/`: durable shared memory for the workspace
 - `ai-assistant/references/`: checklists, playbooks, pitfalls, and handoff templates
 
+## First time? Start here
+
+1. Read **AGENTS.md** → **Skill roster (when to use which)** and **Quick reference: what to ask for** so you know which expertise exists and how to ask for it (including "work as the X").
+2. Run the **workspace onboarding prompt** from the "Prompts" section below in this file.
+3. Let the assistant draft `ai-assistant/memory/agent-profile.md` and `ai-assistant/memory/project-understanding.md`, then review and fix anything marked `Inferred:` or `Unknown`.
+4. Optionally try explicit activation: e.g. "work as the security reviewer" or "focus on launch commercialization" for a specific expert lens.
+
 ## Target workspace shape
 
 Use this starter as a layer inside the actual project you want to work on.
@@ -200,3 +207,9 @@ Before doing anything else, tell me:
 ```
 
 If the answer does not explicitly reflect the local workspace files and skills, reopen the correct workspace root and retry.
+
+## Troubleshooting
+
+- **Assistant doesn’t follow the roster or quick reference** — Point it to `AGENTS.md` → Skill roster and Quick reference: what to ask for. Ask: "Which skills are you loading for this task?"
+- **Repo or product context is unclear** — Run project understanding first: "Use bosskuai-project-understanding. Read the repo and draft agent-profile and project-understanding."
+- **Rules or skills seem ignored** — Confirm the workspace root you opened contains `AGENTS.md`, and for Cursor `.cursor/rules/`, for Claude `CLAUDE.md` and `.claude/rules/`. Reopen that root and retry the quick compatibility check above.

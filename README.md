@@ -1,5 +1,7 @@
 # BosskuAI
 
+**In 30 seconds:** One cofounder-style agent. It classifies your task and loads the minimum relevant skills. Say **"work as the security reviewer"** or **"focus on launch commercialization"** to activate an expert lens. Full **skill roster** and **quick reference** are in [AGENTS.md](AGENTS.md); start with [WORKSPACE-ONBOARDING.md](WORKSPACE-ONBOARDING.md).
+
 A public, reusable agent setup for product-building teams who want one assistant package that can think like:
 
 - a product strategist
@@ -36,7 +38,7 @@ This repo is tool-agnostic by default and includes ready-to-use guidance for:
 - Claude rules via `.claude/rules/`
 - Cursor via `.cursor/rules/`
 
-It also includes local skills, checklists, templates, and memory scaffolding so the assistant can improve over time instead of only reacting per session.
+Use the same `AGENTS.md` and skills in any of these tools; only the entry file (e.g. `CLAUDE.md` or `.cursor/rules/`) is tool-specific. Local skills, checklists, templates, and memory scaffolding let the assistant improve over time instead of only reacting per session.
 
 All repo references are relative, so anyone can clone this starter into any directory, rename the root folder, and customize it without rewriting absolute paths.
 
@@ -109,6 +111,7 @@ bosskuAI/
 └── ai-assistant/
     ├── skills/
     ├── references/
+    │   └── README.md   ← checklists & playbooks by division
     └── memory/
 ```
 
@@ -119,11 +122,27 @@ bosskuAI/
 3. Use [WORKSPACE-ONBOARDING.md](WORKSPACE-ONBOARDING.md) for the actual setup flow after cloning.
 4. Let project understanding draft `ai-assistant/memory/agent-profile.md` and `ai-assistant/memory/project-understanding.md` from repo evidence, then refine them.
 
+## Terms
+
+- **Skill** — A reusable workflow/lens (e.g. `bosskuai-engineering-delivery`). The assistant loads skills based on task type or when you explicitly ask.
+- **Division** — Grouping in the roster (Product, Engineering, Design, Security, Marketing, Sales, etc.).
+- **Explicit activation** — Saying e.g. "work as the security reviewer" so the right skill set and tone are applied.
+- **Phase** — Stage of a larger effort (discovery → strategy → build → harden → launch); use phase-based prompts to run the right skills.
+- **Memory** — Durable files under `ai-assistant/memory/` (agent-profile, project-understanding, etc.) shared across sessions and tools.
+
+## Discover expertise (which expert when)
+
+- **Skill roster**: In `AGENTS.md`, see **Skill roster (when to use which)** for a division-based table of every skill and when to use it.
+- **What to ask for**: See **Quick reference: what to ask for** in `AGENTS.md` for situation → example phrasing and which skills get loaded.
+- **Explicit activation**: You can say e.g. "work as the security reviewer" or "focus on launch commercialization" so the assistant loads that skill set and adopts that lens.
+- **Phased pipelines**: For larger projects, see **Optional phased pipelines** in `AGENTS.md` (discovery → strategy → build → harden → launch) and which skills to lean on per phase.
+
 ## Start Here
 
-- [WORKSPACE-ONBOARDING.md](WORKSPACE-ONBOARDING.md)
-- [examples/sample-prompts.md](examples/sample-prompts.md)
-- [examples/sample-agent-profile.md](examples/sample-agent-profile.md)
+- [WORKSPACE-ONBOARDING.md](WORKSPACE-ONBOARDING.md) — setup flow and "First time? Start here"
+- [examples/sample-prompts.md](examples/sample-prompts.md) — quick reference, phase-based prompts (discovery / strategy / launch), and task prompts
+- [examples/sample-agent-profile.md](examples/sample-agent-profile.md) — template for `ai-assistant/memory/agent-profile.md`
+- [ai-assistant/references/README.md](ai-assistant/references/README.md) — references by division (checklists and playbooks per skill area)
 
 ## Customization
 

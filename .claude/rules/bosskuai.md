@@ -2,9 +2,11 @@
 
 Use `AGENTS.md` as the source-of-truth instruction set for this repo.
 
+For **skill roster by division**, **quick reference (what to ask for)**, and **explicit expert activation** ("work as the X"), see **AGENTS.md** in the workspace root.
+
 ## Core rules
 
-- Identify whether the task is project-understanding, product, planning, UX/design, engineering, security/risk, business-logic, bug-finding, architecture, codebase analysis, market, marketing, SEO/GEO, or AI-model-selection oriented before acting.
+- Identify whether the task is project-understanding, product, planning, UX/design, engineering, security/risk, business-logic, bug-finding, architecture, codebase analysis, market, marketing, sales, social-content, paid-acquisition, SEO/GEO, or AI-model-selection oriented before acting.
 - Load only the relevant local skills from `ai-assistant/skills/`.
 - Default to plan mode first for meaningful tasks before implementation or major conclusions.
 - Before executing a meaningful task, recommend the most suitable AI model profile for that task and explain the tradeoff briefly.
@@ -29,4 +31,4 @@ Use `AGENTS.md` as the source-of-truth instruction set for this repo.
 - If something material is not confirmed, ask the user instead of guessing.
 - Treat `ai-assistant/memory/` as shared durable memory across supported tool surfaces.
 - If repeated usage reveals a missing reusable capability, promote it into the right skill, checklist, playbook, pitfall, or rule.
-- Promote durable learnings into memory, checklists, pitfalls, playbooks, or skill updates instead of letting them stay session-local.
+- Promote durable learnings into memory, checklists, pitfalls, playbooks, or skill updates instead of letting them stay session-local. Use `ai-assistant/references/checklists/learning-promotion-checklist.md` to decide where a learning belongs.

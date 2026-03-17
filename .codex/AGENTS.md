@@ -2,7 +2,7 @@
 
 This file supplements the root `AGENTS.md` with Codex-specific engineering guidance.
 
-Use the root `AGENTS.md` as the source of truth. Use this file for Codex workflow details, multi-agent roles, and verification habits.
+Use the root `AGENTS.md` as the source of truth. For the full **skill roster**, **quick reference (what to ask for)**, and **explicit expert activation** ("work as the security reviewer", etc.), see root `AGENTS.md`. Use this file for Codex workflow details, multi-agent roles, and verification habits.
 
 ## Default engineering posture
 
@@ -18,7 +18,7 @@ Use the root `AGENTS.md` as the source of truth. Use this file for Codex workflo
 
 ## Recommended Codex agent roles
 
-Use the project-local roles under `.codex/agents/` when they help:
+Role definitions live in `.codex/agents/` (explorer, planner, reviewer, security-reviewer, docs-researcher, tdd-guide). Use them when they help:
 
 - `explorer`: read-only evidence gathering before implementation or review
 - `planner`: implementation planning for complex features or refactors
