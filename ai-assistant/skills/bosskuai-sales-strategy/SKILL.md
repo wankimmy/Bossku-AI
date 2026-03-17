@@ -24,6 +24,8 @@ Use this skill when the task is about revenue generation, closing deals, shaping
 - needed sales assets
 - next pipeline or conversion move
 
+**Deliverables (copy-paste friendly):** ICP + buyer map; objection handling + rebuttals; value/ROI framing; list of needed sales assets; next pipeline or conversion move. Use the sales-strategy checklist and playbook for structure.
+
 ## References
 
 - `../../references/checklists/sales-strategy-checklist.md`

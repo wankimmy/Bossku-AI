@@ -1,6 +1,57 @@
 # Sample Prompts
 
-Use these as starter prompts after cloning the repo.
+Use these as starter prompts after cloning the repo. For the full skill roster and "what to ask for" table, see **AGENTS.md** (Skill roster, Quick reference, Optional phased pipelines).
+
+## Quick reference: which prompt for which situation
+
+| Situation | Jump to section |
+|-----------|-----------------|
+| New repo or unclear context | Workspace onboarding |
+| Shape product or scope | Product strategy |
+| Plan roadmap or launch | Planning, Launch commercialization |
+| Track delivery and milestones | Project management |
+| Build a feature with quality gates | Engineering delivery |
+| **Design** / UI (design-to-code) | UI/UX and design-to-code |
+| Security or abuse review | Security and misuse |
+| Harden the AI workspace | Agent security hardening |
+| Find bugs or logic flaws | Bug finding, Business logic |
+| Architecture or boundaries | Architecture |
+| Refactor / modernize | (Use engineering-delivery + code-revamp in AGENTS.md) |
+| Context limit / handoff | (Use context-limit-continuation in AGENTS.md) |
+| Market or positioning | Market analysis, Marketing and growth |
+| **Marketing** (strategy, channels, content, paid ads) | Marketing and growth, Social content calendar, Paid acquisition and monetization, SEO and GEO |
+| **Sales** (ICP, pipeline, objections, pricing) | Sales strategy |
+| Launch (marketing + sales + SEO) | Launch commercialization, SEO and GEO, Sales strategy |
+| Which AI model for this task | AI model selection |
+| Discovery, strategy, or launch phase | Phase-based prompts (below) |
+
+## Phase-based prompts
+
+Use these when you want the assistant to run in a specific phase (see AGENTS.md → Optional phased pipelines).
+
+### Discovery phase
+
+```text
+We're in the discovery phase. Use project understanding and product strategy first.
+
+Read the repo and any specs, then draft ai-assistant/memory/agent-profile.md and ai-assistant/memory/project-understanding.md. Use market-analysis if we need competitor or positioning input. Separate confirmed facts from inference.
+```
+
+### Strategy phase
+
+```text
+We're in the strategy phase. Use planning-execution and project-management.
+
+Produce a realistic roadmap, scope, priorities, and ownership. Use software-architecture if we need system boundaries or tradeoffs. Give me the smallest meaningful next slice and decision checkpoints.
+```
+
+### Launch phase
+
+```text
+We're in the launch phase. Run the launch commercialization checklist and cover marketing, sales, and SEO/GEO.
+
+Use launch-commercialization, marketing-growth, sales-strategy, and seo-geo. Produce: launch readiness assessment, marketing plan, sales strategy, monetization recommendation, and PMF signals to validate next.
+```
 
 ## Workspace onboarding
 

@@ -24,6 +24,8 @@ Use this skill when the task is about getting attention, demand, adoption, or di
 - funnel or growth loop
 - recommended next experiments
 
+**Deliverables (copy-paste friendly):** Audience and positioning one-pager; messaging and channels; funnel or growth loop; first experiments to run. Use the marketing-growth checklist and playbook for structure.
+
 ## References
 
 - `../../references/playbooks/marketing-growth-playbook.md`

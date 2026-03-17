@@ -25,7 +25,7 @@ Use `AGENTS.md` in the current workspace as the source-of-truth instruction set.
 
 ## Task routing
 
-Load the relevant local skills from `ai-assistant/skills/` based on the task:
+For the full **skill roster by division** and **quick reference (what to ask for)**, see `AGENTS.md` in the workspace root. Load the relevant local skills from `ai-assistant/skills/` based on the task:
 
 - product strategy
 - project understanding
