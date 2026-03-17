@@ -60,3 +60,5 @@ If no issues are found, say that clearly and mention residual risk or verificati
 - Codex uses `AGENTS.md` plus this project-local `.codex/AGENTS.md`.
 - Multi-agent support is configured in `.codex/config.toml`.
 - Keep `.codex/config.toml` portable. Do not assume global MCP servers or machine-specific tools are installed.
+
+

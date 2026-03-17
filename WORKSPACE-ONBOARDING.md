@@ -11,9 +11,9 @@ It is the main setup path for applying this starter inside a real project worksp
 - `CLAUDE.md`: root Claude-facing instruction file
 - `.claude/rules/bosskuai.md`: Claude rule mirror for repo-wide behavior
 - `.cursor/rules/bosskuai.mdc`: Cursor rule file with `alwaysApply: true`
-- `.codex-assistant/skills/`: reusable expert workflows
-- `.codex-assistant/memory/`: durable shared memory for the workspace
-- `.codex-assistant/references/`: checklists, playbooks, pitfalls, and handoff templates
+- `ai-assistant/skills/`: reusable expert workflows
+- `ai-assistant/memory/`: durable shared memory for the workspace
+- `ai-assistant/references/`: checklists, playbooks, pitfalls, and handoff templates
 
 ## Target workspace shape
 
@@ -28,7 +28,7 @@ my-product/
 ├── CLAUDE.md
 ├── .claude/
 ├── .cursor/
-└── .codex-assistant/
+└── ai-assistant/
 ```
 
 ## Fast path after `git clone`
@@ -40,12 +40,12 @@ my-product/
    - `CLAUDE.md`
    - `.claude/`
    - `.cursor/`
-   - `.codex-assistant/`
+   - `ai-assistant/`
 3. Open the target project root in Cursor, Claude, or Codex.
 4. Run the workspace onboarding prompt from this file.
 5. Let the assistant draft:
-   - `.codex-assistant/memory/agent-profile.md`
-   - `.codex-assistant/memory/project-understanding.md`
+   - `ai-assistant/memory/agent-profile.md`
+   - `ai-assistant/memory/project-understanding.md`
 6. Review the draft and correct anything marked `Inferred:` or `Unknown`.
 
 ## Alternative: explore the starter itself
@@ -55,7 +55,7 @@ Use this only if you want to inspect the starter itself before applying it to a 
 1. Clone the repo.
 2. Open the `bosskuAI/` folder as the workspace root.
 3. Read [README.md](README.md) and this file.
-4. Either fill in [agent-profile.md](.codex-assistant/memory/agent-profile.md) manually or let project understanding draft it first.
+4. Either fill in [agent-profile.md](ai-assistant/memory/agent-profile.md) manually or let project understanding draft it first.
 5. Start with the onboarding prompt in the prompts section below.
 
 ## How rules and skills are picked up in each tool
@@ -65,14 +65,14 @@ Use this only if you want to inspect the starter itself before applying it to a 
 - Open the target project root that contains `.cursor/rules/`.
 - Cursor will see `.cursor/rules/bosskuai.mdc`.
 - Because the rule has `alwaysApply: true`, it should apply throughout the repo.
-- The rule points the assistant back to `AGENTS.md` and `.codex-assistant/`.
+- The rule points the assistant back to `AGENTS.md` and `ai-assistant/`.
 
 ### Claude
 
 - Open the target project root that contains `CLAUDE.md` and `.claude/rules/`.
 - Claude should use `CLAUDE.md` at the workspace root.
 - The mirrored rule in `.claude/rules/bosskuai.md` reinforces the same behavior.
-- Claude should then follow the local skills under `.codex-assistant/skills/`.
+- Claude should then follow the local skills under `ai-assistant/skills/`.
 
 ### Codex
 
@@ -81,11 +81,11 @@ Use this only if you want to inspect the starter itself before applying it to a 
 - Codex uses `AGENTS.md` as the repo instruction source.
 - The `.codex/` folder adds Codex-specific engineering roles for planning, exploration, review, security, docs verification, and TDD guidance.
 - The repo instructions tell Codex to use the relevant local skill instead of loading everything.
-- Durable repo knowledge should be stored under `.codex-assistant/memory/`.
+- Durable repo knowledge should be stored under `ai-assistant/memory/`.
 
 ## First customization to make
 
-Use project understanding to draft [agent-profile.md](.codex-assistant/memory/agent-profile.md), then confirm or correct:
+Use project understanding to draft [agent-profile.md](ai-assistant/memory/agent-profile.md), then confirm or correct:
 
 - product name
 - company or team
@@ -98,7 +98,7 @@ Use project understanding to draft [agent-profile.md](.codex-assistant/memory/ag
 - priorities
 - competitors
 
-Then create or update [project-understanding.md](.codex-assistant/memory/project-understanding.md) after the first repo analysis pass.
+Then create or update [project-understanding.md](ai-assistant/memory/project-understanding.md) after the first repo analysis pass.
 
 ## Suggested onboarding flow
 
@@ -119,7 +119,7 @@ Then create or update [project-understanding.md](.codex-assistant/memory/project
 Use this right after opening the project workspace in Cursor, Claude, or Codex.
 
 ```text
-Use the workspace instructions in AGENTS.md, CLAUDE.md, .claude/rules/, .cursor/rules/, and the relevant skills under .codex-assistant/skills/.
+Use the workspace instructions in AGENTS.md, CLAUDE.md, .claude/rules/, .cursor/rules/, and the relevant skills under ai-assistant/skills/.
 
 Start with bosskuai-workspace-assistant. First classify this task, recommend the best AI model for it by concrete model name available in this tool with a short tradeoff note and fallback, and then use bosskuai-project-understanding if the repo context is still unclear.
 
@@ -130,8 +130,8 @@ Then give me:
 2. the stack and architecture
 3. key source-of-truth files
 4. which local skills should be used most often in this workspace
-5. a draft for .codex-assistant/memory/agent-profile.md using Confirmed, Inferred, or Unknown where appropriate
-6. what should be written into .codex-assistant/memory/project-understanding.md
+5. a draft for ai-assistant/memory/agent-profile.md using Confirmed, Inferred, or Unknown where appropriate
+6. what should be written into ai-assistant/memory/project-understanding.md
 ```
 
 ### 2. Project understanding prompt
@@ -148,7 +148,7 @@ Separate:
 - inference
 - unknowns that still need confirmation
 
-Then recommend the next 3 most relevant skills from .codex-assistant/skills/, draft a concise update for .codex-assistant/memory/project-understanding.md, and draft .codex-assistant/memory/agent-profile.md. Mark any unsupported business details as Inferred or Unknown instead of guessing.
+Then recommend the next 3 most relevant skills from ai-assistant/skills/, draft a concise update for ai-assistant/memory/project-understanding.md, and draft ai-assistant/memory/agent-profile.md. Mark any unsupported business details as Inferred or Unknown instead of guessing.
 ```
 
 ### 3. Efficiency test prompt
@@ -170,7 +170,7 @@ Constraints:
 - separate confirmed facts from inference
 - do not load every skill, only the relevant ones
 - findings first if you discover issues
-- end with a compact handoff note suitable for .codex-assistant/memory/ or session continuation
+- end with a compact handoff note suitable for ai-assistant/memory/ or session continuation
 ```
 
 ## What a good response should look like
