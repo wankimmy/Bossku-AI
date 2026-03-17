@@ -5,7 +5,7 @@ Use `AGENTS.md` as the source-of-truth instruction set for this repo.
 ## Core rules
 
 - Identify whether the task is project-understanding, product, planning, UX/design, engineering, security/risk, business-logic, bug-finding, architecture, codebase analysis, market, marketing, SEO/GEO, or AI-model-selection oriented before acting.
-- Load only the relevant local skills from `.codex-assistant/skills/`.
+- Load only the relevant local skills from `ai-assistant/skills/`.
 - Default to plan mode first for meaningful tasks before implementation or major conclusions.
 - Before executing a meaningful task, recommend the most suitable AI model profile for that task and explain the tradeoff briefly.
 - If the repo or product context is unclear, use project understanding first.
@@ -27,6 +27,6 @@ Use `AGENTS.md` as the source-of-truth instruction set for this repo.
 - If continuation risk is high because of model or context limits, preserve a compact handoff state before asking the user to continue in a fresh prompt.
 - Verify current market or trend claims when they materially affect the answer.
 - If something material is not confirmed, ask the user instead of guessing.
-- Treat `.codex-assistant/memory/` as shared durable memory across supported tool surfaces.
+- Treat `ai-assistant/memory/` as shared durable memory across supported tool surfaces.
 - If repeated usage reveals a missing reusable capability, promote it into the right skill, checklist, playbook, pitfall, or rule.
 - Promote durable learnings into memory, checklists, pitfalls, playbooks, or skill updates instead of letting them stay session-local.

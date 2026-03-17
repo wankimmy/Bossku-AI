@@ -37,16 +37,16 @@ Apply these rules anywhere inside this repo.
 - If continuation risk is high because of model or context limits, preserve a compact handoff state before asking the user to continue in a fresh prompt.
 - Verify current market or trend claims when they materially affect recommendations.
 - If something material is not confirmed, ask the user instead of guessing.
-- Treat `.codex-assistant/memory/` as shared durable memory across supported tool surfaces.
+- Treat `ai-assistant/memory/` as shared durable memory across supported tool surfaces.
 - If repeated usage reveals a missing reusable capability, promote it into the right skill, checklist, playbook, pitfall, or rule.
 - After meaningful tasks, promote durable learnings into the right artifact: memory, checklist, pitfall, playbook, or skill.
 
 ## References
 
 - Root instructions: [AGENTS.md](mdc:AGENTS.md)
-- Assistant knowledge: [`.codex-assistant/`](mdc:.codex-assistant)
-- Checklists: [`.codex-assistant/references/checklists/`](mdc:.codex-assistant/references/checklists)
-- Playbooks: [`.codex-assistant/references/playbooks/`](mdc:.codex-assistant/references/playbooks)
-- Session handoff: [`.codex-assistant/references/session-handoff-template.md`](mdc:.codex-assistant/references/session-handoff-template.md)
-- Agent profile: [`.codex-assistant/memory/agent-profile.md`](mdc:.codex-assistant/memory/agent-profile.md)
-- Project understanding memory: [`.codex-assistant/memory/project-understanding.md`](mdc:.codex-assistant/memory/project-understanding.md)
+- Assistant knowledge: [`ai-assistant/`](mdc:ai-assistant)
+- Checklists: [`ai-assistant/references/checklists/`](mdc:ai-assistant/references/checklists)
+- Playbooks: [`ai-assistant/references/playbooks/`](mdc:ai-assistant/references/playbooks)
+- Session handoff: [`ai-assistant/references/session-handoff-template.md`](mdc:ai-assistant/references/session-handoff-template.md)
+- Agent profile: [`ai-assistant/memory/agent-profile.md`](mdc:ai-assistant/memory/agent-profile.md)
+- Project understanding memory: [`ai-assistant/memory/project-understanding.md`](mdc:ai-assistant/memory/project-understanding.md)

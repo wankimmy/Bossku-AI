@@ -12,8 +12,8 @@ Classify the task, recommend the best AI model by concrete model name available 
 Read the nearest README, manifests, docs, and enough source code to understand the project. Separate confirmed facts from inference.
 
 Then draft:
-- .codex-assistant/memory/agent-profile.md
-- .codex-assistant/memory/project-understanding.md
+- ai-assistant/memory/agent-profile.md
+- ai-assistant/memory/project-understanding.md
 
 Use Confirmed, Inferred, or Unknown where appropriate instead of guessing.
 ```

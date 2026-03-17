@@ -1,6 +1,6 @@
 # Sample Agent Profile
 
-Use this as an example of how to fill `.codex-assistant/memory/agent-profile.md`.
+Use this as an example of how to fill `ai-assistant/memory/agent-profile.md`.
 
 ## Identity
 

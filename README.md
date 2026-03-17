@@ -106,7 +106,7 @@ bosskuAI/
 ├── .codex/
 ├── .claude/rules/
 ├── .cursor/rules/
-└── .codex-assistant/
+└── ai-assistant/
     ├── skills/
     ├── references/
     └── memory/
@@ -117,7 +117,7 @@ bosskuAI/
 1. Put this starter at the root of the workspace you actually want the AI to work in.
 2. Treat `AGENTS.md` as the source-of-truth instructions for the active workspace.
 3. Use [WORKSPACE-ONBOARDING.md](WORKSPACE-ONBOARDING.md) for the actual setup flow after cloning.
-4. Let project understanding draft `.codex-assistant/memory/agent-profile.md` and `.codex-assistant/memory/project-understanding.md` from repo evidence, then refine them.
+4. Let project understanding draft `ai-assistant/memory/agent-profile.md` and `ai-assistant/memory/project-understanding.md` from repo evidence, then refine them.
 
 ## Start Here
 
@@ -131,10 +131,10 @@ This starter is meant to be remixed.
 
 - Rename the root folder if you want. The internal references are relative.
 - Edit `AGENTS.md` to change posture, priorities, or expert surfaces.
-- Fill in `.codex-assistant/memory/agent-profile.md` with your domain, product, audience, and constraints, or ask project understanding to draft it dynamically first.
+- Fill in `ai-assistant/memory/agent-profile.md` with your domain, product, audience, and constraints, or ask project understanding to draft it dynamically first.
 - Use `examples/sample-agent-profile.md` as a starting point if you want a filled example first.
-- Add or remove skills under `.codex-assistant/skills/`.
-- Extend playbooks and checklists under `.codex-assistant/references/`.
+- Add or remove skills under `ai-assistant/skills/`.
+- Extend playbooks and checklists under `ai-assistant/references/`.
 - Adjust `.codex/` if you want different Codex-specific roles or config defaults.
 
 ## Principles

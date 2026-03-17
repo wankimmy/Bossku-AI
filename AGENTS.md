@@ -8,50 +8,50 @@ Use it when you want the assistant to behave like a pragmatic cofounder rather t
 
 ## Local skills
 
-- `bosskuai-workspace-assistant`: Use this for repo discovery, orchestration, and deciding which expert skills to load. File: `.codex-assistant/skills/bosskuai-workspace-assistant/SKILL.md`
-- `bosskuai-project-understanding`: Use this for reading a codebase or repository to understand what the project is about, who it serves, what stack and architecture it uses, which files are source-of-truth, which skills should be loaded next, and what durable understanding should be stored in memory. File: `.codex-assistant/skills/bosskuai-project-understanding/SKILL.md`
-- `bosskuai-product-strategy`: Use this for product framing, requirement shaping, prioritization, scope, and go-to-market implications. File: `.codex-assistant/skills/bosskuai-product-strategy/SKILL.md`
-- `bosskuai-planning-execution`: Use this for roadmaps, sequencing, milestone planning, launch planning, and turning strategy into execution slices. File: `.codex-assistant/skills/bosskuai-planning-execution/SKILL.md`
-- `bosskuai-project-management`: Use this for execution tracking, dependencies, milestone control, ownership clarity, and keeping projects on track. File: `.codex-assistant/skills/bosskuai-project-management/SKILL.md`
-- `bosskuai-launch-commercialization`: Use this for balancing engineering readiness, SEO/GEO, marketing, sales, monetization, country strategy, and product-market-fit planning before launch. File: `.codex-assistant/skills/bosskuai-launch-commercialization/SKILL.md`
-- `bosskuai-engineering-delivery`: Use this for implementation-heavy work that should follow planning-first execution, test-guided development where practical, review-before-finalization, and explicit verification. File: `.codex-assistant/skills/bosskuai-engineering-delivery/SKILL.md`
-- `bosskuai-ui-ux-design-to-code`: Use this for UI/UX review, interaction quality, and translating designs into implementation-ready code guidance. File: `.codex-assistant/skills/bosskuai-ui-ux-design-to-code/SKILL.md`
-- `bosskuai-cybersecurity-risk`: Use this for auth, abuse cases, privacy, trust boundaries, security review, and operational risk analysis. File: `.codex-assistant/skills/bosskuai-cybersecurity-risk/SKILL.md`
-- `bosskuai-agent-security-hardening`: Use this for securing the AI-agent workspace itself, including instructions, MCPs, external content, memory, and least-privilege configuration. File: `.codex-assistant/skills/bosskuai-agent-security-hardening/SKILL.md`
-- `bosskuai-business-logic-review`: Use this for workflow gaps, state transitions, edge cases, approval flows, and hidden rule failures. File: `.codex-assistant/skills/bosskuai-business-logic-review/SKILL.md`
-- `bosskuai-bug-finding`: Use this for bug hunts, regression analysis, failure-path review, suspicious diffs, and finding likely defects before shipping. File: `.codex-assistant/skills/bosskuai-bug-finding/SKILL.md`
-- `bosskuai-software-architecture`: Use this for module boundaries, system design, integration decisions, layering, scaling implications, and architecture tradeoffs. File: `.codex-assistant/skills/bosskuai-software-architecture/SKILL.md`
-- `bosskuai-codebase-analysis`: Use this for reading unfamiliar codebases, understanding structure quickly, mapping execution flow, and summarizing how the source code really works. File: `.codex-assistant/skills/bosskuai-codebase-analysis/SKILL.md`
-- `bosskuai-code-revamp`: Use this for safe code modernization, structural cleanup, legacy refactors, and revamps that should still respect the current codebase structure and minimize unnecessary churn. File: `.codex-assistant/skills/bosskuai-code-revamp/SKILL.md`
-- `bosskuai-coding-best-practices`: Use this for implementation quality, maintainability, readability, testing expectations, error handling, naming, and applying coding best practices in a way that still fits the current project conventions. File: `.codex-assistant/skills/bosskuai-coding-best-practices/SKILL.md`
-- `bosskuai-context-limit-continuation`: Use this when a task risks hitting model context or token limits mid-process. It should stop cleanly, summarize current progress, ask the user to retry or continue in a fresh prompt, and provide a compact continuation state. File: `.codex-assistant/skills/bosskuai-context-limit-continuation/SKILL.md`
-- `bosskuai-polyglot-engineering`: Use this for implementation guidance across programming languages, frameworks, runtimes, and stack-specific tradeoffs. File: `.codex-assistant/skills/bosskuai-polyglot-engineering/SKILL.md`
-- `bosskuai-market-analysis`: Use this for competitor review, market trends, positioning, pricing context, demand signals, and opportunity analysis. File: `.codex-assistant/skills/bosskuai-market-analysis/SKILL.md`
-- `bosskuai-marketing-growth`: Use this for marketing strategy, distribution, positioning, go-to-market planning, channels, messaging, and growth loops. File: `.codex-assistant/skills/bosskuai-marketing-growth/SKILL.md`
-- `bosskuai-social-content-calendar`: Use this for platform-specific content calendars with recommended local posting dates, times, formats, hooks, and CTAs. File: `.codex-assistant/skills/bosskuai-social-content-calendar/SKILL.md`
-- `bosskuai-paid-acquisition-monetization`: Use this for Google Ads, paid acquisition strategy, CAC logic, pricing, packaging, and monetization planning. File: `.codex-assistant/skills/bosskuai-paid-acquisition-monetization/SKILL.md`
-- `bosskuai-sales-strategy`: Use this for sales positioning, ICP definition, pipeline strategy, founder-led sales, objection handling, and pricing narrative. File: `.codex-assistant/skills/bosskuai-sales-strategy/SKILL.md`
-- `bosskuai-seo-geo`: Use this for SEO, GEO, content discoverability, search demand alignment, and optimization for both search engines and generative engines. File: `.codex-assistant/skills/bosskuai-seo-geo/SKILL.md`
-- `bosskuai-ai-model-selection`: Use this for recommending which AI model is suitable for a given task based on reasoning depth, speed, tool use, multimodality, coding needs, cost sensitivity, and risk tolerance. File: `.codex-assistant/skills/bosskuai-ai-model-selection/SKILL.md`
+- `bosskuai-workspace-assistant`: Use this for repo discovery, orchestration, and deciding which expert skills to load. File: `ai-assistant/skills/bosskuai-workspace-assistant/SKILL.md`
+- `bosskuai-project-understanding`: Use this for reading a codebase or repository to understand what the project is about, who it serves, what stack and architecture it uses, which files are source-of-truth, which skills should be loaded next, and what durable understanding should be stored in memory. File: `ai-assistant/skills/bosskuai-project-understanding/SKILL.md`
+- `bosskuai-product-strategy`: Use this for product framing, requirement shaping, prioritization, scope, and go-to-market implications. File: `ai-assistant/skills/bosskuai-product-strategy/SKILL.md`
+- `bosskuai-planning-execution`: Use this for roadmaps, sequencing, milestone planning, launch planning, and turning strategy into execution slices. File: `ai-assistant/skills/bosskuai-planning-execution/SKILL.md`
+- `bosskuai-project-management`: Use this for execution tracking, dependencies, milestone control, ownership clarity, and keeping projects on track. File: `ai-assistant/skills/bosskuai-project-management/SKILL.md`
+- `bosskuai-launch-commercialization`: Use this for balancing engineering readiness, SEO/GEO, marketing, sales, monetization, country strategy, and product-market-fit planning before launch. File: `ai-assistant/skills/bosskuai-launch-commercialization/SKILL.md`
+- `bosskuai-engineering-delivery`: Use this for implementation-heavy work that should follow planning-first execution, test-guided development where practical, review-before-finalization, and explicit verification. File: `ai-assistant/skills/bosskuai-engineering-delivery/SKILL.md`
+- `bosskuai-ui-ux-design-to-code`: Use this for UI/UX review, interaction quality, and translating designs into implementation-ready code guidance. File: `ai-assistant/skills/bosskuai-ui-ux-design-to-code/SKILL.md`
+- `bosskuai-cybersecurity-risk`: Use this for auth, abuse cases, privacy, trust boundaries, security review, and operational risk analysis. File: `ai-assistant/skills/bosskuai-cybersecurity-risk/SKILL.md`
+- `bosskuai-agent-security-hardening`: Use this for securing the AI-agent workspace itself, including instructions, MCPs, external content, memory, and least-privilege configuration. File: `ai-assistant/skills/bosskuai-agent-security-hardening/SKILL.md`
+- `bosskuai-business-logic-review`: Use this for workflow gaps, state transitions, edge cases, approval flows, and hidden rule failures. File: `ai-assistant/skills/bosskuai-business-logic-review/SKILL.md`
+- `bosskuai-bug-finding`: Use this for bug hunts, regression analysis, failure-path review, suspicious diffs, and finding likely defects before shipping. File: `ai-assistant/skills/bosskuai-bug-finding/SKILL.md`
+- `bosskuai-software-architecture`: Use this for module boundaries, system design, integration decisions, layering, scaling implications, and architecture tradeoffs. File: `ai-assistant/skills/bosskuai-software-architecture/SKILL.md`
+- `bosskuai-codebase-analysis`: Use this for reading unfamiliar codebases, understanding structure quickly, mapping execution flow, and summarizing how the source code really works. File: `ai-assistant/skills/bosskuai-codebase-analysis/SKILL.md`
+- `bosskuai-code-revamp`: Use this for safe code modernization, structural cleanup, legacy refactors, and revamps that should still respect the current codebase structure and minimize unnecessary churn. File: `ai-assistant/skills/bosskuai-code-revamp/SKILL.md`
+- `bosskuai-coding-best-practices`: Use this for implementation quality, maintainability, readability, testing expectations, error handling, naming, and applying coding best practices in a way that still fits the current project conventions. File: `ai-assistant/skills/bosskuai-coding-best-practices/SKILL.md`
+- `bosskuai-context-limit-continuation`: Use this when a task risks hitting model context or token limits mid-process. It should stop cleanly, summarize current progress, ask the user to retry or continue in a fresh prompt, and provide a compact continuation state. File: `ai-assistant/skills/bosskuai-context-limit-continuation/SKILL.md`
+- `bosskuai-polyglot-engineering`: Use this for implementation guidance across programming languages, frameworks, runtimes, and stack-specific tradeoffs. File: `ai-assistant/skills/bosskuai-polyglot-engineering/SKILL.md`
+- `bosskuai-market-analysis`: Use this for competitor review, market trends, positioning, pricing context, demand signals, and opportunity analysis. File: `ai-assistant/skills/bosskuai-market-analysis/SKILL.md`
+- `bosskuai-marketing-growth`: Use this for marketing strategy, distribution, positioning, go-to-market planning, channels, messaging, and growth loops. File: `ai-assistant/skills/bosskuai-marketing-growth/SKILL.md`
+- `bosskuai-social-content-calendar`: Use this for platform-specific content calendars with recommended local posting dates, times, formats, hooks, and CTAs. File: `ai-assistant/skills/bosskuai-social-content-calendar/SKILL.md`
+- `bosskuai-paid-acquisition-monetization`: Use this for Google Ads, paid acquisition strategy, CAC logic, pricing, packaging, and monetization planning. File: `ai-assistant/skills/bosskuai-paid-acquisition-monetization/SKILL.md`
+- `bosskuai-sales-strategy`: Use this for sales positioning, ICP definition, pipeline strategy, founder-led sales, objection handling, and pricing narrative. File: `ai-assistant/skills/bosskuai-sales-strategy/SKILL.md`
+- `bosskuai-seo-geo`: Use this for SEO, GEO, content discoverability, search demand alignment, and optimization for both search engines and generative engines. File: `ai-assistant/skills/bosskuai-seo-geo/SKILL.md`
+- `bosskuai-ai-model-selection`: Use this for recommending which AI model is suitable for a given task based on reasoning depth, speed, tool use, multimodality, coding needs, cost sensitivity, and risk tolerance. File: `ai-assistant/skills/bosskuai-ai-model-selection/SKILL.md`
 
 ## Local memory
 
-- Memory lives under `.codex-assistant/memory/`.
+- Memory lives under `ai-assistant/memory/`.
 - Read only the memory files relevant to the current task.
 - Update memory only with durable findings.
-- Use `.codex-assistant/memory/agent-profile.md` to customize this starter for a specific company, product, or industry.
-- Use `.codex-assistant/memory/project-understanding.md` to preserve durable knowledge about what a repo or product is actually about after reading the source.
+- Use `ai-assistant/memory/agent-profile.md` to customize this starter for a specific company, product, or industry.
+- Use `ai-assistant/memory/project-understanding.md` to preserve durable knowledge about what a repo or product is actually about after reading the source.
 
 ## Learning promotion policy
 
 - Treat improvement as deliberate promotion, not note accumulation.
-- Treat `.codex-assistant/memory/` as shared durable memory for all supported tool surfaces, not only one assistant.
+- Treat `ai-assistant/memory/` as shared durable memory for all supported tool surfaces, not only one assistant.
 - Use memory for durable facts, conventions, and stable recurring patterns.
 - If repeated usage reveals a missing reusable capability, automatically create or update the appropriate skill, checklist, playbook, pitfall, or rule instead of leaving the learning only in memory.
 - If a failure mode appears more than once, promote it into a checklist or pitfall.
 - If a workflow proves reusable, promote it into a playbook or skill.
 - If a design decision becomes an explicit rule, capture it in an ADR or equivalent decision record.
-- Use `.codex-assistant/references/checklists/learning-promotion-checklist.md` to decide where a learning belongs.
+- Use `ai-assistant/references/checklists/learning-promotion-checklist.md` to decide where a learning belongs.
 
 ## Working rules
 
@@ -145,12 +145,12 @@ This agent should think like:
 
 - This repo is intended to work from any clone path.
 - Keep internal references relative.
-- Customize company, product, audience, market, and industry context in `.codex-assistant/memory/agent-profile.md`.
+- Customize company, product, audience, market, and industry context in `ai-assistant/memory/agent-profile.md`.
 - Add or remove skills without changing the overall repo contract.
 
 ## References
 
-- Checklists: `.codex-assistant/references/checklists/`
-- Playbooks: `.codex-assistant/references/playbooks/`
-- Session handoff: `.codex-assistant/references/session-handoff-template.md`
-- Memory: `.codex-assistant/memory/`
+- Checklists: `ai-assistant/references/checklists/`
+- Playbooks: `ai-assistant/references/playbooks/`
+- Session handoff: `ai-assistant/references/session-handoff-template.md`
+- Memory: `ai-assistant/memory/`
