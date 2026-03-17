@@ -9,3 +9,4 @@
 - Which `agent-profile.md` fields can be filled from evidence now, and which remain `Inferred` or `Unknown`?
 - Which expert skills should be loaded next for the user’s task?
 - What durable understanding should be stored in memory for later sessions?
+- If material facts are unclear, have we asked the user instead of guessing?
