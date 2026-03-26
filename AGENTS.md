@@ -6,6 +6,29 @@ This repo packages a reusable AI cofounder setup that combines product, design, 
 
 Use it when you want the assistant to behave like a pragmatic cofounder rather than a narrow code generator.
 
+## Model assignment (mandatory — applies to all tools)
+
+**Two-phase model split — always enforced for meaningful tasks, regardless of which tool you are using:**
+
+| Tool | Planning model | Execution model |
+|------|---------------|-----------------|
+| Claude Code | `claude-opus-4-6` | `claude-sonnet-4-6` |
+| Codex | `gpt-5.4` (high reasoning effort via planner agent) | `gpt-4.1` |
+| Cursor | Strongest available reasoning model | Fastest capable model |
+
+- **Never skip the planning phase** on meaningful tasks. Always plan first, then execute.
+- State the active model and phase at the start of each meaningful response.
+- Quick/trivial tasks (single-line fixes, factual lookups) may skip the split.
+- Update model names in the relevant tool config when newer models are released.
+
+## Shared memory (mandatory — applies to all tools)
+
+- `ai-assistant/memory/` is **shared durable memory across all tools** — Claude, Codex, and Cursor.
+- At the start of every session, read the memory files relevant to the current task.
+- After meaningful tasks, write durable findings back to `ai-assistant/memory/`.
+- Never treat memory as tool-local. What is written here must be usable by any tool in any session.
+- Memory files: `agent-profile.md`, `project-understanding.md`, `learning-log.md`, `bug-patterns.md`, `market-notes.md`.
+
 ## Skill roster (when to use which)
 
 Use this table to discover expertise. The assistant classifies tasks and loads the minimum relevant skills; you can also **explicitly activate** by saying e.g. "work as the security reviewer" or "focus on launch commercialization" so the right skill set and lens are applied.
@@ -14,6 +37,9 @@ Use this table to discover expertise. The assistant classifies tasks and loads t
 |----------|-------|-------------|
 | **Orchestration** | workspace-assistant | Repo discovery, cross-cutting work, deciding which expert skills to load |
 | **Orchestration** | project-understanding | Reading a codebase to understand what the project is, who it serves, stack, source-of-truth files, what to load next |
+| **Orchestration** | search-first | Check repo-local options, tool capabilities, and maintained solutions before building custom code or workflows |
+| **Orchestration** | skill-stocktake | Audit local skills, commands, and guidance for overlap, staleness, and maintenance improvements |
+| **Orchestration** | rules-distill | Extract repeated principles from skills and references, then propose safe shared rule updates |
 | **Product** | product-strategy | Product framing, requirement shaping, prioritization, scope, go-to-market implications |
 | **Product** | planning-execution | Roadmaps, sequencing, milestone planning, launch planning, strategy → execution slices |
 | **Product** | project-management | Execution tracking, dependencies, milestone control, ownership clarity, keeping projects on track |
@@ -43,6 +69,9 @@ Use this table to discover expertise. The assistant classifies tasks and loads t
 | Situation | What to say (examples) | Primary skills to load |
 |-----------|------------------------|------------------------|
 | New repo or unclear context | "Use project understanding first" / "Understand this codebase" | project-understanding, workspace-assistant |
+| Research existing options before building | "Search first" / "Check if we already have this" / "Should we adopt or build?" | search-first, codebase-analysis |
+| Audit the assistant setup itself | "Run a skill stocktake" / "Audit our skills and commands" | skill-stocktake, workspace-assistant |
+| Promote repeated lessons into rules | "Distill the rules" / "What should become a shared rule?" | rules-distill, workspace-assistant |
 | Shape product or scope | "Work as product strategist" / "Review this idea and tighten the spec" | product-strategy |
 | Plan roadmap or launch | "Create a 90-day plan" / "Focus on launch commercialization" | planning-execution, launch-commercialization |
 | Track delivery | "Use project management" / "Turn this into a delivery plan with milestones" | project-management |
@@ -79,6 +108,8 @@ When the user says e.g. "We're in the build phase" or "Run the launch checklist"
 Use the right skill without the user having to ask:
 
 - Code just written or modified → consider **bug-finding** or **coding-best-practices** (review before finalizing).
+- New utility, dependency, integration, or workflow request → consider **search-first** before building from scratch.
+- Skill count or repo guidance has grown and feels messy → consider **skill-stocktake** or **rules-distill** instead of adding more guidance blindly.
 - Touching auth, billing, user input, or external APIs → consider **cybersecurity-risk** or **agent-security-hardening**.
 - Unfamiliar codebase or unclear product context → **project-understanding** first.
 - Complex feature or refactor → **planning-execution** or **engineering-delivery** (plan then implement).
@@ -100,6 +131,9 @@ Before considering a meaningful task done:
 
 - `bosskuai-workspace-assistant`: Use this for repo discovery, orchestration, and deciding which expert skills to load. File: `ai-assistant/skills/bosskuai-workspace-assistant/SKILL.md`
 - `bosskuai-project-understanding`: Use this for reading a codebase or repository to understand what the project is about, who it serves, what stack and architecture it uses, which files are source-of-truth, which skills should be loaded next, and what durable understanding should be stored in memory. File: `ai-assistant/skills/bosskuai-project-understanding/SKILL.md`
+- `bosskuai-search-first`: Use this when deciding whether to adopt an existing package, service, MCP, internal utility, or pattern before building custom code or workflow logic. File: `ai-assistant/skills/bosskuai-search-first/SKILL.md`
+- `bosskuai-skill-stocktake`: Use this to audit local skills, commands, and nearby guidance for overlap, staleness, weak triggers, and missing maintenance improvements. File: `ai-assistant/skills/bosskuai-skill-stocktake/SKILL.md`
+- `bosskuai-rules-distill`: Use this to extract repeated cross-cutting principles from skills and references, then propose safe rule updates instead of letting important guidance stay fragmented. File: `ai-assistant/skills/bosskuai-rules-distill/SKILL.md`
 - `bosskuai-product-strategy`: Use this for product framing, requirement shaping, prioritization, scope, and go-to-market implications. File: `ai-assistant/skills/bosskuai-product-strategy/SKILL.md`
 - `bosskuai-planning-execution`: Use this for roadmaps, sequencing, milestone planning, launch planning, and turning strategy into execution slices. File: `ai-assistant/skills/bosskuai-planning-execution/SKILL.md`
 - `bosskuai-project-management`: Use this for execution tracking, dependencies, milestone control, ownership clarity, and keeping projects on track. File: `ai-assistant/skills/bosskuai-project-management/SKILL.md`

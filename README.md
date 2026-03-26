@@ -18,6 +18,8 @@ A public, reusable agent setup for product-building teams who want one assistant
 - a bug-finding and code-review specialist
 - a software architect
 - a source-code analysis expert
+- a search-first implementation advisor
+- a skill and rule maintenance operator
 - a code revamp and refactor advisor
 - a coding best practices reviewer
 - a continuation and handoff operator for context-limit cases
@@ -35,8 +37,12 @@ This repo is tool-agnostic by default and includes ready-to-use guidance for:
 - Codex via `AGENTS.md`
 - Codex project config via `.codex/`
 - Claude via `CLAUDE.md`
+- Claude commands via `.claude/commands/`
 - Claude rules via `.claude/rules/`
 - Cursor via `.cursor/rules/`
+- Workspace installation via `scripts/install.sh`, `scripts/install.ps1`, and `scripts/check-workspace.sh`
+- Maintenance helpers via `ai-assistant/scripts/`
+- Optional advisory hooks via `ai-assistant/hooks/`
 
 Use the same `AGENTS.md` and skills in any of these tools; only the entry file (e.g. `CLAUDE.md` or `.cursor/rules/`) is tool-specific. Local skills, checklists, templates, and memory scaffolding let the assistant improve over time instead of only reacting per session.
 
@@ -54,6 +60,7 @@ Use this starter when you want an AI collaborator that can:
 - read unfamiliar source code quickly and explain the real architecture
 - hunt bugs, regressions, logic flaws, and misuse paths
 - study a codebase first, understand its structure, and implement changes in the current style
+- check for repo-local, tool-native, or maintained solutions before inventing new abstractions
 - use a disciplined engineering workflow with planning, test-guided delivery, review, and verification
 - apply coding best practices without fighting the existing project conventions
 - harden the AI-agent workspace itself against unsafe permissions, prompt injection, and risky integrations
@@ -84,6 +91,8 @@ Use this starter when you want an AI collaborator that can:
 - Bug finding and code review
 - Software architecture and system design
 - Source-code analysis and repository understanding
+- Search-first solution selection
+- Skill and rule maintenance
 - Code revamp and safe refactoring
 - Coding best practices and implementation quality
 - Engineering delivery workflow
@@ -106,8 +115,10 @@ bosskuAI/
 ├── AGENTS.md
 ├── CLAUDE.md
 ├── .codex/
+├── .claude/commands/
 ├── .claude/rules/
 ├── .cursor/rules/
+├── scripts/
 └── ai-assistant/
     ├── skills/
     ├── references/
@@ -117,10 +128,17 @@ bosskuAI/
 
 ## How To Use
 
-1. Put this starter at the root of the workspace you actually want the AI to work in.
-2. Treat `AGENTS.md` as the source-of-truth instructions for the active workspace.
-3. Use [WORKSPACE-ONBOARDING.md](WORKSPACE-ONBOARDING.md) for the actual setup flow after cloning.
-4. Let project understanding draft `ai-assistant/memory/agent-profile.md` and `ai-assistant/memory/project-understanding.md` from repo evidence, then refine them.
+1. Clone this starter somewhere local.
+2. Apply the BosskuAI workspace layer into your real project root:
+
+```bash
+./scripts/install.sh /path/to/your/project
+./scripts/check-workspace.sh /path/to/your/project
+```
+
+3. Treat `AGENTS.md` in the target workspace as the source-of-truth instructions.
+4. Use [WORKSPACE-ONBOARDING.md](WORKSPACE-ONBOARDING.md) in the target workspace for the actual setup flow.
+5. Let project understanding draft `ai-assistant/memory/agent-profile.md` and `ai-assistant/memory/project-understanding.md` from repo evidence, then refine them.
 
 ## Terms
 
@@ -187,6 +205,7 @@ This starter is meant to be remixed.
 - "Read this codebase and explain the real architecture"
 - "Find likely bugs and logic flaws before we ship"
 - "Which AI model should I use for this exact task and why"
+- "Audit our local skills and tell me what should be merged, improved, or promoted into rules"
 
 ## License
 

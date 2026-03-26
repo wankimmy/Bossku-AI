@@ -7,14 +7,34 @@ alwaysApply: true
 
 Apply these rules anywhere inside this repo.
 
+## Model assignment (mandatory)
+
+**Two-phase model split — always enforced for meaningful tasks in Cursor:**
+
+| Phase | Model | Why |
+|-------|-------|-----|
+| Planning, architecture, strategy, analysis (Plan mode) | **Claude Opus 4.6**, **GPT-5.4**, or **Gemini Pro 3.1** (pick strongest available for the task) | Deepest reasoning for complex/ambiguous problems |
+| Implementation, execution, code generation | **Cursor Composer 2** (always) | Default execution surface; fast, tool-capable agent for concrete work |
+
+- Always enter **Plan mode** first with **Opus 4.6, GPT-5.4, or Gemini Pro 3.1** (whichever is available and best suited). Never skip to execution on meaningful tasks.
+- **Execution** (implementation, edits, codegen): always use **Composer 2**, not ad-hoc chat models.
+- Quick/trivial tasks (single-line fixes, factual lookups) may skip the split.
+
+## Shared memory (mandatory)
+
+- `ai-assistant/memory/` is shared durable memory across Claude, Codex, and Cursor.
+- Read relevant memory files at the start of every session before acting.
+- Write durable findings back to memory after meaningful tasks.
+- Never treat memory as tool-local — any insight written here must be usable by all tools.
+
 ## Core rules
 
 - For division/skill mapping and explicit activation ("work as the X"), see root **AGENTS.md** → Skill roster and Quick reference: what to ask for.
 - Identify whether the task is project-understanding, product, planning, project-management, launch-commercialization, design, engineering, security, business-logic, bug-finding, architecture, codebase analysis, market, marketing, social-content, paid-acquisition, sales, SEO/GEO, or AI-model-selection oriented before acting.
 - For implementation-heavy work, use the engineering-delivery workflow: plan, test-guide, implement, review, and verify.
 - Load only the relevant local skills instead of loading every expert surface.
-- Default to plan mode first for meaningful tasks before implementation or major conclusions.
-- Before executing a meaningful task, recommend the most suitable AI model for that task by concrete model name if possible in the current tool and explain the tradeoff briefly.
+- Always plan first in Plan mode (Opus 4.6 / GPT-5.4 / Gemini Pro 3.1) before implementation or major conclusions.
+- State the phase and model (plan vs Composer 2) at the start of each meaningful task.
 - If the repo or product context is unclear, use project understanding first.
 - Read the nearest specs, mocks, code, or notes first.
 - Study the current code structure, conventions, and extension points before implementing changes.
@@ -34,7 +54,7 @@ Apply these rules anywhere inside this repo.
 - Treat planning, launch readiness, marketing, and discoverability as part of real product success.
 - Treat project management, ownership clarity, execution cadence, sales friction, and mobile responsiveness as part of real product success.
 - Explain AI model recommendations in terms of capability, cost, speed, modality, and reliability tradeoffs.
-- Do not jump straight into execution on meaningful tasks before both the plan and model recommendation are stated.
+- Do not jump straight into **Composer 2** execution on meaningful tasks before the **Plan mode** outcome (and chosen plan model) is stated.
 - If continuation risk is high because of model or context limits, preserve a compact handoff state before asking the user to continue in a fresh prompt.
 - Verify current market or trend claims when they materially affect recommendations.
 - If something material is not confirmed, ask the user instead of guessing.

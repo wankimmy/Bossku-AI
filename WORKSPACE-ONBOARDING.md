@@ -9,11 +9,15 @@ It is the main setup path for applying this starter inside a real project worksp
 - `AGENTS.md`: root source-of-truth behavior for the workspace
 - `.codex/`: Codex-specific config and engineering agent roles
 - `CLAUDE.md`: root Claude-facing instruction file
+- `.claude/commands/`: optional Claude shortcuts for planning, verification, and quality gates
 - `.claude/rules/bosskuai.md`: Claude rule mirror for repo-wide behavior
 - `.cursor/rules/bosskuai.mdc`: Cursor rule file with `alwaysApply: true`
 - `ai-assistant/skills/`: reusable expert workflows
 - `ai-assistant/memory/`: durable shared memory for the workspace
 - `ai-assistant/references/`: checklists, playbooks, pitfalls, and handoff templates
+- `ai-assistant/scripts/`: deterministic helper scripts for maintenance workflows
+- `ai-assistant/hooks/`: optional advisory hook-ready reminders with no automatic state mutation
+- `scripts/`: install and workspace validation helpers in the starter repo
 
 ## First time? Start here
 
@@ -41,13 +45,19 @@ my-product/
 ## Fast path after `git clone`
 
 1. Clone the BosskuAI starter.
-2. Copy these into the root of your actual project workspace:
-   - `AGENTS.md`
-   - `.codex/`
-   - `CLAUDE.md`
-   - `.claude/`
-   - `.cursor/`
-   - `ai-assistant/`
+2. Apply the workspace layer into your actual project workspace:
+
+```bash
+./scripts/install.sh /path/to/your/project
+./scripts/check-workspace.sh /path/to/your/project
+```
+
+On Windows PowerShell:
+
+```powershell
+.\scripts\install.ps1 C:\path\to\your\project
+```
+
 3. Open the target project root in Cursor, Claude, or Codex.
 4. Run the workspace onboarding prompt from this file.
 5. Let the assistant draft:
@@ -79,6 +89,7 @@ Use this only if you want to inspect the starter itself before applying it to a 
 - Open the target project root that contains `CLAUDE.md` and `.claude/rules/`.
 - Claude should use `CLAUDE.md` at the workspace root.
 - The mirrored rule in `.claude/rules/bosskuai.md` reinforces the same behavior.
+- If `.claude/commands/` is present, use those commands as shortcuts for common workflows such as planning and verification.
 - Claude should then follow the local skills under `ai-assistant/skills/`.
 
 ### Codex
@@ -117,7 +128,9 @@ Then create or update [project-understanding.md](ai-assistant/memory/project-und
 6. Review and correct any `Inferred:` or `Unknown` fields.
 7. For implementation-heavy work, ask it to use `bosskuai-engineering-delivery`.
 8. For agent workspace or instruction security, ask it to use `bosskuai-agent-security-hardening`.
-9. Only then move into implementation, review, planning, or strategy prompts.
+9. After adding enough custom guidance, use `bosskuai-skill-stocktake` or `bosskuai-rules-distill` to keep the setup clean and reusable.
+10. If you enable hooks, keep them advisory and opt-in; avoid automatic memory or rule edits.
+11. Only then move into implementation, review, planning, or strategy prompts.
 
 ## Copy-paste prompts
 
@@ -126,7 +139,7 @@ Then create or update [project-understanding.md](ai-assistant/memory/project-und
 Use this right after opening the project workspace in Cursor, Claude, or Codex.
 
 ```text
-Use the workspace instructions in AGENTS.md, CLAUDE.md, .claude/rules/, .cursor/rules/, and the relevant skills under ai-assistant/skills/.
+Use the workspace instructions in AGENTS.md, CLAUDE.md, .claude/commands/, .claude/rules/, .cursor/rules/, and the relevant skills under ai-assistant/skills/.
 
 Start with bosskuai-workspace-assistant. First classify this task, recommend the best AI model for it by concrete model name available in this tool with a short tradeoff note and fallback, and then use bosskuai-project-understanding if the repo context is still unclear.
 
@@ -210,6 +223,8 @@ If the answer does not explicitly reflect the local workspace files and skills, 
 
 ## Troubleshooting
 
+- **I want to verify the layer is installed correctly** — Run `./scripts/check-workspace.sh /path/to/project` from the starter repo.
+- **The starter is accumulating too many overlapping skills or rules** — Run a skill stocktake or rules distillation pass using the sample prompts so you can tighten the guidance before adding more.
 - **Assistant doesn’t follow the roster or quick reference** — Point it to `AGENTS.md` → Skill roster and Quick reference: what to ask for. Ask: "Which skills are you loading for this task?"
 - **Repo or product context is unclear** — Run project understanding first: "Use bosskuai-project-understanding. Read the repo and draft agent-profile and project-understanding."
 - **Rules or skills seem ignored** — Confirm the workspace root you opened contains `AGENTS.md`, and for Cursor `.cursor/rules/`, for Claude `CLAUDE.md` and `.claude/rules/`. Reopen that root and retry the quick compatibility check above.

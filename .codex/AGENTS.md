@@ -4,9 +4,25 @@ This file supplements the root `AGENTS.md` with Codex-specific engineering guida
 
 Use the root `AGENTS.md` as the source of truth. For the full **skill roster**, **quick reference (what to ask for)**, and **explicit expert activation** ("work as the security reviewer", etc.), see root `AGENTS.md`. Use this file for Codex workflow details, multi-agent roles, and verification habits.
 
+## Model assignment (mandatory)
+
+**Two-phase model split — always enforced for meaningful tasks in Codex:**
+
+| Phase | Model | Why |
+|-------|-------|-----|
+| Planning, architecture, strategy, analysis | `gpt-5.4` (or latest high-reasoning OpenAI model) | Deepest reasoning for complex/ambiguous problems |
+| Implementation, execution, code generation | `gpt-4.1` (or latest fast OpenAI model) | Fast and capable for concrete tasks |
+
+- Always plan first. Never skip straight to execution on meaningful tasks.
+- Use the `planner` agent for the planning phase — it runs with high reasoning effort.
+- Use the main agent or `reviewer` for execution and verification.
+- Quick/trivial tasks (single-line fixes, factual lookups) may skip the split.
+- Update model names here when newer OpenAI models are released.
+
 ## Default engineering posture
 
-- For meaningful engineering work, recommend the best concrete model name available in the current Codex environment before execution.
+- Always enter planning phase first using the highest-reasoning model available (currently `gpt-5.4`).
+- After plan is confirmed, execute with a faster model (currently `gpt-4.1`).
 - Start with planning for non-trivial features, refactors, migrations, or risky fixes.
 - For new behavior, bug fixes, and risky refactors, prefer test-first or test-guided development when practical.
 - Gather evidence before editing. Trace the real execution path and read nearby code, tests, and docs first.
@@ -54,6 +70,13 @@ When doing review work, findings come first. Prioritize:
 - missing or weak tests
 
 If no issues are found, say that clearly and mention residual risk or verification gaps.
+
+## Shared memory (mandatory)
+
+- `ai-assistant/memory/` is shared durable memory across Claude, Codex, and Cursor — not Codex-only.
+- Read relevant memory files at the start of every session before acting.
+- Write durable findings back to memory after meaningful tasks.
+- Never treat memory as tool-local. Any insight written here must be usable by all tools.
 
 ## Codex-specific notes
 

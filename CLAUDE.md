@@ -2,6 +2,20 @@
 
 Use `AGENTS.md` in the current workspace as the source-of-truth instruction set.
 
+## Model assignment (mandatory)
+
+**Always use a two-phase model split for meaningful tasks:**
+
+| Phase | Model | Why |
+|-------|-------|-----|
+| Planning, architecture, strategy, analysis | `claude-opus-4-6` | Deepest reasoning, best for ambiguous/complex problems |
+| Implementation, execution, code generation | `claude-sonnet-4-6` | Fast, capable, cost-efficient for concrete tasks |
+
+- NEVER skip the planning phase and jump straight to execution on meaningful tasks.
+- Always enter plan mode first. State the plan, get alignment, then switch to execution.
+- When in doubt about which phase applies, default to Opus 4.6 and plan.
+- Quick/trivial tasks (single-line fixes, lookup questions) may skip the split.
+
 ## Default posture
 
 - Think like a pragmatic cofounder, not just a code assistant.
@@ -14,13 +28,12 @@ Use `AGENTS.md` in the current workspace as the source-of-truth instruction set.
 - Use project understanding first when the codebase or repo purpose is still unclear.
 - Challenge weak assumptions.
 - Prefer concrete tradeoffs over generic advice.
-- Default to plan mode first for meaningful tasks before implementation or major recommendations.
-- Before executing a meaningful task, recommend the most suitable AI model for that task by concrete model name if possible in the current tool and explain the tradeoff briefly.
+- Always plan first with `claude-opus-4-6`, then execute with `claude-sonnet-4-6`.
 - Triple-check important conclusions before finalizing them.
 - Treat validation, secret handling, injection resistance, and safe defaults as part of engineering correctness.
 - Treat AI-agent workspace security as a first-class concern: least privilege, minimal integrations, and distrust of external content.
 - Verify current market and trend claims when they matter.
-- Do not jump straight into execution on meaningful tasks before both the plan and model recommendation are stated.
+- Do not jump straight into execution on meaningful tasks before both the plan and model assignment are stated.
 - If continuation risk is high because of model or context limits, preserve a compact handoff state before asking the user to continue in a fresh prompt.
 
 ## Task routing
@@ -29,6 +42,9 @@ For the full **skill roster by division** and **quick reference (what to ask for
 
 - product strategy
 - project understanding
+- search-first
+- skill-stocktake
+- rules-distill
 - planning and execution
 - project management
 - launch commercialization
@@ -52,10 +68,16 @@ For the full **skill roster by division** and **quick reference (what to ask for
 - SEO/GEO
 - AI model selection
 
+## Shared memory (mandatory)
+
+- `ai-assistant/memory/` is **shared durable memory across all tools** — Claude, Codex, and Cursor.
+- Read relevant memory files at the start of every session, regardless of which tool is being used.
+- Write durable findings back to memory after meaningful tasks.
+- Never treat memory as tool-local — insights written here must be usable by any tool in any session.
+
 ## Durable learning
 
 - Keep durable learnings in `ai-assistant/memory/`.
-- Treat `ai-assistant/memory/` as shared durable memory across supported AI tool surfaces.
 - If repeated usage reveals a missing reusable capability, create or update the right skill, checklist, playbook, pitfall, or rule instead of leaving it only in memory.
 - Promote repeated lessons into checklists, pitfalls, playbooks, or skill updates.
 - Use `ai-assistant/memory/agent-profile.md` to customize the active workspace for the user's actual company or domain.

@@ -5,6 +5,11 @@
 # Keep this project-local config lightweight and portable.
 # Add personal MCP servers or machine-specific tooling in ~/.codex/config.toml.
 
+# Model assignment:
+# - Planning phase: gpt-5.4 (high reasoning effort) via planner agent
+# - Execution phase: gpt-4.1 (fast, capable for concrete implementation)
+model = "gpt-4.1"
+
 approval_policy = "on-request"
 sandbox_mode = "workspace-write"
 web_search = "live"

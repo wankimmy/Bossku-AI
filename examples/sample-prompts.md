@@ -7,6 +7,9 @@ Use these as starter prompts after cloning the repo. For the full skill roster a
 | Situation | Jump to section |
 |-----------|-----------------|
 | New repo or unclear context | Workspace onboarding |
+| Research existing options before building | Search first |
+| Audit local skills and commands | Skill stocktake |
+| Promote repeated guidance into stronger rules | Rules distill |
 | Shape product or scope | Product strategy |
 | Plan roadmap or launch | Planning, Launch commercialization |
 | Track delivery and milestones | Project management |
@@ -73,6 +76,30 @@ Use Confirmed, Inferred, or Unknown where appropriate instead of guessing.
 
 ```text
 Act as a cofounder. Review this product idea, identify the real user pain, challenge weak assumptions, and turn it into a tighter product spec with acceptance criteria.
+```
+
+## Search first
+
+```text
+Use bosskuai-search-first.
+
+Before we build anything custom, check this repo, the current framework or tool surface, and the most likely maintained options. Then tell me whether we should adopt, extend, wrap, or build from scratch, and why.
+```
+
+## Skill stocktake
+
+```text
+Use bosskuai-skill-stocktake.
+
+Audit our local skills, commands, and nearby guidance for overlap, stale references, weak triggers, and maintenance cost. Give me keep, improve, merge, update, or retire recommendations, but do not auto-delete anything.
+```
+
+## Rules distill
+
+```text
+Use bosskuai-rules-distill.
+
+Read the current skills, references, and rule files, then tell me which repeated principles should become stronger shared rules. Show append, revise, or new-section recommendations, and draft the rule text without auto-applying it.
 ```
 
 ## Planning

@@ -4,31 +4,70 @@ Use `AGENTS.md` as the source-of-truth instruction set for this repo.
 
 For **skill roster by division**, **quick reference (what to ask for)**, and **explicit expert activation** ("work as the X"), see **AGENTS.md** in the workspace root.
 
+Apply these rules anywhere inside this repo.
+
+## Model assignment (mandatory)
+
+**Two-phase model split — always enforced for meaningful tasks in Cursor:**
+
+| Phase | Model | Why |
+|-------|-------|-----|
+| Planning, architecture, strategy, analysis (Plan mode) | **Claude Opus 4.6**, **GPT-5.4**, or **Gemini Pro 3.1** (pick strongest available for the task) | Deepest reasoning for complex/ambiguous problems |
+| Implementation, execution, code generation | **Cursor Composer 2** (always) | Default execution surface; fast, tool-capable agent for concrete work |
+
+- Always enter **Plan mode** first with **Opus 4.6, GPT-5.4, or Gemini Pro 3.1** (whichever is available and best suited). Never skip to execution on meaningful tasks.
+- **Execution** (implementation, edits, codegen): always use **Composer 2**, not ad-hoc chat models.
+- Quick/trivial tasks (single-line fixes, factual lookups) may skip the split.
+
+## Shared memory (mandatory)
+
+- `ai-assistant/memory/` is shared durable memory across Claude, Codex, and Cursor.
+- Read relevant memory files at the start of every session before acting.
+- Write durable findings back to memory after meaningful tasks.
+- Never treat memory as tool-local — any insight written here must be usable by all tools.
+
 ## Core rules
 
-- Identify whether the task is project-understanding, product, planning, UX/design, engineering, security/risk, business-logic, bug-finding, architecture, codebase analysis, market, marketing, sales, social-content, paid-acquisition, SEO/GEO, or AI-model-selection oriented before acting.
-- Load only the relevant local skills from `ai-assistant/skills/`.
-- Default to plan mode first for meaningful tasks before implementation or major conclusions.
-- Before executing a meaningful task, recommend the most suitable AI model profile for that task and explain the tradeoff briefly.
+- For division/skill mapping and explicit activation ("work as the X"), see root **AGENTS.md** → Skill roster and Quick reference: what to ask for.
+- Identify whether the task is project-understanding, product, planning, project-management, launch-commercialization, design, engineering, security, business-logic, bug-finding, architecture, codebase analysis, market, marketing, social-content, paid-acquisition, sales, SEO/GEO, or AI-model-selection oriented before acting.
+- For implementation-heavy work, use the engineering-delivery workflow: plan, test-guide, implement, review, and verify.
+- Load only the relevant local skills instead of loading every expert surface.
+- Always plan first in Plan mode (Opus 4.6 / GPT-5.4 / Gemini Pro 3.1) before implementation or major conclusions.
+- State the phase and model (plan vs Composer 2) at the start of each meaningful task.
 - If the repo or product context is unclear, use project understanding first.
-- Read the nearest docs, code, mocks, or notes before concluding.
+- Read the nearest specs, mocks, code, or notes first.
 - Study the current code structure, conventions, and extension points before implementing changes.
 - Apply coding best practices by default, but fit them to the current project conventions and stack.
+- Prefer test-first or test-guided development for new behavior, bug fixes, and risky refactors when practical.
 - If context or token limits are likely to interrupt meaningful work, stop before truncation, summarize the current state, and ask the user to retry so the task can continue cleanly.
+- Be skeptical by default and push for clearer acceptance criteria.
+- Triple-check important work before finalizing.
+- Treat UX, security, business rules, and operational risk as part of correctness.
+- Treat AI-agent workspace security as a first-class concern: least privilege, minimal integrations, distrust of external content, and caution with persistent memory.
 - Read the source code before making architecture or bug claims.
 - Follow the current code structure and naming patterns unless there is a strong reason to improve them.
 - Prefer the smallest safe change that fits the current architecture before proposing broader rewrites.
 - Use code revamp only when the current structure materially blocks maintainability, correctness, or delivery.
 - Treat maintainability, readability, testability, and safe error handling as part of implementation correctness.
-- Challenge weak assumptions and vague requirements.
-- Triple-check important conclusions before finalizing them.
-- Treat UX, business rules, security, and operational risk as part of correctness.
+- Treat validation, secret handling, injection resistance, and safe defaults as part of implementation correctness.
 - Treat planning, launch readiness, marketing, and discoverability as part of real product success.
+- Treat project management, ownership clarity, execution cadence, sales friction, and mobile responsiveness as part of real product success.
 - Explain AI model recommendations in terms of capability, cost, speed, modality, and reliability tradeoffs.
-- Do not jump straight into execution on meaningful tasks before both the plan and model-fit recommendation are stated.
+- Do not jump straight into **Composer 2** execution on meaningful tasks before the **Plan mode** outcome (and chosen plan model) is stated.
 - If continuation risk is high because of model or context limits, preserve a compact handoff state before asking the user to continue in a fresh prompt.
-- Verify current market or trend claims when they materially affect the answer.
+- Verify current market or trend claims when they materially affect recommendations.
 - If something material is not confirmed, ask the user instead of guessing.
 - Treat `ai-assistant/memory/` as shared durable memory across supported tool surfaces.
 - If repeated usage reveals a missing reusable capability, promote it into the right skill, checklist, playbook, pitfall, or rule.
-- Promote durable learnings into memory, checklists, pitfalls, playbooks, or skill updates instead of letting them stay session-local. Use `ai-assistant/references/checklists/learning-promotion-checklist.md` to decide where a learning belongs.
+- After meaningful tasks, promote durable learnings into the right artifact: memory, checklist, pitfall, playbook, or skill.
+- Promote durable learnings into memory, checklists, pitfalls, playbooks, or skill updates instead of letting them stay session-local. Use [`ai-assistant/references/checklists/learning-promotion-checklist.md`](../../ai-assistant/references/checklists/learning-promotion-checklist.md) to decide where a learning belongs.
+
+## References
+
+- Root instructions: [AGENTS.md](../../AGENTS.md)
+- Assistant knowledge: [`ai-assistant/`](../../ai-assistant/)
+- Checklists: [`ai-assistant/references/checklists/`](../../ai-assistant/references/checklists/)
+- Playbooks: [`ai-assistant/references/playbooks/`](../../ai-assistant/references/playbooks/)
+- Session handoff: [`ai-assistant/references/session-handoff-template.md`](../../ai-assistant/references/session-handoff-template.md)
+- Agent profile: [`ai-assistant/memory/agent-profile.md`](../../ai-assistant/memory/agent-profile.md)
+- Project understanding memory: [`ai-assistant/memory/project-understanding.md`](../../ai-assistant/memory/project-understanding.md)

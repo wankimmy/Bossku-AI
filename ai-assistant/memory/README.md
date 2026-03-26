@@ -1,6 +1,14 @@
 # Memory
 
-Durable, shared context for the assistant across sessions and supported tools (Cursor, Claude, Codex). Read only what’s relevant to the current task; update with durable findings.
+**Shared durable memory — mandatory for all tools (Claude, Codex, Cursor).**
+
+This directory is the single source of truth for durable context. It is not tool-local.
+
+**Rules:**
+- Read relevant memory files at the start of every session, regardless of which tool you are using.
+- Write durable findings back here after meaningful tasks.
+- Never store session-only or ephemeral state here — only durable facts, patterns, and conventions.
+- Any insight written here must be usable by Claude Code, Codex, and Cursor equally.
 
 | File | Purpose |
 |------|---------|
