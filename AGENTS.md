@@ -50,6 +50,7 @@ Use this table to discover expertise. The assistant classifies tasks and loads t
 | **Engineering** | coding-best-practices | Implementation quality, maintainability, testing, error handling, naming, fitting project conventions |
 | **Engineering** | polyglot-engineering | Guidance across languages, frameworks, runtimes, stack-specific tradeoffs |
 | **Design** | ui-ux-design-to-code | UI/UX review, interaction quality, design systems, accessibility (e.g. WCAG), designs → implementation-ready code guidance |
+| **Design** | 3d-web-development | 3D websites, WebGL, Three.js/R3F, scroll-driven 3D animations, GSAP motion, post-processing, Spline, particles, Awwwards-quality immersive experiences |
 | **Security** | cybersecurity-risk | Auth, abuse cases, privacy, trust boundaries, security review, operational risk |
 | **Security** | agent-security-hardening | Securing the AI-agent workspace: instructions, MCPs, external content, memory, least-privilege |
 | **Quality** | business-logic-review | Workflow gaps, state transitions, edge cases, approval flows, hidden rule failures |
@@ -77,6 +78,7 @@ Use this table to discover expertise. The assistant classifies tasks and loads t
 | Track delivery | "Use project management" / "Turn this into a delivery plan with milestones" | project-management |
 | Build a feature | "Plan then implement" / "Use engineering delivery" | engineering-delivery, coding-best-practices |
 | **Design** / UI (design-to-code, a11y) | "Work as design/UX" / "Turn this design into implementation guidance" / "Review for UX and accessibility" | ui-ux-design-to-code |
+| **3D website** / WebGL / immersive | "Create a 3D website" / "Work as 3D web expert" / "Build an Awwwards-quality 3D experience" / "Add Three.js/R3F to this project" | 3d-web-development, ui-ux-design-to-code |
 | Security or abuse review | "Work as security reviewer" / "Audit for abuse and privacy risks" | cybersecurity-risk |
 | Harden the AI workspace | "Audit agent security" / "Use agent security hardening" | agent-security-hardening |
 | Find bugs or logic flaws | "Hunt for bugs" / "Review business logic and edge cases" | bug-finding, business-logic-review |
@@ -97,7 +99,7 @@ For larger efforts you can run the assistant in a phase-aware way. The assistant
 |-------|--------|-------------------|
 | **Discovery** | What we're building, for whom, evidence | project-understanding, product-strategy, market-analysis |
 | **Strategy** | Roadmap, scope, priorities, ownership | planning-execution, project-management, software-architecture |
-| **Build** | Implementation with quality gates | engineering-delivery, ui-ux-design-to-code, coding-best-practices, bug-finding |
+| **Build** | Implementation with quality gates | engineering-delivery, ui-ux-design-to-code, 3d-web-development, coding-best-practices, bug-finding |
 | **Harden** | Security, logic, readiness | cybersecurity-risk, business-logic-review, agent-security-hardening |
 | **Launch** | Readiness, GTM, PMF signals | launch-commercialization, seo-geo, **Marketing**: marketing-growth, social-content-calendar, paid-acquisition-monetization; **Sales**: sales-strategy |
 
@@ -107,6 +109,7 @@ When the user says e.g. "We're in the build phase" or "Run the launch checklist"
 
 Use the right skill without the user having to ask:
 
+- Task involves creating a website with 3D, WebGL, Three.js, R3F, Spline, immersive experience, or Awwwards-style design → consider **3d-web-development** alongside **ui-ux-design-to-code**.
 - Code just written or modified → consider **bug-finding** or **coding-best-practices** (review before finalizing).
 - New utility, dependency, integration, or workflow request → consider **search-first** before building from scratch.
 - Skill count or repo guidance has grown and feels messy → consider **skill-stocktake** or **rules-distill** instead of adding more guidance blindly.
@@ -140,6 +143,7 @@ Before considering a meaningful task done:
 - `bosskuai-launch-commercialization`: Use this for balancing engineering readiness, SEO/GEO, marketing, sales, monetization, country strategy, and product-market-fit planning before launch. File: `ai-assistant/skills/bosskuai-launch-commercialization/SKILL.md`
 - `bosskuai-engineering-delivery`: Use this for implementation-heavy work that should follow planning-first execution, test-guided development where practical, review-before-finalization, and explicit verification. File: `ai-assistant/skills/bosskuai-engineering-delivery/SKILL.md`
 - `bosskuai-ui-ux-design-to-code`: Use this for UI/UX review, interaction quality, and translating designs into implementation-ready code guidance. File: `ai-assistant/skills/bosskuai-ui-ux-design-to-code/SKILL.md`
+- `bosskuai-3d-web-development`: Use this for creating immersive 3D websites, WebGL experiences, Three.js/React Three Fiber scenes, scroll-driven 3D animations, GSAP-powered motion, post-processing effects, Spline integrations, interactive particle systems, and Awwwards-quality 3D web experiences. File: `ai-assistant/skills/bosskuai-3d-web-development/SKILL.md`
 - `bosskuai-cybersecurity-risk`: Use this for auth, abuse cases, privacy, trust boundaries, security review, and operational risk analysis. File: `ai-assistant/skills/bosskuai-cybersecurity-risk/SKILL.md`
 - `bosskuai-agent-security-hardening`: Use this for securing the AI-agent workspace itself, including instructions, MCPs, external content, memory, and least-privilege configuration. File: `ai-assistant/skills/bosskuai-agent-security-hardening/SKILL.md`
 - `bosskuai-business-logic-review`: Use this for workflow gaps, state transitions, edge cases, approval flows, and hidden rule failures. File: `ai-assistant/skills/bosskuai-business-logic-review/SKILL.md`
@@ -189,6 +193,7 @@ Before considering a meaningful task done:
   - launch commercialization
   - engineering delivery
   - UX/design
+  - 3D web development (Three.js, R3F, WebGL, Spline, GSAP 3D, immersive experiences)
   - implementation
   - security/risk
   - agent security hardening
@@ -258,6 +263,7 @@ This agent should think like:
 - a product manager when clarifying value and scope
 - an operator when turning ambition into an executable plan
 - a designer when judging usability and interface quality
+- a 3D web expert when creating immersive WebGL experiences, choosing the right 3D stack, and building Awwwards-quality interactive sites
 - a senior engineer when evaluating implementation feasibility
 - a security reviewer when identifying abuse, privacy, and trust issues
 - a domain analyst when checking workflow correctness

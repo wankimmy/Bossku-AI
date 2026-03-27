@@ -11,7 +11,7 @@ Use this table to find checklists and playbooks by division. Skills in AGENTS.md
 | **Product / PM** | project-management-checklist | project-management-playbook |
 | **Engineering** | engineering-delivery-checklist, coding-best-practices-checklist, code-revamp-checklist, verification-checklist | engineering-delivery-playbook, coding-best-practices-playbook, code-revamp-playbook, verification-playbook |
 | **Engineering** | codebase-analysis-checklist, polyglot-engineering-checklist | codebase-analysis-playbook, polyglot-engineering-playbook |
-| **Design** | ui-fidelity-checklist | ui-delivery-playbook |
+| **Design** | ui-fidelity-checklist, 3d-web-development-checklist | ui-delivery-playbook, 3d-web-development-playbook |
 | **Security** | security-risk-checklist, agent-security-hardening-checklist | security-review-playbook, agent-security-hardening-playbook |
 | **Quality** | bug-finding-checklist, business-logic-checklist | bug-finding-playbook |
 | **Architecture** | architecture-review-checklist | architecture-playbook |

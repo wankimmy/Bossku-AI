@@ -50,6 +50,7 @@ For the full **skill roster by division** and **quick reference (what to ask for
 - launch commercialization
 - engineering delivery
 - UI/UX and design-to-code
+- 3D web development (Three.js, R3F, WebGL, Spline, GSAP 3D, immersive Awwwards-quality experiences)
 - cybersecurity and risk
 - agent security hardening
 - business logic review
