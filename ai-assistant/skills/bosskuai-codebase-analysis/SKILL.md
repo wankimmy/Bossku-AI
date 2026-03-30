@@ -9,7 +9,7 @@ Use this skill when the first task is understanding the codebase correctly befor
 
 ## How this differs from nearby skills
 
-- **`bosskuai-project-understanding`**: broader project context including purpose, stakeholders, and recommended next skills; this skill goes deeper into source code structure and execution paths.
+- **`bosskuai-project-understanding`**: answers *what the project is for*, who uses it, stack, docs, and where truth lives — enough context to choose the next skills. **This skill** answers *how the code actually runs*: entry points, call chains, module boundaries, side effects, and extension points. Use project-understanding first when purpose is unclear; use codebase-analysis when you must trace behavior or map structure accurately.
 - **`bosskuai-software-architecture`**: evaluates and redesigns architectural decisions; this skill reads and maps what currently exists without passing judgment.
 - **`bosskuai-bug-finding`**: locates defects in a traced execution path; load this skill first to understand the path, then load bug-finding to locate defects within it.
 - **`bosskuai-code-revamp`**: proposes structural changes; this skill is the prerequisite read before any revamp proposal.
@@ -113,3 +113,4 @@ Open uncertainties:
 
 - `../../references/playbooks/codebase-analysis-playbook.md`
 - `../../references/checklists/codebase-analysis-checklist.md`
+- `../../references/pitfalls/performance-pitfalls.md` (hot paths, N+1, unbounded reads while tracing)

@@ -1,6 +1,8 @@
 # BosskuAI
 
-Use `AGENTS.md` in the current workspace as the source-of-truth instruction set.
+Use `AGENTS.md` in the current workspace as the **tool-neutral source of truth** for the skill roster, quick reference, shared memory rules, and success criteria.
+
+**Duplication on purpose:** This file is the **Claude Code entry point** — it repeats the two-phase model split and core posture so Claude loads the right defaults without requiring `AGENTS.md` to be opened first. For the full skill table, phased pipelines, and “future skill areas,” read **`AGENTS.md`**. For Cursor-specific execution rules, see `.cursor/rules/bosskuai.mdc`. For Codex naming, see `.codex/AGENTS.md`.
 
 ## Model assignment (mandatory)
 

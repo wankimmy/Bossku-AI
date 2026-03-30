@@ -27,5 +27,6 @@ Other:
 
 - **Rigorous code review** (`bosskuai-rigorous-code-review` skill): uses `coding-best-practices-checklist`, `verification-checklist`, `bug-finding-checklist`, and `architecture-review-checklist` as review gates.
 - **Session handoff**: `session-handoff-template.md`
-- **Pitfalls**: `pitfalls/` (general-known-pitfalls.md)
-- **ADRs**: `adr/`
+- **Pitfalls**: `pitfalls/` — see `pitfalls/README.md` (domain files: security, performance, business-logic, product, ai-workspace + `general-known-pitfalls.md`)
+- **ADRs**: `adr/` — see `adr/README.md` for index
+- **Skill reference integrity**: from repo root, `./scripts/verify-skill-references.sh` checks that every `../../references/...` link in `skills/**/SKILL.md` resolves

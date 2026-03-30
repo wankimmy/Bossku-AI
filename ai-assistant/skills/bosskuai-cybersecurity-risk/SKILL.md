@@ -98,3 +98,4 @@ Confirmed vs inferred: [label each]
 - `../../references/playbooks/security-review-playbook.md`
 - `../../references/checklists/security-risk-checklist.md`
 - `../../references/checklists/agent-security-hardening-checklist.md`
+- `../../references/pitfalls/security-pitfalls.md`

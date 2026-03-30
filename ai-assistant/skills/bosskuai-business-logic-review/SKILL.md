@@ -14,6 +14,16 @@ Use this skill when the main risk is **incorrect workflow rules**, not syntax er
 - **`bosskuai-product-strategy`**: defines what the rules should be; this skill audits what they actually are.
 - **`bosskuai-cybersecurity-risk`**: checks whether rules can be exploited; load alongside when auth, permissions, or financial logic is involved.
 
+## Concrete examples (hidden logic failures)
+
+Use these as patterns to hunt for in any domain — they are not exhaustive.
+
+1. **Fulfillment without payment verification** — Orders move to `SHIPPED` or digital entitlements activate when `payment_status` is still `PENDING` or when only a client-side “success” page is shown. Webhook delay or PSP failure leaves inventory or access granted without settled funds.
+
+2. **Partial cancellation, full charge** — User removes line items from a subscription or cart after a billing job runs; the next invoice still uses stale quantities or proration is skipped because cancel and bill are separate cron paths with no shared invariant check.
+
+3. **Concurrent inventory oversell** — Two checkouts pass “stock > 0” reads and both decrement; no transactional guard or idempotent reservation, so sellable quantity goes negative or orders are accepted when stock is zero.
+
 ## Mindset
 
 - A business logic bug is often silent — it produces wrong outcomes without throwing errors.
@@ -76,3 +86,4 @@ Recommended rule changes:
 ## References
 
 - `../../references/checklists/business-logic-checklist.md`
+- `../../references/pitfalls/business-logic-pitfalls.md`

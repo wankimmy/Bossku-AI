@@ -12,6 +12,12 @@ Use this skill when the user wants a social media plan they can copy and execute
 - **`bosskuai-marketing-growth`**: overall marketing and channel strategy; this skill produces the executable content calendar within that strategy.
 - **`bosskuai-seo-geo`**: organic search discoverability; this skill handles social discovery and community-driven distribution.
 
+## Maintenance (time-sensitive)
+
+**Annual review (required):** Refresh platform defaults (formats, lengths, algorithm-leaning tactics), posting-time guidance, and feature names at least once per calendar year — **recommended window: Q1**. Social products change surfaces and ranking signals often.
+
+**Last reviewed:** 2026-03.
+
 ## Mindset
 
 - Social media content is not about posting — it is about building an audience that trusts you enough to buy.

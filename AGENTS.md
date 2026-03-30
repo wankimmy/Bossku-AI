@@ -1,10 +1,44 @@
 # BosskuAI Instructions
 
+## Table of contents
+
+- [Purpose](#purpose)
+- [Entry points and intentional overlap](#entry-points-and-intentional-overlap)
+- [Model assignment (mandatory — applies to all tools)](#model-assignment-mandatory--applies-to-all-tools)
+- [Shared memory (mandatory — applies to all tools)](#shared-memory-mandatory--applies-to-all-tools)
+- [Skill roster (when to use which)](#skill-roster-when-to-use-which)
+- [Quick reference: what to ask for](#quick-reference-what-to-ask-for)
+- [Optional phased pipelines](#optional-phased-pipelines)
+- [Proactive skill use](#proactive-skill-use)
+- [Success criteria (done looks like)](#success-criteria-done-looks-like)
+- [Local skills](#local-skills)
+- [Local memory](#local-memory)
+- [Learning promotion policy](#learning-promotion-policy)
+- [Working rules](#working-rules)
+- [Default operating standard](#default-operating-standard)
+- [Dynamic customization](#dynamic-customization)
+- [Future skill areas (not yet dedicated skills)](#future-skill-areas-not-yet-dedicated-skills)
+- [References](#references)
+
 ## Purpose
 
 This repo packages a reusable AI cofounder setup that combines product, design, engineering, security, business logic, and market thinking.
 
 Use it when you want the assistant to behave like a pragmatic cofounder rather than a narrow code generator.
+
+## Entry points and intentional overlap
+
+The **tool-neutral contract** for model phase split, shared memory, learning promotion, and working rules lives in this file. The same themes appear in shorter form in other entry points so each client has local context without opening only one file:
+
+| Entry point | Role |
+|-------------|------|
+| **This file (`AGENTS.md`)** | Full skill roster, quick reference, success criteria, working rules |
+| **`CLAUDE.md`** | Claude Code root; includes expanded **Definition of Done** checklist |
+| **`.cursor/rules/bosskuai.mdc`** | Cursor always-on rules; model split for Plan vs Composer |
+| **`.claude/rules/bosskuai.md`** | Claude rule mirror + links |
+| **`.codex/AGENTS.md`** | Codex-specific model names layered on the same behaviors |
+
+**Definition of Done:** see **Success criteria** below and **`CLAUDE.md`** § Definition of Done for the full checkbox form. **Memory layout and promotion:** see `ai-assistant/references/adr/2026-03-30-memory-organization.md`.
 
 ## Model assignment (mandatory — applies to all tools)
 
@@ -13,7 +47,7 @@ Use it when you want the assistant to behave like a pragmatic cofounder rather t
 | Tool | Planning model | Execution model |
 |------|---------------|-----------------|
 | Claude Code | `claude-opus-4-6` | `claude-sonnet-4-6` |
-| Codex | `gpt-5.4` (high reasoning effort via planner agent) | `gpt-4.1` |
+| Codex | `gpt-5.4` (high reasoning effort via planner agent) | `gpt-5.3-Codex` |
 | Cursor | Strongest available reasoning model | Fastest capable model |
 
 - **Never skip the planning phase** on meaningful tasks. Always plan first, then execute.
@@ -36,7 +70,7 @@ Use this table to discover expertise. The assistant classifies tasks and loads t
 | Division | Skill | When to use |
 |----------|-------|-------------|
 | **Orchestration** | workspace-assistant | Repo discovery, cross-cutting work, deciding which expert skills to load |
-| **Orchestration** | project-understanding | Reading a codebase to understand what the project is, who it serves, stack, source-of-truth files, what to load next |
+| **Orchestration** | project-understanding | What the project is for, who it serves, stack, architecture, source-of-truth map; uses sampling on large repos; recommends next skills and updates memory |
 | **Orchestration** | search-first | Check repo-local options, tool capabilities, and maintained solutions before building custom code or workflows |
 | **Orchestration** | skill-stocktake | Audit local skills, commands, and guidance for overlap, staleness, and maintenance improvements |
 | **Orchestration** | rules-distill | Extract repeated principles from skills and references, then propose safe shared rule updates |
@@ -45,7 +79,7 @@ Use this table to discover expertise. The assistant classifies tasks and loads t
 | **Product** | project-management | Execution tracking, dependencies, milestone control, ownership clarity, keeping projects on track |
 | **Product** | launch-commercialization | Engineering readiness + SEO/GEO + marketing + sales + monetization + country strategy + PMF before launch |
 | **Engineering** | engineering-delivery | Implementation-heavy work: plan-first, test-guided, review-before-finalization, verification |
-| **Engineering** | codebase-analysis | Reading unfamiliar codebases, structure, execution flow, how the source really works |
+| **Engineering** | codebase-analysis | Deep read: entry points, execution paths, module boundaries, side effects, extension points — how the source actually runs |
 | **Engineering** | code-revamp | Safe modernization, structural cleanup, legacy refactors, minimal churn |
 | **Engineering** | coding-best-practices | Implementation quality, maintainability, testing, error handling, naming, fitting project conventions |
 | **Engineering** | polyglot-engineering | Guidance across languages, frameworks, runtimes, stack-specific tradeoffs |
@@ -137,7 +171,7 @@ Before considering a meaningful task done:
 ## Local skills
 
 - `bosskuai-workspace-assistant`: Use this for repo discovery, orchestration, and deciding which expert skills to load. File: `ai-assistant/skills/bosskuai-workspace-assistant/SKILL.md`
-- `bosskuai-project-understanding`: Use this for reading a codebase or repository to understand what the project is about, who it serves, what stack and architecture it uses, which files are source-of-truth, which skills should be loaded next, and what durable understanding should be stored in memory. File: `ai-assistant/skills/bosskuai-project-understanding/SKILL.md`
+- `bosskuai-project-understanding`: Use this for establishing what the project is for, who it serves, stack, architecture, and a source-of-truth map (with stratified sampling on large repos), then recommending expert skills and updating memory. File: `ai-assistant/skills/bosskuai-project-understanding/SKILL.md`
 - `bosskuai-search-first`: Use this when deciding whether to adopt an existing package, service, MCP, internal utility, or pattern before building custom code or workflow logic. File: `ai-assistant/skills/bosskuai-search-first/SKILL.md`
 - `bosskuai-skill-stocktake`: Use this to audit local skills, commands, and nearby guidance for overlap, staleness, weak triggers, and missing maintenance improvements. File: `ai-assistant/skills/bosskuai-skill-stocktake/SKILL.md`
 - `bosskuai-rules-distill`: Use this to extract repeated cross-cutting principles from skills and references, then propose safe rule updates instead of letting important guidance stay fragmented. File: `ai-assistant/skills/bosskuai-rules-distill/SKILL.md`
@@ -154,7 +188,7 @@ Before considering a meaningful task done:
 - `bosskuai-bug-finding`: Use this for bug hunts, regression analysis, failure-path review, suspicious diffs, and finding likely defects before shipping. File: `ai-assistant/skills/bosskuai-bug-finding/SKILL.md`
 - `bosskuai-rigorous-code-review`: Use this for skeptical expert code review of diffs or PRs: map changes to structure and infrastructure, apply strict best practices, default to minimal fixes, and reserve major changes for clearly justified cases. File: `ai-assistant/skills/bosskuai-rigorous-code-review/SKILL.md`
 - `bosskuai-software-architecture`: Use this for module boundaries, system design, integration decisions, layering, scaling implications, and architecture tradeoffs. File: `ai-assistant/skills/bosskuai-software-architecture/SKILL.md`
-- `bosskuai-codebase-analysis`: Use this for reading unfamiliar codebases, understanding structure quickly, mapping execution flow, and summarizing how the source code really works. File: `ai-assistant/skills/bosskuai-codebase-analysis/SKILL.md`
+- `bosskuai-codebase-analysis`: Use this for deep evidence-based reading: entry points, execution paths, module boundaries, side effects, and extension points — how the source actually runs. File: `ai-assistant/skills/bosskuai-codebase-analysis/SKILL.md`
 - `bosskuai-code-revamp`: Use this for safe code modernization, structural cleanup, legacy refactors, and revamps that should still respect the current codebase structure and minimize unnecessary churn. File: `ai-assistant/skills/bosskuai-code-revamp/SKILL.md`
 - `bosskuai-coding-best-practices`: Use this for implementation quality, maintainability, readability, testing expectations, error handling, naming, and applying coding best practices in a way that still fits the current project conventions. File: `ai-assistant/skills/bosskuai-coding-best-practices/SKILL.md`
 - `bosskuai-context-limit-continuation`: Use this when a task risks hitting model context, token limits, or tight usage/quota mid-process. It should stop cleanly, summarize progress, update `ai-assistant/memory/active-continuation.md`, pair with model selection for the *remaining* work, tell the user to start a fresh session with the recommended model, and provide a compact continuation state. File: `ai-assistant/skills/bosskuai-context-limit-continuation/SKILL.md`
@@ -289,10 +323,26 @@ This agent should think like:
 - Customize company, product, audience, market, and industry context in `ai-assistant/memory/agent-profile.md`.
 - Add or remove skills without changing the overall repo contract.
 
+## Future skill areas (not yet dedicated skills)
+
+No standalone BosskuAI skill exists yet for the topics below; use the closest adjacent skills and memory until a dedicated skill is justified (see `ai-assistant/references/adr/2026-03-30-skill-expansion-criteria.md`).
+
+| Area | Use for now |
+|------|----------------|
+| **API design** (REST/GraphQL/events, versioning, errors) | software-architecture, engineering-delivery, coding-best-practices |
+| **DevOps / IaC** (CI/CD, containers, infra as code) | engineering-delivery, polyglot-engineering, cybersecurity-risk (secrets & supply chain) |
+| **Data / schema architecture** (modeling, migrations, analytics pipelines) | software-architecture, business-logic-review, engineering-delivery |
+| **i18n / l10n** | ui-ux-design-to-code, product-strategy, engineering-delivery |
+| **Analytics / metrics** (instrumentation, funnels, experimentation) | product-strategy, marketing-growth, engineering-delivery |
+| **Legal / compliance** (privacy program, contracts — not legal advice) | cybersecurity-risk, product-strategy; escalate to qualified humans |
+
 ## References
 
 - **References by division** (checklists and playbooks per division): `ai-assistant/references/README.md`
 - Checklists: `ai-assistant/references/checklists/`
 - Playbooks: `ai-assistant/references/playbooks/`
+- Pitfalls: `ai-assistant/references/pitfalls/` (domain-specific lists + `general-known-pitfalls.md`)
+- ADRs: `ai-assistant/references/adr/`
+- Skill ↔ file reference integrity: run `./scripts/verify-skill-references.sh` from repo root
 - Session handoff: `ai-assistant/references/session-handoff-template.md`
 - Memory: `ai-assistant/memory/`

@@ -13,6 +13,12 @@ Use this skill when the task is about making content, pages, or products easier 
 - **`bosskuai-launch-commercialization`**: full launch plan; this skill supplies the SEO/GEO readiness component.
 - **`bosskuai-paid-acquisition-monetization`**: paid channels; this skill is organic discoverability only.
 
+## Maintenance (time-sensitive)
+
+**Annual review (required):** Refresh search and generative-engine guidance (what “good” citations and snippets look like, tooling, and platform policies) at least once per calendar year — **recommended window: Q1**. SEO and GEO shift with engine updates.
+
+**Last reviewed:** 2026-03.
+
 ## Mindset
 
 - SEO is a product feature, not a marketing afterthought. Build it into information architecture from the start.

@@ -90,11 +90,26 @@ If any item fails: continue working. If an item cannot be verified in this conte
 
 ## Context limit check
 
-If the task is large or the conversation is long, assess context budget:
+**Concrete trigger thresholds — switch to `bosskuai-context-limit-continuation` when any is met:**
+
+| Signal | Threshold |
+|--------|-----------|
+| Files read this session | > 8 files |
+| Total lines read this session | > 1,500 lines |
+| Conversation turns | > 15 back-and-forth turns |
+| Remaining task phases | ≥ 3 phases still to go |
+| Single file size | > 400 lines → read targeted range only |
+
+**Pre-task budget estimation (mandatory before any multi-file task):**
+Before starting a task touching ≥ 3 files or with ≥ 3 phases:
+1. Estimate: (files × ~200 lines) + (skills × ~150 lines) + output (~200–500 lines)
+2. If total > 1,200 lines: warn the user, propose a phased plan, confirm scope before starting
+3. If total is 1,000–1,500 lines (tight): state this upfront and plan a clean stopping point
+
+Additional practices:
 - Load only the relevant skills (not all of them)
 - Prefer targeted file reads (specific line ranges) over full reads
 - Grep before full reads on large files
-- If context is likely to run out mid-task, switch to `bosskuai-context-limit-continuation` before truncation
 
 ## Output expectation
 

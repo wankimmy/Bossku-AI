@@ -11,6 +11,12 @@ Use this skill when the user wants to know **which AI model fits a specific task
 
 - **`bosskuai-context-limit-continuation`**: handles the handoff mechanics when context is exhausted; this skill recommends *which model* to use for the remaining work. Load both together at handoff.
 
+## Maintenance (time-sensitive)
+
+**Annual review (required):** Refresh model names, capability claims, and default picks against current vendor docs at least once per calendar year — **recommended window: Q1**. The roster below is a template until re-verified.
+
+**Last reviewed:** 2026-03.
+
 ## Current model roster (verify at cutoff August 2025 — re-check for newer releases)
 
 ### Anthropic / Claude

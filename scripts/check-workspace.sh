@@ -79,5 +79,8 @@ fi
 echo "Status: PASS"
 echo "Core workspace files are present."
 echo
+echo "Optional integrity check (skill → reference paths):"
+echo "  ./scripts/verify-skill-references.sh"
+echo
 echo "Recommended next step:"
 echo "  Open this workspace root in Codex, Claude, or Cursor and run the onboarding prompt in WORKSPACE-ONBOARDING.md"

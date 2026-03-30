@@ -13,6 +13,12 @@ Use this skill when the task involves spending money to acquire users or custome
 - **`bosskuai-sales-strategy`**: closing individual deals; this skill handles the paid channel and pricing strategy that feeds the pipeline.
 - **`bosskuai-launch-commercialization`**: full launch plan; this skill supplies the paid acquisition and monetization components.
 
+## Maintenance (time-sensitive)
+
+**Annual review (required):** Refresh channel benchmarks, attribution caveats, and platform UI/feature names at least once per calendar year — **recommended window: Q1**. Ad networks and auction dynamics change; verify before treating examples as current.
+
+**Last reviewed:** 2026-03.
+
 ## Mindset
 
 - Paid acquisition without positive unit economics is a money furnace, not a growth engine.

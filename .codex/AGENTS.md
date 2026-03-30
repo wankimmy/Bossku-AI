@@ -4,6 +4,8 @@ This file supplements the root `AGENTS.md` with Codex-specific engineering guida
 
 Use the root `AGENTS.md` as the source of truth. For the full **skill roster**, **quick reference (what to ask for)**, and **explicit expert activation** ("work as the security reviewer", etc.), see root `AGENTS.md`. Use this file for Codex workflow details, multi-agent roles, and verification habits.
 
+**Intentional overlap:** Model split, shared memory, and Definition of Done also appear in **`CLAUDE.md`** (Claude) and **`.cursor/rules/bosskuai.mdc`** (Cursor). See root `AGENTS.md` § **Entry points and intentional overlap** for the map.
+
 ## Model assignment (mandatory)
 
 **Two-phase model split — always enforced for meaningful tasks in Codex:**

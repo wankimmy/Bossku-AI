@@ -9,9 +9,30 @@ Use this skill when a task is long enough that the current model session may run
 
 **Not covered here:** training or fine-tuning ML models. For choosing *which* commercial/chat model to use, load **`bosskuai-ai-model-selection`** in the same pass.
 
+## Trigger thresholds — when to activate this skill
+
+Activate this skill (stop and hand off) when **any** of the following are true:
+
+| Signal | Threshold | Action |
+|--------|-----------|--------|
+| Files read this session | > 8 files | Trigger handoff check |
+| Total lines read this session | > 1,500 lines | Trigger handoff check |
+| Conversation turns | > 15 back-and-forth turns | Trigger handoff check |
+| Remaining task phases | ≥ 3 phases still to go | Trigger handoff check |
+| Single file size | > 400 lines before reading | Read targeted range only; warn if full read needed |
+
+**Pre-task budget estimation (mandatory before any multi-file task):**
+Before starting a task that touches ≥ 3 files or has ≥ 3 phases, estimate:
+1. Count files to read × ~200 lines average = estimated lines consumed
+2. Add skills to load × ~150 lines average
+3. Add expected output size (~200–500 lines for meaningful tasks)
+4. If total > 1,200 lines: warn the user upfront, propose a phased plan, and confirm scope before starting
+
+If the estimate is tight (1,000–1,500 lines), explicitly note this at the start of the task and plan a clean stopping point.
+
 ## Continuation workflow
 
-1. Watch for signs that the task is becoming too large for the current model context or reply budget, or that usage limits may block completion in this session.
+1. Check trigger thresholds above — activate this skill if any threshold is met or the pre-task budget estimate is tight.
 2. Stop before truncation instead of letting the work end abruptly.
 3. Summarize what has already been completed, what remains, and any key decisions already made.
 4. **Update memory for the handoff** — Fill or overwrite `../../memory/active-continuation.md` with goal, done, remaining, key files, risks, and a **paste block** for the next session. This is the durable bridge other tools can read; clear that file when the task is fully done.

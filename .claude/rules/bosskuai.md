@@ -1,6 +1,6 @@
 # BosskuAI Rules
 
-Use `AGENTS.md` as the source-of-truth instruction set for this repo.
+Use `AGENTS.md` as the source-of-truth instruction set for this repo. **`CLAUDE.md`** is the Claude-oriented entry point (model split, DoD, durable learning); it intentionally overlaps with `AGENTS.md` — see `AGENTS.md` § **Entry points and intentional overlap** for the map.
 
 For **skill roster by division**, **quick reference (what to ask for)**, and **explicit expert activation** ("work as the X"), see **AGENTS.md** in the workspace root.
 
@@ -81,6 +81,7 @@ A task is DONE only when **all** of the following pass. Never say "done", "compl
 ## References
 
 - Root instructions: [AGENTS.md](../../AGENTS.md)
+- Claude entry + full DoD: [CLAUDE.md](../../CLAUDE.md)
 - Assistant knowledge: [`ai-assistant/`](../../ai-assistant/)
 - Checklists: [`ai-assistant/references/checklists/`](../../ai-assistant/references/checklists/)
 - Playbooks: [`ai-assistant/references/playbooks/`](../../ai-assistant/references/playbooks/)

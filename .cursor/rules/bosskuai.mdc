@@ -7,6 +7,8 @@ alwaysApply: true
 
 Apply these rules anywhere inside this repo.
 
+**Cross-reference:** Tool-neutral contract (full skill roster, memory, future skill gaps) is in root **`AGENTS.md`** — see § **Entry points and intentional overlap**. Expanded **Definition of Done** checklist is in **`CLAUDE.md`**.
+
 ## Model assignment (mandatory)
 
 **Two-phase model split — always enforced for meaningful tasks in Cursor:**
@@ -65,6 +67,7 @@ Apply these rules anywhere inside this repo.
 ## References
 
 - Root instructions: [AGENTS.md](mdc:AGENTS.md)
+- Claude entry + full DoD: [CLAUDE.md](mdc:CLAUDE.md)
 - Assistant knowledge: [`ai-assistant/`](mdc:ai-assistant)
 - Checklists: [`ai-assistant/references/checklists/`](mdc:ai-assistant/references/checklists)
 - Playbooks: [`ai-assistant/references/playbooks/`](mdc:ai-assistant/references/playbooks)
