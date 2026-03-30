@@ -1,30 +1,72 @@
 ---
 name: bosskuai-context-limit-continuation
-description: Use this when a task risks hitting model context or token limits mid-process. Stop cleanly, summarize current progress, ask the user to retry or continue in a fresh prompt, and provide a compact continuation state.
+description: Use this when a task risks hitting model context, token limits, or tight usage/quota mid-process. Stop cleanly, write progress into ai-assistant/memory/active-continuation.md, pair with bosskuai-ai-model-selection to recommend which model should complete the remaining work, and tell the user explicitly to open a fresh chat/session with that model. Also contains token-budget guidance for keeping agent sessions efficient.
 ---
 
 # BosskuAI Context-Limit Continuation
 
-Use this skill when a task is long enough that the current model session may run out of context budget, hit token limits, or otherwise risk being cut off before completion.
+Use this skill when a task is long enough that the current model session may run out of context budget, hit token limits, face usage or quota pressure, or otherwise risk being cut off before completion.
 
-## Workflow
+**Not covered here:** training or fine-tuning ML models. For choosing *which* commercial/chat model to use, load **`bosskuai-ai-model-selection`** in the same pass.
 
-1. Watch for signs that the task is becoming too large for the current model context or reply budget.
+## Continuation workflow
+
+1. Watch for signs that the task is becoming too large for the current model context or reply budget, or that usage limits may block completion in this session.
 2. Stop before truncation instead of letting the work end abruptly.
 3. Summarize what has already been completed, what remains, and any key decisions already made.
-4. Provide a compact continuation state the next turn can use immediately.
-5. Ask the user to retry, continue, or start a fresh prompt so the work can resume cleanly.
-6. If files were changed, name them clearly so the next turn can verify the current state quickly.
+4. **Update memory for the handoff** — Fill or overwrite `../../memory/active-continuation.md` with goal, done, remaining, key files, risks, and a **paste block** for the next session. This is the durable bridge other tools can read; clear that file when the task is fully done.
+5. **Recommend the next model** — Apply **`bosskuai-ai-model-selection`** for the *remaining* work (not the whole original task if the phase changed). Give a **primary** and **fallback** model by concrete name when the tool exposes them, with one-line tradeoffs (reasoning vs speed vs cost vs context).
+6. **Tell the user clearly** to **start a new chat or session** (or switch model in-product) using the **recommended model**, paste the continuation block, and point them at `active-continuation.md` if their workspace uses shared memory.
+7. Provide a compact continuation state in the reply so the user can act even before opening the memory file.
+8. Ask the user to retry, continue, or start a fresh prompt so the work can resume cleanly.
+9. If files were changed, name them clearly so the next turn can verify the current state quickly.
 
-## Output expectation
+## Continuation output
 
 - what is completed
 - what remains
 - key files or artifacts touched
 - important risks or open questions
+- **recommended model(s)** for finishing the remainder (primary + fallback)
+- explicit **user instruction**: new session/chat + which model + paste block
+- confirmation that **`active-continuation.md`** was updated (or why skipping is justified)
 - short retry / continue instruction for the user
+
+---
+
+## Token-budget guidance for efficient agent sessions
+
+Apply these practices to keep sessions lean and avoid premature context exhaustion.
+
+### Prompt hygiene
+
+- **Load skills on demand** — only read a skill file when the task explicitly calls for it. Do not bulk-load all skills at the start of a session.
+- **Read targeted file ranges** — when a file is large, read only the relevant section (use line offsets) rather than the entire file.
+- **Prefer grep over full reads** — search for symbols, patterns, or function names before reading the surrounding context.
+- **Summarize before appending** — when prior research output is large, summarize the relevant findings into a compact note before continuing rather than carrying the full raw output forward.
+
+### Context preservation
+
+- **Compact handoff state** — before stopping on a long task, write a 5–10 line summary of: goal, progress, next step, key file paths, open risks. This is the only content the next session needs; it avoids re-reading everything.
+- **Avoid re-reading unchanged files** — if a file was read earlier in the session and has not changed, refer to your earlier notes instead of re-reading.
+- **Inline evidence, not full files** — when citing code to support a finding or decision, quote the 3–5 relevant lines, not the whole function or file.
+
+### Skill and instruction loading
+
+- **Root CLAUDE.md** is always loaded — keep it lean (model assignment + core rules + skill routing pointer only).
+- **bosskuAI/CLAUDE.md** — read at session start for meaningful tasks; skip for quick/trivial tasks.
+- **Memory files** — read only the files relevant to the current task, not the entire memory directory.
+- **Checklists** — load a checklist only when actively working through it; skip if you can apply the judgment directly.
+
+### Model selection for token efficiency
+
+- Use `claude-sonnet-4-6` for implementation and execution phases — it is faster and cheaper per token.
+- Reserve `claude-opus-4-6` for planning, ambiguous analysis, and architecture decisions where deeper reasoning has clear payoff.
+- Do not use Opus for tasks that are clearly mechanical (formatting, boilerplate generation, simple edits).
 
 ## References
 
+- `../../memory/active-continuation.md`
 - `../../references/session-handoff-template.md`
 - `../../references/checklists/context-limit-continuation-checklist.md`
+- Pair with **`bosskuai-ai-model-selection`** for model recommendations at handoff.

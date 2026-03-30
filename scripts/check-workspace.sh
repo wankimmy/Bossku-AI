@@ -36,6 +36,7 @@ required_paths=(
   ".claude/commands/rules-distill.md"
   "ai-assistant/memory/agent-profile.md"
   "ai-assistant/memory/project-understanding.md"
+  "ai-assistant/memory/active-continuation.md"
   "ai-assistant/skills/bosskuai-workspace-assistant/SKILL.md"
   "ai-assistant/skills/bosskuai-search-first/SKILL.md"
   "ai-assistant/skills/bosskuai-skill-stocktake/SKILL.md"

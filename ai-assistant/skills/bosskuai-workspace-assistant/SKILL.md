@@ -1,32 +1,89 @@
 ---
 name: bosskuai-workspace-assistant
-description: Use this for general work in a workspace using this starter, or when a task spans multiple expert surfaces such as product, planning, UI/UX, bug-finding, software architecture, source-code analysis, security, business logic, marketing, and market analysis.
+description: Use this for general work in a workspace using this starter, or when a task spans multiple expert surfaces such as product, planning, UI/UX, bug-finding, rigorous code review, software architecture, source-code analysis, security, business logic, marketing, and market analysis.
 ---
 
 # BosskuAI Workspace Assistant
 
-Use this skill to orchestrate work across the current workspace.
+Use this skill to orchestrate work across the current workspace when no single expert skill covers the full task, or when you need to route a task to the right skill first.
 
-## Workflow
+## How this differs from other skills
 
-1. Classify the task and map to the **Skill roster** in root AGENTS.md by division (Orchestration, Product, Engineering, Design, Security, Quality, Architecture, Marketing, Sales, Continuation, AI ops). If the user **explicitly names an expert** (e.g. "work as the security reviewer", "focus on launch commercialization"), load that skill set first, then any other relevant skills. Task types include: project understanding, product strategy, planning and execution, project management, launch commercialization, engineering delivery, UI/UX or design-to-code, bug finding, software architecture, codebase analysis, code revamp, coding best practices, context-limit continuation, polyglot engineering, cybersecurity and risk, agent security hardening, business-logic review, market analysis, marketing and growth, social content calendar, paid acquisition and monetization, sales strategy, SEO/GEO, AI model selection, mixed.
-2. For meaningful tasks, start in plan mode before execution.
-3. Recommend the most suitable AI model for the task before execution starts, ideally by concrete model name available in the current tool, with a short tradeoff note and fallback if useful.
-4. Load only the relevant expert skills.
-5. If the repo or product context is unclear, or `../../memory/agent-profile.md` is still sparse, use project understanding first.
-6. Read the nearest docs, mocks, code, or specs.
-7. Study the current code structure, conventions, and extension points before proposing or implementing changes.
-8. Apply coding best practices by default, but fit them to the current project conventions and stack.
-9. For meaningful engineering work, prefer the engineering-delivery workflow: plan, test-guide, implement, review, and verify.
-10. For AI-agent workspace risk, use agent-security-hardening rather than treating it as ordinary application security.
-11. If context or token limits are likely to interrupt the task, switch into context-limit continuation behavior before truncation.
-12. Prefer the smallest safe change that fits the current architecture, and use code revamp only when a broader restructure is clearly justified.
-13. Distinguish explicit facts from inference.
-14. Triple-check important conclusions before finalizing.
-15. If something material is still unconfirmed, ask the user instead of guessing.
-16. If repeated usage reveals a missing reusable capability, create or update the right skill, checklist, playbook, pitfall, or rule.
-17. After the task, decide whether any durable learning should be promoted.
-18. When project understanding runs early, prefer drafting both `../../memory/agent-profile.md` and `../../memory/project-understanding.md` before narrower expert work begins.
+This is the **orchestration layer** — it does not replace expert skills, it routes to them. If the task is clearly within one expert domain, load that skill directly. Load this skill when:
+- The task spans multiple domains (e.g., launch readiness = engineering + marketing + SEO)
+- The domain is unclear and routing is needed
+- The workspace context (project purpose, stack) is not yet established
+
+## Routing logic
+
+### Step 1: Classify the task
+
+| Task type | Load first |
+|-----------|-----------|
+| Unfamiliar codebase or repo | `bosskuai-project-understanding` |
+| Code-level defect, failure, regression | `bosskuai-bug-finding` |
+| Diff review for quality and correctness | `bosskuai-rigorous-code-review` |
+| Implementation task (new feature, refactor) | `bosskuai-engineering-delivery` |
+| Architecture design or review | `bosskuai-software-architecture` |
+| Structural cleanup or legacy migration | `bosskuai-code-revamp` |
+| Code quality at implementation level | `bosskuai-coding-best-practices` |
+| Multi-language or framework-specific guidance | `bosskuai-polyglot-engineering` |
+| Map execution paths and module structure | `bosskuai-codebase-analysis` |
+| Should we adopt a library or build custom? | `bosskuai-search-first` |
+| UI/UX review or design-to-code | `bosskuai-ui-ux-design-to-code` |
+| Application security, threat modeling | `bosskuai-cybersecurity-risk` |
+| AI agent workspace security | `bosskuai-agent-security-hardening` |
+| Business rule and logic correctness | `bosskuai-business-logic-review` |
+| Product strategy and scoping | `bosskuai-product-strategy` |
+| Planning and prioritization | `bosskuai-planning-execution` |
+| Milestone and delivery tracking | `bosskuai-project-management` |
+| Full launch plan | `bosskuai-launch-commercialization` |
+| Market research and competitive analysis | `bosskuai-market-analysis` |
+| Marketing strategy and growth loops | `bosskuai-marketing-growth` |
+| Paid channels and monetization | `bosskuai-paid-acquisition-monetization` |
+| SEO and GEO discoverability | `bosskuai-seo-geo` |
+| Social content calendar | `bosskuai-social-content-calendar` |
+| Sales motion, ICP, deal qualification | `bosskuai-sales-strategy` |
+| Which AI model for this task | `bosskuai-ai-model-selection` |
+| Context or token limit approaching | `bosskuai-context-limit-continuation` |
+| Skill quality audit | `bosskuai-skill-stocktake` |
+| Extract rules from patterns | `bosskuai-rules-distill` |
+
+### Step 2: Select the model
+
+Before any meaningful task, state the model:
+- Planning / strategy / analysis → `claude-opus-4-6`
+- Implementation / code generation / execution → `claude-sonnet-4-6`
+- Quick lookups / single-line fixes → skip the split
+
+### Step 3: Load only what is needed
+
+Load the 1–2 skills most relevant to the current task. Do not load all skills speculatively — each loaded skill consumes context. Load additional skills only when their specific domain is needed.
+
+## General operating rules
+
+1. **Read before concluding**: Study code, docs, and specs before making claims or proposals.
+2. **Minimal safe changes**: Prefer the smallest change that fits the current architecture.
+3. **Plan before executing**: For meaningful tasks, state the plan and get alignment before implementation.
+4. **Distinguish facts from inference**: Mark inferences explicitly. Ask when unsure.
+5. **Triple-check before finalizing**: Especially for architecture decisions, security findings, and irreversible actions.
+6. **Preserve handoff state**: If context limits are approaching, write a compact handoff state before truncation.
+7. **Promote durable learnings**: After meaningful tasks, decide whether a finding belongs in memory, a checklist, playbook, or skill.
+
+## Context limit check
+
+If the task is large or the conversation is long, assess context budget:
+- Load only the relevant skills (not all of them)
+- Prefer targeted file reads (specific line ranges) over full reads
+- Grep before full reads on large files
+- If context is likely to run out mid-task, switch to `bosskuai-context-limit-continuation` before truncation
+
+## Output expectation
+
+- State the expert skill(s) loaded and the model selected.
+- Apply the workflow from the loaded skill(s).
+- Surface plan → get alignment → execute.
+- After the task: identify any durable learning worth promoting.
 
 ## References
 

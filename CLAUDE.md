@@ -55,6 +55,7 @@ For the full **skill roster by division** and **quick reference (what to ask for
 - agent security hardening
 - business logic review
 - bug finding
+- rigorous code review
 - software architecture
 - codebase analysis
 - code revamp

@@ -5,27 +5,109 @@ description: Use this for reading unfamiliar source code, understanding reposito
 
 # BosskuAI Codebase Analysis
 
-Use this skill when the first task is understanding the codebase correctly.
+Use this skill when the first task is understanding the codebase correctly before making any claims or changes.
+
+## How this differs from nearby skills
+
+- **`bosskuai-project-understanding`**: broader project context including purpose, stakeholders, and recommended next skills; this skill goes deeper into source code structure and execution paths.
+- **`bosskuai-software-architecture`**: evaluates and redesigns architectural decisions; this skill reads and maps what currently exists without passing judgment.
+- **`bosskuai-bug-finding`**: locates defects in a traced execution path; load this skill first to understand the path, then load bug-finding to locate defects within it.
+- **`bosskuai-code-revamp`**: proposes structural changes; this skill is the prerequisite read before any revamp proposal.
+
+## Mindset
+
+- Read before you conclude. The codebase is the source of truth — not the README, not your assumptions, not the last conversation.
+- Distinguish confirmed facts (seen in code) from inferences (likely true based on patterns).
+- Generated code, compiled output, and support files are not the source of truth — find the originating source.
+- The goal is a mental model of the system that is accurate enough to make correct predictions about behavior.
 
 ## Workflow
 
-1. Identify the stack, entry points, top-level structure, dominant code conventions, and visible quality patterns.
-2. Follow the real execution path for the behavior in question.
-3. Distinguish source-of-truth code from generated or support files.
-4. Identify the safest extension points and how the current codebase expects changes to be made.
-5. Note the code-quality expectations implied by the repo, such as naming, separation of concerns, error handling, and testing style.
-6. Confirm explanations against source code and tests.
-7. Summarize clearly what is explicit and what is inferred.
+### Phase 1 — Orient
 
-## Output expectation
+1. Identify the **entry points**: HTTP server, CLI entrypoint, main function, event listener, cron schedule.
+2. Read the top-level structure: directory organization, major modules/packages, config files, test structure.
+3. Identify the **stack**: language, runtime, framework, major dependencies, build system.
+4. Distinguish source files from generated, compiled, or vendor files.
 
-- stack and repo summary
-- execution path
-- architecture explanation
-- key conventions
-- safest extension points
-- code-quality expectations
-- open uncertainties
+### Phase 2 — Trace execution paths
+
+5. For the behavior in question, trace the **real execution path**:
+   - Entry → Authentication/Authorization middleware → Routing → Handler → Business logic → Data access → Response/Side effects
+6. At each step: what data flows in? what transforms happen? what can go wrong?
+7. Identify **side effects** that are not immediately obvious: cache writes, event emissions, external calls, background jobs triggered.
+
+### Phase 3 — Map the architecture
+
+8. Identify the **architectural style**: monolith, layered, hexagonal, microservices, event-driven, serverless, BFF, etc.
+9. Map the **module/package boundaries**: what does each major module own? where are the boundaries?
+10. Identify **data ownership**: which module is the source of truth for each domain entity?
+11. Identify **integration points**: external APIs, message queues, databases, cache, third-party SDKs.
+
+### Phase 4 — Identify quality signals
+
+12. Scan for **tech debt markers**:
+    - TODOs/FIXMEs in critical paths
+    - Commented-out code blocks
+    - Duplicate business logic in multiple modules
+    - Deep nesting (4+ levels)
+    - Functions over 100 lines
+    - Missing error handling in critical paths
+    - Missing or absent tests in core modules
+
+13. Scan for **dead code signals**:
+    - Exported functions/classes with no internal callers
+    - Feature flags that are always true or always false
+    - Unreachable branches
+    - Deprecated modules still imported
+
+### Phase 5 — Identify extension points
+
+14. Where does the codebase expect changes to be made? (plugin pattern, strategy pattern, config-driven behavior)
+15. What are the **safest places to add new behavior** without touching existing logic?
+16. What are the **highest-risk areas** where changes are likely to cause regressions?
+
+### Phase 6 — Summarize
+
+17. State clearly what is **confirmed** (directly seen in code) vs **inferred** (pattern-based).
+18. List open uncertainties and what would need to be read or tested to resolve them.
+
+## Output format
+
+```
+Stack and entry points:
+  Language / runtime: [stack]
+  Frameworks: [list]
+  Entry points: [list with file paths]
+  Build / test system: [tools]
+
+Architecture:
+  Style: [monolith / layered / hexagonal / microservices / etc.]
+  Major modules: [module — what it owns — key files]
+  Data ownership: [entity — owning module]
+  Integration points: [external systems — how connected]
+
+Execution path (for [behavior]):
+  [entry] → [middleware] → [handler] → [logic] → [data access] → [response / side effects]
+  Side effects not immediately obvious: [list]
+
+Code quality signals:
+  Tech debt markers: [location — issue]
+  Dead code candidates: [location — signal]
+  Strong patterns: [what the codebase does well]
+  Weak patterns: [what needs attention]
+
+Extension points:
+  Safest places to add behavior: [list]
+  High-risk areas (change carefully): [list]
+
+Confirmed vs inferred:
+  Confirmed: [facts seen directly in code]
+  Inferred: [reasonable assumptions from patterns]
+
+Open uncertainties:
+  [question — what would resolve it]
+```
 
 ## References
 

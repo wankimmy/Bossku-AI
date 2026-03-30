@@ -29,7 +29,7 @@ Apply these rules anywhere inside this repo.
 ## Core rules
 
 - For division/skill mapping and explicit activation ("work as the X"), see root **AGENTS.md** → Skill roster and Quick reference: what to ask for.
-- Identify whether the task is project-understanding, product, planning, project-management, launch-commercialization, design, 3D-web-development, engineering, security, business-logic, bug-finding, architecture, codebase analysis, market, marketing, social-content, paid-acquisition, sales, SEO/GEO, or AI-model-selection oriented before acting.
+- Identify whether the task is project-understanding, product, planning, project-management, launch-commercialization, design, 3D-web-development, engineering, security, business-logic, bug-finding, rigorous-code-review, architecture, codebase analysis, market, marketing, social-content, paid-acquisition, sales, SEO/GEO, or AI-model-selection oriented before acting.
 - For implementation-heavy work, use the engineering-delivery workflow: plan, test-guide, implement, review, and verify.
 - Load only the relevant local skills instead of loading every expert surface.
 - Always plan first in Plan mode (Opus 4.6 / GPT-5.4 / Gemini Pro 3.1) before implementation or major conclusions.

@@ -15,6 +15,7 @@ This directory is the single source of truth for durable context. It is not tool
 | **agent-profile.md** | Company, product, audience, industry, operating preferences. Customize after cloning or let project-understanding draft it from repo evidence. |
 | **project-understanding.md** | What the project is, who it serves, stack, source-of-truth files, which skills are usually relevant. Updated after reading the codebase. |
 | **learning-log.md** | Optional log of promoted learnings (e.g. from memory → checklist or skill). |
+| **active-continuation.md** | Ephemeral handoff when context or usage limits require a fresh session or different model; overwrite each time; clear when the task is done. See `bosskuai-context-limit-continuation`. |
 | **bug-patterns.md** | Recurring bug patterns or failure modes observed in this codebase. |
 | **market-notes.md** | Stable market, competitor, or positioning notes worth reusing. |
 

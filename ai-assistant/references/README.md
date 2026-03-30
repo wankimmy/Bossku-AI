@@ -25,6 +25,7 @@ Use this table to find checklists and playbooks by division. Skills in AGENTS.md
 
 Other:
 
+- **Rigorous code review** (`bosskuai-rigorous-code-review` skill): uses `coding-best-practices-checklist`, `verification-checklist`, `bug-finding-checklist`, and `architecture-review-checklist` as review gates.
 - **Session handoff**: `session-handoff-template.md`
 - **Pitfalls**: `pitfalls/` (general-known-pitfalls.md)
 - **ADRs**: `adr/`
