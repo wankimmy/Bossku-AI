@@ -14,9 +14,11 @@ This directory is the single source of truth for durable context. It is not tool
 |------|---------|
 | **agent-profile.md** | Company, product, audience, industry, operating preferences. Customize after cloning or let project-understanding draft it from repo evidence. |
 | **project-understanding.md** | What the project is, who it serves, stack, source-of-truth files, which skills are usually relevant. Updated after reading the codebase. |
-| **learning-log.md** | Optional log of promoted learnings (e.g. from memory → checklist or skill). |
+| **learning-log.md** | Chronological durable lessons and promotion decisions. Prefer structured entries with source, confidence, target artifact, and review status so stale learnings can be audited later. |
 | **active-continuation.md** | Ephemeral handoff when context or usage limits require a fresh session or different model; overwrite each time; clear when the task is done. See `bosskuai-context-limit-continuation`. |
 | **bug-patterns.md** | Recurring defect classes for this workspace. See the file header for **when to add**, **format**, and **when to promote** to pitfalls or checklists. |
 | **market-notes.md** | Durable market / competitor / positioning notes (6+ month horizon). See the file header for **when to add** vs ephemeral news and **when to promote** to skills or learning-log. |
 
 Use the [learning-promotion checklist](../references/checklists/learning-promotion-checklist.md) to decide where a new learning belongs (memory vs checklist vs playbook vs skill).
+
+For periodic hygiene, run `bash ./ai-assistant/scripts/learning-doctor.sh` from the workspace root to catch stale counts, contradictory memory, empty high-value memory files, and consumed continuation state.

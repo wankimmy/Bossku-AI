@@ -47,6 +47,7 @@ For the full **skill roster by division** and **quick reference (what to ask for
 - search-first
 - skill-stocktake
 - rules-distill
+- continuous-learning
 - planning and execution
 - project management
 - launch commercialization
@@ -116,8 +117,10 @@ For the full **skill roster by division** and **quick reference (what to ask for
 ## Durable learning
 
 - Keep durable learnings in `ai-assistant/memory/`.
+- After meaningful work, run a deliberate promotion pass with `bosskuai-continuous-learning` or an equivalent explicit review.
 - If repeated usage reveals a missing reusable capability, create or update the right skill, checklist, playbook, pitfall, or rule instead of leaving it only in memory.
 - Promote repeated lessons into checklists, pitfalls, playbooks, or skill updates.
+- Use `bash ./ai-assistant/scripts/learning-doctor.sh` when available to catch stale counts, contradictory memory, and consumed continuation state before larger maintenance passes.
 - Use `ai-assistant/memory/agent-profile.md` to customize the active workspace for the user's actual company or domain.
 - Use `ai-assistant/memory/project-understanding.md` to preserve durable understanding of what a project is about and which skills are usually most relevant.
 - If something material is not confirmed from code, docs, design, or current evidence, ask the user instead of guessing.

@@ -4,6 +4,7 @@ These scripts support deterministic collection for BosskuAI maintenance workflow
 
 Use them when running:
 
+- continuous learning
 - skill stocktake
 - rules distillation
 
@@ -19,6 +20,7 @@ They are intentionally lightweight:
 - `scan-skills.sh` — inventory local BosskuAI skills
 - `scan-commands.sh` — inventory local Claude command files
 - `scan-rules.sh` — inventory rule and instruction files used as shared guidance
+- `learning-doctor.sh` — check learning hygiene: stale memory, stale counts, empty high-value memory files, and consumed continuation state
 - `skill-stocktake.sh` — combined stocktake inventory for skills, commands, and references
 - `rules-distill-context.sh` — combined rules-distillation context inventory
 
@@ -27,6 +29,7 @@ They are intentionally lightweight:
 Run from the workspace root:
 
 ```bash
+bash ./ai-assistant/scripts/learning-doctor.sh
 bash ./ai-assistant/scripts/skill-stocktake.sh
 bash ./ai-assistant/scripts/rules-distill-context.sh
 ```
@@ -34,6 +37,7 @@ bash ./ai-assistant/scripts/rules-distill-context.sh
 Or pass an explicit repo root:
 
 ```bash
+bash ./ai-assistant/scripts/learning-doctor.sh /path/to/workspace
 bash ./ai-assistant/scripts/skill-stocktake.sh /path/to/workspace
 bash ./ai-assistant/scripts/rules-distill-context.sh /path/to/workspace
 ```

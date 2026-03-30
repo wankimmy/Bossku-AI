@@ -3,20 +3,88 @@
 Use this file for durable, cross-session learnings that matter in future work.
 Treat it as shared memory that should improve behavior across Codex, Claude, Cursor, and any future compatible tool surface that reads this repo.
 
-## Entries
+## What belongs here
 
-- Keep entries brief and dated.
-- Store stable patterns, decisions, and conventions.
-- Do not store temporary debugging chatter.
-- 2026-03-16: If model context or token limits are likely to cut work mid-task, BosskuAI should stop before truncation, preserve a compact continuation state, and ask the user to retry or continue in a fresh prompt.
-- 2026-03-26: BosskuAI should prioritize harness operations over roster expansion. The highest-value next additions are commands, install/install-check scripts, verification flows, and project-scoped learning loops rather than many new expert personas.
-- 2026-03-26: Phase 1 of that direction is now in place: a search-first skill, verification references, and Claude command shortcuts. The next highest-value gap remains installability and lightweight workspace automation.
-- 2026-03-26: Phase 2 is now partially in place: BosskuAI has starter install/check scripts for applying the workspace layer into real repos. The next strongest remaining gap is lightweight automation and maintenance workflows rather than more expert-surface breadth.
-- 2026-03-26: Phase 3 is now partially in place: BosskuAI has maintenance workflows for skill stocktake and rules distillation. The strongest remaining gap is safe lightweight automation, especially hook-driven observation and maintenance helpers.
-- 2026-03-26: The maintenance layer now has deterministic helper scripts under `ai-assistant/scripts/` for skill inventory, command inventory, and rule inventory. This is the current safe automation baseline before any always-on hooks.
-- 2026-03-30: README was shortened around a single quick-setup path; `scripts/install.sh` now runs `check-workspace.sh` after copy by default (`--skip-check` / PowerShell `-SkipCheck` to opt out). Windows install runs the check when `bash` is on PATH.
-- 2026-03-30: Added `bosskuai-rigorous-code-review` skill (skeptical PR-style review, infra/structure fit, strict standards, minimal diffs; major change only when justified). Registered in AGENTS.md roster, quick reference, Build phase, proactive hints, workspace-assistant, and Cursor/Claude rules.
-- 2026-03-30: Clarified limit handoff: `bosskuai-context-limit-continuation` now pairs with `bosskuai-ai-model-selection`, updates `memory/active-continuation.md`, and instructs a fresh session with a recommended model. No BosskuAI skill covers training/fine-tuning ML models.
-- 2026-03-30: Token optimization pass: root CLAUDE.md trimmed from 82 to ~30 lines by removing content that duplicates bosskuAI/CLAUDE.md — saves tokens every session. `bosskuai-context-limit-continuation` now includes token-budget guidance (load-on-demand skills, targeted reads, compact handoffs, model selection for efficiency). `bosskuai-rigorous-code-review` enhanced with P0–P3 severity scale, security/performance/test/API contract/AI-generated code categories, explicit output format, and new `code-review-checklist.md`.
-- 2026-03-30: Full 10x skill improvement pass completed across all 30 skills.
-- 2026-03-30: BosskuAI audit follow-through: expanded `references/pitfalls/` (security, performance, business-logic, product, ai-workspace + general index), added ADRs for model split / skill expansion / memory organization, `./scripts/verify-skill-references.sh` for SKILL.md → reference integrity, tightened **project-understanding** vs **codebase-analysis** boundaries with large-repo sampling strategy, concrete examples in **business-logic-review**, annual review blocks on **ai-model-selection**, **social-content-calendar**, **seo-geo**, **paid-acquisition-monetization**, **AGENTS.md** ToC + future skill areas + entry-point cross-links (**CLAUDE.md**, **bosskuai** rules, **.codex/AGENTS.md**), and fill guidance for **bug-patterns.md** / **market-notes.md**. Every skill now has: (1) disambiguation from nearby skills, (2) concrete domain frameworks (JTBD, STRIDE, OWASP, AARRR, MEDDIC, RICE, ADR, WCAG, Nielsen, SOLID, Strangler Fig, RACI, CAC/LTV unit economics, GEO patterns, content pillars, platform algorithm heuristics), (3) structured output formats, (4) guardrails listing what NOT to do. Key additions by group — Group 1: product-strategy (JTBD+MoSCoW), business-logic-review (state machine+invariants), market-analysis (TAM/SAM/SOM), planning-execution (RICE+milestone phases), software-architecture (C4+ADR). Group 2: cybersecurity-risk (STRIDE+OWASP Top 10), engineering-delivery (5-phase workflow+rollback), ui-ux-design-to-code (Nielsen+WCAG 2.1 AA), marketing-growth (AARRR+growth loops), sales-strategy (MEDDIC+buyer map). Group 3: ai-model-selection (model roster table), bug-finding (bug pattern taxonomy+execution tracing), coding-best-practices (SOLID+anti-pattern table), code-revamp (Strangler Fig+migration risk matrix+revamp justified? decision matrix), codebase-analysis (execution tracing+dead code signals+tech debt markers). Group 4: polyglot-engineering (language ecosystem table+gotchas+interop seam guidance), project-management (RACI+risk register+sprint ceremony guide), seo-geo (technical SEO checklist+GEO patterns+content cluster model), paid-acquisition-monetization (unit economics+channel comparison table+monetization matrix+attribution models), social-content-calendar (platform algorithm heuristics+engagement hook taxonomy+repurposing strategy). Group 5: project-understanding (systematic code reading+memory write guidance), search-first (build vs adopt decision matrix+evaluation criteria table), agent-security-hardening (attack surface map+threat taxonomy+memory safety rules), workspace-assistant (routing table+context limit check), skill-stocktake (audit dimensions+verdict definitions), rules-distill (promotion checklist+artifact level guidance), launch-commercialization (4-gate launch readiness framework+PMF signals).
+- durable behavioral lessons
+- explicit promotion decisions
+- repo-level decisions that should be reviewed again later
+
+Do not use this file for temporary debugging chatter, raw task transcripts, or a full duplicate of `CHANGELOG.md`.
+
+## Entry format
+
+Append new entries in this format:
+
+```markdown
+### [Short title] — YYYY-MM-DD
+
+- **Source:** task / review / incident / repeated usage / audit
+- **Signal:** what happened or what was observed
+- **Decision / learning:** the durable lesson
+- **Promote to:** memory / checklist / pitfall / playbook / skill / rule / ADR / defer
+- **Status:** applied / proposed / deferred / superseded
+- **Confidence:** high / medium / low
+- **Last reviewed:** YYYY-MM-DD
+```
+
+## Active entries
+
+### Context limits require an explicit handoff before truncation — 2026-03-16
+
+- **Source:** repeated usage
+- **Signal:** meaningful work can be cut off mid-task when context or usage limits are approached too late
+- **Decision / learning:** BosskuAI should stop before truncation, preserve a compact continuation state, and pair the handoff with a model recommendation for the remaining work
+- **Promote to:** skill + checklist + memory
+- **Status:** applied
+- **Confidence:** high
+- **Last reviewed:** 2026-03-30
+
+### Operator leverage should win over persona expansion — 2026-03-26
+
+- **Source:** audit
+- **Signal:** BosskuAI already had strong cofounder-style breadth, while the bigger gaps were commands, installability, verification, maintenance, and learning loops
+- **Decision / learning:** prioritize harness operations and curated quality over adding more overlapping expert personas
+- **Promote to:** ADR + memory
+- **Status:** applied
+- **Confidence:** high
+- **Last reviewed:** 2026-03-30
+
+### Setup and maintenance should be scriptable, deterministic, and proposal-first — 2026-03-26
+
+- **Source:** audit + implementation
+- **Signal:** onboarding and maintenance improved once the repo added install/check scripts, deterministic inventory scripts, and advisory hooks rather than relying on manual ceremony
+- **Decision / learning:** prefer lightweight deterministic helpers and explicit review checkpoints over silent automation or repo-specific one-off workflows
+- **Promote to:** scripts + playbooks + hooks guidance
+- **Status:** applied
+- **Confidence:** high
+- **Last reviewed:** 2026-03-30
+
+### Continuous learning needs an explicit triage workflow — 2026-03-30
+
+- **Source:** repo audit
+- **Signal:** learning promotion existed mainly as policy, reminders, and maintenance notes; no dedicated workflow routed lessons into the strongest artifact consistently
+- **Decision / learning:** BosskuAI should treat continuous learning as a first-class post-task workflow with explicit triage, freshness checks, and proposal-first promotion
+- **Promote to:** skill + checklist + playbook + command + script
+- **Status:** applied
+- **Confidence:** high
+- **Last reviewed:** 2026-03-30
+
+### Entry-point overlap should be intentional and token-efficient — 2026-03-30
+
+- **Source:** audit + implementation
+- **Signal:** duplicated instructions across entry points made startup context heavier and increased drift risk unless the overlap was explicit and controlled
+- **Decision / learning:** keep root `AGENTS.md` as the tool-neutral contract, keep local entry points thinner, and duplicate only the minimum guidance needed for each tool to start in the right mode
+- **Promote to:** rules + docs
+- **Status:** applied
+- **Confidence:** high
+- **Last reviewed:** 2026-03-30
+
+### Skill quality should improve through depth, not only count — 2026-03-30
+
+- **Source:** repo-wide skill improvement pass
+- **Signal:** the biggest gains came from clarifying boundaries, adding concrete frameworks, output formats, and guardrails across existing skills rather than multiplying adjacent personas
+- **Decision / learning:** when the roster grows, prefer deepening high-traffic skills and tightening boundaries before adding new surface area
+- **Promote to:** ADR + skill-stocktake guidance
+- **Status:** applied
+- **Confidence:** high
+- **Last reviewed:** 2026-03-30

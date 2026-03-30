@@ -46,6 +46,7 @@ A task is DONE only when **all** of the following pass. Never say "done", "compl
 
 - For division/skill mapping and explicit activation ("work as the X"), see root **AGENTS.md** → Skill roster and Quick reference: what to ask for.
 - Identify whether the task is project-understanding, product, planning, project-management, launch-commercialization, design, 3D-web-development, engineering, security, business-logic, bug-finding, rigorous-code-review, architecture, codebase analysis, market, marketing, social-content, paid-acquisition, sales, SEO/GEO, or AI-model-selection oriented before acting.
+- If a meaningful task, review, or incident just finished, consider `bosskuai-continuous-learning` before closing the loop.
 - For implementation-heavy work, use the engineering-delivery workflow: plan, test-guide, implement, review, and verify.
 - Load only the relevant local skills instead of loading every expert surface.
 - Always plan first in Plan mode (Opus 4.6 / GPT-5.4 / Gemini Pro 3.1) before implementation or major conclusions.
@@ -77,12 +78,14 @@ A task is DONE only when **all** of the following pass. Never say "done", "compl
 - If repeated usage reveals a missing reusable capability, promote it into the right skill, checklist, playbook, pitfall, or rule.
 - After meaningful tasks, promote durable learnings into the right artifact: memory, checklist, pitfall, playbook, or skill.
 - Promote durable learnings into memory, checklists, pitfalls, playbooks, or skill updates instead of letting them stay session-local. Use [`ai-assistant/references/checklists/learning-promotion-checklist.md`](../../ai-assistant/references/checklists/learning-promotion-checklist.md) to decide where a learning belongs.
+- Use `bash ./ai-assistant/scripts/learning-doctor.sh` when available before larger maintenance passes to catch stale counts, contradictory memory, empty high-value memory files, and consumed continuation state.
 
 ## References
 
 - Root instructions: [AGENTS.md](../../AGENTS.md)
 - Claude entry + full DoD: [CLAUDE.md](../../CLAUDE.md)
 - Assistant knowledge: [`ai-assistant/`](../../ai-assistant/)
+- Continuous-learning skill: [`ai-assistant/skills/bosskuai-continuous-learning/SKILL.md`](../../ai-assistant/skills/bosskuai-continuous-learning/SKILL.md)
 - Checklists: [`ai-assistant/references/checklists/`](../../ai-assistant/references/checklists/)
 - Playbooks: [`ai-assistant/references/playbooks/`](../../ai-assistant/references/playbooks/)
 - Session handoff: [`ai-assistant/references/session-handoff-template.md`](../../ai-assistant/references/session-handoff-template.md)

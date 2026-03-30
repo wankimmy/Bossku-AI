@@ -74,6 +74,7 @@ Use this table to discover expertise. The assistant classifies tasks and loads t
 | **Orchestration** | search-first | Check repo-local options, tool capabilities, and maintained solutions before building custom code or workflows |
 | **Orchestration** | skill-stocktake | Audit local skills, commands, and guidance for overlap, staleness, and maintenance improvements |
 | **Orchestration** | rules-distill | Extract repeated principles from skills and references, then propose safe shared rule updates |
+| **Orchestration** | continuous-learning | After meaningful work, triage durable lessons, choose the strongest artifact, and catch stale memory before it drifts |
 | **Product** | product-strategy | Product framing, requirement shaping, prioritization, scope, go-to-market implications |
 | **Product** | planning-execution | Roadmaps, sequencing, milestone planning, launch planning, strategy → execution slices |
 | **Product** | project-management | Execution tracking, dependencies, milestone control, ownership clarity, keeping projects on track |
@@ -108,6 +109,7 @@ Use this table to discover expertise. The assistant classifies tasks and loads t
 | Research existing options before building | "Search first" / "Check if we already have this" / "Should we adopt or build?" | search-first, codebase-analysis |
 | Audit the assistant setup itself | "Run a skill stocktake" / "Audit our skills and commands" | skill-stocktake, workspace-assistant |
 | Promote repeated lessons into rules | "Distill the rules" / "What should become a shared rule?" | rules-distill, workspace-assistant |
+| Capture and promote learnings | "Run continuous learning" / "What should we promote from this work?" / "Audit memory freshness" | continuous-learning, workspace-assistant |
 | Shape product or scope | "Work as product strategist" / "Review this idea and tighten the spec" | product-strategy |
 | Plan roadmap or launch | "Create a 90-day plan" / "Focus on launch commercialization" | planning-execution, launch-commercialization |
 | Track delivery | "Use project management" / "Turn this into a delivery plan with milestones" | project-management |
@@ -150,6 +152,7 @@ Use the right skill without the user having to ask:
 - User asks for harsh, skeptical, or strict review with minimal churn → **rigorous-code-review** first.
 - New utility, dependency, integration, or workflow request → consider **search-first** before building from scratch.
 - Skill count or repo guidance has grown and feels messy → consider **skill-stocktake** or **rules-distill** instead of adding more guidance blindly.
+- A meaningful task, review, or incident just finished → consider **continuous-learning** to capture durable lessons and clean up stale memory.
 - Touching auth, billing, user input, or external APIs → consider **cybersecurity-risk** or **agent-security-hardening**.
 - Unfamiliar codebase or unclear product context → **project-understanding** first.
 - Complex feature or refactor → **planning-execution** or **engineering-delivery** (plan then implement).
@@ -167,6 +170,7 @@ Before considering a meaningful task done:
 - Verification was done (tests, diff review, or explicit verification steps).
 - No critical security, business-logic, or product assumptions left unconfirmed; if something is inferred, say so and note confidence.
 - Learning was promoted to the right place (memory, checklist, pitfall, playbook, or skill) when applicable.
+- Shared memory and continuation state were left fresher than they were before the task started.
 
 ## Local skills
 
@@ -175,6 +179,7 @@ Before considering a meaningful task done:
 - `bosskuai-search-first`: Use this when deciding whether to adopt an existing package, service, MCP, internal utility, or pattern before building custom code or workflow logic. File: `ai-assistant/skills/bosskuai-search-first/SKILL.md`
 - `bosskuai-skill-stocktake`: Use this to audit local skills, commands, and nearby guidance for overlap, staleness, weak triggers, and missing maintenance improvements. File: `ai-assistant/skills/bosskuai-skill-stocktake/SKILL.md`
 - `bosskuai-rules-distill`: Use this to extract repeated cross-cutting principles from skills and references, then propose safe rule updates instead of letting important guidance stay fragmented. File: `ai-assistant/skills/bosskuai-rules-distill/SKILL.md`
+- `bosskuai-continuous-learning`: Use this after meaningful tasks, reviews, incidents, or repeated observations to triage durable lessons, choose the strongest artifact, and propose the smallest safe promotion update without silently mutating the workspace. File: `ai-assistant/skills/bosskuai-continuous-learning/SKILL.md`
 - `bosskuai-product-strategy`: Use this for product framing, requirement shaping, prioritization, scope, and go-to-market implications. File: `ai-assistant/skills/bosskuai-product-strategy/SKILL.md`
 - `bosskuai-planning-execution`: Use this for roadmaps, sequencing, milestone planning, launch planning, and turning strategy into execution slices. File: `ai-assistant/skills/bosskuai-planning-execution/SKILL.md`
 - `bosskuai-project-management`: Use this for execution tracking, dependencies, milestone control, ownership clarity, and keeping projects on track. File: `ai-assistant/skills/bosskuai-project-management/SKILL.md`
@@ -214,11 +219,13 @@ Before considering a meaningful task done:
 - Treat improvement as deliberate promotion, not note accumulation.
 - Treat `ai-assistant/memory/` as shared durable memory for all supported tool surfaces, not only one assistant.
 - Use memory for durable facts, conventions, and stable recurring patterns.
+- After meaningful work, use `bosskuai-continuous-learning` or an equivalent explicit promotion pass before leaving the lesson only in chat history.
 - If repeated usage reveals a missing reusable capability, automatically create or update the appropriate skill, checklist, playbook, pitfall, or rule instead of leaving the learning only in memory.
 - If a failure mode appears more than once, promote it into a checklist or pitfall.
 - If a workflow proves reusable, promote it into a playbook or skill.
 - If a design decision becomes an explicit rule, capture it in an ADR or equivalent decision record.
 - Use `ai-assistant/references/checklists/learning-promotion-checklist.md` to decide where a learning belongs.
+- Run `bash ./ai-assistant/scripts/learning-doctor.sh` periodically or before large maintenance passes to catch stale memory, contradictory counts, and consumed continuation state.
 
 ## Working rules
 
@@ -226,6 +233,7 @@ Before considering a meaningful task done:
 - Start by identifying the real task type:
   - discovery
   - project understanding
+  - continuous learning
   - product strategy
   - planning and execution
   - project management

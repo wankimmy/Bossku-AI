@@ -20,6 +20,12 @@ These are opt-in, hook-ready reminder scripts for teams that want light automati
 - `session-end-reminder.sh`
   Use at response stop or session end to remind the assistant to promote durable learnings deliberately, not automatically.
 
+For manual hygiene after a meaningful work session, run:
+
+```bash
+bash ./ai-assistant/scripts/learning-doctor.sh
+```
+
 ## Example usage
 
 Manual:

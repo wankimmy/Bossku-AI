@@ -6,7 +6,7 @@ Use this table to find checklists and playbooks by division. Skills in AGENTS.md
 
 | Division | Checklists | Playbooks |
 |----------|-------------|-----------|
-| **Orchestration** | project-understanding-checklist, learning-promotion-checklist, search-first-checklist, skill-health-checklist, rule-distillation-checklist | project-understanding-playbook, search-first-playbook, skill-stocktake-playbook, rules-distillation-playbook |
+| **Orchestration** | project-understanding-checklist, learning-promotion-checklist, continuous-learning-checklist, search-first-checklist, skill-health-checklist, rule-distillation-checklist | project-understanding-playbook, continuous-learning-playbook, search-first-playbook, skill-stocktake-playbook, rules-distillation-playbook |
 | **Product** | product-spec-checklist, planning-checklist | product-discovery-playbook, planning-playbook |
 | **Product / PM** | project-management-checklist | project-management-playbook |
 | **Engineering** | engineering-delivery-checklist, coding-best-practices-checklist, code-revamp-checklist, verification-checklist | engineering-delivery-playbook, coding-best-practices-playbook, code-revamp-playbook, verification-playbook |

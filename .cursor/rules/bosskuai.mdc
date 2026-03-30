@@ -33,6 +33,7 @@ Apply these rules anywhere inside this repo.
 
 - For division/skill mapping and explicit activation ("work as the X"), see root **AGENTS.md** → Skill roster and Quick reference: what to ask for.
 - Identify whether the task is project-understanding, product, planning, project-management, launch-commercialization, design, engineering, security, business-logic, bug-finding, rigorous-code-review, architecture, codebase analysis, market, marketing, social-content, paid-acquisition, sales, SEO/GEO, or AI-model-selection oriented before acting.
+- If a meaningful task, review, or incident just finished, consider `bosskuai-continuous-learning` before closing the loop.
 - For implementation-heavy work, use the engineering-delivery workflow: plan, test-guide, implement, review, and verify.
 - Load only the relevant local skills instead of loading every expert surface.
 - Always plan first in Plan mode (Opus 4.6 / GPT-5.4 / Gemini Pro 3.1) before implementation or major conclusions.
@@ -63,12 +64,14 @@ Apply these rules anywhere inside this repo.
 - Treat `ai-assistant/memory/` as shared durable memory across supported tool surfaces.
 - If repeated usage reveals a missing reusable capability, promote it into the right skill, checklist, playbook, pitfall, or rule.
 - After meaningful tasks, promote durable learnings into the right artifact: memory, checklist, pitfall, playbook, or skill.
+- Use `bash ./ai-assistant/scripts/learning-doctor.sh` when available before larger maintenance passes to catch stale counts, contradictory memory, empty high-value memory files, and consumed continuation state.
 
 ## References
 
 - Root instructions: [AGENTS.md](mdc:AGENTS.md)
 - Claude entry + full DoD: [CLAUDE.md](mdc:CLAUDE.md)
 - Assistant knowledge: [`ai-assistant/`](mdc:ai-assistant)
+- Continuous-learning skill: [`ai-assistant/skills/bosskuai-continuous-learning/SKILL.md`](mdc:ai-assistant/skills/bosskuai-continuous-learning/SKILL.md)
 - Checklists: [`ai-assistant/references/checklists/`](mdc:ai-assistant/references/checklists)
 - Playbooks: [`ai-assistant/references/playbooks/`](mdc:ai-assistant/references/playbooks)
 - Session handoff: [`ai-assistant/references/session-handoff-template.md`](mdc:ai-assistant/references/session-handoff-template.md)

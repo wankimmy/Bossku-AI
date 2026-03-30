@@ -30,6 +30,7 @@ This is the **orchestration layer** — it does not replace expert skills, it ro
 | Multi-language or framework-specific guidance | `bosskuai-polyglot-engineering` |
 | Map execution paths and module structure | `bosskuai-codebase-analysis` |
 | Should we adopt a library or build custom? | `bosskuai-search-first` |
+| Capture or promote durable learnings | `bosskuai-continuous-learning` |
 | UI/UX review or design-to-code | `bosskuai-ui-ux-design-to-code` |
 | Application security, threat modeling | `bosskuai-cybersecurity-risk` |
 | AI agent workspace security | `bosskuai-agent-security-hardening` |
@@ -121,7 +122,9 @@ Additional practices:
 ## References
 
 - `../../references/checklists/learning-promotion-checklist.md`
+- `../../references/checklists/continuous-learning-checklist.md`
 - `../../references/session-handoff-template.md`
+- `../../references/playbooks/continuous-learning-playbook.md`
 - `../../memory/learning-log.md`
 - `../../memory/bug-patterns.md`
 - `../../memory/market-notes.md`

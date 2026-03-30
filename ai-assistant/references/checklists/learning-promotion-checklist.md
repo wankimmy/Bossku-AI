@@ -42,5 +42,7 @@ Use this after meaningful tasks, reviews, or decisions to decide where a lesson 
 ## Quality bar
 
 - keep notes brief
+- record the source signal and confidence when the lesson is not self-evident
+- record the promotion target or defer reason so the learning can be audited later
 - prefer specific triggers over vague reminders
 - avoid duplicate learnings in multiple places unless one points to the stronger artifact
