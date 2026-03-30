@@ -27,7 +27,7 @@ Treat it as shared memory across supported tool surfaces.
 - Tool posture: Confirmed: Tool-agnostic starter with specific entry points for Codex, Claude, and Cursor.
 - Source-of-truth files: Confirmed: `AGENTS.md` is the root instruction source; `.codex/AGENTS.md` adds Codex-specific guidance; `README.md` and `WORKSPACE-ONBOARDING.md` are the main public onboarding docs.
 - Knowledge layout: Confirmed: `ai-assistant/skills/` contains the expert surfaces; `ai-assistant/references/` contains checklists, playbooks, pitfalls, and ADRs; `ai-assistant/memory/` is shared durable memory across tools.
-- Current expert surface size: Confirmed: 38 skills, 39 checklists, and 35 playbooks are present in the repo.
+- Current expert surface size: Confirmed: 39 skills, 39 checklists, and 35 playbooks are present in the repo.
 - Codex support shape: Confirmed: `.codex/config.toml` enables multi-agent mode with read-only `planner`, `explorer`, `reviewer`, `security_reviewer`, `docs_researcher`, and `tdd_guide` roles.
 - Current strength: Inferred: BosskuAI is stronger at curated cofounder-style breadth and cross-functional judgment than at harness automation.
 - Current gap: Confirmed: The repo now has an initial Claude command layer, starter install/check scripts, maintenance workflows for skill and rule review, a dedicated continuous-learning workflow, and optional advisory hook-ready scripts, but it still has no fully integrated always-on hook system and remains intentionally proposal-first rather than silently self-mutating.
