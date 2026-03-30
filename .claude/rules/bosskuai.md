@@ -26,6 +26,22 @@ Apply these rules anywhere inside this repo.
 - Write durable findings back to memory after meaningful tasks.
 - Never treat memory as tool-local — any insight written here must be usable by all tools.
 
+## Definition of Done (mandatory — enforced before any "done" declaration)
+
+A task is DONE only when **all** of the following pass. Never say "done", "complete", "finished", or similar until this checklist passes:
+
+1. **Files applied** — every file change is written to disk, not just planned or drafted
+2. **Requirement re-read** — original request re-read verbatim; implementation confirmed to satisfy it
+3. **Edge cases checked** — empty, null, boundary values, and error states considered
+4. **No regressions** — adjacent behavior unchanged or intentionally changed
+5. **Build/tests pass** — build compiles, all affected tests pass, lint clean
+6. **Triple-check** — implementation re-read from the actual saved file (not from memory)
+7. **Self-diff review** — the change does exactly what it claims, no more, no less
+8. **Security minimum** — no new unvalidated trust boundaries, no hardcoded/logged secrets
+9. **Unverified items named** — anything that could NOT be verified is stated explicitly
+
+**If any item fails: continue working, do not declare done.**
+
 ## Core rules
 
 - For division/skill mapping and explicit activation ("work as the X"), see root **AGENTS.md** → Skill roster and Quick reference: what to ask for.

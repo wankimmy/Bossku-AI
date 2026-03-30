@@ -91,6 +91,14 @@ Use this skill when the goal is to **review** code (diffs, PRs, new modules, or 
 
 5. **Recommend minimally** — For each issue, propose the **smallest** change that resolves it. If only a large refactor helps, label it **scope escalation**, give one concise rationale, and suggest **`bosskuai-code-revamp`** or a tracked follow-up — not a drive-by rewrite.
 
+6. **Apply the Review Definition of Done** — Before declaring the review complete, confirm:
+   - [ ] All diff files read — not skimmed, read
+   - [ ] All 7 stress-test categories worked through (or explicitly skipped with reason)
+   - [ ] Every P0/P1 finding has a specific file:line reference and a concrete fix
+   - [ ] Verdict is defensible: if asked "why did you approve this?", the answer is in the review
+   - [ ] Non-goals stated: what was NOT reviewed and why (scope, familiarity, time constraints)
+   - [ ] No finding was added from assumption — every finding traces to specific evidence in the diff
+
 ## Output format
 
 ```

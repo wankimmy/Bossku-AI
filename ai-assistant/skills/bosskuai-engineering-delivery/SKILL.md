@@ -57,12 +57,40 @@ Use this skill when the task is **implementation-heavy** and needs a reliable en
     - Missing tests: are edge cases, failure paths, and the bug path covered?
     - Observability: is there logging or metrics for this in production?
 
-### Phase 5 — Verify
+### Phase 5 — Verify and apply the Definition of Done
 
-12. Run available verification steps: build, lint, tests, type checks, security scan.
-13. Check that migrations are backwards-compatible and the deployment order is safe (no column removal before code removal).
-14. Confirm rollback path: can this be reverted or feature-flagged off without data loss?
-15. Name what was verified and what could not be verified in the handoff.
+Run the full DoD checklist before declaring the task complete. **Do not declare done until every item passes.**
+
+**Files applied:**
+- [ ] Every file change is written to disk — not drafted in a code block, actually saved
+- [ ] No planned change is missing from the applied set
+
+**Correctness:**
+- [ ] Re-read the original requirement verbatim — implementation satisfies it exactly
+- [ ] Edge cases covered: empty input, null/undefined, boundary values, error paths
+- [ ] No regressions: adjacent behavior unchanged or intentionally changed and documented
+
+**Verification run:**
+- [ ] Build/compile passes without errors
+- [ ] All affected tests pass — run them, do not assume
+- [ ] Lint/type checks pass if applicable
+- [ ] Migrations are backwards-compatible; deployment order is safe
+
+**Triple-check:**
+- [ ] Implementation re-read from the actual saved file — not from memory, not from the conversation
+- [ ] Self-diff review: the change does exactly what it claims, no more, no less
+- [ ] If new tests were written: they actually run and pass
+
+**Security minimum:**
+- [ ] No new trust boundaries without validation
+- [ ] No secrets hardcoded or logged
+- [ ] Auth/permissions unchanged or explicitly reviewed
+
+**Rollback and handoff:**
+- [ ] Rollback path confirmed: can this be reverted or feature-flagged off without data loss?
+- [ ] Anything that could NOT be verified is named explicitly — do not silently omit gaps
+
+**If any item fails: fix it, then re-run the checklist. Never declare done with failing items.**
 
 ## Feature flags
 
@@ -79,16 +107,25 @@ Every meaningful change should have a rollback answer:
 - **Migration**: ensure the new schema works with the old code; deploy code first, migrate second; only drop old columns in a later release
 - **Service change**: verify old clients still work during the transition window
 
-## Output expectation
+## Output format
 
 ```
 Task classification: [type + risk level]
 Implementation plan: [what changes, where, test strategy, rollback]
 Test strategy: [unit/integration/E2E breakdown, what is tested, what is not]
 Security-sensitive areas: [if any]
-Verification steps run: [list]
+
+Definition of Done — status:
+  Files applied: [✅ all saved / ❌ missing: list]
+  Requirement satisfied: [✅ confirmed / ❌ gap: describe]
+  Edge cases checked: [✅ / ❌ unchecked: list]
+  Build/tests pass: [✅ / ❌ failing: describe]
+  Triple-check done: [✅ re-read from file / ❌]
+  Self-diff review: [✅ clean / ❌ issue found: describe]
+  Security minimum: [✅ / ❌ gap: describe]
+
 Rollback strategy: [feature flag / migration safety / revert path]
-Residual risks or gaps: [what could not be verified]
+Residual risks or gaps: [what could not be verified — named explicitly]
 ```
 
 ## References

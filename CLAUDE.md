@@ -70,6 +70,40 @@ For the full **skill roster by division** and **quick reference (what to ask for
 - SEO/GEO
 - AI model selection
 
+## Definition of Done (mandatory)
+
+**A task is DONE only when ALL of the following are true. Never say "done", "complete", or "finished" until every item passes.**
+
+### Files applied
+- [ ] Every file change is written to disk — not planned, not shown, actually saved
+- [ ] No planned change is left unapplied
+
+### Correctness
+- [ ] Re-read the original requirement verbatim — implementation satisfies it
+- [ ] Edge cases checked: empty input, null/undefined, boundary values, error states
+- [ ] No regressions: adjacent behavior unchanged, or the change is intentional and documented
+
+### Verification run
+- [ ] Build/compile passes without errors
+- [ ] All affected tests pass (or manual test plan executed and documented)
+- [ ] Lint/type checks pass if applicable to the project
+
+### Triple-check
+- [ ] Implementation re-read from the actual saved file — not from memory
+- [ ] Self-diff review: the change does exactly what it claims, no more, no less
+- [ ] If tests were added: tests actually run and pass, not just written
+
+### Security minimum
+- [ ] No new trust boundaries added without input validation
+- [ ] No secrets hardcoded, logged, or returned in responses
+- [ ] Auth/permissions unchanged or explicitly reviewed if touched
+
+### Handoff
+- [ ] Anything that could NOT be verified is named explicitly
+- [ ] If the task produced a durable learning: memory or checklist updated
+
+**If any item fails: do not declare done. Fix it and re-run the checklist.**
+
 ## Shared memory (mandatory)
 
 - `ai-assistant/memory/` is **shared durable memory across all tools** — Claude, Codex, and Cursor.

@@ -70,6 +70,24 @@ Load the 1–2 skills most relevant to the current task. Do not load all skills 
 6. **Preserve handoff state**: If context limits are approaching, write a compact handoff state before truncation.
 7. **Promote durable learnings**: After meaningful tasks, decide whether a finding belongs in memory, a checklist, playbook, or skill.
 
+## Definition of Done gate
+
+**Never declare a task done without running this checklist.** "Done" means all of the following pass — not just "code written" or "response provided":
+
+| Item | What it means |
+|------|--------------|
+| **Files applied** | Every change is written to disk, not just shown in a code block |
+| **Requirement re-read** | Original request re-read verbatim; confirmed satisfied |
+| **Edge cases** | Empty, null, boundary, and error states considered |
+| **No regressions** | Adjacent behavior unchanged or intentionally changed |
+| **Build/tests pass** | Compiled, tests run and passed — not assumed |
+| **Triple-check** | Implementation re-read from the actual saved file, not from memory |
+| **Self-diff review** | Change does exactly what it claims, no more, no less |
+| **Security minimum** | No unvalidated trust boundaries, no hardcoded/logged secrets |
+| **Gaps named** | Anything NOT verified is stated explicitly |
+
+If any item fails: continue working. If an item cannot be verified in this context, name it in the residual risks.
+
 ## Context limit check
 
 If the task is large or the conversation is long, assess context budget:
