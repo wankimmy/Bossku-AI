@@ -36,13 +36,19 @@ This is the **orchestration layer** — it does not replace expert skills, it ro
 | AI agent workspace security | `bosskuai-agent-security-hardening` |
 | Business rule and logic correctness | `bosskuai-business-logic-review` |
 | Product strategy and scoping | `bosskuai-product-strategy` |
+| Analytics, funnels, experiments, instrumentation | `bosskuai-analytics-metrics` |
 | Planning and prioritization | `bosskuai-planning-execution` |
 | Milestone and delivery tracking | `bosskuai-project-management` |
 | Full launch plan | `bosskuai-launch-commercialization` |
 | Market research and competitive analysis | `bosskuai-market-analysis` |
+| API contract design | `bosskuai-api-design` |
+| Data modeling, migrations, or analytics pipelines | `bosskuai-data-architecture` |
 | Marketing strategy and growth loops | `bosskuai-marketing-growth` |
+| CI/CD, containers, infra, runtime operations | `bosskuai-devops-iac` |
 | Paid channels and monetization | `bosskuai-paid-acquisition-monetization` |
+| Localization, locale handling, multilingual UX | `bosskuai-i18n-l10n` |
 | SEO and GEO discoverability | `bosskuai-seo-geo` |
+| Privacy and compliance readiness | `bosskuai-legal-compliance` |
 | Social content calendar | `bosskuai-social-content-calendar` |
 | Sales motion, ICP, deal qualification | `bosskuai-sales-strategy` |
 | Which AI model for this task | `bosskuai-ai-model-selection` |

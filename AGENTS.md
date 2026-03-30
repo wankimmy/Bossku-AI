@@ -76,22 +76,28 @@ Use this table to discover expertise. The assistant classifies tasks and loads t
 | **Orchestration** | rules-distill | Extract repeated principles from skills and references, then propose safe shared rule updates |
 | **Orchestration** | continuous-learning | After meaningful work, triage durable lessons, choose the strongest artifact, and catch stale memory before it drifts |
 | **Product** | product-strategy | Product framing, requirement shaping, prioritization, scope, go-to-market implications |
+| **Product** | analytics-metrics | Instrumentation strategy, funnels, KPI definitions, experimentation, and making product decisions measurable |
 | **Product** | planning-execution | Roadmaps, sequencing, milestone planning, launch planning, strategy → execution slices |
 | **Product** | project-management | Execution tracking, dependencies, milestone control, ownership clarity, keeping projects on track |
 | **Product** | launch-commercialization | Engineering readiness + SEO/GEO + marketing + sales + monetization + country strategy + PMF before launch |
 | **Engineering** | engineering-delivery | Implementation-heavy work: plan-first, test-guided, review-before-finalization, verification |
+| **Engineering** | devops-iac | CI/CD, containers, deployment workflow, infrastructure as code, runtime reliability, secrets, and rollback design |
 | **Engineering** | codebase-analysis | Deep read: entry points, execution paths, module boundaries, side effects, extension points — how the source actually runs |
 | **Engineering** | code-revamp | Safe modernization, structural cleanup, legacy refactors, minimal churn |
 | **Engineering** | coding-best-practices | Implementation quality, maintainability, testing, error handling, naming, fitting project conventions |
 | **Engineering** | polyglot-engineering | Guidance across languages, frameworks, runtimes, stack-specific tradeoffs |
 | **Design** | ui-ux-design-to-code | UI/UX review, interaction quality, design systems, accessibility (e.g. WCAG), designs → implementation-ready code guidance |
+| **Design** | i18n-l10n | Internationalization, localization, locale handling, translation workflow, formatting, expansion-safe UX, and RTL readiness |
 | **Design** | 3d-web-development | 3D websites, WebGL, Three.js/R3F, scroll-driven 3D animations, GSAP motion, post-processing, Spline, particles, Awwwards-quality immersive experiences |
 | **Security** | cybersecurity-risk | Auth, abuse cases, privacy, trust boundaries, security review, operational risk |
 | **Security** | agent-security-hardening | Securing the AI-agent workspace: instructions, MCPs, external content, memory, least-privilege |
+| **Security** | legal-compliance | Privacy, retention, consent, vendor obligations, policy alignment, and spotting when qualified human legal/compliance review is required |
 | **Quality** | business-logic-review | Workflow gaps, state transitions, edge cases, approval flows, hidden rule failures |
 | **Quality** | bug-finding | Bug hunts, regression analysis, failure-path review, suspicious diffs, defects before shipping |
 | **Quality** | rigorous-code-review | Skeptical PR/diff review, strict standards with minimal changes, infra and structure fit, challenge implementation |
 | **Architecture** | software-architecture | Module boundaries, system design, integration decisions, layering, scaling, tradeoffs |
+| **Architecture** | api-design | REST/GraphQL/event contract design, versioning, errors, pagination, idempotency, and integrator ergonomics |
+| **Architecture** | data-architecture | Data modeling, schema ownership, migrations, warehouses, analytics pipelines, and retention/correctness tradeoffs |
 | **Continuation** | context-limit-continuation | Context/token or usage pressure: stop cleanly, handoff to `memory/active-continuation.md`, recommend next model (`ai-model-selection`), fresh session |
 | **Marketing** | market-analysis | Competitor review, market trends, positioning, pricing, demand signals, opportunity analysis |
 | **Marketing** | marketing-growth | Marketing strategy, distribution, positioning, GTM, channels, messaging, growth loops |
@@ -111,13 +117,19 @@ Use this table to discover expertise. The assistant classifies tasks and loads t
 | Promote repeated lessons into rules | "Distill the rules" / "What should become a shared rule?" | rules-distill, workspace-assistant |
 | Capture and promote learnings | "Run continuous learning" / "What should we promote from this work?" / "Audit memory freshness" | continuous-learning, workspace-assistant |
 | Shape product or scope | "Work as product strategist" / "Review this idea and tighten the spec" | product-strategy |
+| Product instrumentation or KPIs | "Design the metrics" / "What should we instrument?" / "Define the funnel and guardrails" | analytics-metrics, product-strategy |
 | Plan roadmap or launch | "Create a 90-day plan" / "Focus on launch commercialization" | planning-execution, launch-commercialization |
 | Track delivery | "Use project management" / "Turn this into a delivery plan with milestones" | project-management |
 | Build a feature | "Plan then implement" / "Use engineering delivery" | engineering-delivery, coding-best-practices |
+| API contract or webhook design | "Design this API" / "Review REST or GraphQL contract" / "How should we version this?" | api-design, software-architecture |
+| CI/CD, containers, or infra | "Review our pipeline" / "Design the deploy flow" / "Audit Terraform or Docker setup" | devops-iac, engineering-delivery, cybersecurity-risk |
+| Schema, migration, or warehouse design | "Review this schema" / "Plan the migration" / "Audit the analytics pipeline" | data-architecture, software-architecture |
 | **Design** / UI (design-to-code, a11y) | "Work as design/UX" / "Turn this design into implementation guidance" / "Review for UX and accessibility" | ui-ux-design-to-code |
+| Localization or multilingual UX | "Audit i18n" / "Make this app localization-ready" / "Review locale handling" | i18n-l10n, ui-ux-design-to-code |
 | **3D website** / WebGL / immersive | "Create a 3D website" / "Work as 3D web expert" / "Build an Awwwards-quality 3D experience" / "Add Three.js/R3F to this project" | 3d-web-development, ui-ux-design-to-code |
 | Security or abuse review | "Work as security reviewer" / "Audit for abuse and privacy risks" | cybersecurity-risk |
 | Harden the AI workspace | "Audit agent security" / "Use agent security hardening" | agent-security-hardening |
+| Privacy or compliance posture | "Review privacy/compliance risk" / "What legal or compliance issues should we flag?" | legal-compliance, cybersecurity-risk |
 | Find bugs or logic flaws | "Hunt for bugs" / "Review business logic and edge cases" | bug-finding, business-logic-review |
 | Strict or skeptical code review | "Review this PR harshly" / "Skeptical code review" / "Challenge this implementation" / "Minimal fixes only" | rigorous-code-review, coding-best-practices |
 | Architecture or boundaries | "Review system boundaries" / "Architecture tradeoffs for this change" | software-architecture |
@@ -136,9 +148,9 @@ For larger efforts you can run the assistant in a phase-aware way. The assistant
 | Phase | Focus | Skills to lean on |
 |-------|--------|-------------------|
 | **Discovery** | What we're building, for whom, evidence | project-understanding, product-strategy, market-analysis |
-| **Strategy** | Roadmap, scope, priorities, ownership | planning-execution, project-management, software-architecture |
-| **Build** | Implementation with quality gates | engineering-delivery, ui-ux-design-to-code, 3d-web-development, coding-best-practices, bug-finding, rigorous-code-review |
-| **Harden** | Security, logic, readiness | cybersecurity-risk, business-logic-review, agent-security-hardening |
+| **Strategy** | Roadmap, scope, priorities, ownership | planning-execution, project-management, software-architecture, api-design, data-architecture, analytics-metrics |
+| **Build** | Implementation with quality gates | engineering-delivery, devops-iac, ui-ux-design-to-code, i18n-l10n, 3d-web-development, coding-best-practices, bug-finding, rigorous-code-review |
+| **Harden** | Security, logic, readiness | cybersecurity-risk, legal-compliance, business-logic-review, agent-security-hardening |
 | **Launch** | Readiness, GTM, PMF signals | launch-commercialization, seo-geo, **Marketing**: marketing-growth, social-content-calendar, paid-acquisition-monetization; **Sales**: sales-strategy |
 
 When the user says e.g. "We're in the build phase" or "Run the launch checklist", prefer the skills for that phase and any cross-cutting rules (plan-first, model recommendation, verification).
@@ -153,7 +165,13 @@ Use the right skill without the user having to ask:
 - New utility, dependency, integration, or workflow request → consider **search-first** before building from scratch.
 - Skill count or repo guidance has grown and feels messy → consider **skill-stocktake** or **rules-distill** instead of adding more guidance blindly.
 - A meaningful task, review, or incident just finished → consider **continuous-learning** to capture durable lessons and clean up stale memory.
+- Designing REST, GraphQL, webhooks, or event contracts → consider **api-design** alongside **software-architecture**.
+- Touching CI/CD, containers, deploys, Terraform, or runtime config → consider **devops-iac**.
+- Touching schema changes, warehouses, migrations, or event/analytics pipelines → consider **data-architecture**.
+- Multi-locale products, translation work, formatting rules, or RTL risk → consider **i18n-l10n**.
+- Funnels, KPIs, instrumentation, or experiments → consider **analytics-metrics**.
 - Touching auth, billing, user input, or external APIs → consider **cybersecurity-risk** or **agent-security-hardening**.
+- Privacy programs, consent, retention, policy alignment, or vendor obligations → consider **legal-compliance** and escalate to qualified humans when the risk is material.
 - Unfamiliar codebase or unclear product context → **project-understanding** first.
 - Complex feature or refactor → **planning-execution** or **engineering-delivery** (plan then implement).
 - Multi-faceted task (e.g. launch readiness) → combine **launch-commercialization** with **marketing**, **sales**, **seo-geo** as needed.
@@ -181,18 +199,24 @@ Before considering a meaningful task done:
 - `bosskuai-rules-distill`: Use this to extract repeated cross-cutting principles from skills and references, then propose safe rule updates instead of letting important guidance stay fragmented. File: `ai-assistant/skills/bosskuai-rules-distill/SKILL.md`
 - `bosskuai-continuous-learning`: Use this after meaningful tasks, reviews, incidents, or repeated observations to triage durable lessons, choose the strongest artifact, and propose the smallest safe promotion update without silently mutating the workspace. File: `ai-assistant/skills/bosskuai-continuous-learning/SKILL.md`
 - `bosskuai-product-strategy`: Use this for product framing, requirement shaping, prioritization, scope, and go-to-market implications. File: `ai-assistant/skills/bosskuai-product-strategy/SKILL.md`
+- `bosskuai-analytics-metrics`: Use this for instrumentation strategy, event design, funnels, experimentation, KPI definitions, attribution logic, and making product decisions measurable. File: `ai-assistant/skills/bosskuai-analytics-metrics/SKILL.md`
 - `bosskuai-planning-execution`: Use this for roadmaps, sequencing, milestone planning, launch planning, and turning strategy into execution slices. File: `ai-assistant/skills/bosskuai-planning-execution/SKILL.md`
 - `bosskuai-project-management`: Use this for execution tracking, dependencies, milestone control, ownership clarity, and keeping projects on track. File: `ai-assistant/skills/bosskuai-project-management/SKILL.md`
 - `bosskuai-launch-commercialization`: Use this for balancing engineering readiness, SEO/GEO, marketing, sales, monetization, country strategy, and product-market-fit planning before launch. File: `ai-assistant/skills/bosskuai-launch-commercialization/SKILL.md`
 - `bosskuai-engineering-delivery`: Use this for implementation-heavy work that should follow planning-first execution, test-guided development where practical, review-before-finalization, and explicit verification. File: `ai-assistant/skills/bosskuai-engineering-delivery/SKILL.md`
+- `bosskuai-devops-iac`: Use this for CI/CD, containers, deployment workflows, infrastructure as code, runtime reliability, secrets handling, and rollback design. File: `ai-assistant/skills/bosskuai-devops-iac/SKILL.md`
 - `bosskuai-ui-ux-design-to-code`: Use this for UI/UX review, interaction quality, and translating designs into implementation-ready code guidance. File: `ai-assistant/skills/bosskuai-ui-ux-design-to-code/SKILL.md`
+- `bosskuai-i18n-l10n`: Use this for internationalization, localization, locale handling, translation workflow, formatting, expansion-safe UX, and right-to-left readiness. File: `ai-assistant/skills/bosskuai-i18n-l10n/SKILL.md`
 - `bosskuai-3d-web-development`: Use this for creating immersive 3D websites, WebGL experiences, Three.js/React Three Fiber scenes, scroll-driven 3D animations, GSAP-powered motion, post-processing effects, Spline integrations, interactive particle systems, and Awwwards-quality 3D web experiences. File: `ai-assistant/skills/bosskuai-3d-web-development/SKILL.md`
 - `bosskuai-cybersecurity-risk`: Use this for auth, abuse cases, privacy, trust boundaries, security review, and operational risk analysis. File: `ai-assistant/skills/bosskuai-cybersecurity-risk/SKILL.md`
 - `bosskuai-agent-security-hardening`: Use this for securing the AI-agent workspace itself, including instructions, MCPs, external content, memory, and least-privilege configuration. File: `ai-assistant/skills/bosskuai-agent-security-hardening/SKILL.md`
+- `bosskuai-legal-compliance`: Use this for privacy, retention, consent, vendor obligations, policy alignment, and spotting when qualified human legal/compliance review is required. File: `ai-assistant/skills/bosskuai-legal-compliance/SKILL.md`
 - `bosskuai-business-logic-review`: Use this for workflow gaps, state transitions, edge cases, approval flows, and hidden rule failures. File: `ai-assistant/skills/bosskuai-business-logic-review/SKILL.md`
 - `bosskuai-bug-finding`: Use this for bug hunts, regression analysis, failure-path review, suspicious diffs, and finding likely defects before shipping. File: `ai-assistant/skills/bosskuai-bug-finding/SKILL.md`
 - `bosskuai-rigorous-code-review`: Use this for skeptical expert code review of diffs or PRs: map changes to structure and infrastructure, apply strict best practices, default to minimal fixes, and reserve major changes for clearly justified cases. File: `ai-assistant/skills/bosskuai-rigorous-code-review/SKILL.md`
 - `bosskuai-software-architecture`: Use this for module boundaries, system design, integration decisions, layering, scaling implications, and architecture tradeoffs. File: `ai-assistant/skills/bosskuai-software-architecture/SKILL.md`
+- `bosskuai-api-design`: Use this for REST/GraphQL/event contract design, versioning, errors, pagination, idempotency, and integrator ergonomics. File: `ai-assistant/skills/bosskuai-api-design/SKILL.md`
+- `bosskuai-data-architecture`: Use this for data modeling, schema ownership, migrations, warehouses, analytics pipelines, and retention/correctness tradeoffs. File: `ai-assistant/skills/bosskuai-data-architecture/SKILL.md`
 - `bosskuai-codebase-analysis`: Use this for deep evidence-based reading: entry points, execution paths, module boundaries, side effects, and extension points — how the source actually runs. File: `ai-assistant/skills/bosskuai-codebase-analysis/SKILL.md`
 - `bosskuai-code-revamp`: Use this for safe code modernization, structural cleanup, legacy refactors, and revamps that should still respect the current codebase structure and minimize unnecessary churn. File: `ai-assistant/skills/bosskuai-code-revamp/SKILL.md`
 - `bosskuai-coding-best-practices`: Use this for implementation quality, maintainability, readability, testing expectations, error handling, naming, and applying coding best practices in a way that still fits the current project conventions. File: `ai-assistant/skills/bosskuai-coding-best-practices/SKILL.md`
@@ -236,18 +260,24 @@ Before considering a meaningful task done:
   - continuous learning
   - product strategy
   - planning and execution
+  - analytics and metrics
   - project management
   - launch commercialization
   - engineering delivery
+  - DevOps / IaC
   - UX/design
+  - i18n / l10n
   - 3D web development (Three.js, R3F, WebGL, Spline, GSAP 3D, immersive experiences)
   - implementation
   - security/risk
+  - legal / compliance
   - agent security hardening
   - business-logic review
   - bug finding
   - rigorous code review
   - software architecture
+  - API design
+  - data / schema architecture
   - codebase analysis
   - code revamp
   - coding best practices
@@ -333,16 +363,16 @@ This agent should think like:
 
 ## Future skill areas (not yet dedicated skills)
 
-No standalone BosskuAI skill exists yet for the topics below; use the closest adjacent skills and memory until a dedicated skill is justified (see `ai-assistant/references/adr/2026-03-30-skill-expansion-criteria.md`).
+The previously tracked backlog areas below now have dedicated skills. Keep using `ai-assistant/references/adr/2026-03-30-skill-expansion-criteria.md` before adding more new skills.
 
-| Area | Use for now |
+| Former backlog area | Dedicated skill |
 |------|----------------|
-| **API design** (REST/GraphQL/events, versioning, errors) | software-architecture, engineering-delivery, coding-best-practices |
-| **DevOps / IaC** (CI/CD, containers, infra as code) | engineering-delivery, polyglot-engineering, cybersecurity-risk (secrets & supply chain) |
-| **Data / schema architecture** (modeling, migrations, analytics pipelines) | software-architecture, business-logic-review, engineering-delivery |
-| **i18n / l10n** | ui-ux-design-to-code, product-strategy, engineering-delivery |
-| **Analytics / metrics** (instrumentation, funnels, experimentation) | product-strategy, marketing-growth, engineering-delivery |
-| **Legal / compliance** (privacy program, contracts — not legal advice) | cybersecurity-risk, product-strategy; escalate to qualified humans |
+| **API design** | `bosskuai-api-design` |
+| **DevOps / IaC** | `bosskuai-devops-iac` |
+| **Data / schema architecture** | `bosskuai-data-architecture` |
+| **i18n / l10n** | `bosskuai-i18n-l10n` |
+| **Analytics / metrics** | `bosskuai-analytics-metrics` |
+| **Legal / compliance** | `bosskuai-legal-compliance` |
 
 ## References
 

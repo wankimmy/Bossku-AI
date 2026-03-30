@@ -43,6 +43,7 @@ Use `AGENTS.md` in the current workspace as the **tool-neutral source of truth**
 For the full **skill roster by division** and **quick reference (what to ask for)**, see `AGENTS.md` in the workspace root. Load the relevant local skills from `ai-assistant/skills/` based on the task:
 
 - product strategy
+- analytics and metrics
 - project understanding
 - search-first
 - skill-stocktake
@@ -52,14 +53,19 @@ For the full **skill roster by division** and **quick reference (what to ask for
 - project management
 - launch commercialization
 - engineering delivery
+- DevOps / IaC
 - UI/UX and design-to-code
+- i18n / l10n
 - 3D web development (Three.js, R3F, WebGL, Spline, GSAP 3D, immersive Awwwards-quality experiences)
 - cybersecurity and risk
+- legal / compliance
 - agent security hardening
 - business logic review
 - bug finding
 - rigorous code review
 - software architecture
+- API design
+- data / schema architecture
 - codebase analysis
 - code revamp
 - coding best practices

@@ -7,14 +7,14 @@ Use this table to find checklists and playbooks by division. Skills in AGENTS.md
 | Division | Checklists | Playbooks |
 |----------|-------------|-----------|
 | **Orchestration** | project-understanding-checklist, learning-promotion-checklist, continuous-learning-checklist, search-first-checklist, skill-health-checklist, rule-distillation-checklist | project-understanding-playbook, continuous-learning-playbook, search-first-playbook, skill-stocktake-playbook, rules-distillation-playbook |
-| **Product** | product-spec-checklist, planning-checklist | product-discovery-playbook, planning-playbook |
+| **Product** | product-spec-checklist, planning-checklist, analytics-metrics-checklist | product-discovery-playbook, planning-playbook, analytics-metrics-playbook |
 | **Product / PM** | project-management-checklist | project-management-playbook |
-| **Engineering** | engineering-delivery-checklist, coding-best-practices-checklist, code-revamp-checklist, verification-checklist | engineering-delivery-playbook, coding-best-practices-playbook, code-revamp-playbook, verification-playbook |
+| **Engineering** | engineering-delivery-checklist, coding-best-practices-checklist, code-revamp-checklist, verification-checklist, devops-iac-checklist | engineering-delivery-playbook, coding-best-practices-playbook, code-revamp-playbook, verification-playbook, devops-iac-playbook |
 | **Engineering** | codebase-analysis-checklist, polyglot-engineering-checklist | codebase-analysis-playbook, polyglot-engineering-playbook |
-| **Design** | ui-fidelity-checklist, 3d-web-development-checklist | ui-delivery-playbook, 3d-web-development-playbook |
-| **Security** | security-risk-checklist, agent-security-hardening-checklist | security-review-playbook, agent-security-hardening-playbook |
+| **Design** | ui-fidelity-checklist, 3d-web-development-checklist, i18n-l10n-checklist | ui-delivery-playbook, 3d-web-development-playbook, i18n-l10n-playbook |
+| **Security** | security-risk-checklist, agent-security-hardening-checklist, legal-compliance-checklist | security-review-playbook, agent-security-hardening-playbook, legal-compliance-playbook |
 | **Quality** | bug-finding-checklist, business-logic-checklist | bug-finding-playbook |
-| **Architecture** | architecture-review-checklist | architecture-playbook |
+| **Architecture** | architecture-review-checklist, api-design-checklist, data-architecture-checklist | architecture-playbook, api-design-playbook, data-architecture-playbook |
 | **Marketing** | marketing-growth-checklist, social-content-calendar-checklist, paid-acquisition-monetization-checklist | marketing-growth-playbook, social-content-calendar-playbook, paid-acquisition-monetization-playbook |
 | **Sales** | sales-strategy-checklist | sales-strategy-playbook |
 | **Launch** | launch-commercialization-checklist | launch-commercialization-playbook |
