@@ -11,6 +11,7 @@ Use this skill when the main risk is **incorrect workflow rules**, not syntax er
 
 - **`bosskuai-rigorous-code-review`**: catches implementation bugs and code quality issues; load alongside when a code diff may encode wrong rules.
 - **`bosskuai-bug-finding`**: traces known failure paths; load when a specific defect is already suspected.
+- **`bosskuai-root-cause-investigation`**: correlates business-rule failures with logs, DB rows, job traces, and real incident evidence.
 - **`bosskuai-product-strategy`**: defines what the rules should be; this skill audits what they actually are.
 - **`bosskuai-cybersecurity-risk`**: checks whether rules can be exploited; load alongside when auth, permissions, or financial logic is involved.
 

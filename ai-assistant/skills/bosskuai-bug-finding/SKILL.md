@@ -12,6 +12,7 @@ Use this skill when the goal is to find what is wrong or what is likely to break
 - **`bosskuai-rigorous-code-review`**: reviews a diff for quality across all dimensions; this skill focuses specifically on locating defects and failure modes.
 - **`bosskuai-cybersecurity-risk`**: focuses on security threat surfaces; this skill focuses on correctness defects, logic errors, and runtime failures.
 - **`bosskuai-business-logic-review`**: validates rules and invariants; load alongside this skill if bugs may originate from misencoded business rules.
+- **`bosskuai-root-cause-investigation`**: uses logs, DB state, queues, webhooks, and operational evidence to confirm why a real incident happened after the code path is traced.
 
 ## Bug pattern taxonomy
 

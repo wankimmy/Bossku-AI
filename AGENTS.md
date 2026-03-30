@@ -94,6 +94,7 @@ Use this table to discover expertise. The assistant classifies tasks and loads t
 | **Security** | legal-compliance | Privacy, retention, consent, vendor obligations, policy alignment, and spotting when qualified human legal/compliance review is required |
 | **Quality** | business-logic-review | Workflow gaps, state transitions, edge cases, approval flows, hidden rule failures |
 | **Quality** | bug-finding | Bug hunts, regression analysis, failure-path review, suspicious diffs, defects before shipping |
+| **Quality** | root-cause-investigation | Deep bug investigation using business-logic tracing plus DB state, logs, queues, webhooks, and runtime evidence |
 | **Quality** | rigorous-code-review | Skeptical PR/diff review, strict standards with minimal changes, infra and structure fit, challenge implementation |
 | **Architecture** | software-architecture | Module boundaries, system design, integration decisions, layering, scaling, tradeoffs |
 | **Architecture** | api-design | REST/GraphQL/event contract design, versioning, errors, pagination, idempotency, and integrator ergonomics |
@@ -131,6 +132,7 @@ Use this table to discover expertise. The assistant classifies tasks and loads t
 | Harden the AI workspace | "Audit agent security" / "Use agent security hardening" | agent-security-hardening |
 | Privacy or compliance posture | "Review privacy/compliance risk" / "What legal or compliance issues should we flag?" | legal-compliance, cybersecurity-risk |
 | Find bugs or logic flaws | "Hunt for bugs" / "Review business logic and edge cases" | bug-finding, business-logic-review |
+| Production bug or incident investigation | "Find the root cause" / "Check logs and DB state" / "Investigate this incident end-to-end" | root-cause-investigation, bug-finding, business-logic-review |
 | Strict or skeptical code review | "Review this PR harshly" / "Skeptical code review" / "Challenge this implementation" / "Minimal fixes only" | rigorous-code-review, coding-best-practices |
 | Architecture or boundaries | "Review system boundaries" / "Architecture tradeoffs for this change" | software-architecture |
 | Refactor or modernize | "Safe code revamp" / "Modernize without breaking the structure" | code-revamp, codebase-analysis |
@@ -172,6 +174,7 @@ Use the right skill without the user having to ask:
 - Funnels, KPIs, instrumentation, or experiments → consider **analytics-metrics**.
 - Touching auth, billing, user input, or external APIs → consider **cybersecurity-risk** or **agent-security-hardening**.
 - Privacy programs, consent, retention, policy alignment, or vendor obligations → consider **legal-compliance** and escalate to qualified humans when the risk is material.
+- Investigating a real incident with DB rows, logs, jobs, queues, webhooks, or external side effects → consider **root-cause-investigation** alongside **bug-finding**.
 - Unfamiliar codebase or unclear product context → **project-understanding** first.
 - Complex feature or refactor → **planning-execution** or **engineering-delivery** (plan then implement).
 - Multi-faceted task (e.g. launch readiness) → combine **launch-commercialization** with **marketing**, **sales**, **seo-geo** as needed.
@@ -213,6 +216,7 @@ Before considering a meaningful task done:
 - `bosskuai-legal-compliance`: Use this for privacy, retention, consent, vendor obligations, policy alignment, and spotting when qualified human legal/compliance review is required. File: `ai-assistant/skills/bosskuai-legal-compliance/SKILL.md`
 - `bosskuai-business-logic-review`: Use this for workflow gaps, state transitions, edge cases, approval flows, and hidden rule failures. File: `ai-assistant/skills/bosskuai-business-logic-review/SKILL.md`
 - `bosskuai-bug-finding`: Use this for bug hunts, regression analysis, failure-path review, suspicious diffs, and finding likely defects before shipping. File: `ai-assistant/skills/bosskuai-bug-finding/SKILL.md`
+- `bosskuai-root-cause-investigation`: Use this for comprehensive bug investigation using business-logic tracing plus runtime evidence such as database state, logs, jobs, queues, webhooks, and external side effects to locate the true failure boundary. File: `ai-assistant/skills/bosskuai-root-cause-investigation/SKILL.md`
 - `bosskuai-rigorous-code-review`: Use this for skeptical expert code review of diffs or PRs: map changes to structure and infrastructure, apply strict best practices, default to minimal fixes, and reserve major changes for clearly justified cases. File: `ai-assistant/skills/bosskuai-rigorous-code-review/SKILL.md`
 - `bosskuai-software-architecture`: Use this for module boundaries, system design, integration decisions, layering, scaling implications, and architecture tradeoffs. File: `ai-assistant/skills/bosskuai-software-architecture/SKILL.md`
 - `bosskuai-api-design`: Use this for REST/GraphQL/event contract design, versioning, errors, pagination, idempotency, and integrator ergonomics. File: `ai-assistant/skills/bosskuai-api-design/SKILL.md`
@@ -274,6 +278,7 @@ Before considering a meaningful task done:
   - agent security hardening
   - business-logic review
   - bug finding
+  - root-cause investigation
   - rigorous code review
   - software architecture
   - API design

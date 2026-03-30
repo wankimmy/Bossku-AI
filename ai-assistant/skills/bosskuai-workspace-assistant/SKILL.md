@@ -36,6 +36,7 @@ This is the **orchestration layer** — it does not replace expert skills, it ro
 | AI agent workspace security | `bosskuai-agent-security-hardening` |
 | Business rule and logic correctness | `bosskuai-business-logic-review` |
 | Product strategy and scoping | `bosskuai-product-strategy` |
+| Incident debugging with DB state or logs | `bosskuai-root-cause-investigation` |
 | Analytics, funnels, experiments, instrumentation | `bosskuai-analytics-metrics` |
 | Planning and prioritization | `bosskuai-planning-execution` |
 | Milestone and delivery tracking | `bosskuai-project-management` |

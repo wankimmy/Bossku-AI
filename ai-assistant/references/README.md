@@ -13,7 +13,7 @@ Use this table to find checklists and playbooks by division. Skills in AGENTS.md
 | **Engineering** | codebase-analysis-checklist, polyglot-engineering-checklist | codebase-analysis-playbook, polyglot-engineering-playbook |
 | **Design** | ui-fidelity-checklist, 3d-web-development-checklist, i18n-l10n-checklist | ui-delivery-playbook, 3d-web-development-playbook, i18n-l10n-playbook |
 | **Security** | security-risk-checklist, agent-security-hardening-checklist, legal-compliance-checklist | security-review-playbook, agent-security-hardening-playbook, legal-compliance-playbook |
-| **Quality** | bug-finding-checklist, business-logic-checklist | bug-finding-playbook |
+| **Quality** | bug-finding-checklist, business-logic-checklist, root-cause-investigation-checklist | bug-finding-playbook, root-cause-investigation-playbook |
 | **Architecture** | architecture-review-checklist, api-design-checklist, data-architecture-checklist | architecture-playbook, api-design-playbook, data-architecture-playbook |
 | **Marketing** | marketing-growth-checklist, social-content-calendar-checklist, paid-acquisition-monetization-checklist | marketing-growth-playbook, social-content-calendar-playbook, paid-acquisition-monetization-playbook |
 | **Sales** | sales-strategy-checklist | sales-strategy-playbook |

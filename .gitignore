@@ -29,4 +29,6 @@ coverage/
 tmp/
 temp/
 
+# AI assistant (local)
 ai-assistant/memory/
+**/project-understanding.md
