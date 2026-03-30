@@ -2,13 +2,15 @@ param(
     [Parameter(Position = 0)]
     [string]$TargetDir,
 
-    [switch]$Force
+    [switch]$Force,
+
+    [switch]$SkipCheck
 )
 
 function Show-Usage {
     @"
 Usage:
-  ./scripts/install.ps1 <target-dir> [-Force]
+  ./scripts/install.ps1 <target-dir> [-Force] [-SkipCheck]
 
 Install the BosskuAI workspace layer into an existing project workspace.
 
@@ -24,6 +26,7 @@ Installed entries:
 Behavior:
   - Refuses to overwrite existing entries by default
   - With -Force, moves conflicting entries into a timestamped backup folder
+  - Runs check-workspace.sh via bash when available unless -SkipCheck
 "@
 }
 
@@ -96,4 +99,19 @@ Write-Host "BosskuAI workspace layer installed to: $ResolvedTarget"
 if ($BackupDir) {
     Write-Host "Backed up replaced entries to: $BackupDir"
 }
-Write-Host "Next step: run ./scripts/check-workspace.sh `"$ResolvedTarget`""
+
+if (-not $SkipCheck) {
+    $CheckScript = Join-Path $ScriptDir "check-workspace.sh"
+    $Bash = Get-Command bash -ErrorAction SilentlyContinue
+    if ($Bash) {
+        Write-Host ""
+        & bash $CheckScript $ResolvedTarget
+        exit $LASTEXITCODE
+    }
+    Write-Host ""
+    Write-Host "Install complete. Run validation from Git Bash or WSL:" -ForegroundColor Yellow
+    Write-Host "  ./scripts/check-workspace.sh `"$ResolvedTarget`""
+    exit 0
+}
+
+Write-Host "Skipped workspace check (-SkipCheck). Run: ./scripts/check-workspace.sh `"$ResolvedTarget`""

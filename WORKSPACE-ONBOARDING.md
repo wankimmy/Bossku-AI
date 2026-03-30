@@ -44,19 +44,22 @@ my-product/
 
 ## Fast path after `git clone`
 
-1. Clone the BosskuAI starter.
-2. Apply the workspace layer into your actual project workspace:
+1. Clone the BosskuAI starter and `cd` into it.
+2. Apply the workspace layer into your actual project workspace (install **runs the workspace check** by default):
 
 ```bash
 ./scripts/install.sh /path/to/your/project
-./scripts/check-workspace.sh /path/to/your/project
 ```
+
+Use `./scripts/install.sh /path/to/your/project --skip-check` only if you intentionally want to skip validation.
 
 On Windows PowerShell:
 
 ```powershell
 .\scripts\install.ps1 C:\path\to\your\project
 ```
+
+If `bash` is not available, run `./scripts/check-workspace.sh` from Git Bash or WSL with the same target path.
 
 3. Open the target project root in Cursor, Claude, or Codex.
 4. Run the workspace onboarding prompt from this file.

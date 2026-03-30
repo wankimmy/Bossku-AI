@@ -5,7 +5,7 @@ set -euo pipefail
 usage() {
   cat <<'EOF'
 Usage:
-  ./scripts/install.sh <target-dir> [--force]
+  ./scripts/install.sh <target-dir> [--force] [--skip-check]
 
 Install the BosskuAI workspace layer into an existing project workspace.
 
@@ -21,6 +21,7 @@ Installed entries:
 Behavior:
   - Refuses to overwrite existing entries by default
   - With --force, moves conflicting entries into a timestamped backup folder
+  - Runs ./scripts/check-workspace.sh on the target after install unless --skip-check
 EOF
 }
 
@@ -30,12 +31,16 @@ if [[ $# -lt 1 ]]; then
 fi
 
 force=0
+skip_check=0
 target_dir=""
 
 for arg in "$@"; do
   case "$arg" in
     --force)
       force=1
+      ;;
+    --skip-check)
+      skip_check=1
       ;;
     -h|--help)
       usage
@@ -113,4 +118,10 @@ echo "BosskuAI workspace layer installed to: $target_dir"
 if [[ -n "$backup_dir" ]]; then
   echo "Backed up replaced entries to: $backup_dir"
 fi
-echo "Next step: run ./scripts/check-workspace.sh \"$target_dir\""
+
+if (( skip_check == 0 )); then
+  echo
+  "$script_dir/check-workspace.sh" "$target_dir"
+else
+  echo "Skipped workspace check (--skip-check). Run: ./scripts/check-workspace.sh \"$target_dir\""
+fi

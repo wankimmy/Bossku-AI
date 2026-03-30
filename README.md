@@ -1,212 +1,90 @@
 # BosskuAI
 
-**In 30 seconds:** One cofounder-style agent. It classifies your task and loads the minimum relevant skills. Say **"work as the security reviewer"** or **"focus on launch commercialization"** to activate an expert lens. Full **skill roster** and **quick reference** are in [AGENTS.md](AGENTS.md); start with [WORKSPACE-ONBOARDING.md](WORKSPACE-ONBOARDING.md).
+A reusable **cofounder-style** workspace layer for Cursor, Claude, and Codex: product, engineering, design, security, GTM, and related skills load by task. Say things like *“work as the security reviewer”* to focus a specific lens.
 
-A public, reusable agent setup for product-building teams who want one assistant package that can think like:
+| Doc | Use it for |
+|-----|------------|
+| [AGENTS.md](AGENTS.md) | Skill roster, “what to ask for,” model split, memory rules |
+| [WORKSPACE-ONBOARDING.md](WORKSPACE-ONBOARDING.md) | Onboarding prompt (copy-paste), per-tool notes, troubleshooting |
 
-- a product strategist
-- a planner and operator
-- a project manager
-- a launch strategist
-- an engineering delivery operator
-- a UI/UX expert
-- a mobile-responsive design reviewer
-- a design-to-code implementer
-- a cybersecurity and risk reviewer
-- an agent-security hardening reviewer
-- a business-logic flaw hunter
-- a bug-finding and code-review specialist
-- a software architect
-- a source-code analysis expert
-- a search-first implementation advisor
-- a skill and rule maintenance operator
-- a code revamp and refactor advisor
-- a coding best practices reviewer
-- a continuation and handoff operator for context-limit cases
-- a polyglot engineering advisor
-- a market and trends analyst
-- a marketing and growth strategist
-- a social media content planner
-- a paid acquisition and monetization strategist
-- a sales strategist
-- an SEO and GEO advisor
-- an AI model selection advisor
+Paths inside the repo are relative, so you can clone it anywhere and rename the folder.
 
-This repo is tool-agnostic by default and includes ready-to-use guidance for:
+## Quick setup
 
-- Codex via `AGENTS.md`
-- Codex project config via `.codex/`
-- Claude via `CLAUDE.md`
-- Claude commands via `.claude/commands/`
-- Claude rules via `.claude/rules/`
-- Cursor via `.cursor/rules/`
-- Workspace installation via `scripts/install.sh`, `scripts/install.ps1`, and `scripts/check-workspace.sh`
-- Maintenance helpers via `ai-assistant/scripts/`
-- Optional advisory hooks via `ai-assistant/hooks/`
+1. **Clone** this repo and `cd` into the `bosskuAI` folder.
 
-Use the same `AGENTS.md` and skills in any of these tools; only the entry file (e.g. `CLAUDE.md` or `.cursor/rules/`) is tool-specific. Local skills, checklists, templates, and memory scaffolding let the assistant improve over time instead of only reacting per session.
+2. **Install** into your real project root (the directory you open in your editor):
 
-All repo references are relative, so anyone can clone this starter into any directory, rename the root folder, and customize it without rewriting absolute paths.
+```bash
+./scripts/install.sh /path/to/your/project
+```
 
-## What This Agent Is For
+This copies `AGENTS.md`, `CLAUDE.md`, `WORKSPACE-ONBOARDING.md`, `.codex/`, `.claude/`, `.cursor/`, and `ai-assistant/`, then **runs the workspace check** so you know the layer is complete.
 
-Use this starter when you want an AI collaborator that can:
+- Existing files in the target with the same names are **not** overwritten. To back them up and replace, use `--force`.
+- To install without running the check: `--skip-check`.
 
-- shape product requirements
-- challenge weak assumptions
-- review business workflows and edge cases
-- turn screens or mockups into implementation-ready guidance
-- review security, abuse cases, privacy, and operational risk
-- read unfamiliar source code quickly and explain the real architecture
-- hunt bugs, regressions, logic flaws, and misuse paths
-- study a codebase first, understand its structure, and implement changes in the current style
-- check for repo-local, tool-native, or maintained solutions before inventing new abstractions
-- use a disciplined engineering workflow with planning, test-guided delivery, review, and verification
-- apply coding best practices without fighting the existing project conventions
-- harden the AI-agent workspace itself against unsafe permissions, prompt injection, and risky integrations
-- pause safely when model limits are near, then continue cleanly on retry
-- reason across programming languages and frameworks
-- analyze competitors, trends, positioning, and market opportunities
-- shape launch plans, roadmaps, and execution slices
-- run project delivery with ownership clarity, milestones, and realistic execution cadence
-- balance launch readiness across engineering, SEO/GEO, marketing, sales, monetization, and PMF learning
-- sharpen ICP, buyer messaging, objections, proof points, and sales motion
-- think about growth, distribution, SEO, GEO, and marketing strategy
-- create copy-paste social content calendars with platform-by-platform dates and posting times
-- plan Google Ads and paid acquisition with monetization logic tied to CAC and conversion
-- make interfaces work cleanly across mobile, tablet, and desktop
-- recommend the right AI model for a specific task, tradeoff, or workflow
+**Windows (PowerShell):**
 
-## Expert Surfaces Included
+```powershell
+.\scripts\install.ps1 C:\path\to\your\project
+```
 
-- Product strategy and requirement shaping
-- Planning, roadmap slicing, and execution strategy
-- Project management and delivery coordination
-- Launch commercialization and go-to-market execution
-- UI/UX and design systems thinking
-- Mobile-responsive design and implementation guidance
-- Design-to-code translation
-- Cybersecurity and risk review
-- Business logic and workflow review
-- Bug finding and code review
-- Software architecture and system design
-- Source-code analysis and repository understanding
-- Search-first solution selection
-- Skill and rule maintenance
-- Code revamp and safe refactoring
-- Coding best practices and implementation quality
-- Engineering delivery workflow
-- Context-limit continuation and retry-safe handoff
-- Polyglot engineering across languages and frameworks
-- Agent workspace security hardening
-- Market research and competitive analysis
-- Marketing, growth, and go-to-market thinking
-- Social content planning and platform calendars
-- Paid acquisition, Google Ads, and monetization strategy
-- Sales strategy and buyer conversion thinking
-- SEO and GEO strategy
-- AI model recommendation and task-to-model fit
-- Durable learning and promotion into stronger guidance
+If `bash` is available (e.g. Git for Windows), validation runs automatically; otherwise, from the starter repo run:
 
-## Repo Structure
+```bash
+./scripts/check-workspace.sh /path/to/your/project
+```
+
+3. **Open the target project** in Cursor, Claude, or Codex (not the starter folder).
+
+4. **Onboard** — paste the *Workspace onboarding prompt* from [WORKSPACE-ONBOARDING.md](WORKSPACE-ONBOARDING.md) so the assistant drafts `ai-assistant/memory/agent-profile.md` and `ai-assistant/memory/project-understanding.md`, then fix anything marked `Inferred:` or `Unknown`.
+
+### Optional: explore the starter first
+
+Open the cloned `bosskuAI` folder as the workspace, read `AGENTS.md`, then either install into another project (step 2) or fill memory files manually using [examples/sample-agent-profile.md](examples/sample-agent-profile.md).
+
+## What’s in the box
+
+- **Behavior:** `AGENTS.md` at the project root; `CLAUDE.md` and mirrored rules for Claude; `.cursor/rules/` for Cursor; `.codex/` for Codex.
+- **Skills & memory:** `ai-assistant/skills/`, `ai-assistant/memory/` (shared across tools).
+- **References & helpers:** `ai-assistant/references/`, `ai-assistant/scripts/`, optional `ai-assistant/hooks/`.
+
+## Repo layout
 
 ```text
 bosskuAI/
 ├── AGENTS.md
 ├── CLAUDE.md
-├── .codex/
-├── .claude/commands/
-├── .claude/rules/
-├── .cursor/rules/
+├── WORKSPACE-ONBOARDING.md
 ├── scripts/
+│   ├── install.sh          # apply layer + verify (default)
+│   ├── install.ps1
+│   └── check-workspace.sh  # validate a workspace (also run by install)
+├── .codex/
+├── .claude/
+├── .cursor/
 └── ai-assistant/
     ├── skills/
+    ├── memory/
     ├── references/
-    │   └── README.md   ← checklists & playbooks by division
-    └── memory/
+    ├── scripts/
+    └── hooks/
 ```
 
-## How To Use
+## Customize
 
-1. Clone this starter somewhere local.
-2. Apply the BosskuAI workspace layer into your real project root:
+Edit `AGENTS.md` for posture and priorities, add or remove skills under `ai-assistant/skills/`, and extend `ai-assistant/references/`. After meaningful work, write durable notes back to `ai-assistant/memory/` so any tool can reuse them.
 
-```bash
-./scripts/install.sh /path/to/your/project
-./scripts/check-workspace.sh /path/to/your/project
-```
+## Example asks
 
-3. Treat `AGENTS.md` in the target workspace as the source-of-truth instructions.
-4. Use [WORKSPACE-ONBOARDING.md](WORKSPACE-ONBOARDING.md) in the target workspace for the actual setup flow.
-5. Let project understanding draft `ai-assistant/memory/agent-profile.md` and `ai-assistant/memory/project-understanding.md` from repo evidence, then refine them.
+- “Review this PRD and turn it into implementation slices.”
+- “Audit this flow for abuse, privacy, and logic flaws.”
+- “Explain this codebase’s architecture from the source.”
+- “Run launch readiness across engineering, SEO, and GTM.”
 
-## Terms
-
-- **Skill** — A reusable workflow/lens (e.g. `bosskuai-engineering-delivery`). The assistant loads skills based on task type or when you explicitly ask.
-- **Division** — Grouping in the roster (Product, Engineering, Design, Security, Marketing, Sales, etc.).
-- **Explicit activation** — Saying e.g. "work as the security reviewer" so the right skill set and tone are applied.
-- **Phase** — Stage of a larger effort (discovery → strategy → build → harden → launch); use phase-based prompts to run the right skills.
-- **Memory** — Durable files under `ai-assistant/memory/` (agent-profile, project-understanding, etc.) shared across sessions and tools.
-
-## Discover expertise (which expert when)
-
-- **Skill roster**: In `AGENTS.md`, see **Skill roster (when to use which)** for a division-based table of every skill and when to use it.
-- **What to ask for**: See **Quick reference: what to ask for** in `AGENTS.md` for situation → example phrasing and which skills get loaded.
-- **Explicit activation**: You can say e.g. "work as the security reviewer" or "focus on launch commercialization" so the assistant loads that skill set and adopts that lens.
-- **Phased pipelines**: For larger projects, see **Optional phased pipelines** in `AGENTS.md` (discovery → strategy → build → harden → launch) and which skills to lean on per phase.
-
-## Start Here
-
-- [WORKSPACE-ONBOARDING.md](WORKSPACE-ONBOARDING.md) — setup flow and "First time? Start here"
-- [examples/sample-prompts.md](examples/sample-prompts.md) — quick reference, phase-based prompts (discovery / strategy / launch), and task prompts
-- [examples/sample-agent-profile.md](examples/sample-agent-profile.md) — template for `ai-assistant/memory/agent-profile.md`
-- [ai-assistant/references/README.md](ai-assistant/references/README.md) — references by division (checklists and playbooks per skill area)
-
-## Customization
-
-This starter is meant to be remixed.
-
-- Rename the root folder if you want. The internal references are relative.
-- Edit `AGENTS.md` to change posture, priorities, or expert surfaces.
-- Fill in `ai-assistant/memory/agent-profile.md` with your domain, product, audience, and constraints, or ask project understanding to draft it dynamically first.
-- Use `examples/sample-agent-profile.md` as a starting point if you want a filled example first.
-- Add or remove skills under `ai-assistant/skills/`.
-- Extend playbooks and checklists under `ai-assistant/references/`.
-- Adjust `.codex/` if you want different Codex-specific roles or config defaults.
-
-## Principles
-
-- Research first, then decide
-- Push for clarity over vague ambition
-- Prefer the smallest real step that reduces risk
-- Study the existing structure first, then implement in the current style when possible
-- Apply coding best practices in a way that fits the current project, not generic textbook rules
-- Treat business logic as seriously as code
-- Treat security, privacy, and abuse cases as first-class concerns
-- Treat UI fidelity and usability as part of correctness
-- Treat planning and execution sequencing as part of strategy, not admin work
-- Treat distribution, marketing, SEO, and GEO as part of product success
-- Start in a planning-first mode for meaningful tasks before implementation or strong conclusions
-- Recommend the best-fit AI model by concrete model name before execution starts on meaningful tasks
-- Stop cleanly and preserve continuation context if model limits are likely to cut the task mid-process
-- Verify market and trend claims with current sources when they matter
-
-## Suggested Use Cases
-
-- "Review this PRD and turn it into implementation slices"
-- "Challenge this SaaS idea and tell me what is weak"
-- "Turn this Figma/screenshot into a delivery-ready engineering spec"
-- "Review this signup flow for abuse, fraud, and logic flaws"
-- "Research competitors and recommend a positioning strategy"
-- "Audit this feature for product, UX, security, and operational risk"
-- "Plan a 90-day launch roadmap for this product"
-- "Give me an SEO and GEO content strategy for this SaaS"
-- "Design a go-to-market motion for this niche"
-- "Read this codebase and explain the real architecture"
-- "Find likely bugs and logic flaws before we ship"
-- "Which AI model should I use for this exact task and why"
-- "Audit our local skills and tell me what should be merged, improved, or promoted into rules"
+More prompts: [examples/sample-prompts.md](examples/sample-prompts.md).
 
 ## License
 
-This repo currently uses the MIT License. Review it before publishing if you want a different licensing model.
+MIT — see [LICENSE](LICENSE).
