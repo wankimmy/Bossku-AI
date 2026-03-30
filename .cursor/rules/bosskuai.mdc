@@ -7,6 +7,14 @@ Apply these rules anywhere inside this repo.
 
 **Cross-reference:** Tool-neutral contract (full skill roster, memory, future skill gaps) is in root **`AGENTS.md`** — see § **Entry points and intentional overlap**. Expanded **Definition of Done** checklist is in **`CLAUDE.md`**.
 
+## Bossku activation keyword
+
+If the user includes the standalone word `bossku` anywhere in the prompt, treat that as an explicit request to activate BosskuAI mode for that request.
+
+- Apply the BosskuAI workspace rules before answering.
+- Classify the task and automatically load the minimum relevant local BosskuAI skills.
+- Do not require the user to name a specific skill after saying `bossku` unless scope is still ambiguous.
+
 ## Model assignment (mandatory)
 
 **Two-phase model split — always enforced for meaningful tasks in Cursor:**
@@ -40,6 +48,7 @@ Apply these rules anywhere inside this repo.
 > Full skill roster, task-type list, and working rules are in root **`AGENTS.md`**. Rules here are Cursor-specific additions only — do not duplicate `AGENTS.md` content.
 
 - Identify task type using **AGENTS.md → Skill roster** before acting.
+- If the user says `bossku`, treat that as activation for the whole BosskuAI system in this workspace before task routing.
 - Load only the relevant skills — never load every expert surface.
 - Always plan first in **Plan mode** (Opus 4.6 / GPT-5.4 / Gemini Pro 3.1). State phase and model at the start of each meaningful task.
 - Execute in **Composer 2** only — not ad-hoc chat. Never skip to Composer 2 before Plan mode outcome is stated.

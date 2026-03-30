@@ -24,7 +24,8 @@ It is the main setup path for applying this starter inside a real project worksp
 1. Read **AGENTS.md** → **Skill roster (when to use which)** and **Quick reference: what to ask for** so you know which expertise exists and how to ask for it (including "work as the X").
 2. Run the **workspace onboarding prompt** from the "Prompts" section below in this file.
 3. Let the assistant draft `ai-assistant/memory/agent-profile.md` and `ai-assistant/memory/project-understanding.md`, then review and fix anything marked `Inferred:` or `Unknown`.
-4. Optionally try explicit activation: e.g. "work as the security reviewer" or "focus on launch commercialization" for a specific expert lens.
+4. Use `bossku` anywhere in a prompt when you want the assistant to auto-activate BosskuAI rules and skill routing for that request.
+5. Optionally try explicit activation: e.g. "work as the security reviewer" or "focus on launch commercialization" for a specific expert lens.
 
 ## Target workspace shape
 
@@ -79,6 +80,8 @@ Use this only if you want to inspect the starter itself before applying it to a 
 5. Start with the onboarding prompt in the prompts section below.
 
 ## How rules and skills are picked up in each tool
+
+Once the workspace is opened correctly, the simplest trigger is the keyword `bossku` in your prompt. That tells the assistant to apply BosskuAI rules and auto-pick the right skills for the request.
 
 ### Cursor
 
@@ -162,6 +165,8 @@ bash ./ai-assistant/scripts/relearn-project-understanding.sh --write-active-cont
 Use this right after opening the project workspace in Cursor, Claude, or Codex.
 
 ```text
+bossku
+
 Use the workspace instructions in AGENTS.md, CLAUDE.md, .claude/commands/, .claude/rules/, .cursor/rules/, and the relevant skills under ai-assistant/skills/.
 
 Start with bosskuai-workspace-assistant. First classify this task, recommend the best AI model for it by concrete model name available in this tool with a short tradeoff note and fallback, and then use bosskuai-project-understanding if the repo context is still unclear.
@@ -182,6 +187,8 @@ Then give me:
 Use this when the workspace is new or the codebase is still unfamiliar.
 
 ```text
+bossku
+
 Use bosskuai-project-understanding and bosskuai-codebase-analysis.
 
 Read the codebase first and explain the real project purpose, likely users, architecture style, main entry points, code organization, and technical risks. Only claim what is supported by the source code or nearby docs.
@@ -199,6 +206,8 @@ Then recommend the next 3 most relevant skills from ai-assistant/skills/, draft 
 Use this to test whether the setup is actually following the rules instead of answering generically.
 
 ```text
+bossku
+
 I want to test whether this workspace setup is working correctly.
 
 Follow the repo rules first. Classify the task, recommend the best AI model by concrete model name available in this tool with tradeoffs, and explicitly name which local skills you are using before you do the work.
@@ -235,6 +244,8 @@ If it skips those behaviors, the rules are not being applied strongly enough in 
 Use this quick test in any tool:
 
 ```text
+bossku
+
 Before doing anything else, tell me:
 1. which workspace rule files you are following
 2. which local skills you will use
@@ -249,5 +260,6 @@ If the answer does not explicitly reflect the local workspace files and skills, 
 - **I want to verify the layer is installed correctly** — Run `./scripts/check-workspace.sh /path/to/project` from the starter repo.
 - **The starter is accumulating too many overlapping skills or rules** — Run a skill stocktake or rules distillation pass using the sample prompts so you can tighten the guidance before adding more.
 - **Assistant doesn’t follow the roster or quick reference** — Point it to `AGENTS.md` → Skill roster and Quick reference: what to ask for. Ask: "Which skills are you loading for this task?"
+- **I want a simple way to trigger the setup** — Start the prompt with `bossku` or include `bossku` naturally in the request, for example: `bossku review this PR for security and business-logic risks`.
 - **Repo or product context is unclear** — Run project understanding first: "Use bosskuai-project-understanding. Read the repo and draft agent-profile and project-understanding."
 - **Rules or skills seem ignored** — Confirm the workspace root you opened contains `AGENTS.md`, and for Cursor `.cursor/rules/`, for Claude `CLAUDE.md` and `.claude/rules/`. Reopen that root and retry the quick compatibility check above.

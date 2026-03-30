@@ -7,6 +7,20 @@ A reusable **cofounder-style** workspace layer for Cursor, Claude, and Codex. Sk
 | [AGENTS.md](AGENTS.md) | Skill roster, what to ask for, model split, memory rules |
 | [WORKSPACE-ONBOARDING.md](WORKSPACE-ONBOARDING.md) | Onboarding prompt, per-tool notes, troubleshooting |
 
+## Activation
+
+Say `bossku` anywhere in a prompt to explicitly activate BosskuAI mode for that request.
+
+- BosskuAI rules apply first.
+- The assistant classifies the task and auto-loads the minimum relevant BosskuAI skills.
+- You do not need to name a specific skill unless you want a particular expert lens.
+
+Example asks:
+
+- `bossku review this PR for security and business-logic risks`
+- `bossku plan the smallest safe implementation for this feature`
+- `bossku audit this repo and draft project-understanding`
+
 ## Setup
 
 1. Clone this repo and install into your project root:
@@ -55,9 +69,9 @@ Edit `AGENTS.md` for posture and priorities. Add or remove skills under `ai-assi
 
 ## Example asks
 
-- "Review this PRD and turn it into implementation slices."
-- "Audit this flow for abuse, privacy, and logic flaws."
-- "Run launch readiness across engineering, SEO, and GTM."
+- "bossku review this PRD and turn it into implementation slices."
+- "bossku audit this flow for abuse, privacy, and logic flaws."
+- "bossku run launch readiness across engineering, SEO, and GTM."
 
 More: [examples/sample-prompts.md](examples/sample-prompts.md)
 

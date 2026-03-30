@@ -4,6 +4,14 @@ This file supplements the root `AGENTS.md` with Codex-specific engineering guida
 
 Use the root `AGENTS.md` as the source of truth. For the full **skill roster**, **quick reference (what to ask for)**, and **explicit expert activation** ("work as the security reviewer", etc.), see root `AGENTS.md`. Use this file for Codex workflow details, multi-agent roles, and verification habits.
 
+## Bossku activation keyword
+
+If the user includes the standalone word `bossku` anywhere in the prompt, treat that as an explicit request to activate BosskuAI mode for that request.
+
+- Apply the BosskuAI workspace rules first.
+- Run the normal task classifier from root `AGENTS.md`.
+- Automatically load the minimum relevant local BosskuAI skills for the task.
+
 **Intentional overlap:** Model split, shared memory, and Definition of Done also appear in **`CLAUDE.md`** (Claude) and **`.cursor/rules/bosskuai.mdc`** (Cursor). See root `AGENTS.md` § **Entry points and intentional overlap** for the map.
 
 ## Model assignment (mandatory)
@@ -89,4 +97,3 @@ If no issues are found, say that clearly and mention residual risk or verificati
 - Multi-agent support is configured in `.codex/config.toml`.
 - Keep `.codex/config.toml` portable. Do not assume global MCP servers or machine-specific tools are installed.
 - For learning triage, follow root `AGENTS.md` and load `bosskuai-continuous-learning` when a meaningful task, review, or incident has produced a durable lesson worth promoting.
-

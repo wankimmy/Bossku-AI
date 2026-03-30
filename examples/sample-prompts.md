@@ -2,6 +2,8 @@
 
 Use these as starter prompts after cloning the repo. For the full skill roster and "what to ask for" table, see **AGENTS.md** (Skill roster, Quick reference, Optional phased pipelines).
 
+If you want to force BosskuAI activation explicitly, add `bossku` anywhere in the prompt.
+
 ## Quick reference: which prompt for which situation
 
 | Situation | Jump to section |
@@ -12,7 +14,7 @@ Use these as starter prompts after cloning the repo. For the full skill roster a
 | Promote repeated guidance into stronger rules | Rules distill |
 | Shape product or scope | Product strategy |
 | Plan roadmap or launch | Planning, Launch commercialization |
-| Track delivery and milestones | Project management |
+| Track delivery and milestones | Planning and execution |
 | Build a feature with quality gates | Engineering delivery |
 | **Design** / UI (design-to-code) | UI/UX and design-to-code |
 | Security or abuse review | Security and misuse |
@@ -22,7 +24,7 @@ Use these as starter prompts after cloning the repo. For the full skill roster a
 | Refactor / modernize | (Use engineering-delivery + code-revamp in AGENTS.md) |
 | Context limit / handoff | (Use context-limit-continuation in AGENTS.md) |
 | Market or positioning | Market analysis, Marketing and growth |
-| **Marketing** (strategy, channels, content, paid ads) | Marketing and growth, Social content calendar, Paid acquisition and monetization, SEO and GEO |
+| **Marketing** (strategy, channels, content, paid ads) | Marketing and growth, Paid acquisition and monetization, SEO and GEO |
 | **Sales** (ICP, pipeline, objections, pricing) | Sales strategy |
 | Launch (marketing + sales + SEO) | Launch commercialization, SEO and GEO, Sales strategy |
 | Which AI model for this task | AI model selection |
@@ -43,7 +45,7 @@ Read the repo and any specs, then draft ai-assistant/memory/agent-profile.md and
 ### Strategy phase
 
 ```text
-We're in the strategy phase. Use planning-execution and project-management.
+We're in the strategy phase. Use planning-execution.
 
 Produce a realistic roadmap, scope, priorities, and ownership. Use software-architecture if we need system boundaries or tradeoffs. Give me the smallest meaningful next slice and decision checkpoints.
 ```
@@ -59,6 +61,8 @@ Use launch-commercialization, marketing-growth, sales-strategy, and seo-geo. Pro
 ## Workspace onboarding
 
 ```text
+bossku
+
 Use bosskuai-workspace-assistant first.
 
 Classify the task, recommend the best AI model by concrete model name available in this tool with a short tradeoff note and fallback, and if repo context is still unclear use bosskuai-project-understanding before anything else.
@@ -81,6 +85,8 @@ Act as a cofounder. Review this product idea, identify the real user pain, chall
 ## Search first
 
 ```text
+bossku
+
 Use bosskuai-search-first.
 
 Before we build anything custom, check this repo, the current framework or tool surface, and the most likely maintained options. Then tell me whether we should adopt, extend, wrap, or build from scratch, and why.
@@ -89,6 +95,8 @@ Before we build anything custom, check this repo, the current framework or tool 
 ## Skill stocktake
 
 ```text
+bossku
+
 Use bosskuai-skill-stocktake.
 
 Audit our local skills, commands, and nearby guidance for overlap, stale references, weak triggers, and maintenance cost. Give me keep, improve, merge, update, or retire recommendations, but do not auto-delete anything.
@@ -97,6 +105,8 @@ Audit our local skills, commands, and nearby guidance for overlap, stale referen
 ## Rules distill
 
 ```text
+bossku
+
 Use bosskuai-rules-distill.
 
 Read the current skills, references, and rule files, then tell me which repeated principles should become stronger shared rules. Show append, revise, or new-section recommendations, and draft the rule text without auto-applying it.
@@ -108,10 +118,10 @@ Read the current skills, references, and rule files, then tell me which repeated
 Create a realistic 30-60-90 day plan for this product. Separate must-do work from optional work, identify dependencies, and recommend the smallest meaningful next slice.
 ```
 
-## Project management
+## Planning and execution
 
 ```text
-Use bosskuai-project-management.
+Use bosskuai-planning-execution.
 
 Turn this initiative into a working delivery plan with owners, milestones, blockers, review cadence, decision checkpoints, and the smallest next action that reduces delivery risk.
 ```
@@ -119,6 +129,8 @@ Turn this initiative into a working delivery plan with owners, milestones, block
 ## Launch commercialization
 
 ```text
+bossku
+
 Use bosskuai-launch-commercialization.
 
 I want to launch this product. Balance the engineering readiness with business execution. Assess whether the product is ready enough to sell, whether the SEO and GEO are attractive enough for users to read and buy, and produce:
@@ -132,6 +144,8 @@ I want to launch this product. Balance the engineering readiness with business e
 ## Engineering delivery
 
 ```text
+bossku
+
 Use bosskuai-engineering-delivery.
 
 Plan this implementation first, then propose a test-guided delivery path, the smallest safe code changes, the review points, and the exact verification steps we should run before considering it done.
@@ -152,6 +166,8 @@ Review this workflow for security risks, misuse paths, fraud opportunities, priv
 ## Agent security hardening
 
 ```text
+bossku
+
 Use bosskuai-agent-security-hardening.
 
 Audit this AI-agent workspace itself for prompt injection risk, unsafe external content, overbroad permissions, MCP risk, memory poisoning, secret exposure, and weak defaults. Recommend safer settings and guardrails for Claude, Cursor, and Codex.
@@ -196,7 +212,9 @@ Design a go-to-market strategy for this product. Cover audience, messaging, chan
 ## Social content calendar
 
 ```text
-Use bosskuai-social-content-calendar.
+bossku
+
+Use bosskuai-marketing-growth.
 
 Create a 30-day content plan for LinkedIn, X, Instagram, TikTok, and Facebook for this product. Use my target country and timezone, and give me a copy-paste calendar with:
 - date
@@ -212,6 +230,8 @@ Create a 30-day content plan for LinkedIn, X, Instagram, TikTok, and Facebook fo
 ## Paid acquisition and monetization
 
 ```text
+bossku
+
 Use bosskuai-paid-acquisition-monetization.
 
 Create a practical paid growth plan for this product with Google Ads first. Include:
@@ -227,6 +247,8 @@ Create a practical paid growth plan for this product with Google Ads first. Incl
 ## Sales strategy
 
 ```text
+bossku
+
 Use bosskuai-sales-strategy.
 
 Define the ICP, buyer, champion, likely objections, value and ROI framing, founder-led sales motion, and the next sales assets or outreach moves that can improve conversion.

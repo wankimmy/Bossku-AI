@@ -10,6 +10,7 @@ All notable changes to this repo should be documented here.
 
 ## Unreleased
 
+- Added `bossku` as a documented activation keyword across `AGENTS.md`, tool-specific entry points, onboarding docs, examples, and routing metadata so users can trigger BosskuAI rules plus automatic skill selection with a simple prompt cue.
 - Expanded `ai-assistant/references/pitfalls/` with domain files (security, performance, business-logic, product, ai-workspace), new ADRs (model split, skill expansion criteria, memory organization), `scripts/verify-skill-references.sh`, **AGENTS.md** table of contents and future-skill-area map, cross-links across entry-point rules, and maintenance guidance for time-sensitive marketing/SEO/model skills plus **bug-patterns** / **market-notes** memory templates.
 - Added public onboarding and contribution files, including `WORKSPACE-ONBOARDING.md`, `CONTRIBUTING.md`, `LICENSE`, `.gitignore`, and starter examples.
 - Expanded expert surfaces for planning, marketing, SEO/GEO, bug-finding, architecture, codebase analysis, polyglot engineering, and AI model selection.

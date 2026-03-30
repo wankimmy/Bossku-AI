@@ -1,18 +1,19 @@
 ---
 name: bosskuai-bug-finding
-description: Use this for bug hunts, regression analysis, suspicious changes, failure-path review, and finding likely defects before or after shipping.
+description: Use this for bug hunts, regression analysis, suspicious changes, failure-path review, finding likely defects before shipping, and deep incident investigation using logs, DB state, queues, and runtime evidence.
 ---
 
 # BosskuAI Bug Finding
 
-Use this skill when the goal is to find what is wrong or what is likely to break.
+Use this skill when the goal is to find what is wrong or what is likely to break. Two modes:
+- **Standard mode** — trace defects from code paths and patterns alone.
+- **Deep investigation mode** — correlate code with runtime evidence (logs, DB state, queues, webhooks) when code alone cannot explain the failure.
 
 ## How this differs from nearby skills
 
 - **`bosskuai-rigorous-code-review`**: reviews a diff for quality across all dimensions; this skill focuses specifically on locating defects and failure modes.
 - **`bosskuai-cybersecurity-risk`**: focuses on security threat surfaces; this skill focuses on correctness defects, logic errors, and runtime failures.
 - **`bosskuai-business-logic-review`**: validates rules and invariants; load alongside this skill if bugs may originate from misencoded business rules.
-- **`bosskuai-root-cause-investigation`**: uses logs, DB state, queues, webhooks, and operational evidence to confirm why a real incident happened after the code path is traced.
 
 ## Bug pattern taxonomy
 
@@ -31,7 +32,7 @@ Before tracing code, scan for known high-yield patterns:
 | **Time / timezone** | Daylight saving edge, UTC vs local mismatch, expired TTL logic |
 | **External dependency** | Assumed availability, no timeout, no retry budget, breaking API contract |
 
-## Workflow
+## Standard workflow
 
 ### Phase 1 — Understand the failure
 
@@ -70,6 +71,43 @@ For each finding, score:
 14. If the root cause is structural, flag it and recommend whether a local patch is sufficient or a larger fix is needed.
 15. State what must be verified after the fix.
 
+## Deep investigation mode
+
+Use when: the bug cannot be explained from code alone and you need to correlate **business logic**, **runtime evidence**, and **system state** — i.e. real incidents with DB rows, logs, queues, webhooks, or external side effects.
+
+### Mindset
+
+- The symptom is rarely the root cause.
+- Production truth often lives across code, DB rows, logs, jobs, caches, and external systems together.
+- Business-logic bugs are often silent data/state bugs before they are visible UI bugs.
+- Read-only evidence collection is the default. Be careful with production data, secrets, and PII.
+
+### Evidence surfaces to inspect
+
+Use the minimum relevant set:
+
+- application logs
+- job / queue / worker logs
+- web server / proxy logs
+- DB records and timestamps
+- state-machine transitions
+- cron / scheduled task behavior
+- webhook delivery history
+- cache contents or invalidation behavior
+- third-party API responses or dashboards
+- deployment / config changes around the incident window
+
+### Deep investigation workflow
+
+1. **Define the incident clearly** — expected behavior, actual behavior, impacted entity/user segment, timeframe, environment.
+2. **Trace the business flow** — entry point → validations → business rules → data writes → async jobs / webhooks → downstream side effects.
+3. **Build the evidence timeline** — user action or triggering event → request log or job start → DB state changes → external callbacks or failures → final wrong state or user-visible symptom.
+4. **Inspect data state directly** — compare expected vs actual row state; check status fields, timestamps, foreign keys, retry counts, idempotency keys, soft deletes, and audit history; look for partial writes, stale rows, missing transitions, or duplicate records.
+5. **Inspect logs and operational traces** — correlate by request ID, entity ID, job ID, idempotency key, or user ID; find the earliest divergence; pay attention to silent retries, swallowed exceptions, timeout fallbacks, and background workers.
+6. **Test the business invariant** — what rule should have prevented this? Was the rule missing, bypassed, racing, or operating on stale data?
+7. **Classify the root cause** — business rule encoded incorrectly / missing validation or authorization / race condition or transaction gap / retry/idempotency failure / stale cache / webhook or async handoff failure / bad migration or data repair / config or environment drift.
+8. **Recommend the smallest safe fix** — immediate containment, durable code or schema fix, missing test/monitor/alert, data repair steps if required.
+
 ## Guardrails
 
 - If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
@@ -77,9 +115,12 @@ For each finding, score:
 - Do not assume intermittent bugs are non-reproducible — they are usually race conditions or state corruption.
 - Do not mark a finding as "Confirmed" unless you have traced it in code. Distinguish inferred patterns from confirmed defects.
 - Do not over-fix. The goal is the smallest safe change, not a refactor opportunity.
+- Do not mutate production data or replay jobs unless explicitly asked and it is safe to do so.
+- Do not stop at "code looks fine" when DB state or logs contradict that conclusion.
 
 ## Output format
 
+**Standard mode:**
 ```
 Failure summary:
   Expected: [behavior]
@@ -102,7 +143,36 @@ Structural risk:
   [if the fix is only a patch and a deeper issue remains, flag it here]
 ```
 
+**Deep investigation mode:**
+```
+Incident summary:
+  Expected: [behavior]
+  Actual: [behavior]
+  Scope: [who/what is affected]
+  Time window: [when]
+
+Business flow traced:
+  [entry] -> [logic] -> [writes] -> [async/webhook] -> [final state]
+
+Evidence timeline:
+  [timestamp/event] — [what happened] — [source: log / DB / queue / webhook / code]
+
+Root-cause findings:
+  [finding] — Evidence: [Confirmed/Inferred] — Type: [rule / data / async / race / config / external]
+  Failure boundary: [first place invariant breaks]
+  Containment: [immediate step]
+  Durable fix: [smallest safe fix]
+
+Data or log checks used:
+  [check] — [why it mattered]
+
+Missing protections:
+  [test / monitor / alert / invariant check]
+```
+
 ## References
 
 - `../../references/playbooks/bug-finding-playbook.md`
 - `../../references/checklists/bug-finding-checklist.md`
+- `../../references/checklists/root-cause-investigation-checklist.md`
+- `../../references/playbooks/root-cause-investigation-playbook.md`

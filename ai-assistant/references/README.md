@@ -6,7 +6,7 @@ Checklists and playbooks mapped by division. Skills in AGENTS.md reference these
 |----------|-------------|-----------|
 | **Orchestration** | project-understanding, learning-promotion, continuous-learning, search-first, skill-health, rule-distillation | project-understanding, continuous-learning, search-first, skill-stocktake, rules-distillation |
 | **Product** | product-spec, planning, analytics-metrics | product-discovery, planning, analytics-metrics |
-| **PM** | project-management | project-management |
+| **PM** | planning, project-management | planning, project-management |
 | **Engineering** | engineering-delivery, coding-best-practices, code-revamp, verification, devops-iac, codebase-analysis, polyglot-engineering | engineering-delivery, coding-best-practices, code-revamp, verification, devops-iac, codebase-analysis, polyglot-engineering |
 | **Design** | ui-fidelity, 3d-web-development, i18n-l10n | ui-delivery, 3d-web-development, i18n-l10n |
 | **Security** | security-risk, agent-security-hardening, legal-compliance | security-review, agent-security-hardening, legal-compliance |

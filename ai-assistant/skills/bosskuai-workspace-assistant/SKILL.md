@@ -36,10 +36,10 @@ This is the **orchestration layer** — it does not replace expert skills, it ro
 | AI agent workspace security | `bosskuai-agent-security-hardening` |
 | Business rule and logic correctness | `bosskuai-business-logic-review` |
 | Product strategy and scoping | `bosskuai-product-strategy` |
-| Incident debugging with DB state or logs | `bosskuai-root-cause-investigation` |
+| Incident debugging with DB state or logs | `bosskuai-bug-finding` (deep investigation mode) |
 | Analytics, funnels, experiments, instrumentation | `bosskuai-analytics-metrics` |
 | Planning and prioritization | `bosskuai-planning-execution` |
-| Milestone and delivery tracking | `bosskuai-project-management` |
+| Milestone and delivery tracking | `bosskuai-planning-execution` |
 | Full launch plan | `bosskuai-launch-commercialization` |
 | Market research and competitive analysis | `bosskuai-market-analysis` |
 | API contract design | `bosskuai-api-design` |
@@ -50,7 +50,7 @@ This is the **orchestration layer** — it does not replace expert skills, it ro
 | Localization, locale handling, multilingual UX | `bosskuai-i18n-l10n` |
 | SEO and GEO discoverability | `bosskuai-seo-geo` |
 | Privacy and compliance readiness | `bosskuai-legal-compliance` |
-| Social content calendar | `bosskuai-social-content-calendar` |
+| Social content calendar | `bosskuai-marketing-growth` |
 | Sales motion, ICP, deal qualification | `bosskuai-sales-strategy` |
 | Which AI model for this task | `bosskuai-ai-model-selection` |
 | Context or token limit approaching | `bosskuai-context-limit-continuation` |

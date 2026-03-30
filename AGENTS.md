@@ -3,9 +3,11 @@
 ## Table of contents
 
 - [Purpose](#purpose)
+- [Bossku activation keyword](#bossku-activation-keyword)
 - [Entry points and intentional overlap](#entry-points-and-intentional-overlap)
 - [Model assignment (mandatory — applies to all tools)](#model-assignment-mandatory--applies-to-all-tools)
 - [Shared memory (mandatory — applies to all tools)](#shared-memory-mandatory--applies-to-all-tools)
+- [Task classifier (run first)](#task-classifier-run-first)
 - [Skill roster (when to use which)](#skill-roster-when-to-use-which)
 - [Quick reference: what to ask for](#quick-reference-what-to-ask-for)
 - [Optional phased pipelines](#optional-phased-pipelines)
@@ -24,6 +26,16 @@
 This repo packages a reusable AI cofounder setup that combines product, design, engineering, security, business logic, and market thinking.
 
 Use it when you want the assistant to behave like a pragmatic cofounder rather than a narrow code generator.
+
+## Bossku activation keyword
+
+If the user includes the standalone word `bossku` anywhere in the prompt, treat that as an explicit request to activate BosskuAI mode for that request.
+
+- Apply the BosskuAI rules in this workspace before answering.
+- Run the normal task classifier and automatically load the minimum relevant BosskuAI skills.
+- Do not require the user to name an exact skill after saying `bossku`; infer the right skill(s) from the task.
+- If the scope is still ambiguous, follow the normal clarify-first protocol.
+- Treat `bossku:` or `bossku,` the same as `bossku`.
 
 ## Entry points and intentional overlap
 
@@ -62,87 +74,102 @@ The **tool-neutral contract** for model phase split, shared memory, learning pro
 - Never treat memory as tool-local. What is written here must be usable by any tool in any session.
 - Memory files: `agent-profile.md`, `project-understanding.md`, `learning-log.md`, `bug-patterns.md`, `market-notes.md`, `active-continuation.md` (ephemeral handoffs only; clear when done).
 
+## Task classifier (run first)
+
+Use this decision tree before loading any skill:
+
+1. **Activation gate**
+   - If the prompt contains the standalone word `bossku`, activate BosskuAI mode automatically for this request.
+   - Then continue through the normal classifier so the right skills and rules are applied.
+2. **Scope gate**
+   - If task is meaningful/non-trivial: state planning phase + model, then classify.
+   - If quick/trivial: proceed with minimal routing overhead.
+3. **Intent gate**
+   - **Understand** (repo/project context) -> `project-understanding`
+   - **Decide** (strategy/architecture/prioritization) -> Product or Architecture cluster
+   - **Execute** (implementation/delivery) -> Engineering cluster
+   - **Assure** (review/bugs/security/logic) -> Quality or Security cluster
+   - **Grow** (market/marketing/sales/launch) -> Growth cluster
+4. **Cluster gate (9-way)**
+   - Orchestration, Product, Engineering, Design, Security, Quality, Architecture, Growth, Continuation
+5. **Skill gate**
+   - Pick 1 primary skill and optionally 1 secondary skill.
+   - Avoid loading >2 skills unless the task is explicitly cross-functional.
+6. **Evidence gate**
+   - Read relevant code/docs/specs before conclusions.
+7. **Output gate**
+   - State: task classification, selected skills, model recommendation, and verification plan.
+
 ## Skill roster (when to use which)
 
-Use this table to discover expertise. The assistant classifies tasks and loads the minimum relevant skills; you can also **explicitly activate** by saying e.g. "work as the security reviewer" or "focus on launch commercialization" so the right skill set and lens are applied.
+Classify into a **role cluster** first, then choose the minimum skill set. This reduces routing complexity and improves consistency.
 
-| Division | Skill | When to use |
-|----------|-------|-------------|
-| **Orchestration** | workspace-assistant | Repo discovery, cross-cutting work, deciding which expert skills to load |
-| **Orchestration** | project-understanding | What the project is for, who it serves, stack, architecture, source-of-truth map; uses sampling on large repos; recommends next skills and updates memory |
-| **Orchestration** | search-first | Check repo-local options, tool capabilities, and maintained solutions before building custom code or workflows |
-| **Orchestration** | skill-stocktake | Audit local skills, commands, and guidance for overlap, staleness, and maintenance improvements |
-| **Orchestration** | rules-distill | Extract repeated principles from skills and references, then propose safe shared rule updates |
-| **Orchestration** | continuous-learning | After meaningful work, triage durable lessons, choose the strongest artifact, and catch stale memory before it drifts |
-| **Orchestration** | subagent-delegation | Automatically split heavy, parallel, or risky tasks across subagents before context exhausts; tool-specific patterns for Claude Code (Agent + worktree), Cursor (parallel Composer tabs), and Codex (parallel runs) |
-| **Product** | product-strategy | Product framing, requirement shaping, prioritization, scope, go-to-market implications |
-| **Product** | analytics-metrics | Instrumentation strategy, funnels, KPI definitions, experimentation, and making product decisions measurable |
-| **Product** | planning-execution | Roadmaps, sequencing, milestone planning, launch planning, strategy → execution slices |
-| **Product** | project-management | Execution tracking, dependencies, milestone control, ownership clarity, keeping projects on track |
-| **Product** | launch-commercialization | Engineering readiness + SEO/GEO + marketing + sales + monetization + country strategy + PMF before launch |
-| **Engineering** | engineering-delivery | Implementation-heavy work: plan-first, test-guided, review-before-finalization, verification |
-| **Engineering** | devops-iac | CI/CD, containers, deployment workflow, infrastructure as code, runtime reliability, secrets, and rollback design |
-| **Engineering** | codebase-analysis | Deep read: entry points, execution paths, module boundaries, side effects, extension points — how the source actually runs |
-| **Engineering** | code-revamp | Safe modernization, structural cleanup, legacy refactors, minimal churn |
-| **Engineering** | coding-best-practices | Implementation quality, maintainability, testing, error handling, naming, fitting project conventions |
-| **Engineering** | polyglot-engineering | Guidance across languages, frameworks, runtimes, stack-specific tradeoffs |
-| **Design** | ui-ux-design-to-code | UI/UX review, interaction quality, design systems, accessibility (e.g. WCAG), designs → implementation-ready code guidance |
-| **Design** | i18n-l10n | Internationalization, localization, locale handling, translation workflow, formatting, expansion-safe UX, and RTL readiness |
-| **Design** | 3d-web-development | 3D websites, WebGL, Three.js/R3F, scroll-driven 3D animations, GSAP motion, post-processing, Spline, particles, Awwwards-quality immersive experiences |
-| **Security** | cybersecurity-risk | Auth, abuse cases, privacy, trust boundaries, security review, operational risk |
-| **Security** | agent-security-hardening | Securing the AI-agent workspace: instructions, MCPs, external content, memory, least-privilege |
-| **Security** | legal-compliance | Privacy, retention, consent, vendor obligations, policy alignment, and spotting when qualified human legal/compliance review is required |
-| **Quality** | business-logic-review | Workflow gaps, state transitions, edge cases, approval flows, hidden rule failures |
-| **Quality** | bug-finding | Bug hunts, regression analysis, failure-path review, suspicious diffs, defects before shipping |
-| **Quality** | root-cause-investigation | Deep bug investigation using business-logic tracing plus DB state, logs, queues, webhooks, and runtime evidence |
-| **Quality** | rigorous-code-review | Skeptical PR/diff review, strict standards with minimal changes, infra and structure fit, challenge implementation |
-| **Architecture** | software-architecture | Module boundaries, system design, integration decisions, layering, scaling, tradeoffs |
-| **Architecture** | api-design | REST/GraphQL/event contract design, versioning, errors, pagination, idempotency, and integrator ergonomics |
-| **Architecture** | data-architecture | Data modeling, schema ownership, migrations, warehouses, analytics pipelines, and retention/correctness tradeoffs |
-| **Continuation** | context-limit-continuation | Context/token or usage pressure: stop cleanly, handoff to `memory/active-continuation.md`, recommend next model (`ai-model-selection`), fresh session |
-| **Marketing** | market-analysis | Competitor review, market trends, positioning, pricing, demand signals, opportunity analysis |
-| **Marketing** | marketing-growth | Marketing strategy, distribution, positioning, GTM, channels, messaging, growth loops |
-| **Marketing** | social-content-calendar | Platform-specific content calendars, local posting dates/times, formats, hooks, CTAs |
-| **Marketing** | paid-acquisition-monetization | Google Ads, paid acquisition, CAC logic, pricing, packaging, monetization planning |
-| **Marketing** | seo-geo | SEO, GEO, content discoverability, search demand alignment, search + generative engines |
-| **Sales** | sales-strategy | Sales positioning, ICP, pipeline strategy, founder-led sales, objections, pricing narrative |
-| **AI ops** | ai-model-selection | Which AI model fits a task: reasoning depth, speed, tool use, multimodality, cost, risk |
+| Role cluster | Skill | When to use |
+|-------------|-------|-------------|
+| **Orchestration** | workspace-assistant | Repo discovery, cross-cutting work, and router/meta coordination |
+| **Orchestration** | project-understanding | Source-of-truth map, architecture context, and durable project understanding |
+| **Orchestration** | search-first | Check repo/tool-native options before custom building |
+| **Orchestration** | skill-stocktake | Audit skills/commands/rules for overlap and maintenance quality |
+| **Orchestration** | rules-distill | Promote repeated principles into stronger shared rules |
+| **Orchestration** | continuous-learning | Promote durable learnings into memory/checklists/pitfalls/playbooks |
+| **Orchestration** | subagent-delegation | Split heavy, parallel, or risky workstreams before context overload |
+| **Product** | product-strategy | Product framing, scope, requirements, and prioritization |
+| **Product** | analytics-metrics | Funnel/KPI instrumentation and measurable decision design |
+| **Product** | planning-execution | Strategy sequencing plus delivery tracking, milestones, dependencies, ownership |
+| **Product** | launch-commercialization | End-to-end launch readiness across product, engineering, and business |
+| **Engineering** | engineering-delivery | Plan-first implementation with test-guided verification |
+| **Engineering** | devops-iac | CI/CD, infra-as-code, runtime reliability, rollback and secrets posture |
+| **Engineering** | codebase-analysis | Evidence-based execution-path and module-boundary analysis |
+| **Engineering** | code-revamp | Safe modernization and legacy structural cleanup |
+| **Engineering** | coding-best-practices | Implementation quality, maintainability, and testing posture |
+| **Engineering** | polyglot-engineering | Stack-specific guidance across languages and frameworks |
+| **Design** | ui-ux-design-to-code | UX/UI quality, accessibility, design systems, and design-to-code guidance |
+| **Design** | i18n-l10n | Internationalization, localization workflows, and RTL/expansion readiness |
+| **Design** | 3d-web-development | WebGL/Three.js/R3F immersive web experience delivery |
+| **Security** | cybersecurity-risk | Security/privacy/abuse and trust-boundary risk assessment |
+| **Security** | agent-security-hardening | Agent workspace hardening, least privilege, and prompt/content safety |
+| **Security** | legal-compliance | Privacy/compliance risk spotting and escalation guidance |
+| **Quality** | business-logic-review | Workflow invariants, state transitions, approvals, and edge-case logic |
+| **Quality** | bug-finding | Bug hunts, regression analysis, and deep root-cause/incident investigation |
+| **Quality** | rigorous-code-review | Strict skeptical review of diffs, risk, and implementation choices |
+| **Architecture** | software-architecture | System/module boundaries, layering, and scaling tradeoffs |
+| **Architecture** | api-design | API/event contract design, versioning, errors, and integrator ergonomics |
+| **Architecture** | data-architecture | Data modeling, migrations, analytics pipelines, retention/correctness tradeoffs |
+| **Growth** | market-analysis | Competitive context, demand signals, positioning, and market opportunity |
+| **Growth** | marketing-growth | GTM/channels/messaging/growth loops plus social content calendar planning |
+| **Growth** | paid-acquisition-monetization | Paid channels, CAC logic, pricing, packaging, monetization planning |
+| **Growth** | seo-geo | SEO/GEO discoverability and search/generative answerability |
+| **Growth** | sales-strategy | ICP, pipeline strategy, objections, and conversion narrative |
+| **Continuation** | context-limit-continuation | Safe handoff under context/usage pressure + next-session guidance |
+| **Continuation** | ai-model-selection | Model recommendation by capability, speed, cost, risk, and modality |
 
 ## Quick reference: what to ask for
 
 | Situation | What to say (examples) | Primary skills to load |
 |-----------|------------------------|------------------------|
 | New repo or unclear context | "Use project understanding first" / "Understand this codebase" | project-understanding, workspace-assistant |
-| Research existing options before building | "Search first" / "Check if we already have this" / "Should we adopt or build?" | search-first, codebase-analysis |
+| Research existing options before building | "Search first" / "Check if we already have this" | search-first, codebase-analysis |
 | Audit the assistant setup itself | "Run a skill stocktake" / "Audit our skills and commands" | skill-stocktake, workspace-assistant |
 | Promote repeated lessons into rules | "Distill the rules" / "What should become a shared rule?" | rules-distill, workspace-assistant |
-| Capture and promote learnings | "Run continuous learning" / "What should we promote from this work?" / "Audit memory freshness" | continuous-learning, workspace-assistant |
-| Shape product or scope | "Work as product strategist" / "Review this idea and tighten the spec" | product-strategy |
-| Product instrumentation or KPIs | "Design the metrics" / "What should we instrument?" / "Define the funnel and guardrails" | analytics-metrics, product-strategy |
-| Plan roadmap or launch | "Create a 90-day plan" / "Focus on launch commercialization" | planning-execution, launch-commercialization |
-| Track delivery | "Use project management" / "Turn this into a delivery plan with milestones" | project-management |
+| Capture and promote learnings | "Run continuous learning" / "What should we promote from this work?" | continuous-learning, workspace-assistant |
+| Shape product or scope | "Work as product strategist" / "Tighten this spec" | product-strategy |
+| Product instrumentation or KPIs | "Design the metrics" / "Define funnel guardrails" | analytics-metrics, product-strategy |
+| Plan roadmap and execution tracking | "Create a 90-day plan and owners" / "Build milestone plan and dependencies" | planning-execution |
 | Build a feature | "Plan then implement" / "Use engineering delivery" | engineering-delivery, coding-best-practices |
-| API contract or webhook design | "Design this API" / "Review REST or GraphQL contract" / "How should we version this?" | api-design, software-architecture |
-| CI/CD, containers, or infra | "Review our pipeline" / "Design the deploy flow" / "Audit Terraform or Docker setup" | devops-iac, engineering-delivery, cybersecurity-risk |
-| Schema, migration, or warehouse design | "Review this schema" / "Plan the migration" / "Audit the analytics pipeline" | data-architecture, software-architecture |
-| **Design** / UI (design-to-code, a11y) | "Work as design/UX" / "Turn this design into implementation guidance" / "Review for UX and accessibility" | ui-ux-design-to-code |
-| Localization or multilingual UX | "Audit i18n" / "Make this app localization-ready" / "Review locale handling" | i18n-l10n, ui-ux-design-to-code |
-| **3D website** / WebGL / immersive | "Create a 3D website" / "Work as 3D web expert" / "Build an Awwwards-quality 3D experience" / "Add Three.js/R3F to this project" | 3d-web-development, ui-ux-design-to-code |
-| Security or abuse review | "Work as security reviewer" / "Audit for abuse and privacy risks" | cybersecurity-risk |
-| Harden the AI workspace | "Audit agent security" / "Use agent security hardening" | agent-security-hardening |
-| Privacy or compliance posture | "Review privacy/compliance risk" / "What legal or compliance issues should we flag?" | legal-compliance, cybersecurity-risk |
-| Find bugs or logic flaws | "Hunt for bugs" / "Review business logic and edge cases" | bug-finding, business-logic-review |
-| Production bug or incident investigation | "Find the root cause" / "Check logs and DB state" / "Investigate this incident end-to-end" | root-cause-investigation, bug-finding, business-logic-review |
-| Strict or skeptical code review | "Review this PR harshly" / "Skeptical code review" / "Challenge this implementation" / "Minimal fixes only" | rigorous-code-review, coding-best-practices |
-| Architecture or boundaries | "Review system boundaries" / "Architecture tradeoffs for this change" | software-architecture |
-| Refactor or modernize | "Safe code revamp" / "Modernize without breaking the structure" | code-revamp, codebase-analysis |
-| Context limit / handoff | "We're hitting context limits" / "Summarize and give me a continuation state" / "Which model should I use next?" | context-limit-continuation, ai-model-selection |
-| Heavy, parallel, or risky task | "Delegate to subagents" / "Run in parallel" / "Isolate this in a worktree" | subagent-delegation, workspace-assistant |
-| Market or positioning | "Competitor and market analysis" / "Positioning and pricing" | market-analysis, marketing-growth |
-| **Marketing** (strategy, channels, content) | "Work as marketing strategist" / "GTM and channels" / "Content calendar or paid ads" | marketing-growth, social-content-calendar, paid-acquisition-monetization, seo-geo |
-| **Sales** (ICP, pipeline, objections) | "Work as sales strategist" / "Define ICP and sales motion" / "Objections and pricing narrative" | sales-strategy |
-| Launch (marketing + sales + SEO) | "Launch readiness and GTM" / "Full launch commercialization" | launch-commercialization, marketing-growth, sales-strategy, seo-geo |
-| Which model for this task | "Recommend the best AI model for this task" | ai-model-selection |
+| API contract or webhook design | "Design this API" / "How should we version this?" | api-design, software-architecture |
+| CI/CD, containers, or infra | "Review our pipeline" / "Design deploy flow" | devops-iac, engineering-delivery, cybersecurity-risk |
+| Schema, migration, or warehouse design | "Review this schema" / "Plan the migration" | data-architecture, software-architecture |
+| UX/UI and accessibility | "Review for UX and accessibility" | ui-ux-design-to-code |
+| Localization or multilingual UX | "Audit i18n" / "Make this app localization-ready" | i18n-l10n, ui-ux-design-to-code |
+| 3D website or immersive motion | "Create a 3D web experience" | 3d-web-development, ui-ux-design-to-code |
+| Security/privacy/compliance review | "Audit abuse/privacy risks" / "Review compliance risk" | cybersecurity-risk, legal-compliance |
+| Find bugs or production root cause | "Hunt for bugs" / "Investigate logs and DB state" | bug-finding, business-logic-review |
+| Strict skeptical code review | "Review this PR harshly" / "Challenge this implementation" | rigorous-code-review, coding-best-practices |
+| Architecture or boundaries | "Review system boundaries and tradeoffs" | software-architecture |
+| Refactor or modernize | "Safe code revamp" / "Modernize with minimal churn" | code-revamp, codebase-analysis |
+| Market/GTM/content/paid/sales | "GTM strategy and growth plan" / "Content calendar and paid plan" | marketing-growth, paid-acquisition-monetization, sales-strategy, seo-geo |
+| Context limit / handoff | "Summarize continuation state" / "Which model next?" | context-limit-continuation, ai-model-selection |
+| Heavy parallel or risky scope | "Delegate to subagents" / "Run workstreams in parallel" | subagent-delegation, workspace-assistant |
 
 ## Optional phased pipelines
 
@@ -151,36 +178,26 @@ For larger efforts you can run the assistant in a phase-aware way. The assistant
 | Phase | Focus | Skills to lean on |
 |-------|--------|-------------------|
 | **Discovery** | What we're building, for whom, evidence | project-understanding, product-strategy, market-analysis |
-| **Strategy** | Roadmap, scope, priorities, ownership | planning-execution, project-management, software-architecture, api-design, data-architecture, analytics-metrics |
+| **Strategy** | Roadmap, scope, priorities, ownership | planning-execution, software-architecture, api-design, data-architecture, analytics-metrics |
 | **Build** | Implementation with quality gates | engineering-delivery, devops-iac, ui-ux-design-to-code, i18n-l10n, 3d-web-development, coding-best-practices, bug-finding, rigorous-code-review |
 | **Harden** | Security, logic, readiness | cybersecurity-risk, legal-compliance, business-logic-review, agent-security-hardening |
-| **Launch** | Readiness, GTM, PMF signals | launch-commercialization, seo-geo, **Marketing**: marketing-growth, social-content-calendar, paid-acquisition-monetization; **Sales**: sales-strategy |
+| **Launch** | Readiness, GTM, PMF signals | launch-commercialization, seo-geo, **Growth**: marketing-growth, paid-acquisition-monetization; **Sales**: sales-strategy |
 
 When the user says e.g. "We're in the build phase" or "Run the launch checklist", prefer the skills for that phase and any cross-cutting rules (plan-first, model recommendation, verification).
 
 ## Proactive skill use
 
-Use the right skill without the user having to ask:
+Use the right skill without the user having to ask, grouped by role cluster:
 
-- Task involves creating a website with 3D, WebGL, Three.js, R3F, Spline, immersive experience, or Awwwards-style design → consider **3d-web-development** alongside **ui-ux-design-to-code**.
-- Code just written or modified → consider **rigorous-code-review** (adversarial PR-style pass), plus **bug-finding** or **coding-best-practices** as needed.
-- User asks for harsh, skeptical, or strict review with minimal churn → **rigorous-code-review** first.
-- New utility, dependency, integration, or workflow request → consider **search-first** before building from scratch.
-- Skill count or repo guidance has grown and feels messy → consider **skill-stocktake** or **rules-distill** instead of adding more guidance blindly.
-- A meaningful task, review, or incident just finished → consider **continuous-learning** to capture durable lessons and clean up stale memory.
-- Designing REST, GraphQL, webhooks, or event contracts → consider **api-design** alongside **software-architecture**.
-- Touching CI/CD, containers, deploys, Terraform, or runtime config → consider **devops-iac**.
-- Touching schema changes, warehouses, migrations, or event/analytics pipelines → consider **data-architecture**.
-- Multi-locale products, translation work, formatting rules, or RTL risk → consider **i18n-l10n**.
-- Funnels, KPIs, instrumentation, or experiments → consider **analytics-metrics**.
-- Touching auth, billing, user input, or external APIs → consider **cybersecurity-risk** or **agent-security-hardening**.
-- Privacy programs, consent, retention, policy alignment, or vendor obligations → consider **legal-compliance** and escalate to qualified humans when the risk is material.
-- Investigating a real incident with DB rows, logs, jobs, queues, webhooks, or external side effects → consider **root-cause-investigation** alongside **bug-finding**.
-- Unfamiliar codebase or unclear product context → **project-understanding** first.
-- Complex feature or refactor → **planning-execution** or **engineering-delivery** (plan then implement).
-- Multi-faceted task (e.g. launch readiness) → combine **launch-commercialization** with **marketing**, **sales**, **seo-geo** as needed.
-- Context, token, or usage limits are near → **context-limit-continuation** plus **ai-model-selection**; update **`active-continuation.md`** and tell the user to continue in a **fresh session** with the recommended model.
-- Task has ≥ 5 independent files, ≥ 2 parallel workstreams, pre-task context estimate > 1,200 lines, or risky/irreversible scope → **subagent-delegation** automatically — do not run serially in the main session.
+- **Orchestration**: unfamiliar codebase -> `project-understanding`; new utility/dependency/integration -> `search-first`; skills/rules sprawl -> `skill-stocktake` or `rules-distill`; post-meaningful task -> `continuous-learning`; heavy parallel/risky scope -> `subagent-delegation`.
+- **Product**: roadmap/prioritization/owner or milestone drift -> `planning-execution`; funnels/KPIs/experiments -> `analytics-metrics`; launch-readiness framing -> `launch-commercialization`.
+- **Engineering**: complex implementation/refactor -> `engineering-delivery`; CI/CD/container/infra changes -> `devops-iac`; schema/migration/warehouse/data pipeline work -> `data-architecture`; structural cleanup -> `code-revamp`.
+- **Design**: UI quality/accessibility -> `ui-ux-design-to-code`; multilingual/locale/RTL risks -> `i18n-l10n`; 3D/WebGL/immersive experiences -> `3d-web-development`.
+- **Security**: auth/billing/external API/input trust boundaries -> `cybersecurity-risk`; agent workspace/integration/memory safety -> `agent-security-hardening`; consent/retention/vendor/policy concerns -> `legal-compliance`.
+- **Quality**: code changed -> `rigorous-code-review` plus `bug-finding` as needed; strict skeptical review requested -> `rigorous-code-review`; incidents requiring DB/log/queue/webhook correlation -> `bug-finding` deep investigation mode with `business-logic-review` when invariants are involved.
+- **Architecture**: API/events/contracts -> `api-design` + `software-architecture`; major boundary/tradeoff changes -> `software-architecture`.
+- **Growth**: market/positioning uncertainty -> `market-analysis`; GTM/channels/content calendar -> `marketing-growth`; paid/CAC/pricing strategy -> `paid-acquisition-monetization`; discoverability/search answerability -> `seo-geo`; revenue motion/objections -> `sales-strategy`.
+- **Continuation**: context/token/usage pressure -> `context-limit-continuation` + `ai-model-selection`, update `active-continuation.md`, continue in a fresh session.
 
 For independent sub-tasks (e.g. security pass + business-logic pass), use multiple perspectives in sequence or in parallel where the tool allows; call out each lens and its findings.
 
@@ -211,7 +228,6 @@ Before considering a meaningful task done:
 | `bosskuai-product-strategy` | `ai-assistant/skills/bosskuai-product-strategy/SKILL.md` |
 | `bosskuai-analytics-metrics` | `ai-assistant/skills/bosskuai-analytics-metrics/SKILL.md` |
 | `bosskuai-planning-execution` | `ai-assistant/skills/bosskuai-planning-execution/SKILL.md` |
-| `bosskuai-project-management` | `ai-assistant/skills/bosskuai-project-management/SKILL.md` |
 | `bosskuai-launch-commercialization` | `ai-assistant/skills/bosskuai-launch-commercialization/SKILL.md` |
 | `bosskuai-engineering-delivery` | `ai-assistant/skills/bosskuai-engineering-delivery/SKILL.md` |
 | `bosskuai-devops-iac` | `ai-assistant/skills/bosskuai-devops-iac/SKILL.md` |
@@ -223,7 +239,6 @@ Before considering a meaningful task done:
 | `bosskuai-legal-compliance` | `ai-assistant/skills/bosskuai-legal-compliance/SKILL.md` |
 | `bosskuai-business-logic-review` | `ai-assistant/skills/bosskuai-business-logic-review/SKILL.md` |
 | `bosskuai-bug-finding` | `ai-assistant/skills/bosskuai-bug-finding/SKILL.md` |
-| `bosskuai-root-cause-investigation` | `ai-assistant/skills/bosskuai-root-cause-investigation/SKILL.md` |
 | `bosskuai-rigorous-code-review` | `ai-assistant/skills/bosskuai-rigorous-code-review/SKILL.md` |
 | `bosskuai-software-architecture` | `ai-assistant/skills/bosskuai-software-architecture/SKILL.md` |
 | `bosskuai-api-design` | `ai-assistant/skills/bosskuai-api-design/SKILL.md` |
@@ -235,11 +250,16 @@ Before considering a meaningful task done:
 | `bosskuai-polyglot-engineering` | `ai-assistant/skills/bosskuai-polyglot-engineering/SKILL.md` |
 | `bosskuai-market-analysis` | `ai-assistant/skills/bosskuai-market-analysis/SKILL.md` |
 | `bosskuai-marketing-growth` | `ai-assistant/skills/bosskuai-marketing-growth/SKILL.md` |
-| `bosskuai-social-content-calendar` | `ai-assistant/skills/bosskuai-social-content-calendar/SKILL.md` |
 | `bosskuai-paid-acquisition-monetization` | `ai-assistant/skills/bosskuai-paid-acquisition-monetization/SKILL.md` |
 | `bosskuai-sales-strategy` | `ai-assistant/skills/bosskuai-sales-strategy/SKILL.md` |
 | `bosskuai-seo-geo` | `ai-assistant/skills/bosskuai-seo-geo/SKILL.md` |
 | `bosskuai-ai-model-selection` | `ai-assistant/skills/bosskuai-ai-model-selection/SKILL.md` |
+
+Deprecated alias skills (routing compatibility only):
+
+- `bosskuai-root-cause-investigation` -> use `bosskuai-bug-finding`
+- `bosskuai-project-management` -> use `bosskuai-planning-execution`
+- `bosskuai-social-content-calendar` -> use `bosskuai-marketing-growth`
 
 ## Local memory
 
@@ -286,6 +306,7 @@ Please answer: 1-yes/no  2-A/B/C  3-yes/no
 ---
 
 - If the user explicitly activates an expert (e.g. "work as the security reviewer"), load that skill first; then load the minimum set of other relevant skills.
+- If the user says `bossku`, treat that as an activation cue for the whole BosskuAI system: apply these rules, classify the task, and auto-load the minimum relevant BosskuAI skills.
 - Identify the real task type using the Skill roster table above. Do not re-enumerate task types here — see § Skill roster.
 - Use the minimum set of relevant skills instead of loading everything.
 - Default to plan mode first for meaningful tasks before implementation, major recommendations, or irreversible decisions.

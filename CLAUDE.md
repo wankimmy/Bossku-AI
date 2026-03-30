@@ -4,6 +4,14 @@ Use `AGENTS.md` in the current workspace as the **tool-neutral source of truth**
 
 **Duplication on purpose:** This file is the **Claude Code entry point** — it repeats the two-phase model split and core posture so Claude loads the right defaults without requiring `AGENTS.md` to be opened first. For the full skill table, phased pipelines, and “future skill areas,” read **`AGENTS.md`**. For Cursor-specific execution rules, see `.cursor/rules/bosskuai.mdc`. For Codex naming, see `.codex/AGENTS.md`.
 
+## Bossku activation keyword
+
+If the user includes the standalone word `bossku` anywhere in the prompt, treat that as an explicit request to activate BosskuAI mode for that request.
+
+- Apply the BosskuAI workspace rules before answering.
+- Classify the task and automatically load the minimum relevant local BosskuAI skills.
+- Do not require the user to name a skill after saying `bossku` unless the scope is still ambiguous.
+
 ## Model assignment (mandatory)
 
 **Always use a two-phase model split for meaningful tasks:**
