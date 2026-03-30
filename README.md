@@ -1,54 +1,31 @@
 # BosskuAI
 
-A reusable **cofounder-style** workspace layer for Cursor, Claude, and Codex: product, engineering, design, security, GTM, and related skills load by task. Say things like *“work as the security reviewer”* to focus a specific lens.
+A reusable **cofounder-style** workspace layer for Cursor, Claude, and Codex. Skills load by task across product, engineering, design, security, and GTM.
 
-| Doc | Use it for |
-|-----|------------|
-| [AGENTS.md](AGENTS.md) | Skill roster, “what to ask for,” model split, memory rules |
-| [WORKSPACE-ONBOARDING.md](WORKSPACE-ONBOARDING.md) | Onboarding prompt (copy-paste), per-tool notes, troubleshooting |
+| Doc | Purpose |
+|-----|---------|
+| [AGENTS.md](AGENTS.md) | Skill roster, what to ask for, model split, memory rules |
+| [WORKSPACE-ONBOARDING.md](WORKSPACE-ONBOARDING.md) | Onboarding prompt, per-tool notes, troubleshooting |
 
-Paths inside the repo are relative, so you can clone it anywhere and rename the folder.
+## Setup
 
-## Quick setup
-
-1. **Clone** this repo and `cd` into the `bosskuAI` folder.
-
-2. **Install** into your real project root (the directory you open in your editor):
+1. Clone this repo and install into your project root:
 
 ```bash
 ./scripts/install.sh /path/to/your/project
 ```
 
-This copies `AGENTS.md`, `CLAUDE.md`, `WORKSPACE-ONBOARDING.md`, `.codex/`, `.claude/`, `.cursor/`, and `ai-assistant/`, then **runs the workspace check** so you know the layer is complete.
-
-- Existing files in the target with the same names are **not** overwritten. To back them up and replace, use `--force`.
-- To install without running the check: `--skip-check`.
-
-**Windows (PowerShell):**
-
+**Windows:**
 ```powershell
 .\scripts\install.ps1 C:\path\to\your\project
 ```
 
-If `bash` is available (e.g. Git for Windows), validation runs automatically; otherwise, from the starter repo run:
+- Use `--force` to overwrite existing files.
+- Use `--skip-check` to skip workspace validation.
 
-```bash
-./scripts/check-workspace.sh /path/to/your/project
-```
+2. Open the **target project** in Cursor, Claude, or Codex (not this folder).
 
-3. **Open the target project** in Cursor, Claude, or Codex (not the starter folder).
-
-4. **Onboard** — paste the *Workspace onboarding prompt* from [WORKSPACE-ONBOARDING.md](WORKSPACE-ONBOARDING.md) so the assistant drafts `ai-assistant/memory/agent-profile.md` and `ai-assistant/memory/project-understanding.md`, then fix anything marked `Inferred:` or `Unknown`.
-
-### Optional: explore the starter first
-
-Open the cloned `bosskuAI` folder as the workspace, read `AGENTS.md`, then either install into another project (step 2) or fill memory files manually using [examples/sample-agent-profile.md](examples/sample-agent-profile.md).
-
-## What’s in the box
-
-- **Behavior:** `AGENTS.md` at the project root; `CLAUDE.md` and mirrored rules for Claude; `.cursor/rules/` for Cursor; `.codex/` for Codex.
-- **Skills & memory:** `ai-assistant/skills/`, `ai-assistant/memory/` (shared across tools).
-- **References & helpers:** `ai-assistant/references/`, `ai-assistant/scripts/`, optional `ai-assistant/hooks/`.
+3. Paste the onboarding prompt from [WORKSPACE-ONBOARDING.md](WORKSPACE-ONBOARDING.md) to draft `ai-assistant/memory/agent-profile.md` and `ai-assistant/memory/project-understanding.md`.
 
 ## Repo layout
 
@@ -58,9 +35,9 @@ bosskuAI/
 ├── CLAUDE.md
 ├── WORKSPACE-ONBOARDING.md
 ├── scripts/
-│   ├── install.sh          # apply layer + verify (default)
+│   ├── install.sh
 │   ├── install.ps1
-│   └── check-workspace.sh  # validate a workspace (also run by install)
+│   └── check-workspace.sh
 ├── .codex/
 ├── .claude/
 ├── .cursor/
@@ -74,16 +51,15 @@ bosskuAI/
 
 ## Customize
 
-Edit `AGENTS.md` for posture and priorities, add or remove skills under `ai-assistant/skills/`, and extend `ai-assistant/references/`. After meaningful work, write durable notes back to `ai-assistant/memory/` so any tool can reuse them.
+Edit `AGENTS.md` for posture and priorities. Add or remove skills under `ai-assistant/skills/`. Write durable notes to `ai-assistant/memory/` after meaningful work.
 
 ## Example asks
 
-- “Review this PRD and turn it into implementation slices.”
-- “Audit this flow for abuse, privacy, and logic flaws.”
-- “Explain this codebase’s architecture from the source.”
-- “Run launch readiness across engineering, SEO, and GTM.”
+- "Review this PRD and turn it into implementation slices."
+- "Audit this flow for abuse, privacy, and logic flaws."
+- "Run launch readiness across engineering, SEO, and GTM."
 
-More prompts: [examples/sample-prompts.md](examples/sample-prompts.md).
+More: [examples/sample-prompts.md](examples/sample-prompts.md)
 
 ## License
 

@@ -1,12 +1,6 @@
 # Decision Records
 
-Use this folder for architecture, workflow, and product decision records that deserve durable justification.
-
-Record a decision here when:
-
-- a tradeoff needs to be preserved for future work
-- multiple alternatives were considered
-- the team should not have to rediscover the reasoning later
+Durable justification for architecture, workflow, and product decisions — especially where tradeoffs were considered and the reasoning should not need to be rediscovered.
 
 ## Index
 

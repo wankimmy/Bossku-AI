@@ -2,23 +2,17 @@
 
 **Shared durable memory — mandatory for all tools (Claude, Codex, Cursor).**
 
-This directory is the single source of truth for durable context. It is not tool-local.
-
-**Rules:**
-- Read relevant memory files at the start of every session, regardless of which tool you are using.
-- Write durable findings back here after meaningful tasks.
-- Never store session-only or ephemeral state here — only durable facts, patterns, and conventions.
-- Any insight written here must be usable by Claude Code, Codex, and Cursor equally.
+Read relevant files at session start. Write durable findings back after meaningful tasks. Never store ephemeral state here.
 
 | File | Purpose |
 |------|---------|
-| **agent-profile.md** | Company, product, audience, industry, operating preferences. Customize after cloning or let project-understanding draft it from repo evidence. |
-| **project-understanding.md** | What the project is, who it serves, stack, source-of-truth files, which skills are usually relevant. Updated after reading the codebase. |
-| **learning-log.md** | Chronological durable lessons and promotion decisions. Prefer structured entries with source, confidence, target artifact, and review status so stale learnings can be audited later. |
-| **active-continuation.md** | Ephemeral handoff when context or usage limits require a fresh session or different model; overwrite each time; clear when the task is done. See `bosskuai-context-limit-continuation`. |
-| **bug-patterns.md** | Recurring defect classes for this workspace. See the file header for **when to add**, **format**, and **when to promote** to pitfalls or checklists. |
-| **market-notes.md** | Durable market / competitor / positioning notes (6+ month horizon). See the file header for **when to add** vs ephemeral news and **when to promote** to skills or learning-log. |
+| **agent-profile.md** | Company, product, audience, industry, operating preferences |
+| **project-understanding.md** | What the project is, stack, source-of-truth files, relevant skills |
+| **learning-log.md** | Durable lessons and promotion decisions |
+| **active-continuation.md** | Ephemeral handoff for context/usage-limit breaks; clear when done |
+| **bug-patterns.md** | Recurring defect classes for this workspace |
+| **market-notes.md** | Durable market / competitor / positioning notes (6+ month horizon) |
 
-Use the [learning-promotion checklist](../references/checklists/learning-promotion-checklist.md) to decide where a new learning belongs (memory vs checklist vs playbook vs skill).
+Use the [learning-promotion checklist](../references/checklists/learning-promotion-checklist.md) to decide where a learning belongs.
 
-For periodic hygiene, run `bash ./ai-assistant/scripts/learning-doctor.sh` from the workspace root to catch stale counts, contradictory memory, empty high-value memory files, and consumed continuation state.
+For hygiene, run `bash ./ai-assistant/scripts/learning-doctor.sh` to catch stale memory, empty high-value files, and consumed continuation state.

@@ -1,34 +1,14 @@
 # BosskuAI Optional Hooks
 
-These are opt-in, hook-ready reminder scripts for teams that want light automation without unsafe persistence.
+Opt-in reminder scripts — no automatic memory writes, no rule edits, no blocking behavior. Reminders go to stderr; stdin is passed through unchanged.
 
-## Design goals
+## Scripts
 
-- opt-in only
-- no automatic memory writes
-- no automatic rule edits
-- no blocking behavior
-- stderr-only reminders
-- stdin passthrough so they can fit common hook systems safely
+- `session-start-reminder.sh` — reinforce plan-first and shared-memory discipline at session start
+- `pre-compact-reminder.sh` — remind to preserve a clean handoff before compaction
+- `session-end-reminder.sh` — remind to promote durable learnings at session end
 
-## Available scripts
-
-- `session-start-reminder.sh`
-  Use at session start to reinforce plan-first behavior and shared-memory discipline.
-- `pre-compact-reminder.sh`
-  Use before compaction or context trimming to remind the assistant to preserve a clean handoff.
-- `session-end-reminder.sh`
-  Use at response stop or session end to remind the assistant to promote durable learnings deliberately, not automatically.
-
-For manual hygiene after a meaningful work session, run:
-
-```bash
-bash ./ai-assistant/scripts/learning-doctor.sh
-```
-
-## Example usage
-
-Manual:
+## Usage
 
 ```bash
 bash ./ai-assistant/hooks/session-start-reminder.sh
@@ -36,11 +16,13 @@ bash ./ai-assistant/hooks/pre-compact-reminder.sh
 bash ./ai-assistant/hooks/session-end-reminder.sh
 ```
 
-These scripts also work in hook systems that pass JSON on stdin because they echo stdin back to stdout unchanged and print reminders to stderr.
+For post-session hygiene:
 
-## Safety notes
+```bash
+bash ./ai-assistant/scripts/learning-doctor.sh
+```
 
-- Review any hook integration with `bosskuai-agent-security-hardening`.
-- Keep hooks advisory unless you have a clear reason to block behavior.
-- Prefer review checkpoints over silent automation.
-- If a hook ever starts mutating memory, rules, or skills automatically, treat that as a security-sensitive change and review it explicitly first.
+## Safety
+
+- Review hook integrations with `bosskuai-agent-security-hardening`.
+- Keep hooks advisory. If a hook starts mutating memory, rules, or skills automatically, treat it as a security-sensitive change and review explicitly.

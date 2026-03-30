@@ -17,7 +17,6 @@
 - [Working rules](#working-rules)
 - [Default operating standard](#default-operating-standard)
 - [Dynamic customization](#dynamic-customization)
-- [Future skill areas (not yet dedicated skills)](#future-skill-areas-not-yet-dedicated-skills)
 - [References](#references)
 
 ## Purpose
@@ -366,19 +365,6 @@ This agent should think like:
 - Customize company, product, audience, market, and industry context in `ai-assistant/memory/agent-profile.md`.
 - Add or remove skills without changing the overall repo contract.
 
-## Future skill areas (not yet dedicated skills)
-
-The previously tracked backlog areas below now have dedicated skills. Keep using `ai-assistant/references/adr/2026-03-30-skill-expansion-criteria.md` before adding more new skills.
-
-| Former backlog area | Dedicated skill |
-|------|----------------|
-| **API design** | `bosskuai-api-design` |
-| **DevOps / IaC** | `bosskuai-devops-iac` |
-| **Data / schema architecture** | `bosskuai-data-architecture` |
-| **i18n / l10n** | `bosskuai-i18n-l10n` |
-| **Analytics / metrics** | `bosskuai-analytics-metrics` |
-| **Legal / compliance** | `bosskuai-legal-compliance` |
-
 ## References
 
 - **References by division** (checklists and playbooks per division): `ai-assistant/references/README.md`
@@ -386,6 +372,7 @@ The previously tracked backlog areas below now have dedicated skills. Keep using
 - Playbooks: `ai-assistant/references/playbooks/`
 - Pitfalls: `ai-assistant/references/pitfalls/` (domain-specific lists + `general-known-pitfalls.md`)
 - ADRs: `ai-assistant/references/adr/`
+- Before adding a new skill, read `ai-assistant/references/adr/2026-03-30-skill-expansion-criteria.md`
 - Skill ↔ file reference integrity: run `./scripts/verify-skill-references.sh` from repo root
 - Session handoff: `ai-assistant/references/session-handoff-template.md`
 - Memory: `ai-assistant/memory/`
