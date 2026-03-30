@@ -47,6 +47,7 @@ required_paths=(
   "ai-assistant/scripts/scan-skills.sh"
   "ai-assistant/scripts/scan-commands.sh"
   "ai-assistant/scripts/scan-rules.sh"
+  "ai-assistant/scripts/relearn-project-understanding.sh"
   "ai-assistant/scripts/skill-stocktake.sh"
   "ai-assistant/scripts/rules-distill-context.sh"
   "ai-assistant/hooks/README.md"

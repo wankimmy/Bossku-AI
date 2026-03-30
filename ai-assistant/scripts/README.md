@@ -21,6 +21,7 @@ They are intentionally lightweight:
 - `scan-commands.sh` — inventory local Claude command files
 - `scan-rules.sh` — inventory rule and instruction files used as shared guidance
 - `learning-doctor.sh` — check learning hygiene: stale memory, stale counts, empty high-value memory files, and consumed continuation state
+- `relearn-project-understanding.sh` — snapshot the current project understanding, preserve memory, and generate a ready-to-paste refresh prompt for project-understanding + codebase-analysis
 - `skill-stocktake.sh` — combined stocktake inventory for skills, commands, and references
 - `rules-distill-context.sh` — combined rules-distillation context inventory
 
@@ -30,6 +31,7 @@ Run from the workspace root:
 
 ```bash
 bash ./ai-assistant/scripts/learning-doctor.sh
+bash ./ai-assistant/scripts/relearn-project-understanding.sh
 bash ./ai-assistant/scripts/skill-stocktake.sh
 bash ./ai-assistant/scripts/rules-distill-context.sh
 ```
@@ -38,6 +40,7 @@ Or pass an explicit repo root:
 
 ```bash
 bash ./ai-assistant/scripts/learning-doctor.sh /path/to/workspace
+bash ./ai-assistant/scripts/relearn-project-understanding.sh /path/to/workspace
 bash ./ai-assistant/scripts/skill-stocktake.sh /path/to/workspace
 bash ./ai-assistant/scripts/rules-distill-context.sh /path/to/workspace
 ```

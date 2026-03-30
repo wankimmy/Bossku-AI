@@ -135,6 +135,26 @@ Then create or update [project-understanding.md](ai-assistant/memory/project-und
 10. If you enable hooks, keep them advisory and opt-in; avoid automatic memory or rule edits.
 11. Only then move into implementation, review, planning, or strategy prompts.
 
+## Refreshing understanding after BosskuAI changes
+
+If you improve BosskuAI itself and want the assistant to re-learn the repo without wiping memory:
+
+```bash
+bash ./ai-assistant/scripts/relearn-project-understanding.sh
+```
+
+This will:
+
+- snapshot the current `ai-assistant/memory/project-understanding.md`
+- preserve the rest of `ai-assistant/memory/`
+- generate a ready-to-paste prompt that tells the assistant to refresh project understanding and codebase analysis from source
+
+If you also want to prepare an ephemeral handoff for the next session, use:
+
+```bash
+bash ./ai-assistant/scripts/relearn-project-understanding.sh --write-active-continuation
+```
+
 ## Copy-paste prompts
 
 ### 1. Workspace onboarding prompt
