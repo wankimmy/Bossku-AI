@@ -89,6 +89,7 @@ Measure: D1/D7/D30 retention, NPS/CSAT, referral source attribution, support tic
 
 ## Guardrails
 
+- If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
 - Do not launch if Gate 1 (engineering readiness) has unresolved P0 blockers.
 - Do not launch without a monitoring and rollback plan.
 - Do not confuse launch readiness with PMF — launch readiness means the product works; PMF means the market wants it.

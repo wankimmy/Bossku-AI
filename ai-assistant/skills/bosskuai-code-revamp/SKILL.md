@@ -80,6 +80,7 @@ Apply this decision matrix before proposing structural changes:
 
 ## Guardrails
 
+- If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
 - Do not start a revamp without a passing test suite that covers the behavior to be preserved.
 - Do not do a "big bang" rewrite of a system that is currently in production — always slice.
 - Do not mix refactoring and feature work in the same PR or branch.

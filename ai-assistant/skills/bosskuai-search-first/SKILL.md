@@ -64,6 +64,7 @@ A single Red signal is a blocker. Multiple Amber signals should trigger a build-
 
 ## Guardrails
 
+- If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
 - Do not recommend building custom code when a maintained library covers the use case well.
 - Do not adopt a library without checking its security posture and license.
 - Do not reject an external solution just because it requires reading docs — reading docs beats maintaining custom code.

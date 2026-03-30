@@ -84,6 +84,7 @@ Use this skill when the user wants to know **which AI model fits a specific task
 
 ## Guardrails
 
+- If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
 - Do not recommend Opus for mechanical tasks where Sonnet is sufficient — cost and latency matter.
 - Do not recommend the cheapest model for tasks where reasoning quality directly affects correctness.
 - Always provide a fallback — tool availability changes.

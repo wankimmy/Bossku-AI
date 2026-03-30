@@ -99,6 +99,13 @@ Use this skill when the goal is to **review** code (diffs, PRs, new modules, or 
    - [ ] Non-goals stated: what was NOT reviewed and why (scope, familiarity, time constraints)
    - [ ] No finding was added from assumption — every finding traces to specific evidence in the diff
 
+## Guardrails
+
+- If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
+- Do not request changes without a specific file:line reference and a concrete minimal fix — vague findings are not actionable.
+- Do not expand scope to a full refactor unless the review evidence demands it — flag as scope escalation instead.
+- Do not review the diff in isolation — read call sites, tests, and infra touchpoints affected.
+
 ## Output format
 
 ```

@@ -75,6 +75,7 @@ Apply whichever are relevant; skip clearly irrelevant ones:
 
 ## Guardrails
 
+- If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
 - Do not recommend microservices for a team of two. Match architecture complexity to team size and scale requirements.
 - Do not propose a rewrite when a smaller boundary adjustment solves the problem.
 - Do not conflate "best in theory" with "best for this team now."

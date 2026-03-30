@@ -194,44 +194,48 @@ Before considering a meaningful task done:
 
 ## Local skills
 
-- `bosskuai-workspace-assistant`: Use this for repo discovery, orchestration, and deciding which expert skills to load. File: `ai-assistant/skills/bosskuai-workspace-assistant/SKILL.md`
-- `bosskuai-project-understanding`: Use this for establishing what the project is for, who it serves, stack, architecture, and a source-of-truth map (with stratified sampling on large repos), then recommending expert skills and updating memory. File: `ai-assistant/skills/bosskuai-project-understanding/SKILL.md`
-- `bosskuai-search-first`: Use this when deciding whether to adopt an existing package, service, MCP, internal utility, or pattern before building custom code or workflow logic. File: `ai-assistant/skills/bosskuai-search-first/SKILL.md`
-- `bosskuai-skill-stocktake`: Use this to audit local skills, commands, and nearby guidance for overlap, staleness, weak triggers, and missing maintenance improvements. File: `ai-assistant/skills/bosskuai-skill-stocktake/SKILL.md`
-- `bosskuai-rules-distill`: Use this to extract repeated cross-cutting principles from skills and references, then propose safe rule updates instead of letting important guidance stay fragmented. File: `ai-assistant/skills/bosskuai-rules-distill/SKILL.md`
-- `bosskuai-continuous-learning`: Use this after meaningful tasks, reviews, incidents, or repeated observations to triage durable lessons, choose the strongest artifact, and propose the smallest safe promotion update without silently mutating the workspace. File: `ai-assistant/skills/bosskuai-continuous-learning/SKILL.md`
-- `bosskuai-product-strategy`: Use this for product framing, requirement shaping, prioritization, scope, and go-to-market implications. File: `ai-assistant/skills/bosskuai-product-strategy/SKILL.md`
-- `bosskuai-analytics-metrics`: Use this for instrumentation strategy, event design, funnels, experimentation, KPI definitions, attribution logic, and making product decisions measurable. File: `ai-assistant/skills/bosskuai-analytics-metrics/SKILL.md`
-- `bosskuai-planning-execution`: Use this for roadmaps, sequencing, milestone planning, launch planning, and turning strategy into execution slices. File: `ai-assistant/skills/bosskuai-planning-execution/SKILL.md`
-- `bosskuai-project-management`: Use this for execution tracking, dependencies, milestone control, ownership clarity, and keeping projects on track. File: `ai-assistant/skills/bosskuai-project-management/SKILL.md`
-- `bosskuai-launch-commercialization`: Use this for balancing engineering readiness, SEO/GEO, marketing, sales, monetization, country strategy, and product-market-fit planning before launch. File: `ai-assistant/skills/bosskuai-launch-commercialization/SKILL.md`
-- `bosskuai-engineering-delivery`: Use this for implementation-heavy work that should follow planning-first execution, test-guided development where practical, review-before-finalization, and explicit verification. File: `ai-assistant/skills/bosskuai-engineering-delivery/SKILL.md`
-- `bosskuai-devops-iac`: Use this for CI/CD, containers, deployment workflows, infrastructure as code, runtime reliability, secrets handling, and rollback design. File: `ai-assistant/skills/bosskuai-devops-iac/SKILL.md`
-- `bosskuai-ui-ux-design-to-code`: Use this for UI/UX review, interaction quality, and translating designs into implementation-ready code guidance. File: `ai-assistant/skills/bosskuai-ui-ux-design-to-code/SKILL.md`
-- `bosskuai-i18n-l10n`: Use this for internationalization, localization, locale handling, translation workflow, formatting, expansion-safe UX, and right-to-left readiness. File: `ai-assistant/skills/bosskuai-i18n-l10n/SKILL.md`
-- `bosskuai-3d-web-development`: Use this for creating immersive 3D websites, WebGL experiences, Three.js/React Three Fiber scenes, scroll-driven 3D animations, GSAP-powered motion, post-processing effects, Spline integrations, interactive particle systems, and Awwwards-quality 3D web experiences. File: `ai-assistant/skills/bosskuai-3d-web-development/SKILL.md`
-- `bosskuai-cybersecurity-risk`: Use this for auth, abuse cases, privacy, trust boundaries, security review, and operational risk analysis. File: `ai-assistant/skills/bosskuai-cybersecurity-risk/SKILL.md`
-- `bosskuai-agent-security-hardening`: Use this for securing the AI-agent workspace itself, including instructions, MCPs, external content, memory, and least-privilege configuration. File: `ai-assistant/skills/bosskuai-agent-security-hardening/SKILL.md`
-- `bosskuai-legal-compliance`: Use this for privacy, retention, consent, vendor obligations, policy alignment, and spotting when qualified human legal/compliance review is required. File: `ai-assistant/skills/bosskuai-legal-compliance/SKILL.md`
-- `bosskuai-business-logic-review`: Use this for workflow gaps, state transitions, edge cases, approval flows, and hidden rule failures. File: `ai-assistant/skills/bosskuai-business-logic-review/SKILL.md`
-- `bosskuai-bug-finding`: Use this for bug hunts, regression analysis, failure-path review, suspicious diffs, and finding likely defects before shipping. File: `ai-assistant/skills/bosskuai-bug-finding/SKILL.md`
-- `bosskuai-root-cause-investigation`: Use this for comprehensive bug investigation using business-logic tracing plus runtime evidence such as database state, logs, jobs, queues, webhooks, and external side effects to locate the true failure boundary. File: `ai-assistant/skills/bosskuai-root-cause-investigation/SKILL.md`
-- `bosskuai-rigorous-code-review`: Use this for skeptical expert code review of diffs or PRs: map changes to structure and infrastructure, apply strict best practices, default to minimal fixes, and reserve major changes for clearly justified cases. File: `ai-assistant/skills/bosskuai-rigorous-code-review/SKILL.md`
-- `bosskuai-software-architecture`: Use this for module boundaries, system design, integration decisions, layering, scaling implications, and architecture tradeoffs. File: `ai-assistant/skills/bosskuai-software-architecture/SKILL.md`
-- `bosskuai-api-design`: Use this for REST/GraphQL/event contract design, versioning, errors, pagination, idempotency, and integrator ergonomics. File: `ai-assistant/skills/bosskuai-api-design/SKILL.md`
-- `bosskuai-data-architecture`: Use this for data modeling, schema ownership, migrations, warehouses, analytics pipelines, and retention/correctness tradeoffs. File: `ai-assistant/skills/bosskuai-data-architecture/SKILL.md`
-- `bosskuai-codebase-analysis`: Use this for deep evidence-based reading: entry points, execution paths, module boundaries, side effects, and extension points — how the source actually runs. File: `ai-assistant/skills/bosskuai-codebase-analysis/SKILL.md`
-- `bosskuai-code-revamp`: Use this for safe code modernization, structural cleanup, legacy refactors, and revamps that should still respect the current codebase structure and minimize unnecessary churn. File: `ai-assistant/skills/bosskuai-code-revamp/SKILL.md`
-- `bosskuai-coding-best-practices`: Use this for implementation quality, maintainability, readability, testing expectations, error handling, naming, and applying coding best practices in a way that still fits the current project conventions. File: `ai-assistant/skills/bosskuai-coding-best-practices/SKILL.md`
-- `bosskuai-context-limit-continuation`: Use this when a task risks hitting model context, token limits, or tight usage/quota mid-process. It should stop cleanly, summarize progress, update `ai-assistant/memory/active-continuation.md`, pair with model selection for the *remaining* work, tell the user to start a fresh session with the recommended model, and provide a compact continuation state. File: `ai-assistant/skills/bosskuai-context-limit-continuation/SKILL.md`
-- `bosskuai-polyglot-engineering`: Use this for implementation guidance across programming languages, frameworks, runtimes, and stack-specific tradeoffs. File: `ai-assistant/skills/bosskuai-polyglot-engineering/SKILL.md`
-- `bosskuai-market-analysis`: Use this for competitor review, market trends, positioning, pricing context, demand signals, and opportunity analysis. File: `ai-assistant/skills/bosskuai-market-analysis/SKILL.md`
-- `bosskuai-marketing-growth`: Use this for marketing strategy, distribution, positioning, go-to-market planning, channels, messaging, and growth loops. File: `ai-assistant/skills/bosskuai-marketing-growth/SKILL.md`
-- `bosskuai-social-content-calendar`: Use this for platform-specific content calendars with recommended local posting dates, times, formats, hooks, and CTAs. File: `ai-assistant/skills/bosskuai-social-content-calendar/SKILL.md`
-- `bosskuai-paid-acquisition-monetization`: Use this for Google Ads, paid acquisition strategy, CAC logic, pricing, packaging, and monetization planning. File: `ai-assistant/skills/bosskuai-paid-acquisition-monetization/SKILL.md`
-- `bosskuai-sales-strategy`: Use this for sales positioning, ICP definition, pipeline strategy, founder-led sales, objection handling, and pricing narrative. File: `ai-assistant/skills/bosskuai-sales-strategy/SKILL.md`
-- `bosskuai-seo-geo`: Use this for SEO, GEO, content discoverability, search demand alignment, and optimization for both search engines and generative engines. File: `ai-assistant/skills/bosskuai-seo-geo/SKILL.md`
-- `bosskuai-ai-model-selection`: Use this for recommending which AI model is suitable for a given task based on reasoning depth, speed, tool use, multimodality, coding needs, cost sensitivity, and risk tolerance. File: `ai-assistant/skills/bosskuai-ai-model-selection/SKILL.md`
+> For full "when to use" descriptions, see the **Skill roster** table above. This list is the file index only.
+
+| Skill | File |
+|-------|------|
+| `bosskuai-workspace-assistant` | `ai-assistant/skills/bosskuai-workspace-assistant/SKILL.md` |
+| `bosskuai-project-understanding` | `ai-assistant/skills/bosskuai-project-understanding/SKILL.md` |
+| `bosskuai-search-first` | `ai-assistant/skills/bosskuai-search-first/SKILL.md` |
+| `bosskuai-skill-stocktake` | `ai-assistant/skills/bosskuai-skill-stocktake/SKILL.md` |
+| `bosskuai-rules-distill` | `ai-assistant/skills/bosskuai-rules-distill/SKILL.md` |
+| `bosskuai-continuous-learning` | `ai-assistant/skills/bosskuai-continuous-learning/SKILL.md` |
+| `bosskuai-product-strategy` | `ai-assistant/skills/bosskuai-product-strategy/SKILL.md` |
+| `bosskuai-analytics-metrics` | `ai-assistant/skills/bosskuai-analytics-metrics/SKILL.md` |
+| `bosskuai-planning-execution` | `ai-assistant/skills/bosskuai-planning-execution/SKILL.md` |
+| `bosskuai-project-management` | `ai-assistant/skills/bosskuai-project-management/SKILL.md` |
+| `bosskuai-launch-commercialization` | `ai-assistant/skills/bosskuai-launch-commercialization/SKILL.md` |
+| `bosskuai-engineering-delivery` | `ai-assistant/skills/bosskuai-engineering-delivery/SKILL.md` |
+| `bosskuai-devops-iac` | `ai-assistant/skills/bosskuai-devops-iac/SKILL.md` |
+| `bosskuai-ui-ux-design-to-code` | `ai-assistant/skills/bosskuai-ui-ux-design-to-code/SKILL.md` |
+| `bosskuai-i18n-l10n` | `ai-assistant/skills/bosskuai-i18n-l10n/SKILL.md` |
+| `bosskuai-3d-web-development` | `ai-assistant/skills/bosskuai-3d-web-development/SKILL.md` |
+| `bosskuai-cybersecurity-risk` | `ai-assistant/skills/bosskuai-cybersecurity-risk/SKILL.md` |
+| `bosskuai-agent-security-hardening` | `ai-assistant/skills/bosskuai-agent-security-hardening/SKILL.md` |
+| `bosskuai-legal-compliance` | `ai-assistant/skills/bosskuai-legal-compliance/SKILL.md` |
+| `bosskuai-business-logic-review` | `ai-assistant/skills/bosskuai-business-logic-review/SKILL.md` |
+| `bosskuai-bug-finding` | `ai-assistant/skills/bosskuai-bug-finding/SKILL.md` |
+| `bosskuai-root-cause-investigation` | `ai-assistant/skills/bosskuai-root-cause-investigation/SKILL.md` |
+| `bosskuai-rigorous-code-review` | `ai-assistant/skills/bosskuai-rigorous-code-review/SKILL.md` |
+| `bosskuai-software-architecture` | `ai-assistant/skills/bosskuai-software-architecture/SKILL.md` |
+| `bosskuai-api-design` | `ai-assistant/skills/bosskuai-api-design/SKILL.md` |
+| `bosskuai-data-architecture` | `ai-assistant/skills/bosskuai-data-architecture/SKILL.md` |
+| `bosskuai-codebase-analysis` | `ai-assistant/skills/bosskuai-codebase-analysis/SKILL.md` |
+| `bosskuai-code-revamp` | `ai-assistant/skills/bosskuai-code-revamp/SKILL.md` |
+| `bosskuai-coding-best-practices` | `ai-assistant/skills/bosskuai-coding-best-practices/SKILL.md` |
+| `bosskuai-context-limit-continuation` | `ai-assistant/skills/bosskuai-context-limit-continuation/SKILL.md` |
+| `bosskuai-polyglot-engineering` | `ai-assistant/skills/bosskuai-polyglot-engineering/SKILL.md` |
+| `bosskuai-market-analysis` | `ai-assistant/skills/bosskuai-market-analysis/SKILL.md` |
+| `bosskuai-marketing-growth` | `ai-assistant/skills/bosskuai-marketing-growth/SKILL.md` |
+| `bosskuai-social-content-calendar` | `ai-assistant/skills/bosskuai-social-content-calendar/SKILL.md` |
+| `bosskuai-paid-acquisition-monetization` | `ai-assistant/skills/bosskuai-paid-acquisition-monetization/SKILL.md` |
+| `bosskuai-sales-strategy` | `ai-assistant/skills/bosskuai-sales-strategy/SKILL.md` |
+| `bosskuai-seo-geo` | `ai-assistant/skills/bosskuai-seo-geo/SKILL.md` |
+| `bosskuai-ai-model-selection` | `ai-assistant/skills/bosskuai-ai-model-selection/SKILL.md` |
 
 ## Local memory
 
@@ -256,44 +260,29 @@ Before considering a meaningful task done:
 
 ## Working rules
 
-- If the user explicitly activates an expert (e.g. "work as the security reviewer", "focus on launch commercialization", "use the bug-finding skill", "skeptical code review"), load that skill set first and adopt that lens; then still apply the minimum set of any other relevant skills for the task.
-- Start by identifying the real task type:
-  - discovery
-  - project understanding
-  - continuous learning
-  - product strategy
-  - planning and execution
-  - analytics and metrics
-  - project management
-  - launch commercialization
-  - engineering delivery
-  - DevOps / IaC
-  - UX/design
-  - i18n / l10n
-  - 3D web development (Three.js, R3F, WebGL, Spline, GSAP 3D, immersive experiences)
-  - implementation
-  - security/risk
-  - legal / compliance
-  - agent security hardening
-  - business-logic review
-  - bug finding
-  - root-cause investigation
-  - rigorous code review
-  - software architecture
-  - API design
-  - data / schema architecture
-  - codebase analysis
-  - code revamp
-  - coding best practices
-  - context-limit continuation
-  - polyglot engineering
-  - market analysis
-  - marketing and growth
-  - social content calendar
-  - paid acquisition and monetization
-  - sales strategy
-  - SEO/GEO
-  - AI model selection
+### Clarify first (ambiguity protocol)
+
+**When a prompt is general, ambiguous, or touches many files and you are not sure of the intended scope — stop and ask before acting.**
+
+- Ask using a numbered bullet list of yes/no (or short-answer) questions.
+- Include explicit answer format instructions so the user can reply concisely.
+- Do NOT guess, assume, or start making changes across multiple files without confirmation.
+
+Example format:
+```
+Before I proceed, I need to clarify scope:
+
+- 1) Should I apply this to all files in the folder? (yes/no)
+- 2) Is the goal to reduce file size, or improve AI routing logic, or both? (A/B/C)
+- 3) Should I update checklists and playbooks as well, or just the core rules? (yes/no)
+
+Please answer: 1-yes/no  2-A/B/C  3-yes/no
+```
+
+---
+
+- If the user explicitly activates an expert (e.g. "work as the security reviewer"), load that skill first; then load the minimum set of other relevant skills.
+- Identify the real task type using the Skill roster table above. Do not re-enumerate task types here — see § Skill roster.
 - Use the minimum set of relevant skills instead of loading everything.
 - Default to plan mode first for meaningful tasks before implementation, major recommendations, or irreversible decisions.
 - Before executing a meaningful task, recommend the most suitable AI model for that task by concrete model name if possible in the current tool, and explain the tradeoff briefly.

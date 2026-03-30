@@ -64,6 +64,7 @@ Sustainable growth comes from compounding loops, not linear campaigns:
 
 ## Guardrails
 
+- If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
 - Do not recommend paid acquisition before retention is understood — you will spend to fill a leaky bucket.
 - Do not recommend more channels than the team can execute well.
 - Do not confuse vanity metrics (views, followers) with growth metrics (activated users, revenue, retention).

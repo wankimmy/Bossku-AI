@@ -79,6 +79,7 @@ Use this skill for **screens, flows, and implementation-ready UI guidance** — 
 
 ## Guardrails
 
+- If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
 - Do not skip accessibility — it is part of implementation correctness, not a nice-to-have.
 - Do not design only the happy path — states are part of design.
 - Do not accept designs that do not define mobile behavior — ask for it.

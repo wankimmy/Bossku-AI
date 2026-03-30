@@ -59,6 +59,7 @@ Use this skill when the main question is **how the product behaves across langua
 
 ## Guardrails
 
+- If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
 - Do not treat hardcoded English as acceptable just because the first market is English-speaking.
 - Do not rely on string concatenation for grammatically variable content.
 - Do not ignore RTL or expansion risk when a market requires it.

@@ -64,6 +64,7 @@ When two languages or runtimes exchange data:
 
 ## Guardrails
 
+- If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
 - Do not recommend patterns from a different ecosystem without explaining the translation cost.
 - Do not assume the same idiom works across languages: error handling in Go is not the same as in Python.
 - Do not recommend a library without checking ecosystem quality signals.

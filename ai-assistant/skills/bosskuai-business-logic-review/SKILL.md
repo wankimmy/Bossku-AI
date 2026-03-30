@@ -57,6 +57,7 @@ Use these as patterns to hunt for in any domain — they are not exhaustive.
 
 ## Guardrails
 
+- If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
 - Do not confuse input validation with business rules — they are different concerns.
 - Do not assume that because a rule is implemented it is the right rule.
 - Do not skip edge states (empty, deleted, expired, locked) — most logic bugs live there.

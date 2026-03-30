@@ -107,6 +107,13 @@ Every meaningful change should have a rollback answer:
 - **Migration**: ensure the new schema works with the old code; deploy code first, migrate second; only drop old columns in a later release
 - **Service change**: verify old clients still work during the transition window
 
+## Guardrails
+
+- If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
+- Do not declare done until the full Definition of Done checklist passes — "it works on my machine" is not done.
+- Do not mix feature work and refactoring in the same PR — separate commits keep rollback clean.
+- Do not skip test-guide for bug fixes — a failing test that reproduces the bug is the proof the fix is real.
+
 ## Output format
 
 ```

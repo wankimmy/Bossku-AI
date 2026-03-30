@@ -93,6 +93,7 @@ Apply SOLID at the module and function level — not as a reason to add abstract
 
 ## Guardrails
 
+- If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
 - Do not impose patterns from a different stack or paradigm onto the current codebase.
 - Do not add abstraction unless there are at least 3 concrete uses — YAGNI.
 - Do not refactor code while fixing a bug in the same PR — they are different concerns.

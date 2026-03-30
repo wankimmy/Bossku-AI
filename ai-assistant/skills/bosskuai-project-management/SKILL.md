@@ -99,6 +99,7 @@ Escalate when:
 
 ## Guardrails
 
+- If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
 - Do not add process overhead for a team of 2 — RACI on a napkin is enough.
 - Do not set a deadline without also setting a scope. Pick two: scope, quality, time.
 - Do not run standups as status reports — they are blocker-surfacing sessions.

@@ -73,6 +73,7 @@ Apply STRIDE systematically for each trust boundary and sensitive flow:
 
 ## Guardrails
 
+- If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
 - Do not recommend security theater (adding complexity that doesn't reduce actual risk).
 - Do not list every possible vulnerability — focus on what is plausible given the actual threat model.
 - Do not assume external APIs, webhooks, or user-supplied data are safe.

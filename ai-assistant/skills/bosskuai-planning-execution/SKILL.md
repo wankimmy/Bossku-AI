@@ -47,6 +47,7 @@ Use this skill when the task is to **turn decisions into an executable plan** �
 
 ## Guardrails
 
+- If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
 - Do not plan phases 2–3 in detail before phase 1 is validated.
 - Do not accept "we'll figure it out" for high-risk dependencies.
 - Do not skip the "won't do this quarter" list — scope creep kills delivery cadence.

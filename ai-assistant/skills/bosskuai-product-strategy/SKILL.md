@@ -42,6 +42,7 @@ Use this skill when the task is primarily about **what to build and why**, not h
 
 ## Guardrails
 
+- If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
 - Do not define the solution before the problem is properly framed.
 - Do not skip ICP — "everyone" is not a user.
 - Do not optimize for feature quantity over outcome quality.

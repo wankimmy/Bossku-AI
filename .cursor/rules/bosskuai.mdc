@@ -1,6 +1,4 @@
 ---
-description: BosskuAI workspace rules
-globs:
 alwaysApply: true
 ---
 # BosskuAI Rules
@@ -29,42 +27,32 @@ Apply these rules anywhere inside this repo.
 - Write durable findings back to memory after meaningful tasks.
 - Never treat memory as tool-local — any insight written here must be usable by all tools.
 
+## Clarify first (ambiguity protocol)
+
+**When a prompt is general, ambiguous, or touches many files and you are unsure of the intended scope — stop and ask before acting.**
+
+- Ask a numbered bullet list of yes/no (or short-answer) questions.
+- Include explicit answer format so the user can reply concisely (e.g. `1-yes 2-no 3-A`).
+- Do NOT guess, assume, or make changes across multiple files without confirmation.
+
 ## Core rules
 
-- For division/skill mapping and explicit activation ("work as the X"), see root **AGENTS.md** → Skill roster and Quick reference: what to ask for.
-- Identify whether the task is project-understanding, product, analytics-metrics, planning, project-management, launch-commercialization, design, i18n-l10n, engineering, devops-iac, security, legal-compliance, business-logic, bug-finding, root-cause-investigation, rigorous-code-review, architecture, api-design, data-architecture, codebase analysis, market, marketing, social-content, paid-acquisition, sales, SEO/GEO, or AI-model-selection oriented before acting.
-- If a meaningful task, review, or incident just finished, consider `bosskuai-continuous-learning` before closing the loop.
-- For implementation-heavy work, use the engineering-delivery workflow: plan, test-guide, implement, review, and verify.
-- Load only the relevant local skills instead of loading every expert surface.
-- Always plan first in Plan mode (Opus 4.6 / GPT-5.4 / Gemini Pro 3.1) before implementation or major conclusions.
-- State the phase and model (plan vs Composer 2) at the start of each meaningful task.
-- If the repo or product context is unclear, use project understanding first.
-- Read the nearest specs, mocks, code, or notes first.
-- Study the current code structure, conventions, and extension points before implementing changes.
-- Apply coding best practices by default, but fit them to the current project conventions and stack.
-- Prefer test-first or test-guided development for new behavior, bug fixes, and risky refactors when practical.
-- If context or token limits are likely to interrupt meaningful work, stop before truncation, summarize the current state, and ask the user to retry so the task can continue cleanly.
-- Be skeptical by default and push for clearer acceptance criteria.
-- Triple-check important work before finalizing.
-- Treat UX, security, business rules, and operational risk as part of correctness.
-- Treat AI-agent workspace security as a first-class concern: least privilege, minimal integrations, distrust of external content, and caution with persistent memory.
-- Read the source code before making architecture or bug claims.
-- Follow the current code structure and naming patterns unless there is a strong reason to improve them.
-- Prefer the smallest safe change that fits the current architecture before proposing broader rewrites.
-- Use code revamp only when the current structure materially blocks maintainability, correctness, or delivery.
-- Treat maintainability, readability, testability, and safe error handling as part of implementation correctness.
-- Treat validation, secret handling, injection resistance, and safe defaults as part of implementation correctness.
-- Treat planning, launch readiness, marketing, and discoverability as part of real product success.
-- Treat project management, ownership clarity, execution cadence, sales friction, and mobile responsiveness as part of real product success.
-- Explain AI model recommendations in terms of capability, cost, speed, modality, and reliability tradeoffs.
-- Do not jump straight into **Composer 2** execution on meaningful tasks before the **Plan mode** outcome (and chosen plan model) is stated.
-- If continuation risk is high because of model or context limits, preserve a compact handoff state before asking the user to continue in a fresh prompt.
-- Verify current market or trend claims when they materially affect recommendations.
-- If something material is not confirmed, ask the user instead of guessing.
-- Treat `ai-assistant/memory/` as shared durable memory across supported tool surfaces.
-- If repeated usage reveals a missing reusable capability, promote it into the right skill, checklist, playbook, pitfall, or rule.
-- After meaningful tasks, promote durable learnings into the right artifact: memory, checklist, pitfall, playbook, or skill.
-- Use `bash ./ai-assistant/scripts/learning-doctor.sh` when available before larger maintenance passes to catch stale counts, contradictory memory, empty high-value memory files, and consumed continuation state.
+> Full skill roster, task-type list, and working rules are in root **`AGENTS.md`**. Rules here are Cursor-specific additions only — do not duplicate `AGENTS.md` content.
+
+- Identify task type using **AGENTS.md → Skill roster** before acting.
+- Load only the relevant skills — never load every expert surface.
+- Always plan first in **Plan mode** (Opus 4.6 / GPT-5.4 / Gemini Pro 3.1). State phase and model at the start of each meaningful task.
+- Execute in **Composer 2** only — not ad-hoc chat. Never skip to Composer 2 before Plan mode outcome is stated.
+- If repo or product context is unclear, use `bosskuai-project-understanding` first.
+- Read source code before making architecture or bug claims.
+- Prefer the smallest safe change. Use code revamp only when the structure materially blocks delivery.
+- Triple-check important work. Be skeptical; push for clearer acceptance criteria.
+- Treat security, UX, business rules, and operational risk as part of correctness.
+- Treat `ai-assistant/memory/` as shared durable memory across all tools.
+- After meaningful tasks, promote durable learnings to memory, checklist, pitfall, playbook, or skill.
+- If continuation risk is high, preserve compact handoff state; ask user to continue in a fresh prompt.
+- If something material is unconfirmed, ask the user instead of guessing.
+- Run `bash ./ai-assistant/scripts/learning-doctor.sh` before large maintenance passes.
 
 ## References
 

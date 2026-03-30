@@ -71,6 +71,7 @@ Apply whichever are relevant:
 
 ## Guardrails
 
+- If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
 - Do not expose internal database shape as the public contract without a reason.
 - Do not add versioning complexity unless you can name the compatibility problem it solves.
 - Do not design errors as freeform strings only.

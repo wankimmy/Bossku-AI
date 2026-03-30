@@ -52,6 +52,7 @@ Use this skill when the task is about **external market reality** rather than in
 
 ## Guardrails
 
+- If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
 - Do not accept TAM numbers without a bottom-up sanity check.
 - Do not treat competitor feature parity as a moat — execution and distribution matter more.
 - Do not present inference as fact; label it clearly.

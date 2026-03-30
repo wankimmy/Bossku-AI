@@ -92,6 +92,7 @@ Use the minimum relevant set:
 
 ## Guardrails
 
+- If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
 - Do not mutate production data or replay jobs unless explicitly asked and it is safe to do so.
 - Do not assume the latest error log line is the root cause; build the full timeline first.
 - Do not inspect sensitive production data casually; minimize exposure and summarize safely.

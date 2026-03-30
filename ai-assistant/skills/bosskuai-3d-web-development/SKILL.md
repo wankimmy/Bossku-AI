@@ -191,6 +191,13 @@ Use this skill when creating or reviewing 3D websites, immersive web experiences
     - Cross-browser: Chrome, Safari (WebKit differences), Firefox
     - Memory: no leaks (check dispose, cleanup in useEffect return)
 
+## Guardrails
+
+- If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
+- Do not add post-processing effects without checking GPU and performance budget — effects that look great on desktop can drop mobile to below 30fps.
+- Do not use Spline for production-critical scenes without a fallback — external cloud dependency adds latency and single-point failure risk.
+- Do not skip responsive adaptation — most 3D sites fail on mobile; test at 375px before calling any scene done.
+
 ## Output expectation
 
 - 3D approach classification (hero scene, full experience, scroll-driven, hybrid, etc.)

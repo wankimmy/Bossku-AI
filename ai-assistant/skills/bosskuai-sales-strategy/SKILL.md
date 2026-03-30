@@ -69,6 +69,7 @@ Use this skill when the task is about **converting interest into revenue** — c
 
 ## Guardrails
 
+- If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
 - Do not build a complex sales process before you have 10 paying customers — learn the motion before systematizing it.
 - Do not optimize for pipeline volume at the expense of deal quality in the early stage.
 - Do not guess at buyer objections — run discovery calls and listen.

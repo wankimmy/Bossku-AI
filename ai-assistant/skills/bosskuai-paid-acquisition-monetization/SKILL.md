@@ -126,6 +126,7 @@ Stop a campaign if after the test budget:
 
 ## Guardrails
 
+- If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
 - Do not scale paid spend before achieving positive unit economics — it accelerates losses, not growth.
 - Do not run paid to a generic homepage — landing pages must match ad intent.
 - Do not launch LinkedIn campaigns under USD 1000/month budget — cost per click is too high to learn at lower budgets.

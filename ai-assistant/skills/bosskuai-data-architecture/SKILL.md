@@ -64,6 +64,7 @@ Use this skill when the main question is **how data should be shaped, owned, mig
 
 ## Guardrails
 
+- If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
 - Do not treat analytics tables as a free dumping ground with no ownership.
 - Do not recommend destructive schema changes without an additive transition path.
 - Do not mix transactional source-of-truth needs with reporting convenience blindly.

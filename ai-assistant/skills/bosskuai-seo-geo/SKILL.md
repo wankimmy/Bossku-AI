@@ -113,6 +113,7 @@ Example cluster: Pillar = "AI Assistants for Teams" → Clusters = "Best AI assi
 
 ## Guardrails
 
+- If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
 - Do not chase keyword density — modern search engines penalize keyword stuffing.
 - Do not build backlinks through paid schemes — they risk manual penalties.
 - Do not optimize for one keyword per page in a way that makes the page useless for humans.

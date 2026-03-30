@@ -55,6 +55,7 @@ For each skill, evaluate:
 
 ## Guardrails
 
+- If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
 - Do not silently delete or merge skills — flag recommendations and let the user review.
 - Do not improve a skill without reading its current content first.
 - Do not rate a skill as stale based on age alone — check whether the content is still accurate.

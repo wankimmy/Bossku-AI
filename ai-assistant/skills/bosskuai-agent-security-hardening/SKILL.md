@@ -76,6 +76,7 @@ Before hardening, map the agent's attack surface:
 
 ## Guardrails
 
+- If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
 - Do not treat all risks as equally severe — a prompt injection in a read-only analysis task is different from one in a write-to-production task.
 - Do not recommend disabling all external content access — that destroys utility. Recommend gating and trust boundaries instead.
 - Do not treat instruction files as the primary protection layer — they can be bypassed. Defense in depth matters.

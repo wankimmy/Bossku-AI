@@ -72,6 +72,7 @@ For each finding, score:
 
 ## Guardrails
 
+- If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
 - Do not fix the symptom without tracing to the root cause — symptom fixes mask bugs, they don't close them.
 - Do not assume intermittent bugs are non-reproducible — they are usually race conditions or state corruption.
 - Do not mark a finding as "Confirmed" unless you have traced it in code. Distinguish inferred patterns from confirmed defects.

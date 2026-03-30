@@ -80,6 +80,7 @@ For each candidate learning, answer:
 
 ## Guardrails
 
+- If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
 - Do not promote vague advice like "be more careful."
 - Do not create a new skill when a checklist, pitfall, or playbook is enough.
 - Do not store secrets, customer-specific confidential data, or transient debug chatter in memory.

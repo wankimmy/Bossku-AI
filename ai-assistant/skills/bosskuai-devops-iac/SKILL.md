@@ -64,6 +64,7 @@ Use this skill when the main question is **how software is built, shipped, confi
 
 ## Guardrails
 
+- If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
 - Do not add platform complexity that the current team cannot operate.
 - Do not recommend manual hotfix culture over reproducible deploy paths.
 - Do not treat CI secrets, runners, or third-party actions as implicitly trusted.

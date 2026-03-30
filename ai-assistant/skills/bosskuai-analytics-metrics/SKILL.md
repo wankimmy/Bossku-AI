@@ -64,6 +64,7 @@ Use this skill when the main question is **what to measure, how to instrument it
 
 ## Guardrails
 
+- If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
 - Do not add events with no clear decision owner.
 - Do not stuff unbounded blobs or sensitive data into event properties.
 - Do not define funnels without precise event semantics and time windows.

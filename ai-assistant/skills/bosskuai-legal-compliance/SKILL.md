@@ -58,6 +58,7 @@ Use this skill when the main question is **whether product, data, or operational
 
 ## Guardrails
 
+- If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
 - Do not present this skill as legal advice.
 - Do not guess jurisdiction-specific obligations when the facts are unclear.
 - Do not assume a privacy policy fixes product behavior that contradicts it.

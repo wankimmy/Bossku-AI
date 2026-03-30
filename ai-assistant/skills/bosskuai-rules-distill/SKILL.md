@@ -61,6 +61,7 @@ Before promoting a principle to a rule:
 
 ## Guardrails
 
+- If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
 - Do not promote a principle to a rule without checking the existing rules for near-duplicates.
 - Do not promote project-specific lessons as universal rules.
 - Do not propose rule changes that are not grounded in observed repeated behavior.

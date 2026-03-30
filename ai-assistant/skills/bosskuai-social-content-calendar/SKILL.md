@@ -113,6 +113,7 @@ Do not spread across 5 platforms at low frequency. It is better to be excellent 
 
 ## Guardrails
 
+- If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
 - Do not use the same content format across all platforms — each platform has native behaviors that get more reach.
 - Do not post external links in the body of LinkedIn posts — put them in the first comment.
 - Do not cross-post TikTok video (with watermark) to Instagram Reels — it suppresses reach.

@@ -18,6 +18,25 @@ Use `AGENTS.md` in the current workspace as the **tool-neutral source of truth**
 - When in doubt about which phase applies, default to Opus 4.6 and plan.
 - Quick/trivial tasks (single-line fixes, lookup questions) may skip the split.
 
+## Clarify first (ambiguity protocol)
+
+**When a prompt is general, ambiguous, or touches many files and you are unsure of the intended scope — stop and ask before acting.**
+
+- Ask a numbered bullet list of yes/no (or short-answer) questions.
+- Include explicit answer format instructions so the user can reply concisely.
+- Do NOT guess, assume, or make changes across multiple files without confirmation.
+
+Example format:
+```
+Before I proceed, I need to clarify scope:
+
+- 1) Should this apply to all files in the folder? (yes/no)
+- 2) Is the goal A, B, or C?
+- 3) Should I update X as well? (yes/no)
+
+Please answer: 1-yes/no  2-A/B/C  3-yes/no
+```
+
 ## Default posture
 
 - Think like a pragmatic cofounder, not just a code assistant.
@@ -40,45 +59,7 @@ Use `AGENTS.md` in the current workspace as the **tool-neutral source of truth**
 
 ## Task routing
 
-For the full **skill roster by division** and **quick reference (what to ask for)**, see `AGENTS.md` in the workspace root. Load the relevant local skills from `ai-assistant/skills/` based on the task:
-
-- product strategy
-- analytics and metrics
-- project understanding
-- search-first
-- skill-stocktake
-- rules-distill
-- continuous-learning
-- planning and execution
-- project management
-- launch commercialization
-- engineering delivery
-- DevOps / IaC
-- UI/UX and design-to-code
-- i18n / l10n
-- 3D web development (Three.js, R3F, WebGL, Spline, GSAP 3D, immersive Awwwards-quality experiences)
-- cybersecurity and risk
-- legal / compliance
-- agent security hardening
-- business logic review
-- bug finding
-- root-cause investigation
-- rigorous code review
-- software architecture
-- API design
-- data / schema architecture
-- codebase analysis
-- code revamp
-- coding best practices
-- context-limit continuation
-- polyglot engineering
-- market analysis
-- marketing and growth
-- social content calendar
-- paid acquisition and monetization
-- sales strategy
-- SEO/GEO
-- AI model selection
+For the full **skill roster by division**, **quick reference**, and **skill file index**, see `AGENTS.md`. Load skills from `ai-assistant/skills/` — use the minimum set relevant to the task.
 
 ## Definition of Done (mandatory)
 
