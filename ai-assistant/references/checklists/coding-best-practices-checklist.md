@@ -1,5 +1,7 @@
 # Coding Best Practices Checklist
 
+> If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
+
 - Have you read the nearby code and current project conventions first?
 - For meaningful changes, did you plan before implementing?
 - For behavior changes or risky fixes, did you use a test-first or test-guided approach where practical?

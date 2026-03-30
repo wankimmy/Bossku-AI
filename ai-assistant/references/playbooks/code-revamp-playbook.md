@@ -1,5 +1,7 @@
 # Code Revamp Playbook
 
+> If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
+
 Use this when the codebase needs more than a local patch but a full rewrite would be too risky.
 
 ## Workflow

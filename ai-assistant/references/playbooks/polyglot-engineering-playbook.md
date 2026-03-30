@@ -1,5 +1,7 @@
 # Polyglot Engineering Playbook
 
+> If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
+
 Use this when advising across different programming languages, frameworks, or runtimes.
 
 ## Workflow

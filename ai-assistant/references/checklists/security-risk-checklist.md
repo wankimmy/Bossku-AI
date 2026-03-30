@@ -1,5 +1,7 @@
 # Security Risk Checklist
 
+> If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
+
 - What data is sensitive?
 - What are the trust boundaries?
 - Who can trigger this action?

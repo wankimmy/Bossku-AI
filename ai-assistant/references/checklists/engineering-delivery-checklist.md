@@ -1,5 +1,7 @@
 # Engineering Delivery Checklist
 
+> If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
+
 - Did you classify whether the task needs planning, implementation, review, security review, or docs verification before coding?
 - For non-trivial work, did you plan the change before implementation?
 - Did you read nearby code, tests, docs, and conventions before editing?

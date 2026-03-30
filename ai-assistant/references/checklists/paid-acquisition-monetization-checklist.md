@@ -1,5 +1,7 @@
 # Paid Acquisition and Monetization Checklist
 
+> If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
+
 - What is the offer, who is it for, and what action should paid traffic take?
 - Which country or region is in scope, and how does that affect CPC, channel fit, language, compliance, and payment behavior?
 - What is the monetization model: subscription, usage-based, one-time purchase, services-assisted, freemium, hybrid?

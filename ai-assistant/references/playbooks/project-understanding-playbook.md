@@ -1,5 +1,7 @@
 # Project Understanding Playbook
 
+> If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
+
 Use this when the first job is to understand what a project is about before doing deeper work.
 
 ## Workflow

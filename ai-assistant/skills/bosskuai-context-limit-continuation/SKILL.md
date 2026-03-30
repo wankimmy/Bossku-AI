@@ -33,14 +33,15 @@ If the estimate is tight (1,000–1,500 lines), explicitly note this at the star
 ## Continuation workflow
 
 1. Check trigger thresholds above — activate this skill if any threshold is met or the pre-task budget estimate is tight.
-2. Stop before truncation instead of letting the work end abruptly.
-3. Summarize what has already been completed, what remains, and any key decisions already made.
-4. **Update memory for the handoff** — Fill or overwrite `../../memory/active-continuation.md` with goal, done, remaining, key files, risks, and a **paste block** for the next session. This is the durable bridge other tools can read; clear that file when the task is fully done.
-5. **Recommend the next model** — Apply **`bosskuai-ai-model-selection`** for the *remaining* work (not the whole original task if the phase changed). Give a **primary** and **fallback** model by concrete name when the tool exposes them, with one-line tradeoffs (reasoning vs speed vs cost vs context).
-6. **Tell the user clearly** to **start a new chat or session** (or switch model in-product) using the **recommended model**, paste the continuation block, and point them at `active-continuation.md` if their workspace uses shared memory.
-7. Provide a compact continuation state in the reply so the user can act even before opening the memory file.
-8. Ask the user to retry, continue, or start a fresh prompt so the work can resume cleanly.
-9. If files were changed, name them clearly so the next turn can verify the current state quickly.
+2. **Before stopping to hand off: check if remaining work has ≥ 2 independent workstreams.** If so, consider delegating them in parallel using `bosskuai-subagent-delegation` instead — parallel subagents can complete independent work without consuming the main session context. Only stop and hand off if the remaining work is fundamentally serial or subagents cannot complete it independently.
+3. Stop before truncation instead of letting the work end abruptly.
+4. Summarize what has already been completed, what remains, and any key decisions already made.
+5. **Update memory for the handoff** — Fill or overwrite `../../memory/active-continuation.md` with goal, done, remaining, key files, risks, and a **paste block** for the next session. This is the durable bridge other tools can read; clear that file when the task is fully done.
+6. **Recommend the next model** — Apply **`bosskuai-ai-model-selection`** for the *remaining* work (not the whole original task if the phase changed). Give a **primary** and **fallback** model by concrete name when the tool exposes them, with one-line tradeoffs (reasoning vs speed vs cost vs context).
+7. **Tell the user clearly** to **start a new chat or session** (or switch model in-product) using the **recommended model**, paste the continuation block, and point them at `active-continuation.md` if their workspace uses shared memory.
+8. Provide a compact continuation state in the reply so the user can act even before opening the memory file.
+9. Ask the user to retry, continue, or start a fresh prompt so the work can resume cleanly.
+10. If files were changed, name them clearly so the next turn can verify the current state quickly.
 
 ## Continuation output
 
@@ -84,6 +85,13 @@ Apply these practices to keep sessions lean and avoid premature context exhausti
 - Use `claude-sonnet-4-6` for implementation and execution phases — it is faster and cheaper per token.
 - Reserve `claude-opus-4-6` for planning, ambiguous analysis, and architecture decisions where deeper reasoning has clear payoff.
 - Do not use Opus for tasks that are clearly mechanical (formatting, boilerplate generation, simple edits).
+
+## Guardrails
+
+- If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
+- Do not let context run out silently — stop and write the handoff state before truncation occurs.
+- Do not carry full raw output forward — summarize large prior results into a compact note before continuing.
+- Do not recommend a model without naming the primary and fallback with one-line tradeoffs.
 
 ## References
 

@@ -46,6 +46,7 @@ Please answer: 1-yes/no  2-A/B/C  3-yes/no
 - For meaningful engineering work, use a plan -> test-guide -> implement -> review -> verify workflow.
 - Prefer test-first or test-guided development for new behavior, bug fixes, and risky refactors when practical.
 - If context or token limits are likely to interrupt meaningful work, stop before truncation, summarize the current state, and ask the user to retry so the task can continue cleanly.
+- When a task has ≥ 5 independent files, ≥ 2 parallel workstreams, a pre-task context estimate > 1,200 lines, or risky/irreversible scope — delegate to subagents using `bosskuai-subagent-delegation` before running serially in the main session.
 - Use project understanding first when the codebase or repo purpose is still unclear.
 - Challenge weak assumptions.
 - Prefer concrete tradeoffs over generic advice.

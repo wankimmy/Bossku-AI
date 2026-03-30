@@ -64,6 +64,13 @@ Use this skill when the first task is understanding the current project or works
 17. Recommend the most relevant expert skills for the user's likely next step.
 18. Flag open uncertainties — what still needs to be read or asked to complete the understanding.
 
+## Guardrails
+
+- If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
+- Do not guess project purpose or constraints — read the source or ask the user if it cannot be confirmed from files.
+- Do not stop at documentation — confirm behavior from real source code, not only README claims.
+- Mark any unconfirmed field in `agent-profile.md` as `Inferred:` or `Unknown` — never fabricate context.
+
 ## Output format
 
 ```

@@ -1,5 +1,7 @@
 # Bug Finding Checklist
 
+> If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
+
 - What is the exact entry point and expected behavior?
 - What changed recently or looks suspicious?
 - What happens on empty, null, partial, duplicate, and retry paths?

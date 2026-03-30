@@ -1,5 +1,7 @@
 # Business Logic Checklist
 
+> If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
+
 - What are the core entities and state transitions?
 - What must never happen?
 - What approvals, handoffs, or ownership changes exist?

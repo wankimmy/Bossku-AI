@@ -1,5 +1,7 @@
 # Coding Best Practices Playbook
 
+> If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
+
 Use this when implementing or reviewing code that should be clean, maintainable, and consistent with the existing project.
 
 ## Workflow

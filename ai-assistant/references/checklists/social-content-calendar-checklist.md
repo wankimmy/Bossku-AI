@@ -1,5 +1,7 @@
 # Social Content Calendar Checklist
 
+> If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
+
 - Which platforms matter most for this audience right now: LinkedIn, X, TikTok, Instagram, YouTube, Facebook, Reddit, email, or community channels?
 - What content pillars should repeat across the month: education, proof, founder story, product demo, objection handling, case study, launch updates?
 - What timezone, country, and working-week assumptions should drive the posting schedule?

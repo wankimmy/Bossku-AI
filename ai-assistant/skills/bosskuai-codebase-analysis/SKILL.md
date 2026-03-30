@@ -72,6 +72,13 @@ Use this skill when the first task is understanding the codebase correctly befor
 17. State clearly what is **confirmed** (directly seen in code) vs **inferred** (pattern-based).
 18. List open uncertainties and what would need to be read or tested to resolve them.
 
+## Guardrails
+
+- If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
+- Do not make claims about code behavior without reading the actual source — README and docs are aspirational.
+- Do not treat generated, compiled, or vendor files as the source of truth.
+- Distinguish confirmed facts (directly seen in code) from inferences (pattern-based) in every output.
+
 ## Output format
 
 ```

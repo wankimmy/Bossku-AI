@@ -54,6 +54,7 @@ Role definitions live in `.codex/agents/` (explorer, planner, reviewer, security
 - Auth, billing, uploads, webhooks, user input, external APIs, or PII: use `security-reviewer`
 - Framework upgrade, SDK behavior, release notes, or changing APIs: use `docs-researcher`
 - New feature, bug fix, or risky refactor with tests: use `tdd-guide`
+- ≥ 2 independent workstreams or ≥ 5 independent files: launch parallel Codex runs — one per workstream, each scoped tightly. Use `explorer` for read-only passes, `planner` for scoped planning, `reviewer` for review-only passes.
 
 ## Verification standard
 

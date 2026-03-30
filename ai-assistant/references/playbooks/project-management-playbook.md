@@ -1,5 +1,7 @@
 # Project Management Playbook
 
+> If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
+
 Use this when the task is about execution control, team coordination, ownership, sequencing, risk tracking, or keeping a project on track.
 
 ## Workflow

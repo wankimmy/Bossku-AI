@@ -1,5 +1,7 @@
 # Data Architecture Playbook
 
+> If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
+
 Use this when reviewing models, migrations, data ownership, warehouses, or analytics pipelines.
 
 ## Workflow

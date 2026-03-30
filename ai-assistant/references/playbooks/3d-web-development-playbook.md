@@ -1,5 +1,7 @@
 # 3D Web Development Playbook
 
+> If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
+
 Step-by-step workflow for creating Awwwards-quality 3D websites.
 
 ## Phase 1: Discovery and approach selection

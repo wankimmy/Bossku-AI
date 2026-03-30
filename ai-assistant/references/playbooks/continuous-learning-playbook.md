@@ -1,5 +1,7 @@
 # Continuous Learning Playbook
 
+> If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
+
 Use this after meaningful work to convert lessons into durable improvements without turning the repo into a noisy archive.
 
 ## Workflow

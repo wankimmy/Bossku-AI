@@ -1,5 +1,7 @@
 # Continuous Learning Checklist
 
+> If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
+
 - Did you identify the concrete signal that produced the learning, not just a vague feeling?
 - Is the learning backed by evidence from code, docs, review findings, repeated usage, or an incident?
 - Is the lesson durable enough to matter in a future session?

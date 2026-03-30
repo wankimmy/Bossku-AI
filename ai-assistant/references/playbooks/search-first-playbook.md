@@ -1,5 +1,7 @@
 # Search-First Playbook
 
+> If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
+
 Use this when deciding whether to adopt an existing solution or build custom behavior.
 
 ## Workflow

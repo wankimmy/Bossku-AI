@@ -1,5 +1,7 @@
 # Security Review Playbook
 
+> If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
+
 Use this when reviewing a feature, workflow, or system for security and operational risk.
 
 ## Workflow

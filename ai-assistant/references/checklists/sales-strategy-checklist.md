@@ -1,5 +1,7 @@
 # Sales Strategy Checklist
 
+> If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
+
 - Who is the buyer, champion, user, and blocker?
 - What pain is urgent enough to justify a buying motion now?
 - What proof points, ROI framing, or risk-reduction signals matter most?

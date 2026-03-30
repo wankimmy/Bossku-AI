@@ -1,5 +1,7 @@
 # Launch Commercialization Checklist
 
+> If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
+
 - Is the product actually ready enough to sell, or are there engineering, UX, trust, or reliability gaps that would hurt conversion?
 - What is the target country or region, and how does that change language, pricing, payment methods, compliance, buyer behavior, and channels?
 - Who is the ICP, buyer, champion, user, and purchase trigger?

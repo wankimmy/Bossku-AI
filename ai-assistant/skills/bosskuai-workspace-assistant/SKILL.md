@@ -54,6 +54,7 @@ This is the **orchestration layer** — it does not replace expert skills, it ro
 | Sales motion, ICP, deal qualification | `bosskuai-sales-strategy` |
 | Which AI model for this task | `bosskuai-ai-model-selection` |
 | Context or token limit approaching | `bosskuai-context-limit-continuation` |
+| Heavy, parallel, or risky task | `bosskuai-subagent-delegation` |
 | Skill quality audit | `bosskuai-skill-stocktake` |
 | Extract rules from patterns | `bosskuai-rules-distill` |
 
@@ -118,6 +119,13 @@ Additional practices:
 - Load only the relevant skills (not all of them)
 - Prefer targeted file reads (specific line ranges) over full reads
 - Grep before full reads on large files
+
+## Guardrails
+
+- If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
+- Do not load all skills speculatively — load only the 1–2 skills most relevant to the current task; each loaded skill consumes context.
+- Do not skip model selection — state planning model vs execution model at the start of every meaningful task.
+- Do not declare a task done without running the Definition of Done checklist.
 
 ## Output expectation
 

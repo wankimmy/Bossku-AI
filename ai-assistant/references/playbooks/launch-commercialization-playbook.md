@@ -1,5 +1,7 @@
 # Launch Commercialization Playbook
 
+> If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
+
 Use this when the goal is not just to build the product, but to launch it successfully and turn it into revenue.
 
 ## Workflow

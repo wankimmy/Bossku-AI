@@ -1,5 +1,7 @@
 # Learning Promotion Checklist
 
+> If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
+
 Use this after meaningful tasks, reviews, or decisions to decide where a lesson should live.
 
 ## Put it in memory when:

@@ -1,5 +1,7 @@
 # 3D Web Development Checklist
 
+> If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
+
 Use this checklist when creating or reviewing any 3D website or WebGL experience.
 
 ## Scene setup

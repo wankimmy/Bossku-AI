@@ -1,5 +1,7 @@
 # Context-Limit Continuation Checklist
 
+> If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
+
 - Is the task at risk of exceeding the current model's context or reply budget (or usage/quota)?
 - Can you stop now before the response becomes truncated or low quality?
 - Have you summarized what is already done and what remains?

@@ -1,5 +1,7 @@
 # Data Architecture Checklist
 
+> If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
+
 - Who owns each entity, field, and source of truth?
 - Are model boundaries, invariants, and derived fields explicit?
 - Can schema changes roll out additively with backfill and rollback plans?

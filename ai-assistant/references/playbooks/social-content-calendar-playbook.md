@@ -1,5 +1,7 @@
 # Social Content Calendar Playbook
 
+> If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
+
 Use this when the goal is to produce a platform-specific content plan that a founder or team can copy and follow directly.
 
 ## Workflow

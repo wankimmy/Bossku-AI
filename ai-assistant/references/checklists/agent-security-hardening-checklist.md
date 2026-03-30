@@ -1,5 +1,7 @@
 # Agent Security Hardening Checklist
 
+> If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
+
 - Are the agent’s tools, permissions, and sandbox level scoped to the minimum needed?
 - Are external links, fetched docs, MCP outputs, and third-party content treated as untrusted by default?
 - Could a prompt injection in docs, chat logs, or tool output change agent behavior dangerously?

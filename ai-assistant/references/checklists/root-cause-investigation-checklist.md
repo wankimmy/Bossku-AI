@@ -1,5 +1,7 @@
 # Root Cause Investigation Checklist
 
+> If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
+
 - What is the exact expected behavior, actual behavior, scope, environment, and time window?
 - What entity IDs, request IDs, job IDs, webhook IDs, or idempotency keys link the evidence together?
 - What does the business flow look like from trigger to final side effect?

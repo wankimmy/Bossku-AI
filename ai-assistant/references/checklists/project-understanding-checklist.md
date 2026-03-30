@@ -1,5 +1,7 @@
 # Project Understanding Checklist
 
+> If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
+
 - What is this project trying to do?
 - Who are the likely users or buyers?
 - What does the source code say about the core workflows?

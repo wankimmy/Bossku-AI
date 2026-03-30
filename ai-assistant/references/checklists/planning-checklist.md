@@ -1,5 +1,7 @@
 # Planning Checklist
 
+> If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
+
 - Is the goal specific enough to sequence?
 - What is the smallest meaningful delivery slice?
 - What must happen first, and what can wait?

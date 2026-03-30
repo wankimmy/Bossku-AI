@@ -74,6 +74,7 @@ Use this table to discover expertise. The assistant classifies tasks and loads t
 | **Orchestration** | skill-stocktake | Audit local skills, commands, and guidance for overlap, staleness, and maintenance improvements |
 | **Orchestration** | rules-distill | Extract repeated principles from skills and references, then propose safe shared rule updates |
 | **Orchestration** | continuous-learning | After meaningful work, triage durable lessons, choose the strongest artifact, and catch stale memory before it drifts |
+| **Orchestration** | subagent-delegation | Automatically split heavy, parallel, or risky tasks across subagents before context exhausts; tool-specific patterns for Claude Code (Agent + worktree), Cursor (parallel Composer tabs), and Codex (parallel runs) |
 | **Product** | product-strategy | Product framing, requirement shaping, prioritization, scope, go-to-market implications |
 | **Product** | analytics-metrics | Instrumentation strategy, funnels, KPI definitions, experimentation, and making product decisions measurable |
 | **Product** | planning-execution | Roadmaps, sequencing, milestone planning, launch planning, strategy → execution slices |
@@ -136,6 +137,7 @@ Use this table to discover expertise. The assistant classifies tasks and loads t
 | Architecture or boundaries | "Review system boundaries" / "Architecture tradeoffs for this change" | software-architecture |
 | Refactor or modernize | "Safe code revamp" / "Modernize without breaking the structure" | code-revamp, codebase-analysis |
 | Context limit / handoff | "We're hitting context limits" / "Summarize and give me a continuation state" / "Which model should I use next?" | context-limit-continuation, ai-model-selection |
+| Heavy, parallel, or risky task | "Delegate to subagents" / "Run in parallel" / "Isolate this in a worktree" | subagent-delegation, workspace-assistant |
 | Market or positioning | "Competitor and market analysis" / "Positioning and pricing" | market-analysis, marketing-growth |
 | **Marketing** (strategy, channels, content) | "Work as marketing strategist" / "GTM and channels" / "Content calendar or paid ads" | marketing-growth, social-content-calendar, paid-acquisition-monetization, seo-geo |
 | **Sales** (ICP, pipeline, objections) | "Work as sales strategist" / "Define ICP and sales motion" / "Objections and pricing narrative" | sales-strategy |
@@ -178,6 +180,7 @@ Use the right skill without the user having to ask:
 - Complex feature or refactor → **planning-execution** or **engineering-delivery** (plan then implement).
 - Multi-faceted task (e.g. launch readiness) → combine **launch-commercialization** with **marketing**, **sales**, **seo-geo** as needed.
 - Context, token, or usage limits are near → **context-limit-continuation** plus **ai-model-selection**; update **`active-continuation.md`** and tell the user to continue in a **fresh session** with the recommended model.
+- Task has ≥ 5 independent files, ≥ 2 parallel workstreams, pre-task context estimate > 1,200 lines, or risky/irreversible scope → **subagent-delegation** automatically — do not run serially in the main session.
 
 For independent sub-tasks (e.g. security pass + business-logic pass), use multiple perspectives in sequence or in parallel where the tool allows; call out each lens and its findings.
 
@@ -204,6 +207,7 @@ Before considering a meaningful task done:
 | `bosskuai-skill-stocktake` | `ai-assistant/skills/bosskuai-skill-stocktake/SKILL.md` |
 | `bosskuai-rules-distill` | `ai-assistant/skills/bosskuai-rules-distill/SKILL.md` |
 | `bosskuai-continuous-learning` | `ai-assistant/skills/bosskuai-continuous-learning/SKILL.md` |
+| `bosskuai-subagent-delegation` | `ai-assistant/skills/bosskuai-subagent-delegation/SKILL.md` |
 | `bosskuai-product-strategy` | `ai-assistant/skills/bosskuai-product-strategy/SKILL.md` |
 | `bosskuai-analytics-metrics` | `ai-assistant/skills/bosskuai-analytics-metrics/SKILL.md` |
 | `bosskuai-planning-execution` | `ai-assistant/skills/bosskuai-planning-execution/SKILL.md` |

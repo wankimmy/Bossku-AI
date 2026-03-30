@@ -1,5 +1,7 @@
 # Verification Checklist
 
+> If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
+
 - Did you identify the relevant verification steps for this repo instead of using a generic checklist?
 - Did you run build or compile checks if the project provides them?
 - Did you run type checks, lint, tests, coverage, or security checks where they are relevant and available?

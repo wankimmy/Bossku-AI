@@ -1,5 +1,7 @@
 # DevOps / IaC Checklist
 
+> If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
+
 - Is the build path reproducible from source to artifact?
 - Do CI/CD checks fail early and gate risky changes appropriately?
 - Are artifacts immutable, traceable, and deployable across environments?
