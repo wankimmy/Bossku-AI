@@ -1,6 +1,6 @@
 ---
 name: bosskuai-project-understanding
-description: Use this when reading a codebase or repository to understand what the project is about — purpose, users, stack, architecture, and source-of-truth files — using oriented reading plus a deliberate source sampling strategy for large trees. Recommends expert skills and stores durable understanding in memory; ask the user when facts cannot be confirmed.
+description: Use this when reading a codebase or repository to understand what the project is about — purpose, users, stack, high-level service topology, and source-of-truth files — using oriented reading plus a deliberate source sampling strategy for large trees. Recommends expert skills and stores durable understanding in memory; ask the user when facts cannot be confirmed. Use bosskuai-codebase-analysis when the task requires tracing execution paths or module behavior, not just project orientation.
 ---
 
 # BosskuAI Project Understanding

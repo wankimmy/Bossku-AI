@@ -1,6 +1,6 @@
 ---
 name: bosskuai-codebase-analysis
-description: Use this for reading unfamiliar source code, understanding repository structure, mapping execution paths, explaining architecture, and summarizing how the code actually behaves.
+description: Use this for tracing execution paths, mapping call chains and module boundaries, identifying side effects, and summarizing how code actually behaves at runtime. Use bosskuai-project-understanding first when the project purpose and stack are still unknown.
 ---
 
 # BosskuAI Codebase Analysis
