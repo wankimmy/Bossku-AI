@@ -21,7 +21,7 @@ If the user includes the standalone word `bossku` anywhere in the prompt, treat 
 | Phase | Model | Why |
 |-------|-------|-----|
 | Planning, architecture, strategy, analysis | `gpt-5.4` (or latest high-reasoning OpenAI model) | Deepest reasoning for complex/ambiguous problems |
-| Implementation, execution, code generation | `gpt-4.1` (or latest fast OpenAI model) | Fast and capable for concrete tasks |
+| Implementation, execution, code generation | `gpt-5.2` (or latest fast OpenAI model) | Fast and capable for concrete tasks |
 
 - Always plan first. Never skip straight to execution on meaningful tasks.
 - Use the `planner` agent for the planning phase — it runs with high reasoning effort.
@@ -64,7 +64,7 @@ Learning: <artifact+path, or "deferred: reason">
 ## Default engineering posture
 
 - Always enter planning phase first using the highest-reasoning model available (currently `gpt-5.4`).
-- After plan is confirmed, execute with a faster model (currently `gpt-4.1`).
+- After plan is confirmed, execute with a faster model (currently `gpt-5.2`).
 - Start with planning for non-trivial features, refactors, migrations, or risky fixes.
 - For new behavior, bug fixes, and risky refactors, prefer test-first or test-guided development when practical.
 - Gather evidence before editing. Trace the real execution path and read nearby code, tests, and docs first.

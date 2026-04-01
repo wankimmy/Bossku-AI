@@ -88,3 +88,16 @@ Append new entries in this format:
 - **Status:** applied
 - **Confidence:** high
 - **Last reviewed:** 2026-03-30
+
+## 2026-04-01 — Codex
+
+- **User goal (one line):** Test the BosskuAI skill setup in the repo itself.
+- **What changed:** Updated `README.md`, `.codex/AGENTS.md`, and `.codex/config.toml` to align the documented Codex execution model with the root contract (`gpt-5.2`) and to correct the public skill-count copy from 35 to 39.
+- **Commands run:** `./scripts/check-workspace.sh .`; `./scripts/verify-skill-references.sh`; `bash ./ai-assistant/scripts/learning-doctor.sh`; `bash ./ai-assistant/scripts/scan-skills.sh`; `rg -n "35 skills|39 skills|gpt-4\\.1|gpt-5\\.2" README.md .codex/AGENTS.md .codex/config.toml`; `git diff -- README.md .codex/AGENTS.md .codex/config.toml`
+- **Verification:** Workspace check passed; skill-reference verification passed; learning doctor passed; skill inventory confirmed 39 skills; targeted grep confirmed stale `gpt-4.1` and `35 skills` strings were removed from the touched Codex/README entry points.
+- **Open risks / unknowns:** This was a targeted consistency pass, not a full repo-wide language audit for every historical mention of older model names or earlier skill counts.
+- **Next actions for the next model** (numbered, imperative, include paths or commands):
+  1. Run the efficiency test prompt from `WORKSPACE-ONBOARDING.md` in a fresh Codex session to confirm the live assistant behavior matches the corrected docs.
+  2. If future model defaults change again, update root `AGENTS.md`, `.codex/AGENTS.md`, and `.codex/config.toml` in the same commit to avoid drift.
+- **Promotion note:** none
+- **Memory files touched:** `learning-log.md` only

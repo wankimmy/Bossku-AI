@@ -7,8 +7,8 @@
 
 # Model assignment:
 # - Planning phase: gpt-5.4 (high reasoning effort) via planner agent
-# - Execution phase: gpt-4.1 (fast, capable for concrete implementation)
-model = "gpt-4.1"
+# - Execution phase: gpt-5.2 (fast, capable for concrete implementation)
+model = "gpt-5.2"
 
 approval_policy = "on-request"
 sandbox_mode = "workspace-write"
