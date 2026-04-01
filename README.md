@@ -25,7 +25,7 @@ Every prompt, across every tool, automatically:
 1. **Reads shared memory** — `ai-assistant/memory/` (continuation → profile → understanding → log)
 2. **Routes to the right skill** — picks from 39 skills across product, engineering, design, security, and GTM
 3. **Emits `[TASK START]`** — visible audit header so you can see if protocol was followed
-4. **Plans first** — Opus 4.6 / gpt-5.4 for planning, Sonnet 4.6 / gpt-5.2 for execution
+4. **Plans first** — Opus 4.6 / gpt-5.4 for planning, Sonnet 4.6 / gpt-5.4-mini for execution
 5. **Emits `[TASK END]`** — confirms memory updated and what was learned
 
 If `[TASK START]` is missing from a response, the protocol was skipped.

@@ -101,3 +101,16 @@ Append new entries in this format:
   2. If future model defaults change again, update root `AGENTS.md`, `.codex/AGENTS.md`, and `.codex/config.toml` in the same commit to avoid drift.
 - **Promotion note:** none
 - **Memory files touched:** `learning-log.md` only
+
+## 2026-04-01 — Codex
+
+- **User goal (one line):** Change the BosskuAI Codex execution default to `gpt-5.4-mini` and update the README.
+- **What changed:** Updated `AGENTS.md`, `.codex/AGENTS.md`, `.codex/config.toml`, and `README.md` so the Codex execution model now consistently points to `gpt-5.4-mini` while planning stays on `gpt-5.4`.
+- **Commands run:** `rg -n "gpt-5\\.2|gpt-5\\.4-mini|Execute/gpt-5|\\| Codex \\|" README.md AGENTS.md .codex/AGENTS.md .codex/config.toml`; `git diff -- README.md AGENTS.md .codex/AGENTS.md .codex/config.toml`
+- **Verification:** Targeted grep confirmed the touched files now use `gpt-5.4-mini` for Codex execution and no stale `gpt-5.2` remains in those edited files; diff review matched the requested change only.
+- **Open risks / unknowns:** This was a targeted repo-doc/config update only; it did not re-audit every historical model mention outside the touched entry points.
+- **Next actions for the next model** (numbered, imperative, include paths or commands):
+  1. Run a fresh Codex session against this workspace and confirm the live default model behavior matches `.codex/config.toml`.
+  2. Keep future model-default changes synchronized across `AGENTS.md`, `.codex/AGENTS.md`, `.codex/config.toml`, and `README.md`.
+- **Promotion note:** none
+- **Memory files touched:** `learning-log.md` only

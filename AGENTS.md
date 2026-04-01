@@ -68,7 +68,7 @@ Per-turn enforcement: **Task Start Protocol** below.
 | Tool | Planning model | Execution model |
 |------|---------------|-----------------|
 | Claude Code | `claude-opus-4-6` | `claude-sonnet-4-6` |
-| Codex | `gpt-5.4` (high reasoning effort via planner agent) | `gpt-5.2` |
+| Codex | `gpt-5.4` (high reasoning effort via planner agent) | `gpt-5.4-mini` |
 | Cursor | Strongest available reasoning model | Fastest capable model |
 
 - **Never skip the planning phase** on meaningful tasks. Always plan first, then execute.
