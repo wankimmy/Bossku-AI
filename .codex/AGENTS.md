@@ -86,8 +86,7 @@ If no issues are found, say that clearly and mention residual risk or verificati
 ## Shared memory (mandatory)
 
 - `ai-assistant/memory/` is shared durable memory across Claude, Codex, and Cursor — not Codex-only.
-- Read relevant memory files at the start of every session before acting.
-- Write durable findings back to memory after meaningful tasks.
+- **Canonical protocol:** `ai-assistant/references/memory-first-handoff-protocol.md` — read order **before** substantive work on each non-trivial user turn; structured write **before** declaring done (usually `learning-log.md`); trivial exception with explicit “memory unchanged” in the reply.
 - Never treat memory as tool-local. Any insight written here must be usable by all tools.
 - Use `bash ./ai-assistant/scripts/learning-doctor.sh` when available before larger maintenance passes to catch stale counts, contradictory memory, and consumed continuation state.
 

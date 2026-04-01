@@ -30,8 +30,7 @@ If the user includes the standalone word `bossku` anywhere in the prompt, treat 
 ## Shared memory (mandatory)
 
 - `ai-assistant/memory/` is shared durable memory across Claude, Codex, and Cursor.
-- Read relevant memory files at the start of every session before acting.
-- Write durable findings back to memory after meaningful tasks.
+- **Protocol:** [`ai-assistant/references/memory-first-handoff-protocol.md`](../../ai-assistant/references/memory-first-handoff-protocol.md) — memory-first **read** before substantive work; **write** before done on non-trivial tasks; trivial turns require an explicit one-line memory-unchanged statement in the reply.
 - Never treat memory as tool-local — any insight written here must be usable by all tools.
 
 ## Definition of Done (mandatory — enforced before any "done" declaration)
@@ -47,6 +46,7 @@ A task is DONE only when **all** of the following pass. Never say "done", "compl
 7. **Self-diff review** — the change does exactly what it claims, no more, no less
 8. **Security minimum** — no new unvalidated trust boundaries, no hardcoded/logged secrets
 9. **Unverified items named** — anything that could NOT be verified is stated explicitly
+10. **Memory / cross-tool handoff** — non-trivial work updates `ai-assistant/memory/` per `memory-first-handoff-protocol.md` (usually `learning-log.md`), **or** the reply explicitly states no repo memory update with a valid trivial/no-durable-delta reason
 
 **If any item fails: continue working, do not declare done.**
 
@@ -98,5 +98,6 @@ A task is DONE only when **all** of the following pass. Never say "done", "compl
 - Checklists: [`ai-assistant/references/checklists/`](../../ai-assistant/references/checklists/)
 - Playbooks: [`ai-assistant/references/playbooks/`](../../ai-assistant/references/playbooks/)
 - Session handoff: [`ai-assistant/references/session-handoff-template.md`](../../ai-assistant/references/session-handoff-template.md)
+- Memory-first handoff protocol: [`ai-assistant/references/memory-first-handoff-protocol.md`](../../ai-assistant/references/memory-first-handoff-protocol.md)
 - Agent profile: [`ai-assistant/memory/agent-profile.md`](../../ai-assistant/memory/agent-profile.md)
 - Project understanding memory: [`ai-assistant/memory/project-understanding.md`](../../ai-assistant/memory/project-understanding.md)

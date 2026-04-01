@@ -31,8 +31,7 @@ If the user includes the standalone word `bossku` anywhere in the prompt, treat 
 ## Shared memory (mandatory)
 
 - `ai-assistant/memory/` is shared durable memory across Claude, Codex, and Cursor.
-- Read relevant memory files at the start of every session before acting.
-- Write durable findings back to memory after meaningful tasks.
+- **Memory-first protocol:** [`ai-assistant/references/memory-first-handoff-protocol.md`](mdc:ai-assistant/references/memory-first-handoff-protocol.md) — before substantive edits, follow the read order there; before declaring done on **non-trivial** work, persist a structured handoff (usually append `learning-log.md`). Trivial prompts: no log append, but state explicitly in the reply that memory was unchanged.
 - Never treat memory as tool-local — any insight written here must be usable by all tools.
 
 ## Clarify first (ambiguity protocol)
@@ -58,6 +57,7 @@ If the user includes the standalone word `bossku` anywhere in the prompt, treat 
 - Triple-check important work. Be skeptical; push for clearer acceptance criteria.
 - Treat security, UX, business rules, and operational risk as part of correctness.
 - Treat `ai-assistant/memory/` as shared durable memory across all tools.
+- Non-trivial **Composer** turns end with a repo memory update per the protocol **or** an explicit one-line skip reason; never silent skip.
 - After meaningful tasks, promote durable learnings to memory, checklist, pitfall, playbook, or skill.
 - If continuation risk is high, preserve compact handoff state; ask user to continue in a fresh prompt.
 - When a task has ≥ 2 independent workstreams or ≥ 5 independent files: open parallel Composer tabs — one per workstream, each scoped to its own files and goal. Do not run sequentially in one Composer unless there is an ordering dependency.
@@ -73,5 +73,6 @@ If the user includes the standalone word `bossku` anywhere in the prompt, treat 
 - Checklists: [`ai-assistant/references/checklists/`](mdc:ai-assistant/references/checklists)
 - Playbooks: [`ai-assistant/references/playbooks/`](mdc:ai-assistant/references/playbooks)
 - Session handoff: [`ai-assistant/references/session-handoff-template.md`](mdc:ai-assistant/references/session-handoff-template.md)
+- Memory-first handoff protocol: [`ai-assistant/references/memory-first-handoff-protocol.md`](mdc:ai-assistant/references/memory-first-handoff-protocol.md)
 - Agent profile: [`ai-assistant/memory/agent-profile.md`](mdc:ai-assistant/memory/agent-profile.md)
 - Project understanding memory: [`ai-assistant/memory/project-understanding.md`](mdc:ai-assistant/memory/project-understanding.md)

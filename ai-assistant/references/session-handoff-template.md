@@ -2,6 +2,8 @@
 
 Use this at the end of meaningful tasks to preserve continuity.
 
+For **full cross-tool requirements** (read order, mandatory `learning-log.md` fields, trivial exception), use [`memory-first-handoff-protocol.md`](memory-first-handoff-protocol.md).
+
 ## Summary
 
 - Task type:

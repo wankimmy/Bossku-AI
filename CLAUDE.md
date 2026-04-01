@@ -101,14 +101,15 @@ For the full **skill roster by division**, **quick reference**, and **skill file
 ### Handoff
 - [ ] Anything that could NOT be verified is named explicitly
 - [ ] If the task produced a durable learning: memory or checklist updated
+- [ ] **Memory / cross-tool handoff:** Non-trivial work has a structured update under `ai-assistant/memory/` per `ai-assistant/references/memory-first-handoff-protocol.md` (usually `learning-log.md`), **or** the reply explicitly states memory unchanged with a valid trivial/no-durable-delta reason
 
 **If any item fails: do not declare done. Fix it and re-run the checklist.**
 
 ## Shared memory (mandatory)
 
 - `ai-assistant/memory/` is **shared durable memory across all tools** — Claude, Codex, and Cursor.
-- Read relevant memory files at the start of every session, regardless of which tool is being used.
-- Write durable findings back to memory after meaningful tasks.
+- **Protocol:** `ai-assistant/references/memory-first-handoff-protocol.md` — read order before substantive work; write before done on non-trivial turns; trivial exception requires an explicit one-line “memory unchanged” in the reply.
+- Read per **user turn** (not only first session): continuation → `agent-profile.md` → `project-understanding.md` → recent `learning-log.md` → task-specific memory files as needed.
 - Never treat memory as tool-local — insights written here must be usable by any tool in any session.
 
 ## Durable learning

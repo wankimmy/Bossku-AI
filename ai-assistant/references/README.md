@@ -22,6 +22,7 @@ Checklists and playbooks mapped by division. Skills in AGENTS.md reference these
 
 **Other:**
 - **Rigorous code review**: uses `coding-best-practices`, `verification`, `bug-finding`, and `architecture-review` checklists.
+- **Memory-first cross-tool handoff**: `memory-first-handoff-protocol.md`
 - **Session handoff**: `session-handoff-template.md`
 - **Pitfalls**: `pitfalls/` — see `pitfalls/README.md`
 - **ADRs**: `adr/` — see `adr/README.md`

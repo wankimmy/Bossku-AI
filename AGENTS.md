@@ -49,7 +49,7 @@ The **tool-neutral contract** for model phase split, shared memory, learning pro
 | **`.claude/rules/bosskuai.md`** | Claude rule mirror + links |
 | **`.codex/AGENTS.md`** | Codex-specific model names layered on the same behaviors |
 
-**Definition of Done:** see **Success criteria** below and **`CLAUDE.md`** § Definition of Done for the full checkbox form. **Memory layout and promotion:** see `ai-assistant/references/adr/2026-03-30-memory-organization.md`.
+**Definition of Done:** see **Success criteria** below and **`CLAUDE.md`** § Definition of Done for the full checkbox form. **Memory layout and promotion:** see `ai-assistant/references/adr/2026-03-30-memory-organization.md`. **Cross-tool read/write template:** `ai-assistant/references/memory-first-handoff-protocol.md`.
 
 ## Model assignment (mandatory — applies to all tools)
 
@@ -69,10 +69,15 @@ The **tool-neutral contract** for model phase split, shared memory, learning pro
 ## Shared memory (mandatory — applies to all tools)
 
 - `ai-assistant/memory/` is **shared durable memory across all tools** — Claude, Codex, and Cursor.
-- At the start of every session, read the memory files relevant to the current task.
-- After meaningful tasks, write durable findings back to `ai-assistant/memory/`.
 - Never treat memory as tool-local. What is written here must be usable by any tool in any session.
 - Memory files: `agent-profile.md`, `project-understanding.md`, `learning-log.md`, `bug-patterns.md`, `market-notes.md`, `active-continuation.md` (ephemeral handoffs only; clear when done).
+- **Canonical template:** `ai-assistant/references/memory-first-handoff-protocol.md` — read order, write order, `learning-log.md` fields, trivial exception, `FOR_NEXT_MODEL` block.
+
+### Memory-first protocol
+
+- **Read before act:** On each **user turn**, before substantive edits or repo-specific conclusions, follow the **read order** in `memory-first-handoff-protocol.md` (continuation → profile → project understanding → recent `learning-log` → task-specific memory). Not only “first session of the day.”
+- **Write before done:** On each **non-trivial** turn, before declaring done, persist a structured handoff per that protocol (usually append to `learning-log.md`). Another model or tool must be able to continue **without chat history**.
+- **Trivial exception:** Single-line fixes, pure lookups, or no-repo-impact Q&A — **no** required `learning-log` entry; end the reply with one explicit sentence that memory was intentionally unchanged (see protocol).
 
 ## Task classifier (run first)
 
@@ -99,6 +104,7 @@ Use this decision tree before loading any skill:
    - Read relevant code/docs/specs before conclusions.
 7. **Output gate**
    - State: task classification, selected skills, model recommendation, and verification plan.
+   - For **non-trivial** tasks: state which `ai-assistant/memory/` file(s) were updated (paths), **or** that memory was intentionally unchanged with a **one-line reason** (trivial / no durable delta only — not silent skip).
 
 ## Skill roster (when to use which)
 
@@ -210,7 +216,8 @@ Before considering a meaningful task done:
 - Verification was done (tests, diff review, or explicit verification steps).
 - No critical security, business-logic, or product assumptions left unconfirmed; if something is inferred, say so and note confidence.
 - Learning was promoted to the right place (memory, checklist, pitfall, playbook, or skill) when applicable.
-- Shared memory and continuation state were left fresher than they were before the task started.
+- **Memory gate:** Shared memory was updated per `memory-first-handoff-protocol.md` **or** the final reply explicitly states **no repo memory update** with a valid trivial/no-durable-delta reason — never silent skip.
+- Shared memory and continuation state were left fresher than they were before the task started **when non-trivial** (or explicitly unchanged per protocol).
 
 ## Local skills
 
@@ -264,8 +271,9 @@ Deprecated alias skills (routing compatibility only):
 ## Local memory
 
 - Memory lives under `ai-assistant/memory/`.
-- Read only the memory files relevant to the current task.
-- Update memory only with durable findings.
+- Follow **`ai-assistant/references/memory-first-handoff-protocol.md`** for **which** files to read per turn and **how** to append handoffs.
+- Default handoff vehicle for “next model picks up” is **`learning-log.md`** (dated sections); use `project-understanding.md` / `agent-profile.md` when durable product or stack facts change.
+- Update memory only with durable findings (no secrets, no one-off debug chatter).
 - Use `ai-assistant/memory/agent-profile.md` to customize this starter for a specific company, product, or industry.
 - Use `ai-assistant/memory/project-understanding.md` to preserve durable knowledge about what a repo or product is actually about after reading the source.
 

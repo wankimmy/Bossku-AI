@@ -13,6 +13,8 @@ Use this skill when work has produced a lesson that should improve future sessio
 - **`bosskuai-rules-distill`**: promotes repeated cross-cutting principles into shared rules. This skill works one level earlier by classifying new learnings and routing them to the right artifact.
 - **`bosskuai-context-limit-continuation`**: preserves unfinished task state. This skill captures durable lessons after meaningful work is complete or after a significant review.
 
+**Cross-tool pickup:** The default durable surface so **Cursor, Codex, and Claude** can continue without chat history is **`ai-assistant/memory/learning-log.md`** (dated append template in `../../references/memory-first-handoff-protocol.md`). Use other memory files when a more specific artifact fits.
+
 ## Mindset
 
 - Continuous learning should be deliberate, evidence-based, and reversible.
@@ -45,7 +47,7 @@ For each candidate learning, answer:
 | Artifact | Use when | Typical examples |
 |----------|----------|------------------|
 | **Memory** | Durable project fact or convention | repo purpose, preferred verification path, stable team constraint |
-| **Learning log** | Chronological durable lesson or decision with promotion status | "we added a new workflow and should review its impact later" |
+| **Learning log** | **Default** chronological handoff for the next model/tool; lesson or decision with promotion status | session outcome, next actions, verification — use template in `memory-first-handoff-protocol.md` |
 | **Bug patterns** | Recurring defect class or high-severity near-miss | repeated auth regression, money bug, stale cache invalidation |
 | **Market notes** | Durable GTM / competitor / pricing learning | recurring buyer objection, stable packaging pattern |
 | **Checklist** | Repeatable verification step | "always verify X when touching billing webhooks" |
@@ -57,6 +59,7 @@ For each candidate learning, answer:
 ## Workflow
 
 1. **Collect signals**
+   - Open `../../references/memory-first-handoff-protocol.md` and align any new notes with its **read/write** rules and **`learning-log.md` append template** (so promotions stay consistent with BosskuAI-wide memory-first behavior).
    - Look at the finished task, review findings, memory changes, and any incident or bug notes.
    - Prefer evidence over impressions.
 2. **List candidate learnings**
@@ -70,6 +73,7 @@ For each candidate learning, answer:
    - If no promotion is justified yet, record it in `learning-log.md` with a review status.
 5. **Propose the smallest safe change**
    - Draft the exact note, checklist bullet, pitfall line, playbook addition, or skill change.
+   - When the lesson is primarily “what happened + what’s next for another session,” prefer a **`learning-log.md` dated section** per the protocol (numbered next actions, files, commands) before promoting elsewhere.
    - Do not silently apply broad rewrites.
 6. **Check freshness**
    - If memory contradicts the current repo, fix or flag the stale entry.
@@ -112,6 +116,7 @@ Next promotion actions:
 
 ## References
 
+- `../../references/memory-first-handoff-protocol.md`
 - `../../references/checklists/learning-promotion-checklist.md`
 - `../../references/checklists/continuous-learning-checklist.md`
 - `../../references/playbooks/continuous-learning-playbook.md`
