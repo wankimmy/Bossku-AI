@@ -33,6 +33,7 @@ If the user includes the standalone word `bossku` anywhere in the prompt, treat 
 - `ai-assistant/memory/` is shared durable memory across Claude, Codex, and Cursor.
 - **Memory-first protocol:** [`ai-assistant/references/memory-first-handoff-protocol.md`](mdc:ai-assistant/references/memory-first-handoff-protocol.md) — before substantive edits, follow the read order there; before declaring done on **non-trivial** work, persist a structured handoff (usually append `learning-log.md`). Trivial prompts: no log append, but state explicitly in the reply that memory was unchanged.
 - Never treat memory as tool-local — any insight written here must be usable by all tools.
+- Read order enforced by [TASK START] header — blank 'Memory read:' on non-trivial turn = protocol violation.
 
 ## Clarify first (ambiguity protocol)
 
@@ -42,13 +43,44 @@ If the user includes the standalone word `bossku` anywhere in the prompt, treat 
 - Include explicit answer format so the user can reply concisely (e.g. `1-yes 2-no 3-A`).
 - Do NOT guess, assume, or make changes across multiple files without confirmation.
 
+## Task routing (mandatory — never skip)
+
+**Before acting on any meaningful task, you MUST:**
+
+1. Classify the task type (product / engineering / design / security / marketing / sales / architecture / etc.)
+2. Open root `AGENTS.md` → Quick reference to identify the matching skill(s)
+3. Read the relevant `ai-assistant/skills/<skill-name>/SKILL.md` file(s)
+4. State which skill(s) you loaded at the start of your response
+5. Then proceed with plan → execute
+
+**This is not optional.** Skipping skill loading means giving generic responses instead of domain-specific expertise. The user built this system to be used on every task.
+
+- Load the **minimum relevant skills** — do not load everything, but do not skip applicable ones.
+- When scope is ambiguous, default to the closest skill and note the assumption.
+
+**Mandatory output format — emit before any planning or code:**
+```text
+[TASK START]
+Memory read: <files, or "trivial">
+Skill(s): <name + path, or "trivial">
+Phase: <Plan/strongest model | Execute/Composer 2 | Trivial>
+Type: <cluster/intent>
+```
+
+**Closing block — emit before the final sentence of every non-trivial response:**
+```text
+[TASK END]
+Meaningful: <yes|no>
+Memory: <paths updated, or "none">
+Learning: <artifact+path, or "deferred: reason">
+```
+
 ## Core rules
 
 > Full skill roster, task-type list, and working rules are in root **`AGENTS.md`**. Rules here are Cursor-specific additions only — do not duplicate `AGENTS.md` content.
 
-- Identify task type using **AGENTS.md → Skill roster** before acting.
 - If the user says `bossku`, treat that as activation for the whole BosskuAI system in this workspace before task routing.
-- Load only the relevant skills — never load every expert surface.
+- Auto-emit [TASK START] at the start of every non-trivial response. Do not wait to be asked.
 - Always plan first in **Plan mode** (Opus 4.6 / GPT-5.4 / Gemini Pro 3.1). State phase and model at the start of each meaningful task.
 - Execute in **Composer 2** only — not ad-hoc chat. Never skip to Composer 2 before Plan mode outcome is stated.
 - If repo or product context is unclear, use `bosskuai-project-understanding` first.

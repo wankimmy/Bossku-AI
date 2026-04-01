@@ -1,79 +1,101 @@
 # BosskuAI
 
-A reusable **cofounder-style** workspace layer for Cursor, Claude, and Codex. Skills load by task across product, engineering, design, security, and GTM.
+A cofounder-style AI layer for **Claude Code, Cursor, and Codex** — auto-loads skills, reads shared memory, and enforces plan-first on every prompt.
 
-| Doc | Purpose |
-|-----|---------|
-| [AGENTS.md](AGENTS.md) | Skill roster, what to ask for, model split, memory rules |
-| [WORKSPACE-ONBOARDING.md](WORKSPACE-ONBOARDING.md) | Onboarding prompt, per-tool notes, troubleshooting |
+## Quick setup
+
+```bash
+# 1. Clone
+git clone <repo-url> bosskuAI
+
+# 2. Install into your project
+./bosskuAI/scripts/install.sh /path/to/your/project
+
+# 3. Open your project in Claude / Cursor / Codex and run the onboarding prompt
+```
+
+> **Windows:** use `.\bosskuAI\scripts\install.ps1 C:\path\to\your\project`
+
+After install, paste the onboarding prompt from [WORKSPACE-ONBOARDING.md](WORKSPACE-ONBOARDING.md) once to initialize memory for your project.
+
+## How it works
+
+Every prompt, across every tool, automatically:
+
+1. **Reads shared memory** — `ai-assistant/memory/` (continuation → profile → understanding → log)
+2. **Routes to the right skill** — picks from 35 skills across product, engineering, design, security, and GTM
+3. **Emits `[TASK START]`** — visible audit header so you can see if protocol was followed
+4. **Plans first** — Opus 4.6 / gpt-5.4 for planning, Sonnet 4.6 / gpt-5.2 for execution
+5. **Emits `[TASK END]`** — confirms memory updated and what was learned
+
+If `[TASK START]` is missing from a response, the protocol was skipped.
 
 ## Activation
 
-Say `bossku` anywhere in a prompt to explicitly activate BosskuAI mode for that request.
+Say `bossku` anywhere in a prompt to explicitly activate BosskuAI mode:
 
-- BosskuAI rules apply first.
-- The assistant classifies the task and auto-loads the minimum relevant BosskuAI skills.
-- You do not need to name a specific skill unless you want a particular expert lens.
-
-Example asks:
-
-- `bossku review this PR for security and business-logic risks`
-- `bossku plan the smallest safe implementation for this feature`
-- `bossku audit this repo and draft project-understanding`
-
-## Setup
-
-1. Clone this repo and install into your project root:
-
-```bash
-./scripts/install.sh /path/to/your/project
+```
+bossku review this PR for security and business-logic risks
+bossku plan the smallest safe implementation for this feature
+bossku run launch readiness across engineering, SEO, and GTM
 ```
 
-**Windows:**
-```powershell
-.\scripts\install.ps1 C:\path\to\your\project
-```
+You don't need to name a skill — the assistant routes automatically.
 
-- Use `--force` to overwrite existing files.
-- Use `--skip-check` to skip workspace validation.
+## Skills (35 total)
 
-2. Open the **target project** in Cursor, Claude, or Codex (not this folder).
+| Cluster | Examples |
+|---------|---------|
+| Product | product-strategy, planning-execution, analytics-metrics |
+| Engineering | engineering-delivery, devops-iac, coding-best-practices |
+| Design | ui-ux-design-to-code, i18n-l10n, 3d-web-development |
+| Security | cybersecurity-risk, agent-security-hardening, legal-compliance |
+| Quality | rigorous-code-review, bug-finding, business-logic-review |
+| Architecture | software-architecture, api-design, data-architecture |
+| Growth | marketing-growth, seo-geo, sales-strategy, paid-acquisition |
+| Orchestration | project-understanding, continuous-learning, subagent-delegation |
 
-3. Paste the onboarding prompt from [WORKSPACE-ONBOARDING.md](WORKSPACE-ONBOARDING.md) to draft `ai-assistant/memory/agent-profile.md` and `ai-assistant/memory/project-understanding.md`.
+Full roster + quick reference: [AGENTS.md](AGENTS.md)
+
+## Shared memory
+
+`ai-assistant/memory/` is shared across all tools — Claude, Cursor, and Codex read and write the same files.
+
+| File | Purpose |
+|------|---------|
+| `agent-profile.md` | Your company, product, stack |
+| `project-understanding.md` | What the repo is and how it works |
+| `learning-log.md` | Dated handoffs and durable lessons |
+| `active-continuation.md` | In-flight work across sessions (ephemeral) |
+
+Read/write protocol: [memory-first-handoff-protocol.md](ai-assistant/references/memory-first-handoff-protocol.md)
 
 ## Repo layout
 
-```text
+```
 bosskuAI/
-├── AGENTS.md
-├── CLAUDE.md
-├── WORKSPACE-ONBOARDING.md
+├── AGENTS.md               ← skill roster, model split, memory rules
+├── CLAUDE.md               ← Claude Code entry point
+├── WORKSPACE-ONBOARDING.md ← onboarding prompt (run once)
 ├── scripts/
 │   ├── install.sh
-│   ├── install.ps1
-│   └── check-workspace.sh
-├── .codex/
-├── .claude/
-├── .cursor/
+│   └── install.ps1
+├── .claude/                ← hooks, rules, commands for Claude Code
+├── .cursor/                ← always-on rules for Cursor
+├── .codex/                 ← agent roles and rules for Codex
 └── ai-assistant/
-    ├── skills/
-    ├── memory/
-    ├── references/
-    ├── scripts/
-    └── hooks/
+    ├── skills/             ← 35 skill SKILL.md files
+    ├── memory/             ← shared durable memory
+    ├── hooks/              ← fires on every prompt (UserPromptSubmit)
+    └── references/         ← checklists, playbooks, protocols
 ```
 
 ## Customize
 
-Edit `AGENTS.md` for posture and priorities. Add or remove skills under `ai-assistant/skills/`. Write durable notes to `ai-assistant/memory/` after meaningful work.
-
-## Example asks
-
-- "bossku review this PRD and turn it into implementation slices."
-- "bossku audit this flow for abuse, privacy, and logic flaws."
-- "bossku run launch readiness across engineering, SEO, and GTM."
-
-More: [examples/sample-prompts.md](examples/sample-prompts.md)
+- **Your project context** — edit `ai-assistant/memory/agent-profile.md`
+- **Add/remove skills** — drop folders under `ai-assistant/skills/`
+- **Skill routing** — edit `AGENTS.md` Quick reference table
+- **Rules** — `.claude/rules/bosskuai.md`, `.cursor/rules/bosskuai.mdc`
 
 ## License
 

@@ -66,9 +66,38 @@ Please answer: 1-yes/no  2-A/B/C  3-yes/no
 - Do not jump straight into execution on meaningful tasks before both the plan and model assignment are stated.
 - If continuation risk is high because of model or context limits, preserve a compact handoff state before asking the user to continue in a fresh prompt.
 
-## Task routing
+## Task routing (mandatory — never skip)
 
-For the full **skill roster by division**, **quick reference**, and **skill file index**, see `AGENTS.md`. Load skills from `ai-assistant/skills/` — use the minimum set relevant to the task.
+**Before acting on any meaningful task, you MUST:**
+
+1. Classify the task type (product / engineering / design / security / marketing / sales / architecture / etc.)
+2. Open `AGENTS.md` → Quick reference to identify the matching skill(s)
+3. Read the relevant `ai-assistant/skills/<skill-name>/SKILL.md` file(s)
+4. State which skill(s) you loaded at the start of your response
+5. Then proceed with plan → execute
+
+**This is not optional.** Skipping skill loading means giving generic responses instead of domain-specific expertise. The user built this system to be used on every task.
+
+- Load the **minimum relevant skills** — do not load everything, but do not skip applicable ones.
+- When scope is ambiguous, default to loading the closest skill and noting the assumption.
+- For the full skill roster by division, quick reference table, and file index: see `AGENTS.md`.
+
+**Mandatory output format — emit before any planning or code:**
+```text
+[TASK START]
+Memory read: <files, or "trivial">
+Skill(s): <name + path, or "trivial">
+Phase: <Plan/Opus 4.6 | Execute/Sonnet 4.6 | Trivial>
+Type: <cluster/intent>
+```
+
+**Closing block — emit before the final sentence of every non-trivial response:**
+```text
+[TASK END]
+Meaningful: <yes|no>
+Memory: <paths updated, or "none">
+Learning: <artifact+path, or "deferred: reason">
+```
 
 ## Definition of Done (mandatory)
 
@@ -109,7 +138,7 @@ For the full **skill roster by division**, **quick reference**, and **skill file
 
 - `ai-assistant/memory/` is **shared durable memory across all tools** — Claude, Codex, and Cursor.
 - **Protocol:** `ai-assistant/references/memory-first-handoff-protocol.md` — read order before substantive work; write before done on non-trivial turns; trivial exception requires an explicit one-line “memory unchanged” in the reply.
-- Read per **user turn** (not only first session): continuation → `agent-profile.md` → `project-understanding.md` → recent `learning-log.md` → task-specific memory files as needed.
+- Read per **user turn** — enforced by [TASK START]. Blank 'Memory read:' on a non-trivial turn = protocol violation. Order: continuation → `agent-profile.md` → `project-understanding.md` → recent `learning-log.md` → task-specific memory files as needed.
 - Never treat memory as tool-local — insights written here must be usable by any tool in any session.
 
 ## Durable learning

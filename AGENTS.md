@@ -51,6 +51,16 @@ The **tool-neutral contract** for model phase split, shared memory, learning pro
 
 **Definition of Done:** see **Success criteria** below and **`CLAUDE.md`** § Definition of Done for the full checkbox form. **Memory layout and promotion:** see `ai-assistant/references/adr/2026-03-30-memory-organization.md`. **Cross-tool read/write template:** `ai-assistant/references/memory-first-handoff-protocol.md`.
 
+## Session Start Protocol (every new session — run once)
+
+1. Read `ai-assistant/memory/active-continuation.md` — if non-empty, state unfinished task, ask continue or new.
+2. Read `ai-assistant/memory/agent-profile.md`
+3. Read `ai-assistant/memory/project-understanding.md`
+4. Read last 1–3 entries of `ai-assistant/memory/learning-log.md`
+5. State: "Session started. Memory loaded: [files]. [No continuation | Unfinished: <goal> — continue or new?]"
+
+Per-turn enforcement: **Task Start Protocol** below.
+
 ## Model assignment (mandatory — applies to all tools)
 
 **Two-phase model split — always enforced for meaningful tasks, regardless of which tool you are using:**
@@ -103,8 +113,21 @@ Use this decision tree before loading any skill:
 6. **Evidence gate**
    - Read relevant code/docs/specs before conclusions.
 7. **Output gate**
-   - State: task classification, selected skills, model recommendation, and verification plan.
+   - Emit the **[TASK START] header** from § Task Start Protocol. The header IS the output.
    - For **non-trivial** tasks: state which `ai-assistant/memory/` file(s) were updated (paths), **or** that memory was intentionally unchanged with a **one-line reason** (trivial / no durable delta only — not silent skip).
+
+## Task Start Protocol (mandatory — every non-trivial response)
+
+Before the first substantive sentence, emit:
+```text
+[TASK START]
+Memory read: <files, or "trivial">
+Skill(s): <name + path, or "trivial">
+Phase: <Plan/Opus 4.6 | Execute/Sonnet 4.6 | Trivial>
+Type: <cluster/intent>
+```
+The header IS the classifier output (Output gate step 7). Do not describe classification — emit the header.
+Trivial tasks: emit with "trivial" in all fields.
 
 ## Skill roster (when to use which)
 
@@ -289,6 +312,20 @@ Deprecated alias skills (routing compatibility only):
 - If a design decision becomes an explicit rule, capture it in an ADR or equivalent decision record.
 - Use `ai-assistant/references/checklists/learning-promotion-checklist.md` to decide where a learning belongs.
 - Run `bash ./ai-assistant/scripts/learning-doctor.sh` periodically or before large maintenance passes to catch stale memory, contradictory counts, and consumed continuation state.
+
+### Post-task [TASK END] block (mandatory)
+
+Emit before the final sentence of every non-trivial task:
+```text
+[TASK END]
+Meaningful: <yes|no>
+Memory: <paths updated, or "none">
+Learning: <artifact+path, or "deferred: reason">
+```
+
+**Meaningful = yes** if ANY: file changed / decision made / bug found / skill applied non-generically / pattern 2+ times / gap surfaced.
+**Meaningful = no** only if ALL: no files + no repo conclusion + pure lookup.
+Silent skips are protocol violations. Trivial tasks emit `Meaningful: no`.
 
 ## Working rules
 

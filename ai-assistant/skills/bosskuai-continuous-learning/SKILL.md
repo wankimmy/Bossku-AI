@@ -58,6 +58,14 @@ For each candidate learning, answer:
 
 ## Workflow
 
+### Meaningfulness gate (evaluate first — binary)
+
+Meaningful = ANY true: file changed / decision made / bug found / skill applied non-generically / pattern 2+ times / gap surfaced.
+Trivial = ALL true: no files + no repo conclusion + pure lookup.
+
+YES → run full triage. Emit `[TASK END] Meaningful: yes`.
+NO → emit `[TASK END] Meaningful: no, Reason: <one line>`. Stop here.
+
 1. **Collect signals**
    - Open `../../references/memory-first-handoff-protocol.md` and align any new notes with its **read/write** rules and **`learning-log.md` append template** (so promotions stay consistent with BosskuAI-wide memory-first behavior).
    - Look at the finished task, review findings, memory changes, and any incident or bug notes.

@@ -1,0 +1,34 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-$(pwd)}/ai-assistant/hooks/session-start-reminder.sh\" \"${CLAUDE_PROJECT_DIR:-$(pwd)}\""
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-$(pwd)}/ai-assistant/hooks/session-end-reminder.sh\" \"${CLAUDE_PROJECT_DIR:-$(pwd)}\""
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-$(pwd)}/ai-assistant/hooks/pre-compact-reminder.sh\" \"${CLAUDE_PROJECT_DIR:-$(pwd)}\""
+          }
+        ]
+      }
+    ]
+  }
+}
