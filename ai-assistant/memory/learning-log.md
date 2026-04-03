@@ -29,6 +29,16 @@ Append new entries in this format:
 
 ## Active entries
 
+### Install script can preserve memory and skills-only sync — 2026-04-03
+
+- **Source:** task (batch install overwrote downstream `ai-assistant/memory/`)
+- **Signal:** full `install.sh` / `install.ps1` copy replaces entire `ai-assistant/`, including memory; partial conflicts only back up overlapping paths
+- **Decision / learning:** `scripts/install.sh` and `scripts/install.ps1` support `--preserve-memory` / `-PreserveMemory` (stash `ai-assistant/memory/` before replace, restore after) and `--skills-only` / `-SkillsOnly` (refresh `ai-assistant/skills`, `references`, `scripts` only)
+- **Promote to:** memory + optional README/WORKSPACE note later
+- **Status:** applied
+- **Confidence:** high
+- **Last reviewed:** 2026-04-03
+
 ### Context limits require an explicit handoff before truncation — 2026-03-16
 
 - **Source:** repeated usage

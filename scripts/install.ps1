@@ -4,17 +4,21 @@ param(
 
     [switch]$Force,
 
-    [switch]$SkipCheck
+    [switch]$SkipCheck,
+
+    [switch]$PreserveMemory,
+
+    [switch]$SkillsOnly
 )
 
 function Show-Usage {
     @"
 Usage:
-  ./scripts/install.ps1 <target-dir> [-Force] [-SkipCheck]
+  ./scripts/install.ps1 <target-dir> [-Force] [-SkipCheck] [-PreserveMemory] [-SkillsOnly]
 
 Install the BosskuAI workspace layer into an existing project workspace.
 
-Installed entries:
+Installed entries (full install, default):
   AGENTS.md
   CLAUDE.md
   WORKSPACE-ONBOARDING.md
@@ -23,8 +27,19 @@ Installed entries:
   .cursor/
   ai-assistant/
 
+Switches:
+  -Force
+      Moves conflicting entries into a timestamped backup folder, then copies the layer.
+  -PreserveMemory
+      Before replacing ai-assistant/, saves ai-assistant/memory/ and restores it after install.
+  -SkillsOnly
+      Copies only ai-assistant/skills, references, and scripts. Does not change root files,
+      tool configs, or ai-assistant/memory. (-Force is not used for this mode.)
+  -SkipCheck
+      Skips check-workspace.sh unless bash is unavailable (same as before).
+
 Behavior:
-  - Refuses to overwrite existing entries by default
+  - Refuses to overwrite existing entries by default (full install only)
   - With -Force, moves conflicting entries into a timestamped backup folder
   - Runs check-workspace.sh via bash when available unless -SkipCheck
 "@
@@ -43,6 +58,43 @@ try {
 } catch {
     Write-Error "Target directory does not exist: $TargetDir"
     exit 1
+}
+
+if ($SkillsOnly -and $PreserveMemory) {
+    Write-Host "Note: -SkillsOnly does not replace ai-assistant/memory; -PreserveMemory is redundant." -ForegroundColor DarkYellow
+}
+
+if ($SkillsOnly) {
+    $AssistantDir = Join-Path $ResolvedTarget "ai-assistant"
+    New-Item -ItemType Directory -Path $AssistantDir -Force | Out-Null
+    foreach ($sub in @("skills", "references", "scripts")) {
+        $SrcSub = Join-Path $RepoRoot "ai-assistant\$sub"
+        $DestSub = Join-Path $AssistantDir $sub
+        if (-not (Test-Path $SrcSub)) {
+            Write-Error "Missing source path in starter: $SrcSub"
+            exit 1
+        }
+        if (Test-Path $DestSub) {
+            Remove-Item -Path $DestSub -Recurse -Force
+        }
+        Copy-Item -Path $SrcSub -Destination $DestSub -Recurse
+    }
+    Write-Host "BosskuAI skills layer (skills + references + scripts) installed under: $AssistantDir"
+    if (-not $SkipCheck) {
+        $CheckScript = Join-Path $ScriptDir "check-workspace.sh"
+        $Bash = Get-Command bash -ErrorAction SilentlyContinue
+        if ($Bash) {
+            Write-Host ""
+            & bash $CheckScript $ResolvedTarget
+            exit $LASTEXITCODE
+        }
+        Write-Host ""
+        Write-Host "Install complete. Run validation from Git Bash or WSL:" -ForegroundColor Yellow
+        Write-Host "  ./scripts/check-workspace.sh `"$ResolvedTarget`""
+        exit 0
+    }
+    Write-Host "Skipped workspace check (-SkipCheck). Run: ./scripts/check-workspace.sh `"$ResolvedTarget`""
+    exit 0
 }
 
 $Entries = @(
@@ -72,6 +124,21 @@ if ($Conflicts.Count -gt 0 -and -not $Force) {
     exit 2
 }
 
+$MemoryStash = $null
+$HadMemoryToPreserve = $false
+if ($PreserveMemory) {
+    $MemoryPath = Join-Path $ResolvedTarget "ai-assistant\memory"
+    if (Test-Path $MemoryPath) {
+        $MemoryStash = Join-Path ([System.IO.Path]::GetTempPath()) ("bosskuai-memory-stash-" + [guid]::NewGuid().ToString())
+        New-Item -ItemType Directory -Path $MemoryStash -Force | Out-Null
+        Get-ChildItem -LiteralPath $MemoryPath -Force | ForEach-Object {
+            Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $MemoryStash $_.Name) -Recurse -Force
+        }
+        $HadMemoryToPreserve = $true
+        Write-Host "Preserved existing ai-assistant/memory into temporary stash (will restore after install)."
+    }
+}
+
 $BackupDir = $null
 if ($Conflicts.Count -gt 0 -and $Force) {
     $Timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
@@ -93,6 +160,16 @@ foreach ($Entry in $Entries) {
     $SourcePath = Join-Path $RepoRoot $Entry
     $DestinationPath = Join-Path $ResolvedTarget $Entry
     Copy-Item -Path $SourcePath -Destination $DestinationPath -Recurse
+}
+
+if ($HadMemoryToPreserve -and $MemoryStash) {
+    $DestMemory = Join-Path $ResolvedTarget "ai-assistant\memory"
+    New-Item -ItemType Directory -Path $DestMemory -Force | Out-Null
+    Get-ChildItem -LiteralPath $MemoryStash -Force | ForEach-Object {
+        Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $DestMemory $_.Name) -Recurse -Force
+    }
+    Remove-Item -Path $MemoryStash -Recurse -Force
+    Write-Host "Restored preserved ai-assistant/memory/ over the new layer."
 }
 
 Write-Host "BosskuAI workspace layer installed to: $ResolvedTarget"
