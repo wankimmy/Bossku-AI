@@ -152,6 +152,9 @@ Classify into a **role cluster** first, then choose the minimum skill set. This 
 | **Engineering** | code-revamp | Safe modernization and legacy structural cleanup |
 | **Engineering** | coding-best-practices | Implementation quality, maintainability, and testing posture |
 | **Engineering** | polyglot-engineering | Stack-specific guidance across languages and frameworks |
+| **Engineering** | performance-profiling | CPU/memory profiling, bottleneck diagnosis, query optimization, caching, flame graph interpretation |
+| **Engineering** | integration-testing | Integration test design, contract testing (CDC/Pact), test doubles, fixture management, seam coverage |
+| **Engineering** | incident-response | Severity classification, on-call coordination, stabilization, timeline reconstruction, blameless postmortem |
 | **Design** | ui-ux-design-to-code | UX/UI quality, accessibility, design systems, and design-to-code guidance |
 | **Design** | i18n-l10n | Internationalization, localization workflows, and RTL/expansion readiness |
 | **Design** | 3d-web-development | WebGL/Three.js/R3F immersive web experience delivery |
@@ -187,6 +190,9 @@ Classify into a **role cluster** first, then choose the minimum skill set. This 
 | Build a feature | "Plan then implement" / "Use engineering delivery" | engineering-delivery, coding-best-practices |
 | API contract or webhook design | "Design this API" / "How should we version this?" | api-design, software-architecture |
 | CI/CD, containers, or infra | "Review our pipeline" / "Design deploy flow" | devops-iac, engineering-delivery, cybersecurity-risk |
+| Performance profiling or bottleneck diagnosis | "Profile this slow endpoint" / "Find the memory leak" | performance-profiling, data-architecture |
+| Integration test design or contract testing | "Design the integration test layer" / "Set up CDC tests" | integration-testing, engineering-delivery |
+| Active incident or postmortem | "We have a P1" / "Run a blameless postmortem" | incident-response, bug-finding |
 | Schema, migration, or warehouse design | "Review this schema" / "Plan the migration" | data-architecture, software-architecture |
 | UX/UI and accessibility | "Review for UX and accessibility" | ui-ux-design-to-code |
 | Localization or multilingual UX | "Audit i18n" / "Make this app localization-ready" | i18n-l10n, ui-ux-design-to-code |
@@ -208,8 +214,8 @@ For larger efforts you can run the assistant in a phase-aware way. The assistant
 |-------|--------|-------------------|
 | **Discovery** | What we're building, for whom, evidence | project-understanding, product-strategy, market-analysis |
 | **Strategy** | Roadmap, scope, priorities, ownership | planning-execution, software-architecture, api-design, data-architecture, analytics-metrics |
-| **Build** | Implementation with quality gates | engineering-delivery, devops-iac, ui-ux-design-to-code, i18n-l10n, 3d-web-development, coding-best-practices, bug-finding, rigorous-code-review |
-| **Harden** | Security, logic, readiness | cybersecurity-risk, legal-compliance, business-logic-review, agent-security-hardening |
+| **Build** | Implementation with quality gates | engineering-delivery, devops-iac, ui-ux-design-to-code, i18n-l10n, 3d-web-development, coding-best-practices, bug-finding, rigorous-code-review, performance-profiling, integration-testing |
+| **Harden** | Security, logic, readiness | cybersecurity-risk, legal-compliance, business-logic-review, agent-security-hardening, incident-response |
 | **Launch** | Readiness, GTM, PMF signals | launch-commercialization, seo-geo, **Growth**: marketing-growth, paid-acquisition-monetization; **Sales**: sales-strategy |
 
 When the user says e.g. "We're in the build phase" or "Run the launch checklist", prefer the skills for that phase and any cross-cutting rules (plan-first, model recommendation, verification).
@@ -220,7 +226,7 @@ Use the right skill without the user having to ask, grouped by role cluster:
 
 - **Orchestration**: unfamiliar codebase -> `project-understanding`; new utility/dependency/integration -> `search-first`; skills/rules sprawl -> `skill-stocktake` or `rules-distill`; post-meaningful task -> `continuous-learning`; heavy parallel/risky scope -> `subagent-delegation`.
 - **Product**: roadmap/prioritization/owner or milestone drift -> `planning-execution`; funnels/KPIs/experiments -> `analytics-metrics`; launch-readiness framing -> `launch-commercialization`.
-- **Engineering**: complex implementation/refactor -> `engineering-delivery`; CI/CD/container/infra changes -> `devops-iac`; schema/migration/warehouse/data pipeline work -> `data-architecture`; structural cleanup -> `code-revamp`.
+- **Engineering**: complex implementation/refactor -> `engineering-delivery`; CI/CD/container/infra changes -> `devops-iac`; schema/migration/warehouse/data pipeline work -> `data-architecture`; structural cleanup -> `code-revamp`; performance/bottleneck/profiling work -> `performance-profiling`; integration test layer or contract test design -> `integration-testing`; P1/P2 production incident or postmortem -> `incident-response`.
 - **Design**: UI quality/accessibility -> `ui-ux-design-to-code`; multilingual/locale/RTL risks -> `i18n-l10n`; 3D/WebGL/immersive experiences -> `3d-web-development`.
 - **Security**: auth/billing/external API/input trust boundaries -> `cybersecurity-risk`; agent workspace/integration/memory safety -> `agent-security-hardening`; consent/retention/vendor/policy concerns -> `legal-compliance`.
 - **Quality**: code changed -> `rigorous-code-review` plus `bug-finding` as needed; strict skeptical review requested -> `rigorous-code-review`; incidents requiring DB/log/queue/webhook correlation -> `bug-finding` deep investigation mode with `business-logic-review` when invariants are involved.
@@ -278,6 +284,9 @@ Before considering a meaningful task done:
 | `bosskuai-coding-best-practices` | `ai-assistant/skills/bosskuai-coding-best-practices/SKILL.md` |
 | `bosskuai-context-limit-continuation` | `ai-assistant/skills/bosskuai-context-limit-continuation/SKILL.md` |
 | `bosskuai-polyglot-engineering` | `ai-assistant/skills/bosskuai-polyglot-engineering/SKILL.md` |
+| `bosskuai-performance-profiling` | `ai-assistant/skills/bosskuai-performance-profiling/SKILL.md` |
+| `bosskuai-integration-testing` | `ai-assistant/skills/bosskuai-integration-testing/SKILL.md` |
+| `bosskuai-incident-response` | `ai-assistant/skills/bosskuai-incident-response/SKILL.md` |
 | `bosskuai-market-analysis` | `ai-assistant/skills/bosskuai-market-analysis/SKILL.md` |
 | `bosskuai-marketing-growth` | `ai-assistant/skills/bosskuai-marketing-growth/SKILL.md` |
 | `bosskuai-paid-acquisition-monetization` | `ai-assistant/skills/bosskuai-paid-acquisition-monetization/SKILL.md` |

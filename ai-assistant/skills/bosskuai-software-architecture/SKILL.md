@@ -55,6 +55,83 @@ Apply whichever are relevant; skip clearly irrelevant ones:
 - Does the design apply least-privilege (services only access what they need)?
 - Are secrets injected at runtime, never baked in?
 
+## Advanced patterns guide
+
+Use this section when a team is considering event sourcing, CQRS, or horizontal scaling patterns. These patterns carry significant complexity cost — consult this section to confirm fit before recommending them.
+
+### Event sourcing
+
+**What it is:** Store the history of state changes as an immutable log of domain events, rather than the current state. Current state is derived by replaying events.
+
+**When it fits:**
+- Audit trail is a first-class product requirement (financial ledgers, compliance workflows, health records)
+- The product needs temporal queries ("what was the state at time T?")
+- Business events are intrinsically meaningful and must be observable by multiple consumers independently
+- The team is willing to invest in read model projection infrastructure
+
+**When it does not fit:**
+- Simple CRUD apps with no audit or temporal query requirements
+- Small teams without experience operating event stores
+- When the "history" requirement can be met by a simple `updated_at` timestamp and an audit log table
+- When querying current state is the dominant access pattern and projections would add latency without benefit
+
+**Anti-patterns to watch:**
+- Using event sourcing as the persistence layer for every entity regardless of whether events are meaningful
+- Treating every field change as a domain event (creates noise; events should represent business facts, not technical mutations)
+- Failing to version events — event schema evolution in a durable log is significantly harder than schema migration
+- Not defining explicit projection rebuild strategies before going to production
+
+### CQRS (Command Query Responsibility Segregation)
+
+**What it is:** Separate the write model (commands, business rules) from the read model (queries, views optimized for consumption). Write and read sides can use different stores.
+
+**When it fits:**
+- Read and write throughput requirements are significantly different and one side is a bottleneck
+- Query shape is fundamentally different from write shape (complex joins vs simple entity writes)
+- The read side can tolerate eventual consistency (async projection updates)
+- Event sourcing is in use (CQRS is a natural complement, not a requirement)
+
+**When it does not fit:**
+- Simple domains where a single database model serves reads and writes adequately
+- When strong consistency is required everywhere — CQRS typically introduces eventual consistency on the read side
+- When the team cannot afford to maintain two models (write and read) independently
+- As a solution to a performance problem that a database index or query optimization would solve
+
+**Anti-patterns to watch:**
+- Applying CQRS to every aggregate regardless of whether the read/write impedance mismatch exists
+- Building a CQRS system without a clear projection update strategy (how stale is "too stale"?)
+- Using CQRS to avoid writing good queries rather than because the domain genuinely needs it
+
+### Horizontal scaling patterns
+
+**Sharding**
+- Partition data across nodes by a shard key so each node owns a subset of the dataset.
+- Shard key choice is critical and nearly irreversible: choose a key with high cardinality and even distribution.
+- Hot shards (one shard receiving disproportionate traffic) eliminate the benefit — validate shard key distribution before committing.
+- Cross-shard queries and transactions become expensive or impossible — design to avoid them.
+- When to use: dataset is too large for a single node; write throughput exceeds single-node capacity.
+
+**Partitioning**
+- Partition a table by a range or hash of a column (e.g. date range, tenant ID) within a single logical database.
+- Less operationally complex than sharding — supported natively by most major databases.
+- Improves query performance when the partition key matches the most common query filter.
+- When to use: very large tables where queries are naturally scoped to a partition; time-series data; archival patterns.
+
+**Federation (functional sharding)**
+- Split different domains or features into separate databases (not tables), each owned by a specific service.
+- Reduces cross-domain coupling; each service scales independently.
+- Eliminates cross-domain JOINs — enforce domain boundaries at the application layer.
+- When to use: microservices architecture with well-defined bounded contexts; when one domain's I/O is throttling another's performance.
+
+**Decision guide:**
+
+| Scale problem | Preferred pattern |
+|--------------|------------------|
+| Single large table with time-based queries | Table partitioning |
+| Multi-tenant data at high volume per tenant | Sharding by tenant ID |
+| Cross-service data coupling and scaling bottleneck | Federation |
+| Distributed write load across homogeneous data | Sharding |
+
 ## Workflow
 
 1. **Read the current architecture** — Identify structure from code, not docs. Map: modules, layers, entry points, key data flows, external dependencies.

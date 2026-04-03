@@ -102,6 +102,27 @@ Append new entries in this format:
 - **Promotion note:** none
 - **Memory files touched:** `learning-log.md` only
 
+## 2026-04-03 — Claude (Sonnet 4.6)
+
+- **User goal (one line):** Browse external Claude Code skills marketplace and enhance BosskuAI with missing skills.
+- **What changed:**
+  - Created 3 new skills: `bosskuai-performance-profiling`, `bosskuai-integration-testing`, `bosskuai-incident-response`
+  - Enhanced 5 existing skills: `devops-iac` (observability instrumentation + deployment verification), `analytics-metrics` (retention/lifecycle metrics), `cybersecurity-risk` (supply chain security), `software-architecture` (event sourcing/CQRS/horizontal scaling advanced patterns), `workspace-assistant` (3 new routing rows)
+  - Updated `AGENTS.md`: skill roster (3 Engineering rows), quick reference table (3 rows), local skills table (3 rows), proactive skill use Engineering bullet, phased pipelines Build + Harden phases
+- **Skill count:** 39 → 42
+- **Key gaps filled:**
+  - Performance profiling: flame graphs, `0x`/Clinic.js, `py-spy`, `pprof`, `EXPLAIN ANALYZE`
+  - Integration testing: CDC/Pact contract testing, test double taxonomy, fixture management
+  - Incident response: SEV-1–4, 5-phase response, blameless postmortem with 5-Whys
+- **Verification:** Grepped new skill names in workspace-assistant routing table and AGENTS.md — all 3 present; new SKILL.md files have correct frontmatter names; spot-checked devops-iac for new sections.
+- **Open risks / unknowns:** Skill count in README.md and `.codex/AGENTS.md` still says 39 — update those to 42 in a follow-up.
+- **Next actions for the next model** (numbered, imperative, include paths or commands):
+  1. Update skill count in `README.md` from 39 to 42.
+  2. Update skill count in `.codex/AGENTS.md` from 39 to 42.
+  3. Run `bash ./ai-assistant/scripts/scan-skills.sh` to confirm 42 skills are detected.
+- **Promotion note:** new skills promoted to skill files directly; no additional checklist/playbook artifacts needed
+- **Memory files touched:** `learning-log.md` only
+
 ## 2026-04-01 — Codex
 
 - **User goal (one line):** Change the BosskuAI Codex execution default to `gpt-5.4-mini` and update the README.

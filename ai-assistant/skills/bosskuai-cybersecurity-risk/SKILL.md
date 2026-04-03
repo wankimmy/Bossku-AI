@@ -47,7 +47,7 @@ Apply STRIDE systematically for each trust boundary and sensitive flow:
    - A03 Injection — SQL, NoSQL, shell, LDAP, template, path traversal?
    - A04 Insecure Design — missing rate limits, trust assumptions baked in, no abuse cases considered?
    - A05 Security Misconfiguration — default creds, open cloud storage, verbose error messages?
-   - A06 Vulnerable Dependencies — outdated packages with known CVEs?
+   - A06 Vulnerable Dependencies — outdated packages with known CVEs? Is there a SBOM? Are transitive dependencies pinned?
    - A07 Authentication Failures — broken session management, weak credentials, no MFA where needed?
    - A08 Data Integrity Failures — unsigned updates, deserializing untrusted data?
    - A09 Logging and Monitoring Failures — no audit trail for sensitive operations, no alerting on anomalies?
@@ -70,6 +70,40 @@ Apply STRIDE systematically for each trust boundary and sensitive flow:
    - What is the incident response and rollback path if a vulnerability is exploited?
 
 8. **Separate confirmed issues from inferred risks** — State evidence for confirmed findings; label inferred risks clearly.
+
+## Supply chain security
+
+Use this section when reviewing dependency management, open-source usage, CI/CD supply chain, or third-party code ingestion.
+
+### SBOM (Software Bill of Materials)
+- A SBOM is a machine-readable inventory of all direct and transitive dependencies and their versions.
+- Generate a SBOM as part of CI and store it with each release artifact (SPDX or CycloneDX format).
+- Without a SBOM, CVE scanning is guesswork — scanners need a precise dependency manifest.
+- Treat SBOM generation as a build artifact, not a one-off audit task.
+
+### CVE scanning
+- Run CVE scanning (e.g. `trivy`, `grype`, `snyk`, `dependabot`) on every PR and every base image build.
+- Block merges on Critical/High CVEs with known exploits; warn on Medium. Do not silently suppress scanner output.
+- Track CVE age: a High CVE that has been open for 30+ days without a mitigation plan is a compliance and liability risk.
+- For container images: scan both the application layer and the base image. Base image CVEs are often the most numerous.
+
+### Dependency pinning strategy
+- Pin direct dependencies to exact versions in lock files (`package-lock.json`, `poetry.lock`, `go.sum`). Do not commit only a ranges-based manifest.
+- Pin transitive dependencies wherever the toolchain supports it.
+- For CI/CD actions and IaC modules: pin to a commit SHA, not a mutable tag (e.g. `actions/checkout@v3` is mutable; `actions/checkout@abc1234` is not).
+- Review dependency updates via automated PRs (Dependabot, Renovate) rather than manual periodic bumps — automation ensures freshness without losing auditability.
+
+### Open-source license compliance
+- Before adding a dependency, check its license against your project's allowed license list.
+- Risky licenses for commercial products: GPL/AGPL (copyleft, may require source disclosure), SSPL (MongoDB-style, very broad copyleft), or "no license" (legally all rights reserved).
+- Safe licenses for commercial use: MIT, Apache 2.0, BSD, ISC.
+- Automate license scanning (e.g. `license-checker`, `fossa`, `snyk license`) in CI to catch new dependencies with incompatible licenses before merge.
+- Maintain a `THIRD_PARTY_LICENSES` or `NOTICE` file if your license requires it.
+
+### Third-party code ingestion risk
+- Code copied from LLM outputs or Stack Overflow may carry GPL snippets, incompatible licenses, or known-vulnerable patterns — treat it as untrusted until reviewed.
+- Do not ingest third-party IaC modules or GitHub Actions from unvetted sources without reviewing their content.
+- Pin third-party container base images to digest hashes in production builds, not floating tags.
 
 ## Guardrails
 

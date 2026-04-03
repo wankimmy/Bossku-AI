@@ -6,7 +6,7 @@ A cofounder-style AI layer for **Claude Code, Cursor, and Codex** — auto-loads
 
 ```bash
 # 1. Clone
-git clone <repo-url> bosskuAI
+git clone https://github.com/wankimmy/Bossku-AI bosskuAI
 
 # 2. Install into your project
 ./bosskuAI/scripts/install.sh /path/to/your/project
@@ -23,7 +23,7 @@ After install, paste the onboarding prompt from [WORKSPACE-ONBOARDING.md](WORKSP
 Every prompt, across every tool, automatically:
 
 1. **Reads shared memory** — `ai-assistant/memory/` (continuation → profile → understanding → log)
-2. **Routes to the right skill** — picks from 39 skills across product, engineering, design, security, and GTM
+2. **Routes to the right skill** — picks from 42 skills across product, engineering, design, security, and GTM
 3. **Emits `[TASK START]`** — visible audit header so you can see if protocol was followed
 4. **Plans first** — Opus 4.6 / gpt-5.4 for planning, Sonnet 4.6 / gpt-5.4-mini for execution
 5. **Emits `[TASK END]`** — confirms memory updated and what was learned
@@ -32,7 +32,7 @@ If `[TASK START]` is missing from a response, the protocol was skipped.
 
 ## Activation
 
-Say `bossku` anywhere in a prompt to explicitly activate BosskuAI mode:
+Say `bossku` anywhere in a prompt **or run `/bossku` as a slash command** in Claude Code to explicitly activate BosskuAI mode:
 
 ```
 bossku review this PR for security and business-logic risks
@@ -40,14 +40,18 @@ bossku plan the smallest safe implementation for this feature
 bossku run launch readiness across engineering, SEO, and GTM
 ```
 
+```
+/bossku design the integration test layer for our API
+```
+
 You don't need to name a skill — the assistant routes automatically.
 
-## Skills (39 total)
+## Skills (42 total)
 
 | Cluster | Examples |
 |---------|---------|
 | Product | product-strategy, planning-execution, analytics-metrics |
-| Engineering | engineering-delivery, devops-iac, coding-best-practices |
+| Engineering | engineering-delivery, devops-iac, performance-profiling, integration-testing, incident-response |
 | Design | ui-ux-design-to-code, i18n-l10n, 3d-web-development |
 | Security | cybersecurity-risk, agent-security-hardening, legal-compliance |
 | Quality | rigorous-code-review, bug-finding, business-logic-review |
@@ -84,7 +88,7 @@ bosskuAI/
 ├── .cursor/                ← always-on rules for Cursor
 ├── .codex/                 ← agent roles and rules for Codex
 └── ai-assistant/
-    ├── skills/             ← 39 skill SKILL.md files
+    ├── skills/             ← 42 skill SKILL.md files
     ├── memory/             ← shared durable memory
     ├── hooks/              ← fires on every prompt (UserPromptSubmit)
     └── references/         ← checklists, playbooks, protocols

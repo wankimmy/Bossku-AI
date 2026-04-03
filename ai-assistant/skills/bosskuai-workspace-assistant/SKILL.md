@@ -46,6 +46,9 @@ This is the **orchestration layer** — it does not replace expert skills, it ro
 | Data modeling, migrations, or analytics pipelines | `bosskuai-data-architecture` |
 | Marketing strategy and growth loops | `bosskuai-marketing-growth` |
 | CI/CD, containers, infra, runtime operations | `bosskuai-devops-iac` |
+| Performance profiling, bottleneck diagnosis, flame graphs | `bosskuai-performance-profiling` |
+| Integration test design, contract tests, test fixtures | `bosskuai-integration-testing` |
+| Active incident triage, postmortem, severity escalation | `bosskuai-incident-response` |
 | Paid channels and monetization | `bosskuai-paid-acquisition-monetization` |
 | Localization, locale handling, multilingual UX | `bosskuai-i18n-l10n` |
 | SEO and GEO discoverability | `bosskuai-seo-geo` |

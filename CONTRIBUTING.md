@@ -21,6 +21,31 @@ Good contributions include:
 - example prompts and example outputs
 - portability and consistency fixes across Codex, Claude, and Cursor
 
+## Skill format
+
+Every new skill file must follow this structure:
+
+```markdown
+---
+name: bosskuai-<slug>
+description: One-line description under 200 characters. Used by routers.
+---
+
+# BosskuAI <Title>
+
+## How this differs from nearby skills
+## Mindset
+## <Domain lenses or workflow sections>
+## Guardrails
+## Output format
+## References
+```
+
+- `name` must match the folder slug exactly (`bosskuai-<slug>`)
+- `description` is loaded by routers — keep it specific and under 200 chars
+- `Guardrails` must include the standard ambiguity protocol bullet
+- When adding a skill, also update `AGENTS.md`: skill roster table, quick reference table, local skills table, proactive skill use, and phased pipelines
+
 ## Before opening a PR
 
 Check that:
