@@ -141,6 +141,7 @@ Route to these skills when the task matches:
 | Rapid prototype / POC / timebox build | `bosskuai-rapid-prototype` |
 | Live framework/library docs lookup | `bosskuai-documentation-lookup` |
 | Lead discovery / outreach drafts | `bosskuai-lead-intelligence` |
+| Nuxt development or audit | `bosskuai-nuxt-development` |
 
 All skill files at: `ai-assistant/skills/bosskuai-<name>/SKILL.md`
 

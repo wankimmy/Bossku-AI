@@ -157,6 +157,7 @@ Classify into a **role cluster** first, then choose the minimum skill set. This 
 | **Engineering** | codebase-analysis | Evidence-based execution-path and module-boundary analysis |
 | **Engineering** | code-revamp | Safe modernization and legacy structural cleanup |
 | **Engineering** | coding-best-practices | Implementation quality, maintainability, and testing posture |
+| **Engineering** | nuxt-development | Expert Nuxt 4.x development, code auditing, and best-practice guidance grounded in official docs |
 | **Engineering** | polyglot-engineering | Stack-specific guidance across languages and frameworks |
 | **Engineering** | performance-profiling | CPU/memory profiling, bottleneck diagnosis, query optimization, caching, flame graph interpretation |
 | **Engineering** | integration-testing | Integration test design, contract testing (CDC/Pact), test doubles, fixture management, seam coverage |
@@ -231,6 +232,7 @@ Classify into a **role cluster** first, then choose the minimum skill set. This 
 | Design a growth experiment | "Design an A/B test" / "How do we test this growth idea?" | growth-experiment, analytics-metrics |
 | Quick prototype or POC | "Build a quick POC" / "Prototype this idea" | rapid-prototype |
 | Library or framework docs | "How do I configure X?" / "What is the Y API?" | documentation-lookup |
+| Nuxt development or audit | "Build this Nuxt page" / "Audit this Nuxt app" | nuxt-development, documentation-lookup |
 | Find leads or prospects | "Build outreach list" / "Find potential investors" | lead-intelligence, sales-strategy |
 
 ## Optional phased pipelines
@@ -357,6 +359,7 @@ Before considering a meaningful task done:
 | `bosskuai-code-revamp` | `ai-assistant/skills/bosskuai-code-revamp/SKILL.md` |
 | `bosskuai-coding-best-practices` | `ai-assistant/skills/bosskuai-coding-best-practices/SKILL.md` |
 | `bosskuai-context-limit-continuation` | `ai-assistant/skills/bosskuai-context-limit-continuation/SKILL.md` |
+| `bosskuai-nuxt-development` | `ai-assistant/skills/bosskuai-nuxt-development/SKILL.md` |
 | `bosskuai-polyglot-engineering` | `ai-assistant/skills/bosskuai-polyglot-engineering/SKILL.md` |
 | `bosskuai-performance-profiling` | `ai-assistant/skills/bosskuai-performance-profiling/SKILL.md` |
 | `bosskuai-integration-testing` | `ai-assistant/skills/bosskuai-integration-testing/SKILL.md` |

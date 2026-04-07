@@ -344,6 +344,13 @@
       "keywords": ["ICP", "lead discovery", "Exa search", "warm path", "personalized outreach"]
     },
     {
+      "id": "bosskuai-nuxt-development",
+      "cluster": "engineering",
+      "status": "active",
+      "triggers": ["nuxt development", "nuxt audit", "nuxt best practices", "vue/nuxt project"],
+      "keywords": ["Nuxt", "Vue", "SSR", "Nitro", "useFetch", "auto-imports", "file-based routing", "nuxt.config"]
+    },
+    {
       "id": "bosskuai-root-cause-investigation",
       "cluster": "quality",
       "status": "deprecated_alias",

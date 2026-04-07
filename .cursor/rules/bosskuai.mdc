@@ -114,6 +114,7 @@ These skills were added in the 2026-04 enhancement. Route to them when the task 
 | Rapid prototype / POC / timebox build | `bosskuai-rapid-prototype` | `ai-assistant/skills/bosskuai-rapid-prototype/SKILL.md` |
 | Live framework/library docs | `bosskuai-documentation-lookup` | `ai-assistant/skills/bosskuai-documentation-lookup/SKILL.md` |
 | Lead discovery / outreach drafts | `bosskuai-lead-intelligence` | `ai-assistant/skills/bosskuai-lead-intelligence/SKILL.md` |
+| Nuxt development or audit | `bosskuai-nuxt-development` | `ai-assistant/skills/bosskuai-nuxt-development/SKILL.md` |
 
 ## MCP servers in this workspace
 
