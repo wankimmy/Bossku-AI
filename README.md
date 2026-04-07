@@ -23,10 +23,11 @@ After install, paste the onboarding prompt from [WORKSPACE-ONBOARDING.md](WORKSP
 Every prompt, across every tool, automatically:
 
 1. **Reads shared memory** — `ai-assistant/memory/` (continuation → profile → understanding → log)
-2. **Routes to the right skill** — picks from 42 skills across product, engineering, design, security, and GTM
+2. **Routes to the right skill** — picks from 43 skills across product, engineering, design, security, and GTM
 3. **Emits `[TASK START]`** — visible audit header so you can see if protocol was followed
 4. **Plans first** — Opus 4.6 / gpt-5.4 for planning, Sonnet 4.6 / gpt-5.4-mini for execution
-5. **Emits `[TASK END]`** — confirms memory updated and what was learned
+5. **Escalates when blocked** — brings in another model or tool surface with a scoped brief instead of looping
+6. **Emits `[TASK END]`** — confirms memory updated and what was learned
 
 If `[TASK START]` is missing from a response, the protocol was skipped.
 
@@ -46,7 +47,7 @@ bossku run launch readiness across engineering, SEO, and GTM
 
 You don't need to name a skill — the assistant routes automatically.
 
-## Skills (42 total)
+## Skills (43 total)
 
 | Cluster | Examples |
 |---------|---------|
@@ -57,7 +58,7 @@ You don't need to name a skill — the assistant routes automatically.
 | Quality | rigorous-code-review, bug-finding, business-logic-review |
 | Architecture | software-architecture, api-design, data-architecture |
 | Growth | marketing-growth, seo-geo, sales-strategy, paid-acquisition |
-| Orchestration | project-understanding, continuous-learning, subagent-delegation |
+| Orchestration | project-understanding, continuous-learning, subagent-delegation, cross-model-escalation |
 
 Full roster + quick reference: [AGENTS.md](AGENTS.md)
 
@@ -88,7 +89,7 @@ bosskuAI/
 ├── .cursor/                ← always-on rules for Cursor
 ├── .codex/                 ← agent roles and rules for Codex
 └── ai-assistant/
-    ├── skills/             ← 42 skill SKILL.md files
+    ├── skills/             ← 43 skill SKILL.md files
     ├── memory/             ← shared durable memory
     ├── hooks/              ← fires on every prompt (UserPromptSubmit)
     └── references/         ← checklists, playbooks, protocols

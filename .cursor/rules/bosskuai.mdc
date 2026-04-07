@@ -26,6 +26,7 @@ If the user includes the standalone word `bossku` anywhere in the prompt, treat 
 
 - Always enter **Plan mode** first with **Opus 4.6, GPT-5.4, or Gemini Pro 3.1** (whichever is available and best suited). Never skip to execution on meaningful tasks.
 - **Execution** (implementation, edits, codegen): always use **Composer 2**, not ad-hoc chat models.
+- If the current model is stuck, low-confidence, or missing a capability, load `bosskuai-cross-model-escalation` and switch to a better-fit helper model or tool surface instead of retrying the same path.
 - Quick/trivial tasks (single-line fixes, factual lookups) may skip the split.
 
 ## Shared memory (mandatory)
@@ -93,14 +94,81 @@ Learning: <artifact+path, or "deferred: reason">
 - After meaningful tasks, promote durable learnings to memory, checklist, pitfall, playbook, or skill.
 - If continuation risk is high, preserve compact handoff state; ask user to continue in a fresh prompt.
 - When a task has ≥ 2 independent workstreams or ≥ 5 independent files: open parallel Composer tabs — one per workstream, each scoped to its own files and goal. Do not run sequentially in one Composer unless there is an ordering dependency.
+- When one planning model or Composer path is blocked after two serious attempts, escalate with `bosskuai-cross-model-escalation` and use another planning model or tool surface for a scoped second opinion.
 - If something material is unconfirmed, ask the user instead of guessing.
 - Run `bash ./ai-assistant/scripts/learning-doctor.sh` before large maintenance passes.
+
+## New skill routing (startup + research cluster)
+
+These skills were added in the 2026-04 enhancement. Route to them when the task matches:
+
+| Task type | Skill | File |
+|-----------|-------|------|
+| Multi-source web research | `bosskuai-deep-research` | `ai-assistant/skills/bosskuai-deep-research/SKILL.md` |
+| Browser automation / UI QA | `bosskuai-browser-automation` | `ai-assistant/skills/bosskuai-browser-automation/SKILL.md` |
+| Competitor monitoring | `bosskuai-competitor-intelligence` | `ai-assistant/skills/bosskuai-competitor-intelligence/SKILL.md` |
+| Fundraising / pitch deck / investor memo | `bosskuai-investor-prep` | `ai-assistant/skills/bosskuai-investor-prep/SKILL.md` |
+| User interviews / personas / JTBD | `bosskuai-customer-discovery` | `ai-assistant/skills/bosskuai-customer-discovery/SKILL.md` |
+| Revenue model / runway / unit economics | `bosskuai-financial-modeling` | `ai-assistant/skills/bosskuai-financial-modeling/SKILL.md` |
+| A/B test / growth experiment design | `bosskuai-growth-experiment` | `ai-assistant/skills/bosskuai-growth-experiment/SKILL.md` |
+| Rapid prototype / POC / timebox build | `bosskuai-rapid-prototype` | `ai-assistant/skills/bosskuai-rapid-prototype/SKILL.md` |
+| Live framework/library docs | `bosskuai-documentation-lookup` | `ai-assistant/skills/bosskuai-documentation-lookup/SKILL.md` |
+| Lead discovery / outreach drafts | `bosskuai-lead-intelligence` | `ai-assistant/skills/bosskuai-lead-intelligence/SKILL.md` |
+
+## MCP servers in this workspace
+
+Configured in `mcp-configs/cursor-mcp-servers.json`. Copy relevant blocks to your Cursor MCP settings.
+
+| Server | Tool prefix | Auth required | Notes |
+|--------|-------------|---------------|-------|
+| Exa | `mcp__exa__*` | `EXA_API_KEY` env var | Web search — use for deep-research, competitor, lead skills |
+| Firecrawl | `mcp__firecrawl__*` | `FIRECRAWL_API_KEY` env var | Full-page scraping |
+| Context7 | `mcp__context7__*` | None | Live framework/library docs |
+| GitHub | `mcp__github__*` | `GITHUB_PAT` env var | Repo ops, PR reviews |
+| Pencil | `mcp__pencil__*` | None (installed at `~/.pencil/`) | Browser automation — native in Cursor |
+
+**Cursor browser automation:** Use Pencil MCP (already installed). Playwright MCP is for Claude Code / Codex only.
+
+## Subagent delegation (Cursor)
+
+Cursor does not have native agent spawning. When a task matches an agent's description, adopt that agent's **role**, **process**, and **output format** from `agents/<agent>.md` using the mapped model.
+
+**Delegate when:** task ≥5 independent files, ≥2 parallel workstreams, or research requiring live web search.
+
+**Open parallel Composer tabs** (one per workstream) for tasks with independent parts instead of running serially.
+
+### Agent roster quick-ref
+
+| Agent | Model | Purpose |
+|-------|-------|---------|
+| `agents/planner.md` | Opus | Implementation planning |
+| `agents/code-reviewer.md` | Opus | Code quality review |
+| `agents/security-reviewer.md` | Opus | Vulnerability detection |
+| `agents/build-fixer.md` | Sonnet/Composer 2 | Resolve build errors |
+| `agents/refactor-cleaner.md` | Sonnet/Composer 2 | Dead code, duplication |
+| `agents/doc-updater.md` | Sonnet/Composer 2 | Docs sync |
+| `agents/market-researcher.md` | Opus | Market research with Exa |
+| `agents/competitor-tracker.md` | Opus | Competitor monitoring |
+| `agents/financial-analyst.md` | Opus | Financial modeling, runway |
+| `agents/growth-experimenter.md` | Opus | Experiment design |
+| `agents/lead-finder.md` | Opus | Lead discovery + outreach |
+| `agents/customer-researcher.md` | Opus | User interviews, personas |
+| `agents/browser-agent.md` | Sonnet/Composer 2 | Browser automation (Pencil) |
+| `agents/prototype-builder.md` | Sonnet/Composer 2 | Time-boxed prototyping |
+| `agents/tdd-guide.md` | Sonnet/Composer 2 | TDD red/green/refactor |
+| `agents/e2e-runner.md` | Sonnet/Composer 2 | E2E tests via Playwright/Pencil |
+| `agents/docs-lookup.md` | Sonnet/Composer 2 | Live docs via Context7 |
+| `agents/harness-optimizer.md` | Opus | bosskuAI health check |
+
+Full agent definitions: [`agents/`](mdc:agents) — [`agents/README.md`](mdc:agents/README.md)
 
 ## References
 
 - Root instructions: [AGENTS.md](mdc:AGENTS.md)
 - Claude entry + full DoD: [CLAUDE.md](mdc:CLAUDE.md)
 - Assistant knowledge: [`ai-assistant/`](mdc:ai-assistant)
+- Agents: [`agents/`](mdc:agents)
+- MCP configs: [`mcp-configs/`](mdc:mcp-configs)
 - Continuous-learning skill: [`ai-assistant/skills/bosskuai-continuous-learning/SKILL.md`](mdc:ai-assistant/skills/bosskuai-continuous-learning/SKILL.md)
 - Checklists: [`ai-assistant/references/checklists/`](mdc:ai-assistant/references/checklists)
 - Playbooks: [`ai-assistant/references/playbooks/`](mdc:ai-assistant/references/playbooks)

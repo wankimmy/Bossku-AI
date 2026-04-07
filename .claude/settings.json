@@ -10,12 +10,49 @@
         ]
       }
     ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-$(pwd)}/ai-assistant/hooks/pre-commit-quality.sh\" \"${CLAUDE_TOOL_INPUT:-}\""
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-$(pwd)}/ai-assistant/hooks/mcp-health-check.sh\" \"${CLAUDE_TOOL_NAME:-}\""
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-$(pwd)}/ai-assistant/hooks/suggest-compact.sh\""
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [
           {
             "type": "command",
             "command": "bash \"${CLAUDE_PROJECT_DIR:-$(pwd)}/ai-assistant/hooks/session-end-reminder.sh\" \"${CLAUDE_PROJECT_DIR:-$(pwd)}\""
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-$(pwd)}/ai-assistant/hooks/security-scan-reminder.sh\" \"${CLAUDE_PROJECT_DIR:-$(pwd)}\""
           }
         ]
       }

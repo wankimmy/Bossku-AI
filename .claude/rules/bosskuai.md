@@ -36,9 +36,10 @@ Trivial tasks: emit both blocks with "trivial/no". No silent skips — a missing
 | Phase | Claude | Codex | Cursor |
 |-------|--------|-------|--------|
 | Plan | Opus 4.6 | gpt-5.4 | strongest available |
-| Execute | Sonnet 4.6 | gpt-5.2 | Composer 2 |
+| Execute | Sonnet 4.6 | gpt-5.4-mini | Composer 2 |
 
 Never skip planning on non-trivial tasks.
+If the active model is stuck, low-confidence, or missing a capability, load `bosskuai-cross-model-escalation` and escalate before repeating the same failed path.
 
 ## Memory (mandatory — all tools, every turn)
 `ai-assistant/memory/` is shared across Claude, Codex, Cursor. Read before acting. Write before done.

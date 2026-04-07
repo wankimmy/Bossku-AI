@@ -11,6 +11,7 @@ Use this skill when a task is large enough, parallel enough, or risky enough tha
 
 - **`bosskuai-context-limit-continuation`**: stops and hands off to a *new serial session* when context is nearly exhausted. **This skill** delegates work to *parallel subagents before* context runs out — it is proactive, not reactive.
 - **`bosskuai-workspace-assistant`**: orchestrates skill selection within one session. **This skill** extends that orchestration to multi-agent execution.
+- **`bosskuai-cross-model-escalation`**: brings in another model when the current workstream is blocked or brittle. **This skill** is for parallelizable workstreams, not a single stuck one.
 
 ## Auto-trigger logic (apply without being asked)
 
@@ -127,3 +128,4 @@ Dependency check: [shared state, write conflicts, or ordering dependencies to wa
 - Pair with **`bosskuai-context-limit-continuation`** when context budget is the delegation trigger
 - Pair with **`bosskuai-workspace-assistant`** for orchestration and skill routing decisions
 - Pair with **`bosskuai-ai-model-selection`** to choose the right model per subagent role
+- Pair with **`bosskuai-cross-model-escalation`** when the main workstream is blocked and needs a helper model before or instead of full parallelization

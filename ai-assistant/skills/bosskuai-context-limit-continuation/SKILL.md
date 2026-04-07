@@ -7,7 +7,7 @@ description: Use this when a task risks hitting model context, token limits, or 
 
 Use this skill when a task is long enough that the current model session may run out of context budget, hit token limits, face usage or quota pressure, or otherwise risk being cut off before completion.
 
-**Not covered here:** training or fine-tuning ML models. For choosing *which* commercial/chat model to use, load **`bosskuai-ai-model-selection`** in the same pass.
+**Not covered here:** training or fine-tuning ML models. For choosing *which* commercial/chat model to use, load **`bosskuai-ai-model-selection`** in the same pass. If the problem is that the current model is blocked but context is still healthy, use **`bosskuai-cross-model-escalation`** instead of this skill.
 
 ## Trigger thresholds — when to activate this skill
 
@@ -99,3 +99,4 @@ Apply these practices to keep sessions lean and avoid premature context exhausti
 - `../../references/session-handoff-template.md`
 - `../../references/checklists/context-limit-continuation-checklist.md`
 - Pair with **`bosskuai-ai-model-selection`** for model recommendations at handoff.
+- Pair with **`bosskuai-cross-model-escalation`** when the issue is model fit or repeated failure rather than context pressure.

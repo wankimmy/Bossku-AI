@@ -1,0 +1,61 @@
+# Codex MCP Server Configuration
+# Copy this file to your project's .codex/config.toml
+# Uncomment servers you need. See mcp-configs/README.md for API key setup.
+#
+# API keys must be set as environment variables before launching Codex:
+#   export EXA_API_KEY="your-key"
+#   export FIRECRAWL_API_KEY="your-key"
+#   export GITHUB_PAT="your-token"
+#
+# Recommendation: activate 3-5 servers max for optimal performance.
+# --------------------------------------------------------------------
+
+# --- PLAYWRIGHT ---
+# Browser automation for QA, competitor UI monitoring, and user research.
+# No API key required.
+#
+# [mcp_servers.playwright]
+# command = "npx"
+# args = ["-y", "@playwright/mcp@latest", "--browser", "chrome"]
+
+# --- EXA WEB SEARCH ---
+# Neural web search for market research and real-time data.
+# Requires EXA_API_KEY — free tier at exa.ai (1,000 searches/month)
+#
+# [mcp_servers.exa-web-search]
+# command = "npx"
+# args = ["-y", "exa-mcp-server"]
+#
+# [mcp_servers.exa-web-search.env]
+# EXA_API_KEY = "${EXA_API_KEY}"
+
+# --- CONTEXT7 ---
+# Live documentation lookup for libraries and frameworks.
+# No API key required.
+#
+# [mcp_servers.context7]
+# command = "npx"
+# args = ["-y", "@upstash/context7-mcp@latest"]
+
+# --- FIRECRAWL ---
+# Web scraping for competitor pages, pricing pages, and structured market data.
+# Requires FIRECRAWL_API_KEY — free tier at firecrawl.dev (500 credits/month)
+#
+# [mcp_servers.firecrawl]
+# command = "npx"
+# args = ["-y", "firecrawl-mcp"]
+#
+# [mcp_servers.firecrawl.env]
+# FIRECRAWL_API_KEY = "${FIRECRAWL_API_KEY}"
+
+# --- GITHUB ---
+# GitHub PRs, issues, and repo management.
+# Requires a GitHub Personal Access Token with scopes: repo, read:org, read:user
+# Generate at: GitHub → Settings → Developer settings → Personal access tokens
+#
+# [mcp_servers.github]
+# command = "npx"
+# args = ["-y", "@modelcontextprotocol/server-github"]
+#
+# [mcp_servers.github.env]
+# GITHUB_PERSONAL_ACCESS_TOKEN = "${GITHUB_PAT}"

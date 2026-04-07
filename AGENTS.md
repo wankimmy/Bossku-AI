@@ -12,8 +12,10 @@
 - [Quick reference: what to ask for](#quick-reference-what-to-ask-for)
 - [Optional phased pipelines](#optional-phased-pipelines)
 - [Proactive skill use](#proactive-skill-use)
+- [Subagent delegation](#subagent-delegation)
 - [Success criteria (done looks like)](#success-criteria-done-looks-like)
 - [Local skills](#local-skills)
+- [Local agents](#local-agents)
 - [Local memory](#local-memory)
 - [Learning promotion policy](#learning-promotion-policy)
 - [Working rules](#working-rules)
@@ -43,11 +45,13 @@ The **tool-neutral contract** for model phase split, shared memory, learning pro
 
 | Entry point | Role |
 |-------------|------|
-| **This file (`AGENTS.md`)** | Full skill roster, quick reference, success criteria, working rules |
+| **This file (`AGENTS.md`)** | Full skill roster, agent roster, quick reference, success criteria, working rules |
 | **`CLAUDE.md`** | Claude Code root; includes expanded **Definition of Done** checklist |
 | **`.cursor/rules/bosskuai.mdc`** | Cursor always-on rules; model split for Plan vs Composer |
 | **`.claude/rules/bosskuai.md`** | Claude rule mirror + links |
 | **`.codex/AGENTS.md`** | Codex-specific model names layered on the same behaviors |
+| **`agents/`** | 18 subagent definitions (Claude Code native; Codex & Cursor via role-adoption) |
+| **`mcp-configs/`** | MCP server templates for Playwright, Exa, Context7, Firecrawl, GitHub |
 
 **Definition of Done:** see **Success criteria** below and **`CLAUDE.md`** § Definition of Done for the full checkbox form. **Memory layout and promotion:** see `ai-assistant/references/adr/2026-03-30-memory-organization.md`. **Cross-tool read/write template:** `ai-assistant/references/memory-first-handoff-protocol.md`.
 
@@ -73,6 +77,7 @@ Per-turn enforcement: **Task Start Protocol** below.
 
 - **Never skip the planning phase** on meaningful tasks. Always plan first, then execute.
 - State the active model and phase at the start of each meaningful response.
+- If the active model is stuck, low-confidence, or missing a needed capability, load `cross-model-escalation` and bring in a better-fit helper model or tool surface before repeating the same failed path.
 - Quick/trivial tasks (single-line fixes, factual lookups) may skip the split.
 - Update model names in the relevant tool config when newer models are released.
 
@@ -142,6 +147,7 @@ Classify into a **role cluster** first, then choose the minimum skill set. This 
 | **Orchestration** | rules-distill | Promote repeated principles into stronger shared rules |
 | **Orchestration** | continuous-learning | Promote durable learnings into memory/checklists/pitfalls/playbooks |
 | **Orchestration** | subagent-delegation | Split heavy, parallel, or risky workstreams before context overload |
+| **Orchestration** | cross-model-escalation | If the current model is stuck, low-confidence, or missing a capability, pull in another model or tool surface with a scoped assist request |
 | **Product** | product-strategy | Product framing, scope, requirements, and prioritization |
 | **Product** | analytics-metrics | Funnel/KPI instrumentation and measurable decision design |
 | **Product** | planning-execution | Strategy sequencing plus delivery tracking, milestones, dependencies, ownership |
@@ -172,6 +178,16 @@ Classify into a **role cluster** first, then choose the minimum skill set. This 
 | **Growth** | paid-acquisition-monetization | Paid channels, CAC logic, pricing, packaging, monetization planning |
 | **Growth** | seo-geo | SEO/GEO discoverability and search/generative answerability |
 | **Growth** | sales-strategy | ICP, pipeline strategy, objections, and conversion narrative |
+| **Growth** | deep-research | Multi-source web investigation with source attribution and confidence-rated synthesis |
+| **Growth** | competitor-intelligence | Automated competitor tracking — pricing, features, hiring, funding, messaging changes |
+| **Growth** | growth-experiment | A/B test design, channel experiments, hypothesis-driven growth validation with sample sizes |
+| **Growth** | lead-intelligence | Lead discovery, signal scoring, warm-path identification, personalized outreach drafts |
+| **Product** | investor-prep | Pitch decks, investor memos, one-pagers, financial models, accelerator applications |
+| **Product** | customer-discovery | User interviews, survey design, transcript analysis, persona + JTBD synthesis |
+| **Product** | financial-modeling | Revenue projections, unit economics, burn/runway, pricing model design, scenario planning |
+| **Engineering** | browser-automation | Browser QA, competitor site monitoring, visual regression, Playwright or Pencil (Cursor) |
+| **Engineering** | rapid-prototype | Time-boxed MVPs and POCs with explicit tech-debt ledger; never ship without engineering-delivery review |
+| **Orchestration** | documentation-lookup | Live framework/library docs via Context7 MCP — version-specific APIs and config, not training data |
 | **Continuation** | context-limit-continuation | Safe handoff under context/usage pressure + next-session guidance |
 | **Continuation** | ai-model-selection | Model recommendation by capability, speed, cost, risk, and modality |
 
@@ -203,8 +219,19 @@ Classify into a **role cluster** first, then choose the minimum skill set. This 
 | Architecture or boundaries | "Review system boundaries and tradeoffs" | software-architecture |
 | Refactor or modernize | "Safe code revamp" / "Modernize with minimal churn" | code-revamp, codebase-analysis |
 | Market/GTM/content/paid/sales | "GTM strategy and growth plan" / "Content calendar and paid plan" | marketing-growth, paid-acquisition-monetization, sales-strategy, seo-geo |
+| Current model is stuck or needs a second opinion | "Get another model to help" / "Escalate this to a stronger model" | cross-model-escalation, ai-model-selection |
 | Context limit / handoff | "Summarize continuation state" / "Which model next?" | context-limit-continuation, ai-model-selection |
 | Heavy parallel or risky scope | "Delegate to subagents" / "Run workstreams in parallel" | subagent-delegation, workspace-assistant |
+| Research a topic with citations | "Deep research on X" / "Investigate Y in depth" | deep-research, market-analysis |
+| Track competitors | "Competitor intelligence update" / "What is [company] doing?" | competitor-intelligence, market-analysis |
+| Browser QA or monitoring | "Run browser QA" / "Check competitor site" | browser-automation |
+| Prepare for investors | "Build pitch deck" / "Write investor memo" | investor-prep, financial-modeling |
+| Talk to users / analyze interviews | "Plan user interviews" / "Analyze these transcripts" | customer-discovery, product-strategy |
+| Revenue model or runway | "Build revenue forecast" / "How long is our runway?" | financial-modeling, planning-execution |
+| Design a growth experiment | "Design an A/B test" / "How do we test this growth idea?" | growth-experiment, analytics-metrics |
+| Quick prototype or POC | "Build a quick POC" / "Prototype this idea" | rapid-prototype |
+| Library or framework docs | "How do I configure X?" / "What is the Y API?" | documentation-lookup |
+| Find leads or prospects | "Build outreach list" / "Find potential investors" | lead-intelligence, sales-strategy |
 
 ## Optional phased pipelines
 
@@ -224,17 +251,63 @@ When the user says e.g. "We're in the build phase" or "Run the launch checklist"
 
 Use the right skill without the user having to ask, grouped by role cluster:
 
-- **Orchestration**: unfamiliar codebase -> `project-understanding`; new utility/dependency/integration -> `search-first`; skills/rules sprawl -> `skill-stocktake` or `rules-distill`; post-meaningful task -> `continuous-learning`; heavy parallel/risky scope -> `subagent-delegation`.
+- **Orchestration**: unfamiliar codebase -> `project-understanding`; new utility/dependency/integration -> `search-first`; skills/rules sprawl -> `skill-stocktake` or `rules-distill`; post-meaningful task -> `continuous-learning`; heavy parallel/risky scope -> `subagent-delegation`; stuck/low-confidence/model mismatch -> `cross-model-escalation` + `ai-model-selection`.
 - **Product**: roadmap/prioritization/owner or milestone drift -> `planning-execution`; funnels/KPIs/experiments -> `analytics-metrics`; launch-readiness framing -> `launch-commercialization`.
 - **Engineering**: complex implementation/refactor -> `engineering-delivery`; CI/CD/container/infra changes -> `devops-iac`; schema/migration/warehouse/data pipeline work -> `data-architecture`; structural cleanup -> `code-revamp`; performance/bottleneck/profiling work -> `performance-profiling`; integration test layer or contract test design -> `integration-testing`; P1/P2 production incident or postmortem -> `incident-response`.
 - **Design**: UI quality/accessibility -> `ui-ux-design-to-code`; multilingual/locale/RTL risks -> `i18n-l10n`; 3D/WebGL/immersive experiences -> `3d-web-development`.
 - **Security**: auth/billing/external API/input trust boundaries -> `cybersecurity-risk`; agent workspace/integration/memory safety -> `agent-security-hardening`; consent/retention/vendor/policy concerns -> `legal-compliance`.
 - **Quality**: code changed -> `rigorous-code-review` plus `bug-finding` as needed; strict skeptical review requested -> `rigorous-code-review`; incidents requiring DB/log/queue/webhook correlation -> `bug-finding` deep investigation mode with `business-logic-review` when invariants are involved.
 - **Architecture**: API/events/contracts -> `api-design` + `software-architecture`; major boundary/tradeoff changes -> `software-architecture`.
-- **Growth**: market/positioning uncertainty -> `market-analysis`; GTM/channels/content calendar -> `marketing-growth`; paid/CAC/pricing strategy -> `paid-acquisition-monetization`; discoverability/search answerability -> `seo-geo`; revenue motion/objections -> `sales-strategy`.
+- **Growth**: market/positioning uncertainty -> `market-analysis`; GTM/channels/content calendar -> `marketing-growth`; paid/CAC/pricing strategy -> `paid-acquisition-monetization`; discoverability/search answerability -> `seo-geo`; revenue motion/objections -> `sales-strategy`; multi-source research needed -> `deep-research`; competitor tracking cadence -> `competitor-intelligence`; experiment design -> `growth-experiment`; lead prospecting -> `lead-intelligence`.
+- **Startup/Cofounder**: investor ask or pitch material -> `investor-prep`; user interview or persona work -> `customer-discovery`; runway or projection question -> `financial-modeling`; browser testing or competitor scraping -> `browser-automation`; rapid MVP needed -> `rapid-prototype`; library API question -> `documentation-lookup`.
 - **Continuation**: context/token/usage pressure -> `context-limit-continuation` + `ai-model-selection`, update `active-continuation.md`, continue in a fresh session.
 
 For independent sub-tasks (e.g. security pass + business-logic pass), use multiple perspectives in sequence or in parallel where the tool allows; call out each lens and its findings.
+
+## Subagent delegation
+
+Delegate to agents in `agents/` when any of these conditions are true:
+
+- Task has ≥5 independent files or ≥2 parallel workstreams
+- Research task requiring live web search (market-researcher, competitor-tracker)
+- Code review requested (code-reviewer + security-reviewer in parallel)
+- Build is broken (build-fixer)
+- Feature implementation (planner first, then tdd-guide for execution)
+- Test user flows or competitor sites (browser-agent, e2e-runner)
+- Rapid prototype needed (prototype-builder)
+- Lead discovery or financial modeling (lead-finder, financial-analyst)
+
+### Agent roster
+
+| Agent | Model | Type | Purpose |
+|-------|-------|------|---------|
+| `planner` | opus | read-only | Implementation planning — auto-activate on feature requests and ≥3-file changes |
+| `code-reviewer` | opus | read-only | Code quality and maintainability — auto-activate after implementation |
+| `security-reviewer` | opus | read-only | Vulnerability detection — auto-activate on security-sensitive changes |
+| `build-fixer` | sonnet | write | Resolve build/type/dependency errors |
+| `refactor-cleaner` | sonnet | write | Dead code removal, duplication cleanup |
+| `doc-updater` | sonnet | write | Keep docs and README in sync with code |
+| `market-researcher` | opus | read-only | Multi-source market research via Exa + Firecrawl MCP |
+| `competitor-tracker` | opus | read-only | Competitor monitoring — pricing, features, hiring, funding |
+| `financial-analyst` | opus | read-only | Revenue models, unit economics, runway, scenario planning |
+| `growth-experimenter` | opus | read-only | Rigorous experiment design with sample sizes and decision criteria |
+| `lead-finder` | opus | read-only | Lead discovery, signal scoring, outreach drafts (never auto-sends) |
+| `customer-researcher` | opus | read-only | User interview analysis, persona building, JTBD mapping |
+| `browser-agent` | sonnet | write | Browser automation via Playwright (Claude/Codex) or Pencil (Cursor) |
+| `prototype-builder` | sonnet | write | Time-boxed POC builds with explicit tech-debt ledger |
+| `tdd-guide` | sonnet | write | Test-driven development RED/GREEN/REFACTOR workflow |
+| `e2e-runner` | sonnet | write | End-to-end user journey tests via Playwright |
+| `docs-lookup` | sonnet | read-only | Live framework/library docs via Context7 MCP |
+| `harness-optimizer` | opus | read-only | Audit bosskuAI config — skills, hooks, MCP health, memory hygiene |
+
+**Cross-tool model mapping:**
+
+| bosskuAI agent model | Claude Code | Codex | Cursor |
+|---------------------|-------------|-------|--------|
+| `opus` | claude-opus-4-6 | gpt-5.4 | Strongest available (Opus 4.6/GPT-5.4/Gemini Pro 3.1) |
+| `sonnet` | claude-sonnet-4-6 | gpt-5.4-mini | Cursor Composer 2 |
+
+For Cursor: no native agent spawning — Composer adopts the agent's role, process, and output format from `agents/<name>.md`. For Codex: reference `agents/` directory from `.codex/AGENTS.md` with model remapping.
 
 ## Success criteria (done looks like)
 
@@ -261,6 +334,7 @@ Before considering a meaningful task done:
 | `bosskuai-rules-distill` | `ai-assistant/skills/bosskuai-rules-distill/SKILL.md` |
 | `bosskuai-continuous-learning` | `ai-assistant/skills/bosskuai-continuous-learning/SKILL.md` |
 | `bosskuai-subagent-delegation` | `ai-assistant/skills/bosskuai-subagent-delegation/SKILL.md` |
+| `bosskuai-cross-model-escalation` | `ai-assistant/skills/bosskuai-cross-model-escalation/SKILL.md` |
 | `bosskuai-product-strategy` | `ai-assistant/skills/bosskuai-product-strategy/SKILL.md` |
 | `bosskuai-analytics-metrics` | `ai-assistant/skills/bosskuai-analytics-metrics/SKILL.md` |
 | `bosskuai-planning-execution` | `ai-assistant/skills/bosskuai-planning-execution/SKILL.md` |

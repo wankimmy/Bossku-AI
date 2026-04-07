@@ -24,6 +24,7 @@ If the user includes the standalone word `bossku` anywhere in the prompt, treat 
 - NEVER skip the planning phase and jump straight to execution on meaningful tasks.
 - Always enter plan mode first. State the plan, get alignment, then switch to execution.
 - When in doubt about which phase applies, default to Opus 4.6 and plan.
+- If the current model is stuck, low-confidence, or missing a capability, load `bosskuai-cross-model-escalation` and bring in another model or tool surface with a scoped assist request instead of retrying blindly.
 - Quick/trivial tasks (single-line fixes, lookup questions) may skip the split.
 
 ## Clarify first (ambiguity protocol)
@@ -55,6 +56,7 @@ Please answer: 1-yes/no  2-A/B/C  3-yes/no
 - Prefer test-first or test-guided development for new behavior, bug fixes, and risky refactors when practical.
 - If context or token limits are likely to interrupt meaningful work, stop before truncation, summarize the current state, and ask the user to retry so the task can continue cleanly.
 - When a task has ≥ 5 independent files, ≥ 2 parallel workstreams, a pre-task context estimate > 1,200 lines, or risky/irreversible scope — delegate to subagents using `bosskuai-subagent-delegation` before running serially in the main session.
+- When the active model is blocked or the answer still feels brittle after two serious attempts, use `bosskuai-cross-model-escalation` before continuing.
 - Use project understanding first when the codebase or repo purpose is still unclear.
 - Challenge weak assumptions.
 - Prefer concrete tradeoffs over generic advice.

@@ -56,6 +56,7 @@ This is the **orchestration layer** — it does not replace expert skills, it ro
 | Social content calendar | `bosskuai-marketing-growth` |
 | Sales motion, ICP, deal qualification | `bosskuai-sales-strategy` |
 | Which AI model for this task | `bosskuai-ai-model-selection` |
+| Current model is stuck, low-confidence, or missing capability | `bosskuai-cross-model-escalation` |
 | Context or token limit approaching | `bosskuai-context-limit-continuation` |
 | Heavy, parallel, or risky task | `bosskuai-subagent-delegation` |
 | Skill quality audit | `bosskuai-skill-stocktake` |

@@ -15,6 +15,8 @@
       "quality",
       "architecture",
       "growth",
+      "startup",
+      "research",
       "continuation"
     ]
   },
@@ -270,6 +272,76 @@
       "status": "active",
       "triggers": ["which model", "model recommendation"],
       "keywords": ["capability", "latency", "cost", "modality", "reliability"]
+    },
+    {
+      "id": "bosskuai-deep-research",
+      "cluster": "research",
+      "status": "active",
+      "triggers": ["deep research", "multi-source investigation", "market research deep dive"],
+      "keywords": ["Exa", "Firecrawl", "web research", "cited findings", "source synthesis"]
+    },
+    {
+      "id": "bosskuai-browser-automation",
+      "cluster": "engineering",
+      "status": "active",
+      "triggers": ["browser automation", "playwright", "UI smoke test", "visual regression", "scrape page"],
+      "keywords": ["Playwright", "Pencil", "screenshot", "e2e", "QA automation"]
+    },
+    {
+      "id": "bosskuai-competitor-intelligence",
+      "cluster": "growth",
+      "status": "active",
+      "triggers": ["competitor monitoring", "competitor tracking", "competitive landscape update"],
+      "keywords": ["competitor matrix", "pricing signals", "hiring signals", "feature comparison"]
+    },
+    {
+      "id": "bosskuai-investor-prep",
+      "cluster": "startup",
+      "status": "active",
+      "triggers": ["investor prep", "pitch deck", "fundraising materials", "investor memo"],
+      "keywords": ["pitch", "deck", "memo", "fundraising", "due diligence", "ask"]
+    },
+    {
+      "id": "bosskuai-customer-discovery",
+      "cluster": "product",
+      "status": "active",
+      "triggers": ["user interviews", "customer discovery", "JTBD", "persona building"],
+      "keywords": ["interview guide", "jobs to be done", "persona", "pain tagging", "synthesis"]
+    },
+    {
+      "id": "bosskuai-financial-modeling",
+      "cluster": "startup",
+      "status": "active",
+      "triggers": ["financial model", "runway calculation", "unit economics", "revenue projections"],
+      "keywords": ["MRR", "churn", "CAC", "LTV", "burn rate", "runway", "scenarios"]
+    },
+    {
+      "id": "bosskuai-growth-experiment",
+      "cluster": "growth",
+      "status": "active",
+      "triggers": ["A/B test", "growth experiment", "experiment design", "growth hypothesis"],
+      "keywords": ["hypothesis", "sample size", "MDE", "statistical significance", "guardrail metrics"]
+    },
+    {
+      "id": "bosskuai-rapid-prototype",
+      "cluster": "engineering",
+      "status": "active",
+      "triggers": ["rapid prototype", "POC", "hackathon build", "MVP timebox"],
+      "keywords": ["timebox", "debt ledger", "hard-scope", "demo-ready", "shortcuts"]
+    },
+    {
+      "id": "bosskuai-documentation-lookup",
+      "cluster": "engineering",
+      "status": "active",
+      "triggers": ["docs lookup", "framework API", "library documentation", "how do I use X in Y"],
+      "keywords": ["Context7", "MCP docs", "live docs", "API reference", "version-specific"]
+    },
+    {
+      "id": "bosskuai-lead-intelligence",
+      "cluster": "growth",
+      "status": "active",
+      "triggers": ["find leads", "prospect list", "investor list", "lead scoring", "outreach draft"],
+      "keywords": ["ICP", "lead discovery", "Exa search", "warm path", "personalized outreach"]
     },
     {
       "id": "bosskuai-root-cause-investigation",
