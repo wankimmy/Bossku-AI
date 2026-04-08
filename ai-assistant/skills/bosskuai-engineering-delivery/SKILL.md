@@ -20,6 +20,7 @@ Use this skill when the task is **implementation-heavy** and needs a reliable en
 - Tests are not optional — they are the only proof that behavior is correct and stays correct.
 - The diff review is the last safety net before merge; treat it as a serious gate.
 - Observability and rollback are part of implementation correctness, not afterthoughts.
+- For complex features, consider a 3-agent model: **explorer** (traces execution paths and maps architecture), **architect** (proposes multiple approaches with tradeoffs), **reviewer** (catches bugs and convention violations with confidence-scored findings).
 
 ## Workflow
 
@@ -91,6 +92,13 @@ Run the full DoD checklist before declaring the task complete. **Do not declare 
 - [ ] Anything that could NOT be verified is named explicitly — do not silently omit gaps
 
 **If any item fails: fix it, then re-run the checklist. Never declare done with failing items.**
+
+## Supporting artifacts
+
+- **ADR writing**: For non-obvious architecture choices, use lightweight ADR format: Context → Decision → Consequences. Store in the project's ADR directory.
+- **Standup summaries**: Consolidate recent commits and PRs into structured team updates: what shipped, what's in progress, what's blocked.
+- **Incident postmortems**: Blameless format: timeline, root cause, contributing factors, action items with owners and due dates.
+- **Technical documentation**: Generate and refine API docs, runbooks, and architecture diagrams alongside implementation — not after.
 
 ## Feature flags
 

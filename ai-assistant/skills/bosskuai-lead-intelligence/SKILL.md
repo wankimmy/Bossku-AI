@@ -1,3 +1,8 @@
+---
+name: bosskuai-lead-intelligence
+description: Use this for lead intelligence, prospect research, investor/customer/partner/press list building, lead qualification, warm-intro path research, and personalized outreach drafts.
+---
+
 # Lead Intelligence
 
 ## When to use

@@ -67,6 +67,18 @@ Use this skill when the task is about **converting interest into revenue** — c
 
 7. **Identify required sales assets** — What does the team need to close deals that doesn't exist yet? (case studies, pricing sheet, comparison guide, ROI calculator, security questionnaire template)
 
+## Pipeline operations
+
+When the task is operational (managing active deals) rather than strategic:
+
+**Call summary**: Transform call notes or transcripts into structured summaries — key discussion points, decisions made, objections raised, action items with owners, and draft follow-up email.
+
+**Pipeline review**: Analyze pipeline health — total pipeline value, stage distribution, deal velocity, stale deals (no activity in 14+ days), deals at risk (past close date, champion gone quiet). Generate a weekly action plan with the top 3 deals to advance.
+
+**Forecasting**: Generate weighted sales forecasts in best/likely/worst scenarios from pipeline data. Weight by stage probability and deal-specific confidence. Flag concentration risk (>30% of forecast in one deal).
+
+**CRM integration**: When CRM MCP is available, pull pipeline data directly. Otherwise, work from pasted pipeline exports, CSV data, or described deal status.
+
 ## Guardrails
 
 - If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.

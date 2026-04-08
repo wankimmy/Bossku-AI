@@ -109,7 +109,10 @@ Example cluster: Pillar = "AI Assistants for Teams" → Clusters = "Best AI assi
 4. **GEO audit**: does the content answer the question directly? Is the entity named clearly? Are claims verifiable?
 5. **Structured data**: identify which schema type fits each page; check implementation.
 6. **Content cluster mapping**: is the page part of a cluster? If not, define the cluster.
-7. **Prioritize**: order improvements by impact × effort. Technical blockers (noindex, crawl errors) always come first.
+7. **Keyword intent clustering**: Group target keywords by search intent (informational, navigational, transactional, investigational) to identify content gaps and cannibalization.
+8. **Schema markup generation**: Generate ready-to-paste JSON-LD for the appropriate schema type (Article, Product, FAQ, HowTo). Validate with Google's Rich Results Test.
+9. **AI visibility tracking**: Monitor how and whether the content is cited by generative engines (SGE, Perplexity, ChatGPT). Track citation frequency, quote accuracy, and link-back presence.
+10. **Prioritize**: order improvements by impact × effort. Technical blockers (noindex, crawl errors) always come first.
 
 ## Guardrails
 

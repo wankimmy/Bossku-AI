@@ -20,6 +20,8 @@ Use this skill when writing or reviewing code that should follow strong engineer
 - Clever code is a liability — optimize for the next engineer reading it at 2am during an incident.
 - Best practices are context-dependent: follow the repo's existing patterns unless they are clearly harmful.
 - The three most expensive code problems: wrong behavior, broken in production, impossible to change.
+- TDD as default for bug fixes and new behavior: red-green-refactor. Write a failing test first, make it pass, then clean up. No test = no proof.
+- Hypothesis-driven debugging: never shotgun-debug. Form a hypothesis, binary-search to isolate the root cause, reproduce before fixing.
 
 ## SOLID applied pragmatically
 
@@ -81,6 +83,14 @@ Apply SOLID at the module and function level — not as a reason to add abstract
 - **Python**: type hints for public APIs, avoid mutable default arguments, use dataclasses over dicts for structured data.
 - **Go**: explicit error returns, no panic in library code, context propagation for cancellation, table-driven tests.
 - **Dart/Flutter**: `const` constructors, `final` fields, prefer `sealed` classes for state, avoid `BuildContext` across async gaps.
+
+## Debugging methodology
+
+1. **Reproduce consistently** — If you cannot reproduce it, you cannot prove you fixed it. Get a reliable reproduction first.
+2. **Form a hypothesis** — Based on the symptoms, predict the root cause. Do not change code randomly.
+3. **Binary search to isolate** — Narrow down: which file, which function, which line. Use bisection, logging, or debugger breakpoints.
+4. **Fix and verify** — Apply the minimal fix. Write a regression test that would have caught this. Confirm the fix resolves the reproduction.
+5. **Escalate if stuck** — After 3 failed fix attempts, step back and do an architectural review. The bug may be a symptom of a design problem.
 
 ## Decision: local fix vs revamp vs escalate
 

@@ -19,6 +19,8 @@ Use this skill for **screens, flows, and implementation-ready UI guidance** — 
 - Mobile-first: design and review for the smallest screen first, then enhance.
 - States are as important as the happy path — loading, empty, error, and partial-data states all need design decisions.
 - Accessibility is not optional — it is part of implementation correctness.
+- Anti-generic-AI aesthetics: if it looks like every other AI-generated landing page, redesign it. Reject generic system fonts, predictable purple gradients, and cookie-cutter layouts.
+- Distinctive design: intentional typography pairings, orchestrated motion, asymmetric spatial composition, and visual depth through gradients, textures, and layered effects.
 
 ## UX review lenses (Nielsen's heuristics — apply selectively)
 
@@ -75,7 +77,13 @@ Use this skill for **screens, flows, and implementation-ready UI guidance** — 
    - Interaction rules (hover, focus, active, disabled behaviors)
    - Animation notes (entrance, exit, transition — duration, easing, trigger)
 
-7. **Call out ambiguity** — Do not invent silent design decisions. Flag: "This mockup doesn't show the empty state — define it before building."
+7. **Design critique** — Evaluate mockups for usability issues, design system consistency, and visual distinctiveness. Flag generic or derivative designs.
+
+8. **UX writing** — Craft microcopy for UI elements: button labels, error messages, empty states, tooltips, confirmation dialogs, and onboarding copy. Voice and tone should match the product personality.
+
+9. **Accessibility audit** — Beyond the WCAG checks in step 5, run a structured audit: color contrast, keyboard navigation, screen reader flow, focus management, motion preferences, and form labeling. Use WCAG 2.1 AA as the minimum bar.
+
+10. **Call out ambiguity** — Do not invent silent design decisions. Flag: "This mockup doesn't show the empty state — define it before building."
 
 ## Guardrails
 

@@ -21,6 +21,8 @@ Use this skill when the goal is to **review** code (diffs, PRs, new modules, or 
 - Challenge: necessity, boundaries, error handling, security, observability, backwards compatibility, and rollout.
 - Prefer **strict** best practices in the form of **small, local improvements** that match existing project patterns.
 - **Major or cross-cutting changes** are reserved for clear triggers (repeated duplication across layers, wrong abstraction boundary, systemic security gap, unmaintainable coupling). State **why** a small fix is insufficient before recommending them.
+- Multi-perspective review: run separate passes for security, performance, correctness, and convention compliance rather than a single unstructured read.
+- Confidence scoring: assign each finding a 0–100 confidence score. Only block on findings above 80% confidence to reduce false positives and review noise.
 
 ## Severity scale
 
@@ -87,7 +89,9 @@ Use this skill when the goal is to **review** code (diffs, PRs, new modules, or 
    - Boilerplate that doesn't match the project's actual patterns
    - Inconsistent naming or style breaks within the same diff
 
-4. **Classify findings** — Assign each finding a severity label (P0–P3). Group by category if there are many.
+4. **Classify findings** — Assign each finding a severity label (P0–P3) and a confidence score (0–100). Group by category if there are many. Only post findings with confidence ≥ 80% by default.
+
+   **Optional MCP integration**: If CodeRabbit CLI is available, run `coderabbit:review` for AST-level static analysis (40+ analyzers). Merge its findings into your review with the same severity/confidence framework.
 
 5. **Recommend minimally** — For each issue, propose the **smallest** change that resolves it. If only a large refactor helps, label it **scope escalation**, give one concise rationale, and suggest **`bosskuai-code-revamp`** or a tracked follow-up — not a drive-by rewrite.
 

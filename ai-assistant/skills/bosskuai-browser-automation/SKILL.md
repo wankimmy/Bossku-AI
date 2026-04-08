@@ -25,6 +25,7 @@ description: Use this skill for browser-level testing, UI verification, automate
 | Tool | Role | Degradation |
 |------|------|-------------|
 | Playwright MCP | Browser automation (required) | Without Playwright MCP, provide script templates for manual execution; note Pencil is available in Cursor as an alternative |
+| Chrome DevTools MCP (Google) | Runtime inspection, performance profiling, network analysis, accessibility audits (optional) | Without DevTools MCP, use Playwright's built-in tracing and Lighthouse CLI as alternatives |
 
 Note: When working in Cursor, Pencil (Cursor's built-in browser tool) can substitute for Playwright MCP for inspection tasks. For headless scripting and CI, Playwright is required.
 
@@ -59,6 +60,16 @@ Choose one or more modes based on the task:
 3. Navigate and extract target data (pricing table, feature list, CTA copy).
 4. Store a timestamped snapshot for delta comparison.
 5. Output: extracted data, timestamp, diff from previous snapshot if available.
+
+### Mode 5 — DevTools Profiling (requires Chrome DevTools MCP)
+1. Open the target page in Chrome via DevTools MCP.
+2. Record a performance trace during the critical user action (page load, scroll, interaction).
+3. Capture memory snapshots to identify leaks or excessive allocations.
+4. Run Lighthouse audits (performance, accessibility, best practices, SEO).
+5. Inspect network waterfall for blocking resources, slow responses, or redundant requests.
+6. Check console for errors and warnings with source-mapped stack traces.
+7. Take responsive screenshots at mobile/tablet/desktop viewports.
+8. Output: performance metrics, Lighthouse scores, network waterfall summary, console errors, accessibility findings.
 
 ## Output format
 

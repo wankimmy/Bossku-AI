@@ -20,6 +20,7 @@ Use this skill when the right answer is bigger than a local patch but still need
 - The enemy of a good revamp is an all-at-once rewrite — prefer incremental slices with passing tests at each step.
 - Behavior preservation is non-negotiable. If a revamp changes observable behavior, it is no longer a refactor.
 - Every revamp needs a rollback path — if slice 3 of 5 breaks production, can you ship without it?
+- Simplification is the highest form of revamp — reduce cyclomatic complexity, eliminate dead code, and flatten deep nesting before restructuring.
 
 ## Is a revamp justified?
 
@@ -59,6 +60,7 @@ Apply this decision matrix before proposing structural changes:
 
 ## Workflow
 
+0. **Simplify first**: Before any structural revamp, run a simplification pass — remove dead code and unused imports, flatten nested conditionals (replace nested ternaries with early returns or switch statements), improve naming for clarity, and reduce nesting depth. If simplification alone resolves the problem, stop here.
 1. **Read first**: Use `bosskuai-codebase-analysis` to map the current structure before proposing any changes.
 2. **Separate local from structural**: Is this fixable with a 10-line change? If yes, it is not a revamp.
 3. **State the justification**: Name the concrete harm that the revamp will resolve (delivery blocked, safety risk, testability crisis).

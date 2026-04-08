@@ -59,15 +59,22 @@ Apply whichever are relevant:
 - Are ordering, replay, and deduplication expectations explicit?
 - Is signature verification or authenticity part of the contract?
 
+## MCP integrations
+
+| Tool | Role | Degradation |
+|------|------|-------------|
+| Postman MCP Server | Collection sync, client code generation, API discovery, mock servers, test execution, docs publishing, security audit | Without Postman MCP, work from OpenAPI specs and manual HTTP clients |
+
 ## Workflow
 
-1. **Read the current contract surface** — docs, OpenAPI, GraphQL schema, event schemas, handlers, and tests.
+1. **Read the current contract surface** — docs, OpenAPI, GraphQL schema, event schemas, handlers, and tests. If Postman MCP is available, sync collections to get the live contract state.
 2. **Model the domain objects and operations** — name the resources, actions, and key invariants.
 3. **Choose the contract style intentionally** — REST, GraphQL, command/event, or mixed. Match it to client needs and operational realities.
 4. **Design for evolution** — identify additive changes, breaking changes, deprecation path, and versioning strategy.
 5. **Design the unhappy paths** — auth failures, validation failures, conflicts, retries, timeouts, async completion, and rate limiting.
 6. **Check integrator ergonomics** — consistency, discoverability, pagination, filtering, webhook replays, examples, and field naming.
 7. **State the compatibility risks** — name what breaks existing consumers and what is safe to ship incrementally.
+8. **Validate with tooling** — If Postman MCP is available: sync the designed contract to a collection, generate mock servers for consumer testing, and run API test suites against the mock to verify contract correctness before implementation.
 
 ## Guardrails
 

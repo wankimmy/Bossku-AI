@@ -1,3 +1,8 @@
+---
+name: bosskuai-documentation-lookup
+description: Use this for version-specific framework or library documentation lookup through Context7, including API signatures, configuration options, breaking changes, and recently changed behavior.
+---
+
 # Documentation Lookup
 
 ## When to use

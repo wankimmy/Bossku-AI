@@ -1,3 +1,8 @@
+---
+name: bosskuai-rapid-prototype
+description: Use this for rapid prototypes, proof-of-concepts, demos, hackathon-style builds, MVP scaffolds, unfamiliar API experiments, explicit time-boxing, and prototype debt ledgers.
+---
+
 # Rapid Prototype
 
 ## When to use

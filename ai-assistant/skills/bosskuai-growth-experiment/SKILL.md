@@ -1,3 +1,8 @@
+---
+name: bosskuai-growth-experiment
+description: Use this for designing, sizing, running, and analyzing growth experiments, including A/B tests, channel tests, referral loops, onboarding tests, pricing tests, sample size, guardrails, and decision criteria.
+---
+
 # Growth Experiment
 
 ## When to use

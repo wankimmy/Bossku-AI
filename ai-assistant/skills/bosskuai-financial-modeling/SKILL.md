@@ -1,3 +1,8 @@
+---
+name: bosskuai-financial-modeling
+description: Use this for financial modeling, revenue projections, ARR/MRR forecasts, runway, burn rate, unit economics, pricing model math, scenarios, sensitivity analysis, month-end close, reconciliation, journal entries, and SOX-style controls.
+---
+
 # Financial Modeling
 
 ## When to use

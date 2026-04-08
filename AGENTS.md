@@ -7,15 +7,14 @@
 - [Entry points and intentional overlap](#entry-points-and-intentional-overlap)
 - [Model assignment (mandatory — applies to all tools)](#model-assignment-mandatory--applies-to-all-tools)
 - [Shared memory (mandatory — applies to all tools)](#shared-memory-mandatory--applies-to-all-tools)
+- [Token-efficient operating standard](#token-efficient-operating-standard)
 - [Task classifier (run first)](#task-classifier-run-first)
 - [Skill roster (when to use which)](#skill-roster-when-to-use-which)
 - [Quick reference: what to ask for](#quick-reference-what-to-ask-for)
 - [Optional phased pipelines](#optional-phased-pipelines)
 - [Proactive skill use](#proactive-skill-use)
-- [Subagent delegation](#subagent-delegation)
 - [Success criteria (done looks like)](#success-criteria-done-looks-like)
 - [Local skills](#local-skills)
-- [Local agents](#local-agents)
 - [Local memory](#local-memory)
 - [Learning promotion policy](#learning-promotion-policy)
 - [Working rules](#working-rules)
@@ -45,25 +44,21 @@ The **tool-neutral contract** for model phase split, shared memory, learning pro
 
 | Entry point | Role |
 |-------------|------|
-| **This file (`AGENTS.md`)** | Full skill roster, agent roster, quick reference, success criteria, working rules |
+| **This file (`AGENTS.md`)** | Full skill roster, quick reference, success criteria, working rules |
 | **`CLAUDE.md`** | Claude Code root; includes expanded **Definition of Done** checklist |
 | **`.cursor/rules/bosskuai.mdc`** | Cursor always-on rules; model split for Plan vs Composer |
 | **`.claude/rules/bosskuai.md`** | Claude rule mirror + links |
 | **`.codex/AGENTS.md`** | Codex-specific model names layered on the same behaviors |
-| **`agents/`** | 18 subagent definitions (Claude Code native; Codex & Cursor via role-adoption) |
-| **`mcp-configs/`** | MCP server templates for Playwright, Exa, Context7, Firecrawl, GitHub |
 
 **Definition of Done:** see **Success criteria** below and **`CLAUDE.md`** § Definition of Done for the full checkbox form. **Memory layout and promotion:** see `ai-assistant/references/adr/2026-03-30-memory-organization.md`. **Cross-tool read/write template:** `ai-assistant/references/memory-first-handoff-protocol.md`.
 
 ## Session Start Protocol (every new session — run once)
 
-1. Read `ai-assistant/memory/active-continuation.md` — if non-empty, state unfinished task, ask continue or new.
-2. Read `ai-assistant/memory/agent-profile.md`
-3. Read `ai-assistant/memory/project-understanding.md`
-4. Read last 1–3 entries of `ai-assistant/memory/learning-log.md`
-5. State: "Session started. Memory loaded: [files]. [No continuation | Unfinished: <goal> — continue or new?]"
+1. Read `ai-assistant/memory/active-continuation.md` — if it contains a real unfinished task, state that compactly and ask continue or new.
+2. Retrieve only the memory needed for the first user request. Use `agent-profile.md`, `project-understanding.md`, and recent `learning-log.md` entries when they are relevant; do not dump them into every prompt by default.
+3. In normal Execution mode, do not print a session-start banner. In Debug/Handoff mode, state a compact memory-loaded note.
 
-Per-turn enforcement: **Task Start Protocol** below.
+Per-turn behavior: use the sparse **Task Start Protocol** below.
 
 ## Model assignment (mandatory — applies to all tools)
 
@@ -76,8 +71,7 @@ Per-turn enforcement: **Task Start Protocol** below.
 | Cursor | Strongest available reasoning model | Fastest capable model |
 
 - **Never skip the planning phase** on meaningful tasks. Always plan first, then execute.
-- State the active model and phase at the start of each meaningful response.
-- If the active model is stuck, low-confidence, or missing a needed capability, load `cross-model-escalation` and bring in a better-fit helper model or tool surface before repeating the same failed path.
+- Track the active model and phase internally; state them to the user only when changing modes, debugging routing, resolving a multi-agent conflict, or handing off to another tool/session.
 - Quick/trivial tasks (single-line fixes, factual lookups) may skip the split.
 - Update model names in the relevant tool config when newer models are released.
 
@@ -86,13 +80,33 @@ Per-turn enforcement: **Task Start Protocol** below.
 - `ai-assistant/memory/` is **shared durable memory across all tools** — Claude, Codex, and Cursor.
 - Never treat memory as tool-local. What is written here must be usable by any tool in any session.
 - Memory files: `agent-profile.md`, `project-understanding.md`, `learning-log.md`, `bug-patterns.md`, `market-notes.md`, `active-continuation.md` (ephemeral handoffs only; clear when done).
-- **Canonical template:** `ai-assistant/references/memory-first-handoff-protocol.md` — read order, write order, `learning-log.md` fields, trivial exception, `FOR_NEXT_MODEL` block.
+- **Canonical template:** `ai-assistant/references/memory-first-handoff-protocol.md` — retrieval order, write threshold, compact `learning-log.md` fields, sparse reporting, `FOR_NEXT_MODEL` block.
 
 ### Memory-first protocol
 
-- **Read before act:** On each **user turn**, before substantive edits or repo-specific conclusions, follow the **read order** in `memory-first-handoff-protocol.md` (continuation → profile → project understanding → recent `learning-log` → task-specific memory). Not only “first session of the day.”
-- **Write before done:** On each **non-trivial** turn, before declaring done, persist a structured handoff per that protocol (usually append to `learning-log.md`). Another model or tool must be able to continue **without chat history**.
-- **Trivial exception:** Single-line fixes, pure lookups, or no-repo-impact Q&A — **no** required `learning-log` entry; end the reply with one explicit sentence that memory was intentionally unchanged (see protocol).
+- **Read before act:** Before substantive edits or repo-specific conclusions, retrieve the **minimum relevant memory** per `memory-first-handoff-protocol.md`. Prefer continuation state, recent handoff entries, and task-specific memory over dumping every memory file into context. Read broad profile/project files only when the task needs repo/product orientation or durable context might affect the answer.
+- **Write before done:** Persist memory only when the task creates a durable delta, a cross-tool handoff, or an importance score of **4/5 or higher** per the protocol. Batch memory writes at task completion instead of writing after every turn.
+- **Trivial/no-delta exception:** Single-line fixes, pure lookups, no-repo-impact Q&A, or meaningful work with no durable delta do **not** require a `learning-log.md` append. In normal execution mode, do not print a memory skip line unless the user asks for debug/protocol output.
+
+## Token-efficient operating standard
+
+Default to **Execution mode** unless the user asks for debugging, architecture rationale, or a handoff.
+
+| Mode | Use when | User-visible meta |
+|------|----------|-------------------|
+| **Execution** | Normal tasks, edits, reviews, Q&A | None unless memory was written or a blocker matters |
+| **Debug** | User asks for routing, protocol, memory, or model diagnostics | Compact tags or short protocol notes |
+| **Architect** | Strategy, architecture, or tradeoff-heavy decisions | Concise rationale, not full internal reasoning |
+| **Handoff** | Another model/tool/session must continue | Compact `FOR_NEXT_MODEL` or memory summary |
+
+Rules for token control:
+
+- Track task type, selected skill, model/phase, and memory status in the agent/controller layer; do not force the LLM to repeat them in every reply.
+- Use short status notes only when useful, e.g. `Memory updated: learning-log.md` or `[Debug: engineering-delivery/gpt-5.4]`.
+- Do not repeat static rules, personality, or long memory dumps in dynamic prompts. Cache static instructions where the runtime supports it.
+- Retrieve memory by relevance: top 3-5 chunks/files for the task, using filenames, keywords, or embeddings if an orchestrator provides retrieval.
+- Route to one model/tool by default. Use multi-model or parallel work only for independent workstreams, validation, or a clear capability gap.
+- Be concise by default. Explain reasoning when asked, when risk is high, or when a decision needs tradeoff clarity.
 
 ## Task classifier (run first)
 
@@ -102,7 +116,7 @@ Use this decision tree before loading any skill:
    - If the prompt contains the standalone word `bossku`, activate BosskuAI mode automatically for this request.
    - Then continue through the normal classifier so the right skills and rules are applied.
 2. **Scope gate**
-   - If task is meaningful/non-trivial: state planning phase + model, then classify.
+   - If task is meaningful/non-trivial: choose planning/execution mode internally, then classify.
    - If quick/trivial: proceed with minimal routing overhead.
 3. **Intent gate**
    - **Understand** (repo/project context) -> `project-understanding`
@@ -118,21 +132,19 @@ Use this decision tree before loading any skill:
 6. **Evidence gate**
    - Read relevant code/docs/specs before conclusions.
 7. **Output gate**
-   - Emit the **[TASK START] header** from § Task Start Protocol. The header IS the output.
-   - For **non-trivial** tasks: state which `ai-assistant/memory/` file(s) were updated (paths), **or** that memory was intentionally unchanged with a **one-line reason** (trivial / no durable delta only — not silent skip).
+   - In **Execution mode**, do not emit a boilerplate protocol header. Start with the useful answer or a short work update.
+   - In **Debug/Handoff mode**, emit compact routing details only when they help: memory read, skill(s), phase/model, and type.
+   - If memory was written, mention the path briefly. If memory was not written because there was no durable delta, stay silent unless in Debug mode.
 
-## Task Start Protocol (mandatory — every non-trivial response)
+## Task Start Protocol (sparse reporting)
 
-Before the first substantive sentence, emit:
+Do not spend tokens on this block during normal Execution mode. Track these fields internally in the agent/controller layer.
+
+When the user asks for protocol visibility, the task is a handoff, or routing is disputed, use the compact debug form:
 ```text
-[TASK START]
-Memory read: <files, or "trivial">
-Skill(s): <name + path, or "trivial">
-Phase: <Plan/Opus 4.6 | Execute/Sonnet 4.6 | Trivial>
-Type: <cluster/intent>
+[Route] memory=<files|none> skills=<names> phase=<plan|execute|trivial> type=<cluster/intent>
 ```
-The header IS the classifier output (Output gate step 7). Do not describe classification — emit the header.
-Trivial tasks: emit with "trivial" in all fields.
+For trivial tasks, skip the route line entirely unless the user asks for it.
 
 ## Skill roster (when to use which)
 
@@ -143,25 +155,37 @@ Classify into a **role cluster** first, then choose the minimum skill set. This 
 | **Orchestration** | workspace-assistant | Repo discovery, cross-cutting work, and router/meta coordination |
 | **Orchestration** | project-understanding | Source-of-truth map, architecture context, and durable project understanding |
 | **Orchestration** | search-first | Check repo/tool-native options before custom building |
+| **Orchestration** | documentation-lookup | Fetch current framework/library docs through Context7 before version-sensitive guidance |
+| **Orchestration** | deep-research | Multi-source research, due diligence, and evidence synthesis with citations |
 | **Orchestration** | skill-stocktake | Audit skills/commands/rules for overlap and maintenance quality |
+| **Orchestration** | skill-creator | Create, evaluate, improve, or benchmark BosskuAI skills |
 | **Orchestration** | rules-distill | Promote repeated principles into stronger shared rules |
 | **Orchestration** | continuous-learning | Promote durable learnings into memory/checklists/pitfalls/playbooks |
 | **Orchestration** | subagent-delegation | Split heavy, parallel, or risky workstreams before context overload |
-| **Orchestration** | cross-model-escalation | If the current model is stuck, low-confidence, or missing a capability, pull in another model or tool surface with a scoped assist request |
+| **Orchestration** | claude-md-management | Audit and maintain `CLAUDE.md`, Claude rules, commands, and session-learning capture |
+| **Orchestration** | claude-code-setup | Recommend Claude Code setup across MCPs, hooks, commands, skills, and permissions |
+| **Orchestration** | cross-model-escalation | Bring in another model/tool/session when the current one is stuck or low-confidence |
 | **Product** | product-strategy | Product framing, scope, requirements, and prioritization |
+| **Product** | customer-discovery | User interviews, surveys, transcript analysis, and persona building |
 | **Product** | analytics-metrics | Funnel/KPI instrumentation and measurable decision design |
 | **Product** | planning-execution | Strategy sequencing plus delivery tracking, milestones, dependencies, ownership |
+| **Product** | financial-modeling | Revenue projections, unit economics, pricing math, runway, reconciliation, and controls |
 | **Product** | launch-commercialization | End-to-end launch readiness across product, engineering, and business |
+| **Product** | operations | Vendor management, SOPs, change management, capacity planning, and operating cadence |
 | **Engineering** | engineering-delivery | Plan-first implementation with test-guided verification |
+| **Engineering** | rapid-prototype | Fast proof-of-concepts, demos, MVP scaffolds, and prototype debt ledgers |
+| **Engineering** | github-workflow | GitHub issues, PRs, Actions, releases, Dependabot, and repo workflow operations |
 | **Engineering** | devops-iac | CI/CD, infra-as-code, runtime reliability, rollback and secrets posture |
+| **Engineering** | mongodb | MongoDB collection design, indexes, aggregation, migrations, and operational checks |
+| **Engineering** | nuxt-development | Nuxt 3/4 implementation and audit guidance grounded in current docs |
 | **Engineering** | codebase-analysis | Evidence-based execution-path and module-boundary analysis |
 | **Engineering** | code-revamp | Safe modernization and legacy structural cleanup |
 | **Engineering** | coding-best-practices | Implementation quality, maintainability, and testing posture |
-| **Engineering** | nuxt-development | Expert Nuxt 4.x development, code auditing, and best-practice guidance grounded in official docs |
 | **Engineering** | polyglot-engineering | Stack-specific guidance across languages and frameworks |
 | **Engineering** | performance-profiling | CPU/memory profiling, bottleneck diagnosis, query optimization, caching, flame graph interpretation |
 | **Engineering** | integration-testing | Integration test design, contract testing (CDC/Pact), test doubles, fixture management, seam coverage |
 | **Engineering** | incident-response | Severity classification, on-call coordination, stabilization, timeline reconstruction, blameless postmortem |
+| **Engineering** | browser-automation | Browser-level testing, UI verification, JavaScript-rendered scraping, and user-flow automation |
 | **Design** | ui-ux-design-to-code | UX/UI quality, accessibility, design systems, and design-to-code guidance |
 | **Design** | i18n-l10n | Internationalization, localization workflows, and RTL/expansion readiness |
 | **Design** | 3d-web-development | WebGL/Three.js/R3F immersive web experience delivery |
@@ -175,20 +199,14 @@ Classify into a **role cluster** first, then choose the minimum skill set. This 
 | **Architecture** | api-design | API/event contract design, versioning, errors, and integrator ergonomics |
 | **Architecture** | data-architecture | Data modeling, migrations, analytics pipelines, retention/correctness tradeoffs |
 | **Growth** | market-analysis | Competitive context, demand signals, positioning, and market opportunity |
+| **Growth** | competitor-intelligence | Structured competitor tracking across features, pricing, messaging, hiring, and strategy |
 | **Growth** | marketing-growth | GTM/channels/messaging/growth loops plus social content calendar planning |
+| **Growth** | growth-experiment | A/B tests, channel tests, referral loops, sample sizing, guardrails, and experiment decisions |
 | **Growth** | paid-acquisition-monetization | Paid channels, CAC logic, pricing, packaging, monetization planning |
 | **Growth** | seo-geo | SEO/GEO discoverability and search/generative answerability |
+| **Growth** | investor-prep | Pitch decks, one-pagers, investor memos, financial models, and accelerator applications |
 | **Growth** | sales-strategy | ICP, pipeline strategy, objections, and conversion narrative |
-| **Growth** | deep-research | Multi-source web investigation with source attribution and confidence-rated synthesis |
-| **Growth** | competitor-intelligence | Automated competitor tracking — pricing, features, hiring, funding, messaging changes |
-| **Growth** | growth-experiment | A/B test design, channel experiments, hypothesis-driven growth validation with sample sizes |
-| **Growth** | lead-intelligence | Lead discovery, signal scoring, warm-path identification, personalized outreach drafts |
-| **Product** | investor-prep | Pitch decks, investor memos, one-pagers, financial models, accelerator applications |
-| **Product** | customer-discovery | User interviews, survey design, transcript analysis, persona + JTBD synthesis |
-| **Product** | financial-modeling | Revenue projections, unit economics, burn/runway, pricing model design, scenario planning |
-| **Engineering** | browser-automation | Browser QA, competitor site monitoring, visual regression, Playwright or Pencil (Cursor) |
-| **Engineering** | rapid-prototype | Time-boxed MVPs and POCs with explicit tech-debt ledger; never ship without engineering-delivery review |
-| **Orchestration** | documentation-lookup | Live framework/library docs via Context7 MCP — version-specific APIs and config, not training data |
+| **Growth** | lead-intelligence | Prospect, investor, customer, partner, or press lead discovery and qualification |
 | **Continuation** | context-limit-continuation | Safe handoff under context/usage pressure + next-session guidance |
 | **Continuation** | ai-model-selection | Model recommendation by capability, speed, cost, risk, and modality |
 
@@ -198,15 +216,29 @@ Classify into a **role cluster** first, then choose the minimum skill set. This 
 |-----------|------------------------|------------------------|
 | New repo or unclear context | "Use project understanding first" / "Understand this codebase" | project-understanding, workspace-assistant |
 | Research existing options before building | "Search first" / "Check if we already have this" | search-first, codebase-analysis |
+| Verify framework/library behavior | "Check current docs" / "Look up the API signature" | documentation-lookup, polyglot-engineering |
+| Deep research or due diligence | "Research this deeply" / "Compare evidence from sources" | deep-research, market-analysis |
 | Audit the assistant setup itself | "Run a skill stocktake" / "Audit our skills and commands" | skill-stocktake, workspace-assistant |
+| Create or improve a skill | "Create a BosskuAI skill" / "Benchmark this skill" | skill-creator, skill-stocktake |
+| Claude instruction hygiene | "Audit CLAUDE.md" / "Clean up Claude rules" | claude-md-management, rules-distill |
+| Claude Code setup | "Recommend Claude Code setup" / "Review MCPs and hooks" | claude-code-setup, agent-security-hardening |
 | Promote repeated lessons into rules | "Distill the rules" / "What should become a shared rule?" | rules-distill, workspace-assistant |
 | Capture and promote learnings | "Run continuous learning" / "What should we promote from this work?" | continuous-learning, workspace-assistant |
+| Current model is stuck | "Escalate to another model" / "Get a second model opinion" | cross-model-escalation, ai-model-selection |
+| Customer interviews or personas | "Plan discovery interviews" / "Analyze these transcripts" | customer-discovery, product-strategy |
 | Shape product or scope | "Work as product strategist" / "Tighten this spec" | product-strategy |
 | Product instrumentation or KPIs | "Design the metrics" / "Define funnel guardrails" | analytics-metrics, product-strategy |
 | Plan roadmap and execution tracking | "Create a 90-day plan and owners" / "Build milestone plan and dependencies" | planning-execution |
+| Financial model or runway | "Model runway" / "Build bear-base-bull scenarios" | financial-modeling, paid-acquisition-monetization |
+| Operations or SOP design | "Create the vendor process" / "Write the capacity planning flow" | operations, planning-execution |
+| Fast proof-of-concept | "Prototype this quickly" / "Build a demo by tomorrow" | rapid-prototype, engineering-delivery |
 | Build a feature | "Plan then implement" / "Use engineering delivery" | engineering-delivery, coding-best-practices |
+| GitHub issues, PRs, Actions, releases | "Draft this PR" / "Investigate the failing Action" | github-workflow, engineering-delivery |
+| Nuxt app work | "Audit this Nuxt page" / "Build this in Nuxt" | nuxt-development, ui-ux-design-to-code |
 | API contract or webhook design | "Design this API" / "How should we version this?" | api-design, software-architecture |
 | CI/CD, containers, or infra | "Review our pipeline" / "Design deploy flow" | devops-iac, engineering-delivery, cybersecurity-risk |
+| MongoDB schema or query work | "Review this collection design" / "Optimize this aggregation" | mongodb, data-architecture |
+| Browser automation or UI smoke tests | "Test this flow in the browser" / "Scrape this JS-rendered page" | browser-automation, integration-testing |
 | Performance profiling or bottleneck diagnosis | "Profile this slow endpoint" / "Find the memory leak" | performance-profiling, data-architecture |
 | Integration test design or contract testing | "Design the integration test layer" / "Set up CDC tests" | integration-testing, engineering-delivery |
 | Active incident or postmortem | "We have a P1" / "Run a blameless postmortem" | incident-response, bug-finding |
@@ -220,20 +252,12 @@ Classify into a **role cluster** first, then choose the minimum skill set. This 
 | Architecture or boundaries | "Review system boundaries and tradeoffs" | software-architecture |
 | Refactor or modernize | "Safe code revamp" / "Modernize with minimal churn" | code-revamp, codebase-analysis |
 | Market/GTM/content/paid/sales | "GTM strategy and growth plan" / "Content calendar and paid plan" | marketing-growth, paid-acquisition-monetization, sales-strategy, seo-geo |
-| Current model is stuck or needs a second opinion | "Get another model to help" / "Escalate this to a stronger model" | cross-model-escalation, ai-model-selection |
+| Competitor tracking | "Track these competitors" / "Build a competitor matrix" | competitor-intelligence, market-analysis |
+| Growth experiment | "Design an A/B test" / "Size this channel experiment" | growth-experiment, analytics-metrics |
+| Investor materials | "Prepare an investor memo" / "Review this pitch deck" | investor-prep, financial-modeling |
+| Lead list or prospecting | "Find leads for this ICP" / "Qualify this account list" | lead-intelligence, sales-strategy |
 | Context limit / handoff | "Summarize continuation state" / "Which model next?" | context-limit-continuation, ai-model-selection |
 | Heavy parallel or risky scope | "Delegate to subagents" / "Run workstreams in parallel" | subagent-delegation, workspace-assistant |
-| Research a topic with citations | "Deep research on X" / "Investigate Y in depth" | deep-research, market-analysis |
-| Track competitors | "Competitor intelligence update" / "What is [company] doing?" | competitor-intelligence, market-analysis |
-| Browser QA or monitoring | "Run browser QA" / "Check competitor site" | browser-automation |
-| Prepare for investors | "Build pitch deck" / "Write investor memo" | investor-prep, financial-modeling |
-| Talk to users / analyze interviews | "Plan user interviews" / "Analyze these transcripts" | customer-discovery, product-strategy |
-| Revenue model or runway | "Build revenue forecast" / "How long is our runway?" | financial-modeling, planning-execution |
-| Design a growth experiment | "Design an A/B test" / "How do we test this growth idea?" | growth-experiment, analytics-metrics |
-| Quick prototype or POC | "Build a quick POC" / "Prototype this idea" | rapid-prototype |
-| Library or framework docs | "How do I configure X?" / "What is the Y API?" | documentation-lookup |
-| Nuxt development or audit | "Build this Nuxt page" / "Audit this Nuxt app" | nuxt-development, documentation-lookup |
-| Find leads or prospects | "Build outreach list" / "Find potential investors" | lead-intelligence, sales-strategy |
 
 ## Optional phased pipelines
 
@@ -241,11 +265,11 @@ For larger efforts you can run the assistant in a phase-aware way. The assistant
 
 | Phase | Focus | Skills to lean on |
 |-------|--------|-------------------|
-| **Discovery** | What we're building, for whom, evidence | project-understanding, product-strategy, market-analysis |
-| **Strategy** | Roadmap, scope, priorities, ownership | planning-execution, software-architecture, api-design, data-architecture, analytics-metrics |
-| **Build** | Implementation with quality gates | engineering-delivery, devops-iac, ui-ux-design-to-code, i18n-l10n, 3d-web-development, coding-best-practices, bug-finding, rigorous-code-review, performance-profiling, integration-testing |
-| **Harden** | Security, logic, readiness | cybersecurity-risk, legal-compliance, business-logic-review, agent-security-hardening, incident-response |
-| **Launch** | Readiness, GTM, PMF signals | launch-commercialization, seo-geo, **Growth**: marketing-growth, paid-acquisition-monetization; **Sales**: sales-strategy |
+| **Discovery** | What we're building, for whom, evidence | project-understanding, customer-discovery, deep-research, product-strategy, market-analysis, competitor-intelligence, claude-code-setup |
+| **Strategy** | Roadmap, scope, priorities, ownership | planning-execution, operations, financial-modeling, investor-prep, software-architecture, api-design, data-architecture, analytics-metrics |
+| **Build** | Implementation with quality gates | engineering-delivery, rapid-prototype, github-workflow, mongodb, nuxt-development, browser-automation, devops-iac, ui-ux-design-to-code, i18n-l10n, 3d-web-development, coding-best-practices, bug-finding, rigorous-code-review, performance-profiling, integration-testing, skill-creator |
+| **Harden** | Security, logic, readiness | cybersecurity-risk, legal-compliance, business-logic-review, agent-security-hardening, incident-response, claude-md-management, cross-model-escalation |
+| **Launch** | Readiness, GTM, PMF signals | launch-commercialization, seo-geo, **Growth**: marketing-growth, growth-experiment, paid-acquisition-monetization, lead-intelligence; **Sales**: sales-strategy |
 
 When the user says e.g. "We're in the build phase" or "Run the launch checklist", prefer the skills for that phase and any cross-cutting rules (plan-first, model recommendation, verification).
 
@@ -253,75 +277,29 @@ When the user says e.g. "We're in the build phase" or "Run the launch checklist"
 
 Use the right skill without the user having to ask, grouped by role cluster:
 
-- **Orchestration**: unfamiliar codebase -> `project-understanding`; new utility/dependency/integration -> `search-first`; skills/rules sprawl -> `skill-stocktake` or `rules-distill`; post-meaningful task -> `continuous-learning`; heavy parallel/risky scope -> `subagent-delegation`; stuck/low-confidence/model mismatch -> `cross-model-escalation` + `ai-model-selection`.
-- **Product**: roadmap/prioritization/owner or milestone drift -> `planning-execution`; funnels/KPIs/experiments -> `analytics-metrics`; launch-readiness framing -> `launch-commercialization`.
-- **Engineering**: complex implementation/refactor -> `engineering-delivery`; CI/CD/container/infra changes -> `devops-iac`; schema/migration/warehouse/data pipeline work -> `data-architecture`; structural cleanup -> `code-revamp`; performance/bottleneck/profiling work -> `performance-profiling`; integration test layer or contract test design -> `integration-testing`; P1/P2 production incident or postmortem -> `incident-response`.
+- **Orchestration**: unfamiliar codebase -> `project-understanding`; current docs/API behavior -> `documentation-lookup`; deep evidence synthesis -> `deep-research`; new utility/dependency/integration -> `search-first`; new/evaluated skill -> `skill-creator`; skills/rules sprawl -> `skill-stocktake` or `rules-distill`; Claude instructions -> `claude-md-management`; Claude Code MCP/hooks/config -> `claude-code-setup`; current model stuck -> `cross-model-escalation`; post-meaningful durable lesson -> `continuous-learning`; heavy parallel/risky scope -> `subagent-delegation`.
+- **Product**: customer research/interviews -> `customer-discovery`; roadmap/prioritization/owner or milestone drift -> `planning-execution`; vendor/process/change/capacity work -> `operations`; financial model/runway/pricing math -> `financial-modeling`; funnels/KPIs/experiments -> `analytics-metrics`; launch-readiness framing -> `launch-commercialization`.
+- **Engineering**: fast demo/POC -> `rapid-prototype`; complex implementation/refactor -> `engineering-delivery`; GitHub issues/PRs/Actions/releases -> `github-workflow`; browser testing/JS-rendered scraping -> `browser-automation`; CI/CD/container/infra changes -> `devops-iac`; MongoDB collection/query/migration work -> `mongodb`; Nuxt app work -> `nuxt-development`; schema/migration/warehouse/data pipeline work -> `data-architecture`; structural cleanup -> `code-revamp`; performance/bottleneck/profiling work -> `performance-profiling`; integration test layer or contract test design -> `integration-testing`; P1/P2 production incident or postmortem -> `incident-response`.
 - **Design**: UI quality/accessibility -> `ui-ux-design-to-code`; multilingual/locale/RTL risks -> `i18n-l10n`; 3D/WebGL/immersive experiences -> `3d-web-development`.
 - **Security**: auth/billing/external API/input trust boundaries -> `cybersecurity-risk`; agent workspace/integration/memory safety -> `agent-security-hardening`; consent/retention/vendor/policy concerns -> `legal-compliance`.
 - **Quality**: code changed -> `rigorous-code-review` plus `bug-finding` as needed; strict skeptical review requested -> `rigorous-code-review`; incidents requiring DB/log/queue/webhook correlation -> `bug-finding` deep investigation mode with `business-logic-review` when invariants are involved.
 - **Architecture**: API/events/contracts -> `api-design` + `software-architecture`; major boundary/tradeoff changes -> `software-architecture`.
-- **Growth**: market/positioning uncertainty -> `market-analysis`; GTM/channels/content calendar -> `marketing-growth`; paid/CAC/pricing strategy -> `paid-acquisition-monetization`; discoverability/search answerability -> `seo-geo`; revenue motion/objections -> `sales-strategy`; multi-source research needed -> `deep-research`; competitor tracking cadence -> `competitor-intelligence`; experiment design -> `growth-experiment`; lead prospecting -> `lead-intelligence`.
-- **Startup/Cofounder**: investor ask or pitch material -> `investor-prep`; user interview or persona work -> `customer-discovery`; runway or projection question -> `financial-modeling`; browser testing or competitor scraping -> `browser-automation`; rapid MVP needed -> `rapid-prototype`; library API question -> `documentation-lookup`.
+- **Growth**: market/positioning uncertainty -> `market-analysis`; competitor tracking -> `competitor-intelligence`; GTM/channels/content calendar -> `marketing-growth`; growth test design -> `growth-experiment`; paid/CAC/pricing strategy -> `paid-acquisition-monetization`; investor materials -> `investor-prep`; prospect discovery -> `lead-intelligence`; discoverability/search answerability -> `seo-geo`; revenue motion/objections -> `sales-strategy`.
 - **Continuation**: context/token/usage pressure -> `context-limit-continuation` + `ai-model-selection`, update `active-continuation.md`, continue in a fresh session.
 
 For independent sub-tasks (e.g. security pass + business-logic pass), use multiple perspectives in sequence or in parallel where the tool allows; call out each lens and its findings.
-
-## Subagent delegation
-
-Delegate to agents in `agents/` when any of these conditions are true:
-
-- Task has ≥5 independent files or ≥2 parallel workstreams
-- Research task requiring live web search (market-researcher, competitor-tracker)
-- Code review requested (code-reviewer + security-reviewer in parallel)
-- Build is broken (build-fixer)
-- Feature implementation (planner first, then tdd-guide for execution)
-- Test user flows or competitor sites (browser-agent, e2e-runner)
-- Rapid prototype needed (prototype-builder)
-- Lead discovery or financial modeling (lead-finder, financial-analyst)
-
-### Agent roster
-
-| Agent | Model | Type | Purpose |
-|-------|-------|------|---------|
-| `planner` | opus | read-only | Implementation planning — auto-activate on feature requests and ≥3-file changes |
-| `code-reviewer` | opus | read-only | Code quality and maintainability — auto-activate after implementation |
-| `security-reviewer` | opus | read-only | Vulnerability detection — auto-activate on security-sensitive changes |
-| `build-fixer` | sonnet | write | Resolve build/type/dependency errors |
-| `refactor-cleaner` | sonnet | write | Dead code removal, duplication cleanup |
-| `doc-updater` | sonnet | write | Keep docs and README in sync with code |
-| `market-researcher` | opus | read-only | Multi-source market research via Exa + Firecrawl MCP |
-| `competitor-tracker` | opus | read-only | Competitor monitoring — pricing, features, hiring, funding |
-| `financial-analyst` | opus | read-only | Revenue models, unit economics, runway, scenario planning |
-| `growth-experimenter` | opus | read-only | Rigorous experiment design with sample sizes and decision criteria |
-| `lead-finder` | opus | read-only | Lead discovery, signal scoring, outreach drafts (never auto-sends) |
-| `customer-researcher` | opus | read-only | User interview analysis, persona building, JTBD mapping |
-| `browser-agent` | sonnet | write | Browser automation via Playwright (Claude/Codex) or Pencil (Cursor) |
-| `prototype-builder` | sonnet | write | Time-boxed POC builds with explicit tech-debt ledger |
-| `tdd-guide` | sonnet | write | Test-driven development RED/GREEN/REFACTOR workflow |
-| `e2e-runner` | sonnet | write | End-to-end user journey tests via Playwright |
-| `docs-lookup` | sonnet | read-only | Live framework/library docs via Context7 MCP |
-| `harness-optimizer` | opus | read-only | Audit bosskuAI config — skills, hooks, MCP health, memory hygiene |
-
-**Cross-tool model mapping:**
-
-| bosskuAI agent model | Claude Code | Codex | Cursor |
-|---------------------|-------------|-------|--------|
-| `opus` | claude-opus-4-6 | gpt-5.4 | Strongest available (Opus 4.6/GPT-5.4/Gemini Pro 3.1) |
-| `sonnet` | claude-sonnet-4-6 | gpt-5.4-mini | Cursor Composer 2 |
-
-For Cursor: no native agent spawning — Composer adopts the agent's role, process, and output format from `agents/<name>.md`. For Codex: reference `agents/` directory from `.codex/AGENTS.md` with model remapping.
 
 ## Success criteria (done looks like)
 
 Before considering a meaningful task done:
 
-- Plan and model recommendation were stated (for non-trivial work).
+- Plan and model recommendation were made internally; state them only when useful, requested, risky, or during handoff/debug mode.
 - Evidence was read (code, docs, or specs); conclusions are not from guesswork.
 - Verification was done (tests, diff review, or explicit verification steps).
 - No critical security, business-logic, or product assumptions left unconfirmed; if something is inferred, say so and note confidence.
 - Learning was promoted to the right place (memory, checklist, pitfall, playbook, or skill) when applicable.
-- **Memory gate:** Shared memory was updated per `memory-first-handoff-protocol.md` **or** the final reply explicitly states **no repo memory update** with a valid trivial/no-durable-delta reason — never silent skip.
-- Shared memory and continuation state were left fresher than they were before the task started **when non-trivial** (or explicitly unchanged per protocol).
+- **Memory gate:** Shared memory was updated per `memory-first-handoff-protocol.md` only when the durable-delta threshold is met; otherwise no visible skip line is required in Execution mode.
+- Shared memory and continuation state were left fresher than they were before the task started **when durable context or handoff state changed**.
 
 ## Local skills
 
@@ -332,17 +310,29 @@ Before considering a meaningful task done:
 | `bosskuai-workspace-assistant` | `ai-assistant/skills/bosskuai-workspace-assistant/SKILL.md` |
 | `bosskuai-project-understanding` | `ai-assistant/skills/bosskuai-project-understanding/SKILL.md` |
 | `bosskuai-search-first` | `ai-assistant/skills/bosskuai-search-first/SKILL.md` |
+| `bosskuai-documentation-lookup` | `ai-assistant/skills/bosskuai-documentation-lookup/SKILL.md` |
+| `bosskuai-deep-research` | `ai-assistant/skills/bosskuai-deep-research/SKILL.md` |
 | `bosskuai-skill-stocktake` | `ai-assistant/skills/bosskuai-skill-stocktake/SKILL.md` |
+| `bosskuai-skill-creator` | `ai-assistant/skills/bosskuai-skill-creator/SKILL.md` |
 | `bosskuai-rules-distill` | `ai-assistant/skills/bosskuai-rules-distill/SKILL.md` |
 | `bosskuai-continuous-learning` | `ai-assistant/skills/bosskuai-continuous-learning/SKILL.md` |
 | `bosskuai-subagent-delegation` | `ai-assistant/skills/bosskuai-subagent-delegation/SKILL.md` |
+| `bosskuai-claude-md-management` | `ai-assistant/skills/bosskuai-claude-md-management/SKILL.md` |
+| `bosskuai-claude-code-setup` | `ai-assistant/skills/bosskuai-claude-code-setup/SKILL.md` |
 | `bosskuai-cross-model-escalation` | `ai-assistant/skills/bosskuai-cross-model-escalation/SKILL.md` |
 | `bosskuai-product-strategy` | `ai-assistant/skills/bosskuai-product-strategy/SKILL.md` |
+| `bosskuai-customer-discovery` | `ai-assistant/skills/bosskuai-customer-discovery/SKILL.md` |
 | `bosskuai-analytics-metrics` | `ai-assistant/skills/bosskuai-analytics-metrics/SKILL.md` |
 | `bosskuai-planning-execution` | `ai-assistant/skills/bosskuai-planning-execution/SKILL.md` |
+| `bosskuai-financial-modeling` | `ai-assistant/skills/bosskuai-financial-modeling/SKILL.md` |
 | `bosskuai-launch-commercialization` | `ai-assistant/skills/bosskuai-launch-commercialization/SKILL.md` |
+| `bosskuai-operations` | `ai-assistant/skills/bosskuai-operations/SKILL.md` |
 | `bosskuai-engineering-delivery` | `ai-assistant/skills/bosskuai-engineering-delivery/SKILL.md` |
+| `bosskuai-rapid-prototype` | `ai-assistant/skills/bosskuai-rapid-prototype/SKILL.md` |
+| `bosskuai-github-workflow` | `ai-assistant/skills/bosskuai-github-workflow/SKILL.md` |
 | `bosskuai-devops-iac` | `ai-assistant/skills/bosskuai-devops-iac/SKILL.md` |
+| `bosskuai-mongodb` | `ai-assistant/skills/bosskuai-mongodb/SKILL.md` |
+| `bosskuai-nuxt-development` | `ai-assistant/skills/bosskuai-nuxt-development/SKILL.md` |
 | `bosskuai-ui-ux-design-to-code` | `ai-assistant/skills/bosskuai-ui-ux-design-to-code/SKILL.md` |
 | `bosskuai-i18n-l10n` | `ai-assistant/skills/bosskuai-i18n-l10n/SKILL.md` |
 | `bosskuai-3d-web-development` | `ai-assistant/skills/bosskuai-3d-web-development/SKILL.md` |
@@ -359,15 +349,19 @@ Before considering a meaningful task done:
 | `bosskuai-code-revamp` | `ai-assistant/skills/bosskuai-code-revamp/SKILL.md` |
 | `bosskuai-coding-best-practices` | `ai-assistant/skills/bosskuai-coding-best-practices/SKILL.md` |
 | `bosskuai-context-limit-continuation` | `ai-assistant/skills/bosskuai-context-limit-continuation/SKILL.md` |
-| `bosskuai-nuxt-development` | `ai-assistant/skills/bosskuai-nuxt-development/SKILL.md` |
 | `bosskuai-polyglot-engineering` | `ai-assistant/skills/bosskuai-polyglot-engineering/SKILL.md` |
 | `bosskuai-performance-profiling` | `ai-assistant/skills/bosskuai-performance-profiling/SKILL.md` |
 | `bosskuai-integration-testing` | `ai-assistant/skills/bosskuai-integration-testing/SKILL.md` |
 | `bosskuai-incident-response` | `ai-assistant/skills/bosskuai-incident-response/SKILL.md` |
+| `bosskuai-browser-automation` | `ai-assistant/skills/bosskuai-browser-automation/SKILL.md` |
 | `bosskuai-market-analysis` | `ai-assistant/skills/bosskuai-market-analysis/SKILL.md` |
+| `bosskuai-competitor-intelligence` | `ai-assistant/skills/bosskuai-competitor-intelligence/SKILL.md` |
 | `bosskuai-marketing-growth` | `ai-assistant/skills/bosskuai-marketing-growth/SKILL.md` |
+| `bosskuai-growth-experiment` | `ai-assistant/skills/bosskuai-growth-experiment/SKILL.md` |
 | `bosskuai-paid-acquisition-monetization` | `ai-assistant/skills/bosskuai-paid-acquisition-monetization/SKILL.md` |
+| `bosskuai-investor-prep` | `ai-assistant/skills/bosskuai-investor-prep/SKILL.md` |
 | `bosskuai-sales-strategy` | `ai-assistant/skills/bosskuai-sales-strategy/SKILL.md` |
+| `bosskuai-lead-intelligence` | `ai-assistant/skills/bosskuai-lead-intelligence/SKILL.md` |
 | `bosskuai-seo-geo` | `ai-assistant/skills/bosskuai-seo-geo/SKILL.md` |
 | `bosskuai-ai-model-selection` | `ai-assistant/skills/bosskuai-ai-model-selection/SKILL.md` |
 
@@ -380,9 +374,9 @@ Deprecated alias skills (routing compatibility only):
 ## Local memory
 
 - Memory lives under `ai-assistant/memory/`.
-- Follow **`ai-assistant/references/memory-first-handoff-protocol.md`** for **which** files to read per turn and **how** to append handoffs.
-- Default handoff vehicle for “next model picks up” is **`learning-log.md`** (dated sections); use `project-understanding.md` / `agent-profile.md` when durable product or stack facts change.
-- Update memory only with durable findings (no secrets, no one-off debug chatter).
+- Follow **`ai-assistant/references/memory-first-handoff-protocol.md`** for **which** files to retrieve and **when** to append handoffs.
+- Default handoff vehicle for “next model picks up” is **`learning-log.md`** (dated sections) only when continuation or durable learning exists; use `project-understanding.md` / `agent-profile.md` when durable product or stack facts change.
+- Update memory only with durable findings scoring **4/5 or higher** (no secrets, no one-off debug chatter).
 - Use `ai-assistant/memory/agent-profile.md` to customize this starter for a specific company, product, or industry.
 - Use `ai-assistant/memory/project-understanding.md` to preserve durable knowledge about what a repo or product is actually about after reading the source.
 
@@ -391,7 +385,7 @@ Deprecated alias skills (routing compatibility only):
 - Treat improvement as deliberate promotion, not note accumulation.
 - Treat `ai-assistant/memory/` as shared durable memory for all supported tool surfaces, not only one assistant.
 - Use memory for durable facts, conventions, and stable recurring patterns.
-- After meaningful work, use `bosskuai-continuous-learning` or an equivalent explicit promotion pass before leaving the lesson only in chat history.
+- After meaningful work, use `bosskuai-continuous-learning` or an equivalent explicit promotion pass **only when a durable lesson likely exists**; do not run promotion ceremony for no-delta work.
 - If repeated usage reveals a missing reusable capability, automatically create or update the appropriate skill, checklist, playbook, pitfall, or rule instead of leaving the learning only in memory.
 - If a failure mode appears more than once, promote it into a checklist or pitfall.
 - If a workflow proves reusable, promote it into a playbook or skill.
@@ -399,19 +393,20 @@ Deprecated alias skills (routing compatibility only):
 - Use `ai-assistant/references/checklists/learning-promotion-checklist.md` to decide where a learning belongs.
 - Run `bash ./ai-assistant/scripts/learning-doctor.sh` periodically or before large maintenance passes to catch stale memory, contradictory counts, and consumed continuation state.
 
-### Post-task [TASK END] block (mandatory)
+### Post-task reporting (sparse)
 
-Emit before the final sentence of every non-trivial task:
+Do not emit a full `[TASK END]` block in normal Execution mode. Use one short line only when memory or learning changed:
 ```text
-[TASK END]
-Meaningful: <yes|no>
-Memory: <paths updated, or "none">
-Learning: <artifact+path, or "deferred: reason">
+Memory updated: <path> — <one-line reason>
+```
+
+Use the full debug block only in Debug/Handoff mode:
+```text
+[Done] meaningful=<yes|no> memory=<paths|none> learning=<artifact|deferred: reason>
 ```
 
 **Meaningful = yes** if ANY: file changed / decision made / bug found / skill applied non-generically / pattern 2+ times / gap surfaced.
-**Meaningful = no** only if ALL: no files + no repo conclusion + pure lookup.
-Silent skips are protocol violations. Trivial tasks emit `Meaningful: no`.
+**Durable memory write = yes** only if the work produced a 4/5+ durable learning, changed project/product context, or requires another model/tool to continue.
 
 ## Working rules
 
@@ -441,7 +436,7 @@ Please answer: 1-yes/no  2-A/B/C  3-yes/no
 - Identify the real task type using the Skill roster table above. Do not re-enumerate task types here — see § Skill roster.
 - Use the minimum set of relevant skills instead of loading everything.
 - Default to plan mode first for meaningful tasks before implementation, major recommendations, or irreversible decisions.
-- Before executing a meaningful task, recommend the most suitable AI model for that task by concrete model name if possible in the current tool, and explain the tradeoff briefly.
+- Before executing a meaningful task, choose the most suitable AI model for that task internally; explain the model tradeoff only when requested, risky, or handing off.
 - If the repository or product context is still unclear, use project understanding first before loading narrower expert skills.
 - Read the nearest docs, code, mocks, or specs before making conclusions.
 - Study the current code structure, conventions, and extension points before implementing changes.
@@ -475,7 +470,7 @@ Please answer: 1-yes/no  2-A/B/C  3-yes/no
 - Treat launch commercialization as a cross-functional problem spanning engineering readiness, SEO/GEO, marketing, sales, monetization, and PMF evidence.
 - Treat SEO and GEO as content, information architecture, and answerability problems, not just keyword stuffing.
 - When recommending AI models, name the concrete model if possible in the current tool and explain the tradeoff: capability, latency, cost, modality, and reliability for the task.
-- Do not jump straight into execution on meaningful tasks before both the plan and model recommendation are stated.
+- Do not jump straight into execution on meaningful tasks before planning; model selection can remain internal unless visibility is useful.
 - If continuation risk is high because of model or context limits, preserve a compact handoff state before asking the user to continue in a fresh prompt.
 - When making market or trend claims that could have changed, verify with current sources.
 - If anything material is still unconfirmed after reading the available evidence, ask the user instead of silently filling the gap with assumptions.

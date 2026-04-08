@@ -126,7 +126,7 @@ Then create or update [project-understanding.md](ai-assistant/memory/project-und
 
 ## Suggested onboarding flow
 
-1. Ask the assistant to recommend the best AI model for the task by concrete model name, plus a fallback if useful.
+1. Let the assistant choose model/phase internally unless you need Debug or Handoff visibility.
 2. Ask it to use `bosskuai-workspace-assistant` and `bosskuai-project-understanding`.
 3. Make it read the nearest README, manifests, and source files first.
 4. Ask it to separate confirmed facts from inference.
@@ -169,7 +169,7 @@ bossku
 
 Use the workspace instructions in AGENTS.md, CLAUDE.md, .claude/commands/, .claude/rules/, .cursor/rules/, and the relevant skills under ai-assistant/skills/.
 
-Start with bosskuai-workspace-assistant. First classify this task, recommend the best AI model for it by concrete model name available in this tool with a short tradeoff note and fallback, and then use bosskuai-project-understanding if the repo context is still unclear.
+Start with bosskuai-workspace-assistant. Classify this task internally, choose the right model/phase without verbose routing output, and then use bosskuai-project-understanding if the repo context is still unclear.
 
 Read the nearest README, manifests, docs, and enough source code to understand the project before making recommendations. Distinguish confirmed facts from inference.
 
@@ -210,7 +210,7 @@ bossku
 
 I want to test whether this workspace setup is working correctly.
 
-Follow the repo rules first. Classify the task, recommend the best AI model by concrete model name available in this tool with tradeoffs, and explicitly name which local skills you are using before you do the work.
+Follow the repo rules first. Use Debug mode for this test: classify the task, name the model/phase and local skills you are using, then do the work.
 
 Then review this project in three passes:
 1. project understanding

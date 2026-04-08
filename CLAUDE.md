@@ -24,7 +24,7 @@ If the user includes the standalone word `bossku` anywhere in the prompt, treat 
 - NEVER skip the planning phase and jump straight to execution on meaningful tasks.
 - Always enter plan mode first. State the plan, get alignment, then switch to execution.
 - When in doubt about which phase applies, default to Opus 4.6 and plan.
-- If the current model is stuck, low-confidence, or missing a capability, load `bosskuai-cross-model-escalation` and bring in another model or tool surface with a scoped assist request instead of retrying blindly.
+- Track phase/model internally; state the model only for debug, handoff, model changes, or risky tradeoffs.
 - Quick/trivial tasks (single-line fixes, lookup questions) may skip the split.
 
 ## Clarify first (ambiguity protocol)
@@ -56,11 +56,10 @@ Please answer: 1-yes/no  2-A/B/C  3-yes/no
 - Prefer test-first or test-guided development for new behavior, bug fixes, and risky refactors when practical.
 - If context or token limits are likely to interrupt meaningful work, stop before truncation, summarize the current state, and ask the user to retry so the task can continue cleanly.
 - When a task has ≥ 5 independent files, ≥ 2 parallel workstreams, a pre-task context estimate > 1,200 lines, or risky/irreversible scope — delegate to subagents using `bosskuai-subagent-delegation` before running serially in the main session.
-- When the active model is blocked or the answer still feels brittle after two serious attempts, use `bosskuai-cross-model-escalation` before continuing.
 - Use project understanding first when the codebase or repo purpose is still unclear.
 - Challenge weak assumptions.
 - Prefer concrete tradeoffs over generic advice.
-- Always plan first with `claude-opus-4-6`, then execute with `claude-sonnet-4-6`.
+- Always plan first with `claude-opus-4-6`, then execute with `claude-sonnet-4-6`; do not repeat the model assignment in every normal reply.
 - Triple-check important conclusions before finalizing them.
 - Treat validation, secret handling, injection resistance, and safe defaults as part of engineering correctness.
 - Treat AI-agent workspace security as a first-class concern: least privilege, minimal integrations, and distrust of external content.
@@ -75,7 +74,7 @@ Please answer: 1-yes/no  2-A/B/C  3-yes/no
 1. Classify the task type (product / engineering / design / security / marketing / sales / architecture / etc.)
 2. Open `AGENTS.md` → Quick reference to identify the matching skill(s)
 3. Read the relevant `ai-assistant/skills/<skill-name>/SKILL.md` file(s)
-4. State which skill(s) you loaded at the start of your response
+4. Track which skill(s) you loaded internally; state them only in Debug/Handoff mode
 5. Then proceed with plan → execute
 
 **This is not optional.** Skipping skill loading means giving generic responses instead of domain-specific expertise. The user built this system to be used on every task.
@@ -84,21 +83,14 @@ Please answer: 1-yes/no  2-A/B/C  3-yes/no
 - When scope is ambiguous, default to loading the closest skill and noting the assumption.
 - For the full skill roster by division, quick reference table, and file index: see `AGENTS.md`.
 
-**Mandatory output format — emit before any planning or code:**
+**Sparse output rule:** Do not emit routing boilerplate during normal execution. If protocol visibility is requested or a handoff is needed, use:
 ```text
-[TASK START]
-Memory read: <files, or "trivial">
-Skill(s): <name + path, or "trivial">
-Phase: <Plan/Opus 4.6 | Execute/Sonnet 4.6 | Trivial>
-Type: <cluster/intent>
+[Route] memory=<files|none> skills=<names> phase=<plan|execute|trivial> type=<cluster/intent>
 ```
 
-**Closing block — emit before the final sentence of every non-trivial response:**
+**Closing meta:** Only report memory/learning when something durable changed. For debug/handoff, use:
 ```text
-[TASK END]
-Meaningful: <yes|no>
-Memory: <paths updated, or "none">
-Learning: <artifact+path, or "deferred: reason">
+[Done] meaningful=<yes|no> memory=<paths|none> learning=<artifact|deferred: reason>
 ```
 
 ## Definition of Done (mandatory)
@@ -132,21 +124,21 @@ Learning: <artifact+path, or "deferred: reason">
 ### Handoff
 - [ ] Anything that could NOT be verified is named explicitly
 - [ ] If the task produced a durable learning: memory or checklist updated
-- [ ] **Memory / cross-tool handoff:** Non-trivial work has a structured update under `ai-assistant/memory/` per `ai-assistant/references/memory-first-handoff-protocol.md` (usually `learning-log.md`), **or** the reply explicitly states memory unchanged with a valid trivial/no-durable-delta reason
+- [ ] **Memory / cross-tool handoff:** Durable deltas and handoff-worthy work have a structured update under `ai-assistant/memory/` per `ai-assistant/references/memory-first-handoff-protocol.md`; no-delta work stays silent in normal execution mode
 
 **If any item fails: do not declare done. Fix it and re-run the checklist.**
 
 ## Shared memory (mandatory)
 
 - `ai-assistant/memory/` is **shared durable memory across all tools** — Claude, Codex, and Cursor.
-- **Protocol:** `ai-assistant/references/memory-first-handoff-protocol.md` — read order before substantive work; write before done on non-trivial turns; trivial exception requires an explicit one-line “memory unchanged” in the reply.
-- Read per **user turn** — enforced by [TASK START]. Blank 'Memory read:' on a non-trivial turn = protocol violation. Order: continuation → `agent-profile.md` → `project-understanding.md` → recent `learning-log.md` → task-specific memory files as needed.
+- **Protocol:** `ai-assistant/references/memory-first-handoff-protocol.md` — retrieve the minimum relevant memory before substantive work; write only for durable deltas, 4/5+ learning importance, or cross-tool handoff.
+- Use broad profile/project files only when context matters; otherwise prefer continuation state, recent handoff entries, and task-specific memory. Visible route headers are optional and debug-oriented.
 - Never treat memory as tool-local — insights written here must be usable by any tool in any session.
 
 ## Durable learning
 
 - Keep durable learnings in `ai-assistant/memory/`.
-- After meaningful work, run a deliberate promotion pass with `bosskuai-continuous-learning` or an equivalent explicit review.
+- After meaningful work, run a deliberate promotion pass with `bosskuai-continuous-learning` or an equivalent review only when a durable lesson likely exists.
 - If repeated usage reveals a missing reusable capability, create or update the right skill, checklist, playbook, pitfall, or rule instead of leaving it only in memory.
 - Promote repeated lessons into checklists, pitfalls, playbooks, or skill updates.
 - Use `bash ./ai-assistant/scripts/learning-doctor.sh` when available to catch stale counts, contradictory memory, and consumed continuation state before larger maintenance passes.
