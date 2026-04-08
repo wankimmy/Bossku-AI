@@ -13,6 +13,9 @@ Installed entries (full install, default):
   AGENTS.md
   CLAUDE.md
   WORKSPACE-ONBOARDING.md
+  skill-index.json
+  agents/
+  mcp-configs/
   .codex/
   .claude/
   .cursor/
@@ -124,6 +127,9 @@ entries=(
   "AGENTS.md"
   "CLAUDE.md"
   "WORKSPACE-ONBOARDING.md"
+  "skill-index.json"
+  "agents"
+  "mcp-configs"
   ".codex"
   ".claude"
   ".cursor"

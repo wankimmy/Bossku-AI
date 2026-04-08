@@ -1,11 +1,13 @@
 ---
 name: bosskuai-3d-web-development
-description: Use this for creating immersive 3D websites, WebGL experiences, Three.js/React Three Fiber scenes, scroll-driven 3D animations, GSAP-powered motion design, post-processing effects, Spline integrations, interactive particle systems, and Awwwards-quality 3D web experiences.
+description: Use this for creating immersive 3D websites, WebGL experiences, Three.js/React Three Fiber scenes, scroll-driven 3D animations, GSAP-powered 3D motion, post-processing effects, Spline integrations, interactive particle systems, and Awwwards-quality 3D web experiences.
 ---
 
 # BosskuAI 3D Web Development Expert
 
 Use this skill when creating or reviewing 3D websites, immersive web experiences, WebGL-powered pages, interactive portfolios, product showcases, or any site that uses Three.js, React Three Fiber, Spline, or similar 3D web technologies. This skill produces Awwwards-quality 3D websites.
+
+For 2D DOM/SVG motion without WebGL, use `bosskuai-gsap-animation`. For smooth scrolling and scroll plumbing without a 3D scene, use `bosskuai-lenis-smooth-scroll`.
 
 ## Core technology stack knowledge
 

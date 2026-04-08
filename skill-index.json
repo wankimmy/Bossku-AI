@@ -162,6 +162,20 @@
       "keywords": ["R3F", "shader", "immersive", "Awwwards"]
     },
     {
+      "id": "bosskuai-gsap-animation",
+      "cluster": "design",
+      "status": "active",
+      "triggers": ["GSAP animation", "ScrollTrigger", "scroll-triggered motion", "timeline animation"],
+      "keywords": ["gsap", "ScrollTrigger", "timeline", "matchMedia", "useGSAP", "SplitText", "Flip"]
+    },
+    {
+      "id": "bosskuai-lenis-smooth-scroll",
+      "cluster": "design",
+      "status": "active",
+      "triggers": ["Lenis smooth scroll", "smooth scrolling", "GSAP Lenis sync", "scroll snap"],
+      "keywords": ["lenis", "smooth scroll", "autoRaf", "ReactLenis", "VueLenis", "lenis/snap", "anchors"]
+    },
+    {
       "id": "bosskuai-cybersecurity-risk",
       "cluster": "security",
       "status": "active",

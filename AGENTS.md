@@ -189,6 +189,8 @@ Classify into a **role cluster** first, then choose the minimum skill set. This 
 | **Design** | ui-ux-design-to-code | UX/UI quality, accessibility, design systems, and design-to-code guidance |
 | **Design** | i18n-l10n | Internationalization, localization workflows, and RTL/expansion readiness |
 | **Design** | 3d-web-development | WebGL/Three.js/R3F immersive web experience delivery |
+| **Design** | gsap-animation | GSAP timelines, ScrollTrigger, responsive motion, and framework-safe cleanup |
+| **Design** | lenis-smooth-scroll | Lenis smooth scrolling, scroll plumbing, anchors, GSAP sync, and scroll accessibility |
 | **Security** | cybersecurity-risk | Security/privacy/abuse and trust-boundary risk assessment |
 | **Security** | agent-security-hardening | Agent workspace hardening, least privilege, and prompt/content safety |
 | **Security** | legal-compliance | Privacy/compliance risk spotting and escalation guidance |
@@ -246,6 +248,8 @@ Classify into a **role cluster** first, then choose the minimum skill set. This 
 | UX/UI and accessibility | "Review for UX and accessibility" | ui-ux-design-to-code |
 | Localization or multilingual UX | "Audit i18n" / "Make this app localization-ready" | i18n-l10n, ui-ux-design-to-code |
 | 3D website or immersive motion | "Create a 3D web experience" | 3d-web-development, ui-ux-design-to-code |
+| GSAP or scroll-triggered motion | "Build this GSAP animation" / "Fix ScrollTrigger cleanup" | gsap-animation, ui-ux-design-to-code |
+| Lenis smooth scroll | "Add Lenis" / "Sync Lenis with GSAP ScrollTrigger" | lenis-smooth-scroll, gsap-animation |
 | Security/privacy/compliance review | "Audit abuse/privacy risks" / "Review compliance risk" | cybersecurity-risk, legal-compliance |
 | Find bugs or production root cause | "Hunt for bugs" / "Investigate logs and DB state" | bug-finding, business-logic-review |
 | Strict skeptical code review | "Review this PR harshly" / "Challenge this implementation" / "Check blast radius" | rigorous-code-review, coding-best-practices |
@@ -267,7 +271,7 @@ For larger efforts you can run the assistant in a phase-aware way. The assistant
 |-------|--------|-------------------|
 | **Discovery** | What we're building, for whom, evidence | project-understanding, customer-discovery, deep-research, product-strategy, market-analysis, competitor-intelligence, claude-code-setup |
 | **Strategy** | Roadmap, scope, priorities, ownership | planning-execution, operations, financial-modeling, investor-prep, software-architecture, api-design, data-architecture, analytics-metrics |
-| **Build** | Implementation with quality gates | engineering-delivery, rapid-prototype, github-workflow, mongodb, nuxt-development, browser-automation, devops-iac, ui-ux-design-to-code, i18n-l10n, 3d-web-development, coding-best-practices, bug-finding, rigorous-code-review, performance-profiling, integration-testing, skill-creator |
+| **Build** | Implementation with quality gates | engineering-delivery, rapid-prototype, github-workflow, mongodb, nuxt-development, browser-automation, devops-iac, ui-ux-design-to-code, i18n-l10n, 3d-web-development, gsap-animation, lenis-smooth-scroll, coding-best-practices, bug-finding, rigorous-code-review, performance-profiling, integration-testing, skill-creator |
 | **Harden** | Security, logic, readiness | cybersecurity-risk, legal-compliance, business-logic-review, agent-security-hardening, incident-response, claude-md-management, cross-model-escalation |
 | **Launch** | Readiness, GTM, PMF signals | launch-commercialization, seo-geo, **Growth**: marketing-growth, growth-experiment, paid-acquisition-monetization, lead-intelligence; **Sales**: sales-strategy |
 
@@ -280,7 +284,7 @@ Use the right skill without the user having to ask, grouped by role cluster:
 - **Orchestration**: unfamiliar codebase -> `project-understanding`; current docs/API behavior -> `documentation-lookup`; deep evidence synthesis -> `deep-research`; new utility/dependency/integration -> `search-first`; new/evaluated skill -> `skill-creator`; skills/rules sprawl -> `skill-stocktake` or `rules-distill`; Claude instructions -> `claude-md-management`; Claude Code MCP/hooks/config -> `claude-code-setup`; current model stuck -> `cross-model-escalation`; post-meaningful durable lesson -> `continuous-learning`; heavy parallel/risky scope -> `subagent-delegation`.
 - **Product**: customer research/interviews -> `customer-discovery`; roadmap/prioritization/owner or milestone drift -> `planning-execution`; vendor/process/change/capacity work -> `operations`; financial model/runway/pricing math -> `financial-modeling`; funnels/KPIs/experiments -> `analytics-metrics`; launch-readiness framing -> `launch-commercialization`.
 - **Engineering**: fast demo/POC -> `rapid-prototype`; complex implementation/refactor -> `engineering-delivery`; GitHub issues/PRs/Actions/releases -> `github-workflow`; browser testing/JS-rendered scraping -> `browser-automation`; CI/CD/container/infra changes -> `devops-iac`; MongoDB collection/query/migration work -> `mongodb`; Nuxt app work -> `nuxt-development`; schema/migration/warehouse/data pipeline work -> `data-architecture`; structural cleanup -> `code-revamp`; performance/bottleneck/profiling work -> `performance-profiling`; integration test layer or contract test design -> `integration-testing`; P1/P2 production incident or postmortem -> `incident-response`.
-- **Design**: UI quality/accessibility -> `ui-ux-design-to-code`; multilingual/locale/RTL risks -> `i18n-l10n`; 3D/WebGL/immersive experiences -> `3d-web-development`.
+- **Design**: UI quality/accessibility -> `ui-ux-design-to-code`; multilingual/locale/RTL risks -> `i18n-l10n`; 3D/WebGL/immersive experiences -> `3d-web-development`; GSAP timelines/ScrollTrigger motion -> `gsap-animation`; Lenis smooth-scroll plumbing -> `lenis-smooth-scroll`.
 - **Security**: auth/billing/external API/input trust boundaries -> `cybersecurity-risk`; agent workspace/integration/memory safety -> `agent-security-hardening`; consent/retention/vendor/policy concerns -> `legal-compliance`.
 - **Quality**: code changed -> `rigorous-code-review` plus `bug-finding` as needed; strict skeptical review requested -> `rigorous-code-review`; incidents requiring DB/log/queue/webhook correlation -> `bug-finding` deep investigation mode with `business-logic-review` when invariants are involved.
 - **Architecture**: API/events/contracts -> `api-design` + `software-architecture`; major boundary/tradeoff changes -> `software-architecture`.
@@ -336,6 +340,8 @@ Before considering a meaningful task done:
 | `bosskuai-ui-ux-design-to-code` | `ai-assistant/skills/bosskuai-ui-ux-design-to-code/SKILL.md` |
 | `bosskuai-i18n-l10n` | `ai-assistant/skills/bosskuai-i18n-l10n/SKILL.md` |
 | `bosskuai-3d-web-development` | `ai-assistant/skills/bosskuai-3d-web-development/SKILL.md` |
+| `bosskuai-gsap-animation` | `ai-assistant/skills/bosskuai-gsap-animation/SKILL.md` |
+| `bosskuai-lenis-smooth-scroll` | `ai-assistant/skills/bosskuai-lenis-smooth-scroll/SKILL.md` |
 | `bosskuai-cybersecurity-risk` | `ai-assistant/skills/bosskuai-cybersecurity-risk/SKILL.md` |
 | `bosskuai-agent-security-hardening` | `ai-assistant/skills/bosskuai-agent-security-hardening/SKILL.md` |
 | `bosskuai-legal-compliance` | `ai-assistant/skills/bosskuai-legal-compliance/SKILL.md` |

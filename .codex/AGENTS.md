@@ -125,7 +125,7 @@ If no issues are found, say that clearly and mention residual risk or verificati
 - Use `bash ./ai-assistant/scripts/learning-doctor.sh` when available before larger maintenance passes to catch stale counts, contradictory memory, and consumed continuation state.
 - Enforced by [TASK START] header — blank 'Memory read:' on non-trivial turn = protocol violation.
 
-## New skills (startup + research cluster — 2026-04)
+## New and extended skill routing
 
 Route to these skills when the task matches:
 
@@ -142,6 +142,8 @@ Route to these skills when the task matches:
 | Live framework/library docs lookup | `bosskuai-documentation-lookup` |
 | Lead discovery / outreach drafts | `bosskuai-lead-intelligence` |
 | Nuxt development or audit | `bosskuai-nuxt-development` |
+| GSAP timelines / ScrollTrigger motion | `bosskuai-gsap-animation` |
+| Lenis smooth scroll / GSAP sync | `bosskuai-lenis-smooth-scroll` |
 
 All skill files at: `ai-assistant/skills/bosskuai-<name>/SKILL.md`
 
