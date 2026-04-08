@@ -29,6 +29,11 @@
       },
       "description": "GitHub PRs, issues, and repo management"
     },
+    "code-review-graph": {
+      "command": "uvx",
+      "args": ["code-review-graph", "serve"],
+      "description": "Local code graph for blast-radius PR review, caller/test tracing, and token-efficient codebase exploration"
+    },
     "_playwright_optional": {
       "_note": "Playwright is OPTIONAL in Cursor. If you have the Pencil extension installed, it already covers browser automation. Uncomment and rename this key to 'playwright' only if you need it without Pencil.",
       "command": "npx",
@@ -39,7 +44,7 @@
   "_setup_instructions": {
     "cursor_ui": "Go to Cursor → Settings → Features → MCP Servers. Add each server manually using the command and args above. Paste env var values in the Environment Variables section per server.",
     "cursor_json": "Alternatively, if Cursor supports a JSON config file, merge the mcpServers block above into your Cursor MCP config file.",
-    "api_keys": "Set EXA_API_KEY, FIRECRAWL_API_KEY, and GITHUB_PAT in your shell profile (~/.zshrc or ~/.bashrc) before launching Cursor, or enter them directly in the Cursor MCP settings UI.",
-    "recommendation": "Keep 3-4 MCPs active in Cursor. Context7 + Exa + GitHub covers most coding and research workflows."
+    "api_keys": "Set EXA_API_KEY, FIRECRAWL_API_KEY, and GITHUB_PAT in your shell profile (~/.zshrc or ~/.bashrc) before launching Cursor, or enter them directly in the Cursor MCP settings UI. code-review-graph requires no API key but does require Python 3.10+ and uvx or a local code-review-graph install.",
+    "recommendation": "Keep 3-4 MCPs active in Cursor for normal work. Add code-review-graph during PR review, refactors, and codebase exploration."
   }
 }

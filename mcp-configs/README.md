@@ -6,11 +6,11 @@ Model Context Protocol (MCP) servers extend AI coding assistants with real-time 
 
 For a startup, the practical payoff is: less tab-switching, fewer hallucinated API signatures, and agents that can gather market data or run QA flows without you copying and pasting.
 
-**Recommendation: keep 3–5 MCPs active at any time.** Too many MCPs slow tool selection and increase token overhead. Pick the ones that match your current phase of work.
+**Recommendation: keep 3–5 MCPs active at any time.** Too many MCPs slow tool selection and increase token overhead. Pick the ones that match your current phase of work. For PR review or refactor-heavy work, temporarily add `code-review-graph` as a local graph MCP.
 
 ---
 
-## The 5 priority servers
+## Priority servers
 
 | Server | Best for | API key required |
 |--------|----------|-----------------|
@@ -19,6 +19,7 @@ For a startup, the practical payoff is: less tab-switching, fewer hallucinated A
 | Context7 | Live library/framework documentation lookup | No |
 | Firecrawl | Web scraping, competitor pricing, structured page data | Yes — free tier |
 | GitHub | PR review, issue triage, repo management | Yes — GitHub PAT |
+| code-review-graph | Local blast-radius analysis, graph-aware PR review, call/test tracing | No |
 
 ---
 
@@ -40,6 +41,13 @@ For a startup, the practical payoff is: less tab-switching, fewer hallucinated A
 - Set env var: `export GITHUB_PAT="your-token-here"`
 
 > Store all API keys in your shell profile or a secrets manager. Never commit them to a repo.
+
+### code-review-graph
+- Requires Python 3.10+.
+- Fastest setup: `pipx install code-review-graph` or `pip install code-review-graph`.
+- If you use `uv`, the MCP config can run through `uvx code-review-graph serve`.
+- Build the graph once per target repo: `code-review-graph build`.
+- Generated graph data stays local in `.code-review-graph/`; do not commit it.
 
 ---
 
@@ -95,6 +103,7 @@ For a startup, the practical payoff is: less tab-switching, fewer hallucinated A
 |------------|------------------------|
 | Market research / competitive analysis | Exa, Firecrawl |
 | Feature development | Context7, GitHub |
+| Code review / risky refactor | GitHub, code-review-graph, Context7 when library behavior matters |
 | QA / testing | Playwright |
 | Launch prep | Exa, Firecrawl, GitHub |
 | General coding | Context7, GitHub |

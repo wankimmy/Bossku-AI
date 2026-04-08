@@ -200,8 +200,8 @@
       "id": "bosskuai-rigorous-code-review",
       "cluster": "quality",
       "status": "active",
-      "triggers": ["strict PR review", "skeptical review"],
-      "keywords": ["adversarial review", "minimal churn", "risk-first"]
+      "triggers": ["strict PR review", "skeptical review", "blast-radius review"],
+      "keywords": ["adversarial review", "minimal churn", "risk-first", "code-review-graph", "callers", "test gaps"]
     },
     {
       "id": "bosskuai-software-architecture",

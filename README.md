@@ -103,7 +103,7 @@ bosskuAI/
     └── scripts/            ← e.g. learning-doctor.sh
 ```
 
-> **`install.sh`** copies `AGENTS.md`, `CLAUDE.md`, `WORKSPACE-ONBOARDING.md`, `.claude/`, `.cursor/`, `.codex/`, and `ai-assistant/` into the target project. Optional: browse `agents/` and `mcp-configs/` in this repo for delegation patterns and MCP setup.
+> **`install.sh`** copies `AGENTS.md`, `CLAUDE.md`, `WORKSPACE-ONBOARDING.md`, `.claude/`, `.cursor/`, `.codex/`, and `ai-assistant/` into the target project. Optional: browse `agents/` and `mcp-configs/` in this repo for delegation patterns and MCP setup, including the optional `code-review-graph` MCP for graph-aware PR review and blast-radius analysis.
 
 ## Customize
 

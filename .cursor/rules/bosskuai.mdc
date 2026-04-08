@@ -126,6 +126,7 @@ Configured in `mcp-configs/cursor-mcp-servers.json`. Copy relevant blocks to you
 | Firecrawl | `mcp__firecrawl__*` | `FIRECRAWL_API_KEY` env var | Full-page scraping |
 | Context7 | `mcp__context7__*` | None | Live framework/library docs |
 | GitHub | `mcp__github__*` | `GITHUB_PAT` env var | Repo ops, PR reviews |
+| code-review-graph | varies by client | Local graph, blast-radius review, caller/test tracing |
 | Pencil | `mcp__pencil__*` | None (installed at `~/.pencil/`) | Browser automation — native in Cursor |
 
 **Cursor browser automation:** Use Pencil MCP (already installed). Playwright MCP is for Claude Code / Codex only.

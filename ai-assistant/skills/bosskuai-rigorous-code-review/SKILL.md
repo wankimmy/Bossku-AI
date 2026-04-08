@@ -37,6 +37,13 @@ Use this skill when the goal is to **review** code (diffs, PRs, new modules, or 
 
 1. **Map context** — Identify how the change fits: directories, modules, public APIs, config, build/deploy (CI, env, migrations, feature flags), and runtime dependencies. Use `project-understanding` / `codebase-analysis` if the layout is unclear.
 
+   **Graph-aware acceleration (when `code-review-graph` MCP tools are available)**:
+   - Start with `get_minimal_context_tool(task="review changes", base=<base>)` to get graph stats, risk, and suggested next tools before broad file scanning.
+   - If the graph is missing or stale, run `build_or_update_graph_tool(postprocess="minimal")`; use `full_rebuild=True` only after branch switches, major refactors, or clearly corrupt graph state.
+   - Use `detect_changes_tool(base=<base>, detail_level="minimal")` as the first review pass. Escalate to `detail_level="standard"` or `get_review_context_tool(include_source=True, max_depth=2)` only for high-risk areas or unclear findings.
+   - For high-risk functions, query `query_graph_tool(pattern="callers_of", target=<symbol>)`, `query_graph_tool(pattern="tests_for", target=<symbol>)`, and `get_affected_flows_tool(base=<base>)` before deciding whether the blast radius is covered.
+   - Treat graph output as a triage map, not proof. Confirm every blocking finding by reading the diff, relevant source, and tests directly. If graph tools are unavailable, proceed with `git diff`, `rg`, call-site reads, and test inspection.
+
 2. **Read evidence** — Inspect the diff **and** call sites, tests, types/schemas, and infra touchpoints (Docker, k8s, serverless, pipelines) affected. Do not review the diff in isolation.
 
 3. **Stress-test by category** — Work through each category below. Skip only if clearly irrelevant:
@@ -138,3 +145,4 @@ Non-goals: [what you are NOT refactoring and why]
 - `../../references/checklists/bug-finding-checklist.md`
 - `../../references/checklists/architecture-review-checklist.md`
 - `../../references/checklists/security-risk-checklist.md`
+- `../../references/playbooks/graph-aware-code-review-playbook.md`

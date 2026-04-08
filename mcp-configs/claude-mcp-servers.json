@@ -26,5 +26,10 @@
     "args": ["-y", "@modelcontextprotocol/server-github"],
     "env": { "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PAT}" },
     "description": "GitHub PRs, issues, and repo management"
+  },
+  "code-review-graph": {
+    "command": "uvx",
+    "args": ["code-review-graph", "serve"],
+    "description": "Local code graph for blast-radius PR review, caller/test tracing, and token-efficient codebase exploration"
   }
 }

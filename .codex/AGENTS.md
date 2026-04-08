@@ -183,6 +183,7 @@ Agent definitions live in `agents/`. Multi-agent is enabled in `.codex/config.to
 
 MCP config blocks are in `mcp-configs/codex-mcp-config.toml` — copy to `.codex/config.toml`.
 Required env vars: `EXA_API_KEY`, `FIRECRAWL_API_KEY`, `GITHUB_PAT` (set in shell, not hardcoded).
+Optional local review accelerator: enable `code-review-graph` for PR reviews, risky refactors, and blast-radius analysis. It requires Python 3.10+ plus `uvx` or a local `code-review-graph` install, but no API key.
 Playwright MCP: use for browser automation in Codex (not Pencil — Pencil is Cursor-only).
 
 ## Codex-specific notes

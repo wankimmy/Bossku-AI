@@ -4,6 +4,14 @@
 
 Use alongside `bosskuai-rigorous-code-review`. Work through each section; skip only if clearly irrelevant to the diff.
 
+## Graph-aware preflight
+
+- [ ] If `code-review-graph` MCP tools are available, start with `get_minimal_context_tool(task="review changes", base=<base>)`.
+- [ ] If graph state is missing or stale, run `build_or_update_graph_tool(postprocess="minimal")` before relying on impact data.
+- [ ] Use `detect_changes_tool(detail_level="minimal")` to identify risk, blast radius, and test gaps before broad file reads.
+- [ ] For high-risk functions or shared modules, query callers, tests, importers, and affected flows.
+- [ ] Confirm every blocking finding by reading the actual source and tests; do not treat graph inference as proof.
+
 ## Correctness
 
 - [ ] Does the change do what it claims in the PR description?

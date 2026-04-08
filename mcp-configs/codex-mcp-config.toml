@@ -59,3 +59,16 @@
 #
 # [mcp_servers.github.env]
 # GITHUB_PERSONAL_ACCESS_TOKEN = "${GITHUB_PAT}"
+
+# --- CODE REVIEW GRAPH ---
+# Local code graph for blast-radius PR review, caller/test tracing, and
+# token-efficient codebase exploration. No API key required.
+# Requires Python 3.10+. Install with: pipx install code-review-graph
+#
+# [mcp_servers.code-review-graph]
+# command = "uvx"
+# args = ["code-review-graph", "serve"]
+#
+# If you do not use uv/uvx, install the package and use:
+# command = "code-review-graph"
+# args = ["serve"]
