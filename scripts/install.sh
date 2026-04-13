@@ -5,7 +5,7 @@ set -euo pipefail
 usage() {
   cat <<'EOF'
 Usage:
-  ./scripts/install.sh <target-dir> [--force] [--skip-check] [--preserve-memory] [--skills-only]
+  ./scripts/install.sh <target-dir> [--force] [--skip-check] [--preserve-memory] [--skills-only] [--sync-layer]
 
 Install the BosskuAI workspace layer into an existing project workspace.
 
@@ -31,6 +31,13 @@ Options:
       Copies only ai-assistant/skills/, ai-assistant/references/, and ai-assistant/scripts/
       from the starter. Does not change AGENTS.md, tool configs (.cursor/.claude/.codex),
       or ai-assistant/memory/. Implies no full-layer conflict checks (--force not used).
+  --sync-layer
+      Refreshes documentation and tooling from the starter without a full install conflict check.
+      Overwrites: root AGENTS.md, CLAUDE.md, WORKSPACE-ONBOARDING.md, skill-index.json, (each only if present in starter), plus agents/,
+      mcp-configs/, .codex/, .claude/, .cursor/, and every ai-assistant/* subtree except memory/.
+      Never creates, replaces, or deletes ai-assistant/memory/ — existing project memory stays.
+      Removes stale top-level folders under ai-assistant/ (other than memory) that are not in
+      the starter, so the tree matches the starter aside from memory.
   --skip-check
       Skips ./scripts/check-workspace.sh after install.
 
@@ -50,6 +57,7 @@ force=0
 skip_check=0
 preserve_memory=0
 skills_only=0
+sync_layer=0
 target_dir=""
 
 for arg in "$@"; do
@@ -65,6 +73,9 @@ for arg in "$@"; do
       ;;
     --skills-only)
       skills_only=1
+      ;;
+    --sync-layer)
+      sync_layer=1
       ;;
     -h|--help)
       usage
@@ -96,8 +107,70 @@ if [[ ! -d "$target_dir" ]]; then
   exit 1
 fi
 
+if (( skills_only + sync_layer > 1 )); then
+  echo "Error: use only one of --skills-only or --sync-layer" >&2
+  usage
+  exit 1
+fi
+
 if (( skills_only && preserve_memory )); then
   echo "Note: --skills-only does not replace ai-assistant/memory; --preserve-memory is redundant." >&2
+fi
+
+if (( sync_layer && preserve_memory )); then
+  echo "Note: --sync-layer never touches ai-assistant/memory; --preserve-memory is redundant." >&2
+fi
+
+if (( sync_layer )); then
+  root_docs=(
+    "AGENTS.md"
+    "CLAUDE.md"
+    "WORKSPACE-ONBOARDING.md"
+    "skill-index.json"
+  )
+  for doc in "${root_docs[@]}"; do
+    if [[ -e "$repo_root/$doc" ]]; then
+      cp -a "$repo_root/$doc" "$target_dir/$doc"
+    fi
+  done
+
+  sync_dirs=(agents mcp-configs .codex .claude .cursor)
+  for dir in "${sync_dirs[@]}"; do
+    if [[ ! -e "$repo_root/$dir" ]]; then
+      echo "Warning: missing source in starter, skipping: $dir" >&2
+      continue
+    fi
+    rm -rf "$target_dir/$dir"
+    cp -a "$repo_root/$dir" "$target_dir/$dir"
+  done
+
+  assistant_dest="$target_dir/ai-assistant"
+  mkdir -p "$assistant_dest"
+  shopt -s nullglob
+  for item in "$assistant_dest"/*; do
+    name=$(basename "$item")
+    if [[ "$name" == "memory" ]]; then
+      continue
+    fi
+    rm -rf "$item"
+  done
+  for item in "$repo_root/ai-assistant"/*; do
+    name=$(basename "$item")
+    if [[ "$name" == "memory" ]]; then
+      continue
+    fi
+    cp -a "$item" "$assistant_dest/$name"
+  done
+  shopt -u nullglob
+
+  echo "BosskuAI layer synced (docs + agents + tool configs + ai-assistant/* except memory) to: $target_dir"
+  if (( skip_check == 0 )); then
+    echo
+    "$script_dir/check-workspace.sh" "$target_dir"
+  else
+    echo "Skipped workspace check (--skip-check). Run: ./scripts/check-workspace.sh \"$target_dir\""
+  fi
+  exit 0
 fi
 
 if (( skills_only )); then
