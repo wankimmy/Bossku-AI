@@ -1,0 +1,28 @@
+name: Integrity Check
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+    branches: ["main", "master"]
+
+jobs:
+  integrity:
+    name: Repo integrity
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Make scripts executable
+        run: chmod +x scripts/check-workspace.sh scripts/verify-skill-references.sh scripts/validate-skill-index.sh
+
+      - name: Workspace check (required files present)
+        run: ./scripts/check-workspace.sh .
+
+      - name: Skill reference check (SKILL.md → references/ paths)
+        run: ./scripts/verify-skill-references.sh
+
+      - name: Skill index consistency (index ↔ folders)
+        run: ./scripts/validate-skill-index.sh .

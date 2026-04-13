@@ -98,26 +98,9 @@ Learning: <artifact+path, or "deferred: reason">
 - If something material is unconfirmed, ask the user instead of guessing.
 - Run `bash ./ai-assistant/scripts/learning-doctor.sh` before large maintenance passes.
 
-## New and extended skill routing
+## Skill routing
 
-Route to these skills when the task matches:
-
-| Task type | Skill | File |
-|-----------|-------|------|
-| Multi-source web research | `bosskuai-deep-research` | `ai-assistant/skills/bosskuai-deep-research/SKILL.md` |
-| Browser automation / UI QA | `bosskuai-browser-automation` | `ai-assistant/skills/bosskuai-browser-automation/SKILL.md` |
-| Competitor monitoring | `bosskuai-competitor-intelligence` | `ai-assistant/skills/bosskuai-competitor-intelligence/SKILL.md` |
-| Fundraising / pitch deck / investor memo | `bosskuai-investor-prep` | `ai-assistant/skills/bosskuai-investor-prep/SKILL.md` |
-| User interviews / personas / JTBD | `bosskuai-customer-discovery` | `ai-assistant/skills/bosskuai-customer-discovery/SKILL.md` |
-| Revenue model / runway / unit economics | `bosskuai-financial-modeling` | `ai-assistant/skills/bosskuai-financial-modeling/SKILL.md` |
-| A/B test / growth experiment design | `bosskuai-growth-experiment` | `ai-assistant/skills/bosskuai-growth-experiment/SKILL.md` |
-| Rapid prototype / POC / timebox build | `bosskuai-rapid-prototype` | `ai-assistant/skills/bosskuai-rapid-prototype/SKILL.md` |
-| Live framework/library docs | `bosskuai-documentation-lookup` | `ai-assistant/skills/bosskuai-documentation-lookup/SKILL.md` |
-| Lead discovery / outreach drafts | `bosskuai-lead-intelligence` | `ai-assistant/skills/bosskuai-lead-intelligence/SKILL.md` |
-| Nuxt development or audit | `bosskuai-nuxt-development` | `ai-assistant/skills/bosskuai-nuxt-development/SKILL.md` |
-| GSAP timelines / ScrollTrigger motion | `bosskuai-gsap-animation` | `ai-assistant/skills/bosskuai-gsap-animation/SKILL.md` |
-| Lenis smooth scroll / GSAP sync | `bosskuai-lenis-smooth-scroll` | `ai-assistant/skills/bosskuai-lenis-smooth-scroll/SKILL.md` |
-| Dockerfile / Docker Compose setup | `bosskuai-docker` | `ai-assistant/skills/bosskuai-docker/SKILL.md` |
+Full skill roster with routing guidance: root `AGENTS.md` § **Skill roster**. All skill files at `ai-assistant/skills/bosskuai-<name>/SKILL.md`.
 
 ## MCP servers in this workspace
 

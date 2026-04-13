@@ -125,28 +125,9 @@ If no issues are found, say that clearly and mention residual risk or verificati
 - Use `bash ./ai-assistant/scripts/learning-doctor.sh` when available before larger maintenance passes to catch stale counts, contradictory memory, and consumed continuation state.
 - Enforced by [TASK START] header — blank 'Memory read:' on non-trivial turn = protocol violation.
 
-## New and extended skill routing
+## Skill routing
 
-Route to these skills when the task matches:
-
-| Task type | Skill |
-|-----------|-------|
-| Multi-source web research | `bosskuai-deep-research` |
-| Browser automation / UI QA | `bosskuai-browser-automation` |
-| Competitor monitoring | `bosskuai-competitor-intelligence` |
-| Fundraising / pitch deck / investor memo | `bosskuai-investor-prep` |
-| User interviews / personas / JTBD | `bosskuai-customer-discovery` |
-| Revenue model / runway / unit economics | `bosskuai-financial-modeling` |
-| A/B test / growth experiment design | `bosskuai-growth-experiment` |
-| Rapid prototype / POC / timebox build | `bosskuai-rapid-prototype` |
-| Live framework/library docs lookup | `bosskuai-documentation-lookup` |
-| Lead discovery / outreach drafts | `bosskuai-lead-intelligence` |
-| Nuxt development or audit | `bosskuai-nuxt-development` |
-| GSAP timelines / ScrollTrigger motion | `bosskuai-gsap-animation` |
-| Lenis smooth scroll / GSAP sync | `bosskuai-lenis-smooth-scroll` |
-| Dockerfile / Docker Compose setup | `bosskuai-docker` |
-
-All skill files at: `ai-assistant/skills/bosskuai-<name>/SKILL.md`
+Full skill roster with routing guidance: root `AGENTS.md` § **Skill roster**. All skill files at `ai-assistant/skills/bosskuai-<name>/SKILL.md`.
 
 ## Subagent delegation (Codex multi-agent)
 

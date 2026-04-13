@@ -23,7 +23,7 @@ After install, paste the onboarding prompt from [WORKSPACE-ONBOARDING.md](WORKSP
 Every meaningful turn follows **`AGENTS.md`** (tool-neutral source of truth):
 
 1. **Reads shared memory** — `ai-assistant/memory/` using the [memory-first protocol](ai-assistant/references/memory-first-handoff-protocol.md) (retrieve the minimum relevant files, not full dumps every time).
-2. **Classifies and routes** — picks from **63** skills across orchestration, product, engineering, design, security, quality, architecture, growth, and continuation.
+2. **Classifies and routes** — picks from skills across orchestration, product, engineering, design, security, quality, architecture, growth, and continuation (see [skill-index.json](skill-index.json) for the full machine-readable list).
 3. **Plans first** — two-phase model split (e.g. Claude: `claude-opus-4-6` plan → `claude-sonnet-4-6` execute; Codex/Cursor mappings in [AGENTS.md](AGENTS.md)). Quick/trivial tasks may skip the split.
 4. **Promotes learnings** — writes durable memory only when the work meets the threshold in `AGENTS.md` (batch at task end; avoid ceremony for no-delta work).
 5. **Reports sparsely** — in normal Execution mode, prefer short notes when memory or learning changed; full `[TASK START]` / `[TASK END]`-style blocks are for Debug/Handoff or tool-specific rules (e.g. some Claude Code presets surface headers for audit).
@@ -46,7 +46,7 @@ bossku run launch readiness across engineering, SEO, and GTM
 
 You don't need to name a skill — the assistant routes automatically.
 
-## 63 Skills
+## Skills
 
 The canonical **when to use** table lives in [AGENTS.md](AGENTS.md). A few folders are legacy aliases (e.g. routed to `bosskuai-bug-finding`, `bosskuai-planning-execution`, `bosskuai-marketing-growth`).
 

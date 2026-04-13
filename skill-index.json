@@ -386,6 +386,76 @@
       "keywords": ["Nuxt", "Vue", "SSR", "Nitro", "useFetch", "auto-imports", "file-based routing", "nuxt.config"]
     },
     {
+      "id": "bosskuai-claude-code-setup",
+      "cluster": "orchestration",
+      "status": "active",
+      "triggers": ["Claude Code setup", "CLAUDE.md setup", "MCP config", "hooks config", "Claude Code onboarding"],
+      "keywords": ["CLAUDE.md", "MCP", "hooks", "commands", "permissions", "Claude Code"]
+    },
+    {
+      "id": "bosskuai-claude-md-management",
+      "cluster": "orchestration",
+      "status": "active",
+      "triggers": ["audit CLAUDE.md", "improve Claude instructions", "rule cleanup", "Claude rule drift"],
+      "keywords": ["CLAUDE.md", "rules", "instruction hygiene", "claude rule", "overlap control"]
+    },
+    {
+      "id": "bosskuai-cross-model-escalation",
+      "cluster": "orchestration",
+      "status": "active",
+      "triggers": ["model stuck", "low confidence", "escalate to another model", "thrashing"],
+      "keywords": ["escalation", "model switch", "blocked", "second opinion", "helper model"]
+    },
+    {
+      "id": "bosskuai-github-workflow",
+      "cluster": "engineering",
+      "status": "active",
+      "triggers": ["GitHub issues", "pull request", "GitHub Actions", "releases", "Dependabot"],
+      "keywords": ["PR", "issues", "Actions", "releases", "repo metadata", "GitHub MCP"]
+    },
+    {
+      "id": "bosskuai-incident-response",
+      "cluster": "quality",
+      "status": "active",
+      "triggers": ["production incident", "system down", "incident triage", "postmortem"],
+      "keywords": ["severity", "escalation", "on-call", "timeline", "blameless postmortem"]
+    },
+    {
+      "id": "bosskuai-integration-testing",
+      "cluster": "engineering",
+      "status": "active",
+      "triggers": ["integration test design", "contract testing", "CDC", "Pact", "test seams"],
+      "keywords": ["contract test", "test doubles", "fixtures", "provider", "consumer", "Pact"]
+    },
+    {
+      "id": "bosskuai-mongodb",
+      "cluster": "engineering",
+      "status": "active",
+      "triggers": ["MongoDB design", "MongoDB index", "aggregation pipeline", "MongoDB migration", "Atlas"],
+      "keywords": ["MongoDB", "collection", "index", "aggregation", "Atlas", "schema validation"]
+    },
+    {
+      "id": "bosskuai-operations",
+      "cluster": "product",
+      "status": "active",
+      "triggers": ["business operations", "vendor management", "SOPs", "RACI", "operating cadence"],
+      "keywords": ["SOP", "RACI", "vendor", "capacity planning", "change management", "process docs"]
+    },
+    {
+      "id": "bosskuai-performance-profiling",
+      "cluster": "engineering",
+      "status": "active",
+      "triggers": ["performance profiling", "bottleneck diagnosis", "why is this slow", "flame graph", "memory growth"],
+      "keywords": ["profiler", "flame graph", "CPU", "memory", "query optimization", "caching"]
+    },
+    {
+      "id": "bosskuai-skill-creator",
+      "cluster": "orchestration",
+      "status": "active",
+      "triggers": ["create skill", "improve skill", "skill quality audit", "benchmark skill", "new bosskuai skill"],
+      "keywords": ["skill design", "frontmatter", "SKILL.md", "validation prompt", "skill scope"]
+    },
+    {
       "id": "bosskuai-root-cause-investigation",
       "cluster": "quality",
       "status": "deprecated_alias",
