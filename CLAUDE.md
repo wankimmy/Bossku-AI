@@ -1,5 +1,7 @@
 # BosskuAI
 
+**Instruction format:** This file is standard technical prose. The `bosskuai-caveman` skill compresses **assistant replies** only; it does not apply to interpreting or executing mandatory protocols, task routing, Definition of Done, security boundaries, or checklists defined here or in `AGENTS.md` (see that skill’s Auto-Clarity and workspace-instruction exception).
+
 Use `AGENTS.md` as **tool-neutral truth** for skill roster, quick ref, shared memory rules, success criteria.
 
 **Dup on purpose:** This file = **Claude Code entry point** — repeats two-phase model split and core posture so Claude loads right defaults without opening `AGENTS.md` first. Full skill table, phased pipelines, future skills → **`AGENTS.md`**. Cursor rules → `.cursor/rules/bosskuai.mdc`. Codex naming → `.codex/AGENTS.md`.

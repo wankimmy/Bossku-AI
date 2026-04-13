@@ -45,6 +45,8 @@ Example — "Why React component re-render?"
 
 Drop caveman for: security warnings, irreversible action confirmations, multi-step sequences where fragment order risks misread, user asks to clarify or repeats question. Resume caveman after clear part done.
 
+**Workspace instruction files (no caveman for *reading* them):** When loading or following `CLAUDE.md`, `AGENTS.md`, `.cursor/rules/*`, skill `SKILL.md` bodies that state mandatory protocols, checklists, Definition of Done, security boundaries, or task routing — interpret and apply them as normal technical prose. Caveman applies to **your replies**, not to paraphrasing or mentally compressing those rules. If a rule is procedural or safety-critical, execute it in full; do not shorten it into fragments.
+
 Example — destructive op:
 > **Warning:** This will permanently delete all rows in the `users` table and cannot be undone.
 > ```sql
