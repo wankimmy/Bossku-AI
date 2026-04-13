@@ -176,6 +176,7 @@ Classify into a **role cluster** first, then choose the minimum skill set. This 
 | **Engineering** | rapid-prototype | Fast proof-of-concepts, demos, MVP scaffolds, and prototype debt ledgers |
 | **Engineering** | github-workflow | GitHub issues, PRs, Actions, releases, Dependabot, and repo workflow operations |
 | **Engineering** | devops-iac | CI/CD, infra-as-code, runtime reliability, rollback and secrets posture |
+| **Engineering** | docker | Dockerfile and Docker Compose setup, `.env`, volumes, networks, and one-command container startup |
 | **Engineering** | mongodb | MongoDB collection design, indexes, aggregation, migrations, and operational checks |
 | **Engineering** | nuxt-development | Nuxt 3/4 implementation and audit guidance grounded in current docs |
 | **Engineering** | codebase-analysis | Evidence-based execution-path and module-boundary analysis |
@@ -239,6 +240,7 @@ Classify into a **role cluster** first, then choose the minimum skill set. This 
 | Nuxt app work | "Audit this Nuxt page" / "Build this in Nuxt" | nuxt-development, ui-ux-design-to-code |
 | API contract or webhook design | "Design this API" / "How should we version this?" | api-design, software-architecture |
 | CI/CD, containers, or infra | "Review our pipeline" / "Design deploy flow" | devops-iac, engineering-delivery, cybersecurity-risk |
+| Dockerfile or Docker Compose setup | "Dockerize this app" / "Make docker compose up -d work" | docker, devops-iac |
 | MongoDB schema or query work | "Review this collection design" / "Optimize this aggregation" | mongodb, data-architecture |
 | Browser automation or UI smoke tests | "Test this flow in the browser" / "Scrape this JS-rendered page" | browser-automation, integration-testing |
 | Performance profiling or bottleneck diagnosis | "Profile this slow endpoint" / "Find the memory leak" | performance-profiling, data-architecture |
@@ -271,7 +273,7 @@ For larger efforts you can run the assistant in a phase-aware way. The assistant
 |-------|--------|-------------------|
 | **Discovery** | What we're building, for whom, evidence | project-understanding, customer-discovery, deep-research, product-strategy, market-analysis, competitor-intelligence, claude-code-setup |
 | **Strategy** | Roadmap, scope, priorities, ownership | planning-execution, operations, financial-modeling, investor-prep, software-architecture, api-design, data-architecture, analytics-metrics |
-| **Build** | Implementation with quality gates | engineering-delivery, rapid-prototype, github-workflow, mongodb, nuxt-development, browser-automation, devops-iac, ui-ux-design-to-code, i18n-l10n, 3d-web-development, gsap-animation, lenis-smooth-scroll, coding-best-practices, bug-finding, rigorous-code-review, performance-profiling, integration-testing, skill-creator |
+| **Build** | Implementation with quality gates | engineering-delivery, rapid-prototype, github-workflow, mongodb, nuxt-development, browser-automation, devops-iac, docker, ui-ux-design-to-code, i18n-l10n, 3d-web-development, gsap-animation, lenis-smooth-scroll, coding-best-practices, bug-finding, rigorous-code-review, performance-profiling, integration-testing, skill-creator |
 | **Harden** | Security, logic, readiness | cybersecurity-risk, legal-compliance, business-logic-review, agent-security-hardening, incident-response, claude-md-management, cross-model-escalation |
 | **Launch** | Readiness, GTM, PMF signals | launch-commercialization, seo-geo, **Growth**: marketing-growth, growth-experiment, paid-acquisition-monetization, lead-intelligence; **Sales**: sales-strategy |
 
@@ -283,7 +285,7 @@ Use the right skill without the user having to ask, grouped by role cluster:
 
 - **Orchestration**: unfamiliar codebase -> `project-understanding`; current docs/API behavior -> `documentation-lookup`; deep evidence synthesis -> `deep-research`; new utility/dependency/integration -> `search-first`; new/evaluated skill -> `skill-creator`; skills/rules sprawl -> `skill-stocktake` or `rules-distill`; Claude instructions -> `claude-md-management`; Claude Code MCP/hooks/config -> `claude-code-setup`; current model stuck -> `cross-model-escalation`; post-meaningful durable lesson -> `continuous-learning`; heavy parallel/risky scope -> `subagent-delegation`.
 - **Product**: customer research/interviews -> `customer-discovery`; roadmap/prioritization/owner or milestone drift -> `planning-execution`; vendor/process/change/capacity work -> `operations`; financial model/runway/pricing math -> `financial-modeling`; funnels/KPIs/experiments -> `analytics-metrics`; launch-readiness framing -> `launch-commercialization`.
-- **Engineering**: fast demo/POC -> `rapid-prototype`; complex implementation/refactor -> `engineering-delivery`; GitHub issues/PRs/Actions/releases -> `github-workflow`; browser testing/JS-rendered scraping -> `browser-automation`; CI/CD/container/infra changes -> `devops-iac`; MongoDB collection/query/migration work -> `mongodb`; Nuxt app work -> `nuxt-development`; schema/migration/warehouse/data pipeline work -> `data-architecture`; structural cleanup -> `code-revamp`; performance/bottleneck/profiling work -> `performance-profiling`; integration test layer or contract test design -> `integration-testing`; P1/P2 production incident or postmortem -> `incident-response`.
+- **Engineering**: fast demo/POC -> `rapid-prototype`; complex implementation/refactor -> `engineering-delivery`; GitHub issues/PRs/Actions/releases -> `github-workflow`; browser testing/JS-rendered scraping -> `browser-automation`; Dockerfile/Compose setup -> `docker`; CI/CD/container/infra changes -> `devops-iac`; MongoDB collection/query/migration work -> `mongodb`; Nuxt app work -> `nuxt-development`; schema/migration/warehouse/data pipeline work -> `data-architecture`; structural cleanup -> `code-revamp`; performance/bottleneck/profiling work -> `performance-profiling`; integration test layer or contract test design -> `integration-testing`; P1/P2 production incident or postmortem -> `incident-response`.
 - **Design**: UI quality/accessibility -> `ui-ux-design-to-code`; multilingual/locale/RTL risks -> `i18n-l10n`; 3D/WebGL/immersive experiences -> `3d-web-development`; GSAP timelines/ScrollTrigger motion -> `gsap-animation`; Lenis smooth-scroll plumbing -> `lenis-smooth-scroll`.
 - **Security**: auth/billing/external API/input trust boundaries -> `cybersecurity-risk`; agent workspace/integration/memory safety -> `agent-security-hardening`; consent/retention/vendor/policy concerns -> `legal-compliance`.
 - **Quality**: code changed -> `rigorous-code-review` plus `bug-finding` as needed; strict skeptical review requested -> `rigorous-code-review`; incidents requiring DB/log/queue/webhook correlation -> `bug-finding` deep investigation mode with `business-logic-review` when invariants are involved.
@@ -335,6 +337,7 @@ Before considering a meaningful task done:
 | `bosskuai-rapid-prototype` | `ai-assistant/skills/bosskuai-rapid-prototype/SKILL.md` |
 | `bosskuai-github-workflow` | `ai-assistant/skills/bosskuai-github-workflow/SKILL.md` |
 | `bosskuai-devops-iac` | `ai-assistant/skills/bosskuai-devops-iac/SKILL.md` |
+| `bosskuai-docker` | `ai-assistant/skills/bosskuai-docker/SKILL.md` |
 | `bosskuai-mongodb` | `ai-assistant/skills/bosskuai-mongodb/SKILL.md` |
 | `bosskuai-nuxt-development` | `ai-assistant/skills/bosskuai-nuxt-development/SKILL.md` |
 | `bosskuai-ui-ux-design-to-code` | `ai-assistant/skills/bosskuai-ui-ux-design-to-code/SKILL.md` |

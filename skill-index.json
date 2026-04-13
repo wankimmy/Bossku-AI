@@ -113,6 +113,13 @@
       "keywords": ["terraform", "docker", "pipeline", "runtime"]
     },
     {
+      "id": "bosskuai-docker",
+      "cluster": "engineering",
+      "status": "active",
+      "triggers": ["dockerize app", "Dockerfile", "Docker Compose", "docker compose up"],
+      "keywords": ["docker", "compose.yaml", "Dockerfile", ".env", "volumes", "networks", "secrets", "bind mount"]
+    },
+    {
       "id": "bosskuai-codebase-analysis",
       "cluster": "engineering",
       "status": "active",

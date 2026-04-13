@@ -10,6 +10,7 @@ Use this skill when the main question is **how software is built, shipped, confi
 ## How this differs from nearby skills
 
 - **`bosskuai-engineering-delivery`**: focuses on application delivery workflow; this skill covers pipeline, deployment, runtime, and infra concerns around that workflow.
+- **`bosskuai-docker`**: owns concrete `Dockerfile`, Docker Compose, `.env`, volume, network, and one-command local container startup work.
 - **`bosskuai-polyglot-engineering`**: explains stack-specific tooling; this skill designs and reviews the operational lifecycle around those tools.
 - **`bosskuai-cybersecurity-risk`**: analyzes security risk; this skill uses that lens specifically for CI/CD, infra, secrets, runners, and supply chain.
 

@@ -117,6 +117,7 @@ Route to these skills when the task matches:
 | Nuxt development or audit | `bosskuai-nuxt-development` | `ai-assistant/skills/bosskuai-nuxt-development/SKILL.md` |
 | GSAP timelines / ScrollTrigger motion | `bosskuai-gsap-animation` | `ai-assistant/skills/bosskuai-gsap-animation/SKILL.md` |
 | Lenis smooth scroll / GSAP sync | `bosskuai-lenis-smooth-scroll` | `ai-assistant/skills/bosskuai-lenis-smooth-scroll/SKILL.md` |
+| Dockerfile / Docker Compose setup | `bosskuai-docker` | `ai-assistant/skills/bosskuai-docker/SKILL.md` |
 
 ## MCP servers in this workspace
 
