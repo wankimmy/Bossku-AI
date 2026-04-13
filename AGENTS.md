@@ -193,6 +193,7 @@ Classify into a **role cluster** first, then choose the minimum skill set. This 
 | **Design** | gsap-animation | GSAP timelines, ScrollTrigger, responsive motion, and framework-safe cleanup |
 | **Design** | lenis-smooth-scroll | Lenis smooth scrolling, scroll plumbing, anchors, GSAP sync, and scroll accessibility |
 | **Design** | design-systems | Design system creation, DESIGN.md generation, token definition, component specification, brand calibration |
+| **Orchestration** | caveman | Compressed caveman-style responses, ~75% output token savings, intensity levels lite/full/ultra/wenyan |
 | **Security** | cybersecurity-risk | Security/privacy/abuse and trust-boundary risk assessment |
 | **Security** | agent-security-hardening | Agent workspace hardening, least privilege, and prompt/content safety |
 | **Security** | legal-compliance | Privacy/compliance risk spotting and escalation guidance |
@@ -254,6 +255,7 @@ Classify into a **role cluster** first, then choose the minimum skill set. This 
 | 3D website or immersive motion | "Create a 3D web experience" | 3d-web-development, ui-ux-design-to-code |
 | GSAP or scroll-triggered motion | "Build this GSAP animation" / "Fix ScrollTrigger cleanup" | gsap-animation, ui-ux-design-to-code |
 | Lenis smooth scroll | "Add Lenis" / "Sync Lenis with GSAP ScrollTrigger" | lenis-smooth-scroll, gsap-animation |
+| Token-efficient or compressed responses | "less tokens" / "caveman mode" / "/caveman" | caveman |
 | Security/privacy/compliance review | "Audit abuse/privacy risks" / "Review compliance risk" | cybersecurity-risk, legal-compliance |
 | Find bugs or production root cause | "Hunt for bugs" / "Investigate logs and DB state" | bug-finding, business-logic-review |
 | Strict skeptical code review | "Review this PR harshly" / "Challenge this implementation" / "Check blast radius" | rigorous-code-review, coding-best-practices |
@@ -285,7 +287,7 @@ When the user says e.g. "We're in the build phase" or "Run the launch checklist"
 
 Use the right skill without the user having to ask, grouped by role cluster:
 
-- **Orchestration**: unfamiliar codebase -> `project-understanding`; current docs/API behavior -> `documentation-lookup`; deep evidence synthesis -> `deep-research`; new utility/dependency/integration -> `search-first`; new/evaluated skill -> `skill-creator`; skills/rules sprawl -> `skill-stocktake` or `rules-distill`; Claude instructions -> `claude-md-management`; Claude Code MCP/hooks/config -> `claude-code-setup`; current model stuck -> `cross-model-escalation`; post-meaningful durable lesson -> `continuous-learning`; heavy parallel/risky scope -> `subagent-delegation`.
+- **Orchestration**: unfamiliar codebase -> `project-understanding`; current docs/API behavior -> `documentation-lookup`; deep evidence synthesis -> `deep-research`; new utility/dependency/integration -> `search-first`; new/evaluated skill -> `skill-creator`; skills/rules sprawl -> `skill-stocktake` or `rules-distill`; Claude instructions -> `claude-md-management`; Claude Code MCP/hooks/config -> `claude-code-setup`; current model stuck -> `cross-model-escalation`; post-meaningful durable lesson -> `continuous-learning`; heavy parallel/risky scope -> `subagent-delegation`; token-efficient/compressed output requested -> `caveman`.
 - **Product**: customer research/interviews -> `customer-discovery`; roadmap/prioritization/owner or milestone drift -> `planning-execution`; vendor/process/change/capacity work -> `operations`; financial model/runway/pricing math -> `financial-modeling`; funnels/KPIs/experiments -> `analytics-metrics`; launch-readiness framing -> `launch-commercialization`.
 - **Engineering**: fast demo/POC -> `rapid-prototype`; complex implementation/refactor -> `engineering-delivery`; GitHub issues/PRs/Actions/releases -> `github-workflow`; browser testing/JS-rendered scraping -> `browser-automation`; Dockerfile/Compose setup -> `docker`; CI/CD/container/infra changes -> `devops-iac`; MongoDB collection/query/migration work -> `mongodb`; Nuxt app work -> `nuxt-development`; schema/migration/warehouse/data pipeline work -> `data-architecture`; structural cleanup -> `code-revamp`; performance/bottleneck/profiling work -> `performance-profiling`; integration test layer or contract test design -> `integration-testing`; P1/P2 production incident or postmortem -> `incident-response`.
 - **Design**: design system creation/audit/token work -> `design-systems`; UI quality/accessibility -> `ui-ux-design-to-code`; multilingual/locale/RTL risks -> `i18n-l10n`; 3D/WebGL/immersive experiences -> `3d-web-development`; GSAP timelines/ScrollTrigger motion -> `gsap-animation`; Lenis smooth-scroll plumbing -> `lenis-smooth-scroll`.
@@ -348,6 +350,7 @@ Before considering a meaningful task done:
 | `bosskuai-gsap-animation` | `ai-assistant/skills/bosskuai-gsap-animation/SKILL.md` |
 | `bosskuai-lenis-smooth-scroll` | `ai-assistant/skills/bosskuai-lenis-smooth-scroll/SKILL.md` |
 | `bosskuai-design-systems` | `ai-assistant/skills/bosskuai-design-systems/SKILL.md` |
+| `bosskuai-caveman` | `ai-assistant/skills/bosskuai-caveman/SKILL.md` |
 | `bosskuai-cybersecurity-risk` | `ai-assistant/skills/bosskuai-cybersecurity-risk/SKILL.md` |
 | `bosskuai-agent-security-hardening` | `ai-assistant/skills/bosskuai-agent-security-hardening/SKILL.md` |
 | `bosskuai-legal-compliance` | `ai-assistant/skills/bosskuai-legal-compliance/SKILL.md` |

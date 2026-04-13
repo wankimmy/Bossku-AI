@@ -190,6 +190,13 @@
       "keywords": ["design system", "DESIGN.md", "tokens", "color palette", "typography scale", "component specs", "brand system", "getdesign.md"]
     },
     {
+      "id": "bosskuai-caveman",
+      "cluster": "orchestration",
+      "status": "active",
+      "triggers": ["compress responses", "less tokens", "caveman mode", "token efficient", "be brief"],
+      "keywords": ["caveman", "compressed responses", "token reduction", "terse output", "intensity", "wenyan"]
+    },
+    {
       "id": "bosskuai-cybersecurity-risk",
       "cluster": "security",
       "status": "active",
