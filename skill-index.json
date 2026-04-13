@@ -183,6 +183,13 @@
       "keywords": ["lenis", "smooth scroll", "autoRaf", "ReactLenis", "VueLenis", "lenis/snap", "anchors"]
     },
     {
+      "id": "bosskuai-design-systems",
+      "cluster": "design",
+      "status": "active",
+      "triggers": ["create design system", "generate DESIGN.md", "design tokens", "design system audit", "brand design system"],
+      "keywords": ["design system", "DESIGN.md", "tokens", "color palette", "typography scale", "component specs", "brand system", "getdesign.md"]
+    },
+    {
       "id": "bosskuai-cybersecurity-risk",
       "cluster": "security",
       "status": "active",
