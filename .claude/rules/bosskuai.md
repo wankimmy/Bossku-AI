@@ -7,6 +7,7 @@ Source of truth: `AGENTS.md`. Full DoD: `CLAUDE.md`. This file carries Claude-sp
 - Standalone `bossku` in a prompt activates BosskuAI mode for that request.
 - For meaningful work: use root `AGENTS.md` to classify the task, load the minimum relevant skill set, plan before execute, and keep routing/meta internal unless the user wants Debug/Handoff visibility.
 - Normal mode: no `[TASK START]` / `[TASK END]` boilerplate. Debug/Handoff only: use root compact forms `[Route] ...` and `[Done] ...`.
+- Ambiguous scope is a hard stop: ask 1-3 numbered clarification questions with a `Please answer:` line, then wait for the user before acting.
 
 ## Claude model split
 

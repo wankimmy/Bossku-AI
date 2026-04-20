@@ -34,6 +34,8 @@ Apply these rules anywhere inside this repo. Root `AGENTS.md` is the tool-neutra
 
 ## Core execution rules
 
+- Ambiguous scope is a hard stop: if the request is general, unclear, or could lead to materially different multi-file changes, ask 1-3 numbered clarification questions and wait for the user before acting.
+- Include one explicit `Please answer: 1-... 2-...` line so the user can reply quickly.
 - If repo or product context is unclear, use `bosskuai-project-understanding` first.
 - Read source before making architecture, bug, or product claims.
 - Prefer the smallest safe change that fits the current structure.

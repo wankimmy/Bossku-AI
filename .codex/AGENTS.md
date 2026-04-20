@@ -22,6 +22,8 @@ Use root `AGENTS.md` as the source of truth. This file keeps Codex-specific exec
 
 ## Engineering posture
 
+- Ambiguous scope is a hard stop: if the request is general, unclear, or could lead to materially different multi-file changes, ask 1-3 numbered clarification questions and wait for the user before acting.
+- Include one explicit `Please answer: 1-... 2-...` line so the reply is easy.
 - Gather evidence before editing. Read nearby code, tests, and docs first.
 - Prefer the smallest safe change that fits the current architecture.
 - Treat correctness, security, business logic, UX, and operational risk as part of engineering quality.

@@ -32,11 +32,20 @@ If prompt has standalone word `bossku`, activate BosskuAI mode for that request.
 
 ## Clarify first (ambiguity protocol)
 
-**Prompt general, ambiguous, or touches many files and scope unclear — stop and ask before acting.**
+**Mandatory gate:** Prompt general, ambiguous, or touches many files and scope unclear — stop and ask before acting.
 
-- Ask numbered bullet list of yes/no (or short-answer) questions.
+- Treat ambiguity as a hard stop.
+- Ask at most 3 numbered yes/no or short-answer questions.
 - Include explicit answer format so user can reply concise.
+- Wait for the user's answer before any multi-file changes or material scope assumptions.
 - Do NOT guess, assume, or change multiple files without confirmation.
+
+Model behavior:
+1. Detect unclear scope or multiple valid interpretations.
+2. Pause before planning or execution.
+3. Ask 1-3 numbered clarification questions.
+4. Add one `Please answer:` line with the exact response format.
+5. Continue only after the user replies.
 
 Example format:
 ```

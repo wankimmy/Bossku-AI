@@ -431,11 +431,22 @@ Use the full debug block only in Debug/Handoff mode:
 
 ### Clarify first (ambiguity protocol)
 
-**When a prompt is general, ambiguous, or touches many files and you are not sure of the intended scope — stop and ask before acting.**
+**Mandatory gate:** When a prompt is general, ambiguous, or touches many files and intended scope is not explicit, the model MUST stop and ask before acting.
 
-- Ask using a numbered bullet list of yes/no (or short-answer) questions.
-- Include explicit answer format instructions so the user can reply concisely.
+- Treat ambiguity as a hard stop, not a soft suggestion.
+- Ask at most 3 numbered questions using yes/no or very short-answer choices.
+- Include one explicit reply format line so the user can answer concisely.
+- Wait for the user's answer before making multi-file changes, choosing between materially different scopes, or assuming defaults that could change the outcome.
 - Do NOT guess, assume, or start making changes across multiple files without confirmation.
+- If only one small clarification blocks the work, ask only that one question.
+- If the request is clear enough for a safe single-file or trivial action, proceed without unnecessary questions.
+
+Model behavior:
+1. Detect ambiguity or hidden scope branches.
+2. Pause before planning or editing.
+3. Ask 1-3 numbered scope questions.
+4. Include `Please answer: 1-... 2-...` format.
+5. Resume only after the user answers.
 
 Example format:
 ```
