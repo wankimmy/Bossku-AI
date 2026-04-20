@@ -11,8 +11,8 @@
     {
       "name": "bossku-ai",
       "source": {
-        "source": "github",
-        "repo": "wankimmy/Bossku-AI"
+        "source": "url",
+        "url": "https://github.com/wankimmy/Bossku-AI.git"
       },
       "description": "AI cofounder plugin for Claude Code with reusable skills, agents, and memory-first workflows.",
       "version": "1.0.0",
