@@ -3,6 +3,7 @@
 **Instruction format:** This file is standard technical prose. The `bosskuai-caveman` skill compresses **assistant replies** only; it does not apply to interpreting or executing mandatory protocols, task routing, Definition of Done, security boundaries, or checklists defined here or in `AGENTS.md` (see that skill’s Auto-Clarity and workspace-instruction exception).
 
 Use `AGENTS.md` as **tool-neutral truth** for skill roster, quick ref, shared memory rules, success criteria.
+The root `AGENTS.md` `<claude-mem-context>` block is the workspace memory seed for Claude sessions; keep it in sync with shared memory when the handoff changes.
 
 **Dup on purpose:** This file = **Claude Code entry point** — repeats two-phase model split and core posture so Claude loads right defaults without opening `AGENTS.md` first. Full skill table, phased pipelines, future skills → **`AGENTS.md`**. Cursor rules → `.cursor/rules/bosskuai.mdc`. Codex naming → `.codex/AGENTS.md`.
 
@@ -134,7 +135,8 @@ Please answer: 1-yes/no  2-A/B/C  3-yes/no
 
 - `ai-assistant/memory/` = **shared durable memory across all tools** — Claude, Codex, Cursor.
 - **Protocol:** `ai-assistant/references/memory-first-handoff-protocol.md` — retrieve minimum relevant memory before substantive work; write only for durable deltas, 4/5+ learning importance, or cross-tool handoff.
-- Broad profile/project files only when context matters; otherwise prefer continuation state, recent handoff entries, task-specific memory. Visible route headers optional, debug-oriented.
+- Read `active-continuation.md` directly first; when `semantic-memory.sqlite3` exists, query that before opening broad memory files. Broad profile/project/plan files only when context matters. Visible route headers optional, debug-oriented.
+- For non-trivial tasks, use the gated flow from the protocol: plan first, store a compact plan in `plan-log.md` when it is likely to matter later, sync vector memory, execute, then store durable outcomes/learnings and sync again if indexed memory changed.
 - Never treat memory as tool-local — insights here must be usable by any tool in any session.
 
 ## Durable learning
@@ -144,6 +146,9 @@ Please answer: 1-yes/no  2-A/B/C  3-yes/no
 - Repeated usage reveals missing reusable capability → create or update right skill, checklist, playbook, pitfall, or rule. Don't leave it only in memory.
 - Promote repeated lessons into checklists, pitfalls, playbooks, or skill updates.
 - Use `bash ./ai-assistant/scripts/learning-doctor.sh` when available to catch stale counts, contradictory memory, consumed continuation state before larger maintenance passes.
+- After touching indexed memory files, refresh semantic recall with `python3 ./ai-assistant/scripts/vector_memory.py sync`.
+- Use `bash ./ai-assistant/scripts/project-understanding.sh` when the workspace itself changed and project understanding should be refreshed from source.
+- Use `ai-assistant/memory/plan-log.md` for compact pre-execution plans worth retrieving later; keep finished outcomes in `learning-log.md`.
 - Use `ai-assistant/memory/agent-profile.md` to customize active workspace for user's actual company/domain.
 - Use `ai-assistant/memory/project-understanding.md` to preserve durable understanding of project purpose and usually-relevant skills.
 - Something material not confirmed from code, docs, design, or current evidence → ask user. Don't guess.

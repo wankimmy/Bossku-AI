@@ -11,9 +11,10 @@ repo_root="$(resolve_repo_root "${1:-$script_dir/../..}")"
 
 {
   echo "[BosskuAI] Post-response — verify before done:"
-  echo "  □ [TASK END] block emitted? (Meaningful/Memory/Learning fields)"
   echo "  □ DoD checklist passed? (CLAUDE.md)"
-  echo "  □ Memory updated OR 'Memory: unchanged (trivial)' stated?"
+  echo "  □ Non-trivial reusable plan -> stored in plan-log.md before execute?"
+  echo "  □ Memory updated if durable delta exists?"
+  echo "  □ Indexed memory changed -> ran vector_memory.py sync?"
   echo "  □ Meaningful:yes → continuous-learning run or deferred with reason?"
   echo "  Changed files:"
   git_changed_files_summary "$repo_root"

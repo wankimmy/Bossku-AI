@@ -14,6 +14,7 @@ Assistants run in Claude, Cursor, Codex, and future tools. Lessons and context m
 2. **File roles**
    - **`agent-profile.md`** — who the user/org is, domain constraints, preferences (durable, low churn).
    - **`project-understanding.md`** — what this repo/product is, stack, conventions, which skills usually apply (durable, update when the project shifts).
+   - **`plan-log.md`** — compact pre-execution plans that should survive across chats/tools when the plan itself is worth reusing.
    - **`learning-log.md`** — chronological durable learnings and decisions (append; distill periodically into pitfalls/skills/checklists).
    - **`bug-patterns.md`** — recurring defect classes for this workspace (see file header for when to add).
    - **`market-notes.md`** — enduring market/competitor/pricing patterns (not ephemeral news).

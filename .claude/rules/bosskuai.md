@@ -1,86 +1,31 @@
 # BosskuAI Rules — always active in this workspace
 
-Source of truth: `AGENTS.md`. Full DoD: `CLAUDE.md`. Skill roster + quick reference: `AGENTS.md`.
+Source of truth: `AGENTS.md`. Full DoD: `CLAUDE.md`. This file carries Claude-specific deltas only.
 
-## Per-turn protocol (mandatory — every response)
+## Core loop
 
-**Every non-trivial response MUST begin with [TASK START] and end with [TASK END].**
+- Standalone `bossku` in a prompt activates BosskuAI mode for that request.
+- For meaningful work: use root `AGENTS.md` to classify the task, load the minimum relevant skill set, plan before execute, and keep routing/meta internal unless the user wants Debug/Handoff visibility.
+- Normal mode: no `[TASK START]` / `[TASK END]` boilerplate. Debug/Handoff only: use root compact forms `[Route] ...` and `[Done] ...`.
 
-### Step 1 — Read memory (before acting)
-Order: `ai-assistant/memory/active-continuation.md` → `agent-profile.md` → `project-understanding.md` → `learning-log.md` (last 3 entries)
+## Claude model split
 
-### Step 2 — Load skill
-Open `AGENTS.md` → Quick reference → read `ai-assistant/skills/bosskuai-<name>/SKILL.md`
+- Plan / architecture / ambiguous work: `claude-opus-4-6`
+- Execute / implementation: `claude-sonnet-4-6`
+- Trivial tasks may skip the split.
+- If the active model is stuck, low-confidence, or missing capability, load `bosskuai-cross-model-escalation` before retrying the same path.
 
-### Step 3 — Emit [TASK START]
-```text
-[TASK START]
-Memory read: <files, or "trivial">
-Skill(s): <name + path, or "trivial">
-Phase: <Plan/Opus 4.6 | Execute/Sonnet 4.6 | Trivial>
-Type: <cluster/intent>
-```
+## Shared memory
 
-### Step 4 — Act (plan before execute on non-trivial tasks)
+- Read `ai-assistant/memory/active-continuation.md` directly first.
+- If `ai-assistant/memory/semantic-memory.sqlite3` exists, query it with `python3 ./ai-assistant/scripts/vector_memory.py query "<task summary>" --limit 3` before opening broad memory files.
+- For non-trivial tasks, if the plan is durable enough to matter later, append a compact pre-execution entry to `ai-assistant/memory/plan-log.md` and sync before executing.
+- Follow `ai-assistant/references/memory-first-handoff-protocol.md` for read/write thresholds and sparse reporting.
+- If indexed memory changed, refresh semantic recall with `python3 ./ai-assistant/scripts/vector_memory.py sync`.
+- The root `AGENTS.md` `<claude-mem-context>` block is the current session memory seed for Claude runs; keep it aligned with shared memory when the handoff changes.
 
-### Step 5 — Emit [TASK END]
-```text
-[TASK END]
-Meaningful: <yes|no>
-Memory: <paths updated, or "none">
-Learning: <artifact+path, or "deferred: reason">
-```
-Trivial tasks: emit both blocks with "trivial/no". No silent skips — a missing header is a violation.
+## Response style
 
-## Model split (mandatory)
-| Phase | Claude | Codex | Cursor |
-|-------|--------|-------|--------|
-| Plan | Opus 4.6 | gpt-5.4 | strongest available |
-| Execute | Sonnet 4.6 | gpt-5.4-mini | Composer 2 |
-
-Never skip planning on non-trivial tasks.
-If the active model is stuck, low-confidence, or missing a capability, load `bosskuai-cross-model-escalation` and escalate before repeating the same failed path.
-
-## Memory (mandatory — all tools, every turn)
-`ai-assistant/memory/` is shared across Claude, Codex, Cursor. Read before acting. Write before done.
-Protocol: `ai-assistant/references/memory-first-handoff-protocol.md`
-If 'Memory read:' is blank on a non-trivial turn — protocol was skipped.
-
-## Task routing (mandatory — never skip)
-1. Classify: trivial or non-trivial
-2. Open `AGENTS.md` → Quick reference → pick cluster + skill
-3. Read `ai-assistant/skills/bosskuai-<name>/SKILL.md`
-4. State which skills loaded in [TASK START] header
-5. Plan then execute
-
-Load minimum relevant skills. When ambiguous, pick closest and note assumption.
-
-## Bossku keyword
-Standalone `bossku` in any prompt → activate BosskuAI mode, auto-load minimum relevant skills.
-
-## Continuous learning (post-task)
-Meaningful = ANY true: file changed / decision made / bug found / skill applied non-generically / pattern 2+ times / gap surfaced.
-Trivial = ALL true: no files changed + no repo conclusion + pure lookup.
-Always emit [TASK END]. Run `/continuous-learning` or explicitly defer after meaningful tasks.
-
-## Definition of Done
-See `CLAUDE.md` § Definition of Done for the full checklist. Always verify before declaring done.
-
-## References
-- Skill roster + quick reference: `AGENTS.md`
-- Full DoD: `CLAUDE.md`
-- Memory protocol: `ai-assistant/references/memory-first-handoff-protocol.md`
-- Skills: `ai-assistant/skills/bosskuai-<name>/SKILL.md`
-
-## Output compression (caveman)
-
-Respond terse like smart caveman. All technical substance stay. Only fluff die.
-
-- Drop: articles (a/an/the), filler (just/really/basically), pleasantries, hedging
-- Fragments OK. Short synonyms. Technical terms exact. Code unchanged.
-- Pattern: [thing] [action] [reason]. [next step].
-- Switch level: /caveman lite|full|ultra|wenyan
-- Stop: "stop caveman" or "normal mode"
-
-Auto-Clarity: drop caveman for security warnings, irreversible actions, user confused. Resume after.
-Boundaries: code/commits/PRs written normal.
+- Default reply style is caveman-compressed.
+- Auto-Clarity overrides compression for security warnings, destructive actions, ambiguity, or user confusion.
+- Code, commits, and PR text stay normal prose.

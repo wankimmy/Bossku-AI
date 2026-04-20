@@ -12,11 +12,10 @@ Use this command to audit local skills, commands, and nearby guidance for overla
 ## Instructions
 
 1. Use `bosskuai-skill-stocktake` and the skill health checklist.
-2. Start with `bash ./ai-assistant/scripts/skill-stocktake.sh` when it is available so the inventory is collected deterministically first.
-3. Review the relevant skills, commands, and linked references in scope.
-4. Compare them against `AGENTS.md`, memory, and references to detect overlap.
-5. Produce verdicts with reasons grounded in actionability, uniqueness, freshness, and maintenance cost.
-6. Do not retire, merge, or delete anything automatically. Present the maintenance recommendations first.
+2. Review the relevant skills, commands, and linked references in scope.
+3. Compare them against `AGENTS.md`, memory, and references to detect overlap.
+4. Produce verdicts with reasons grounded in actionability, uniqueness, freshness, and maintenance cost.
+5. Do not retire, merge, or delete anything automatically. Present the maintenance recommendations first.
 
 ## Output
 

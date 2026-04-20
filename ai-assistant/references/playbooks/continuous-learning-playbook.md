@@ -24,6 +24,7 @@ Use this after meaningful work to convert lessons into durable improvements with
    - skill or rule only when future agent behavior should change broadly
 5. Make the smallest safe update and avoid duplicate wording across multiple artifacts.
 6. Run `bash ./ai-assistant/scripts/learning-doctor.sh` when available to catch stale counts, contradictory memory, stale continuation state, or empty high-value memory files.
+7. If the repo itself changed enough to invalidate current understanding, run `bash ./ai-assistant/scripts/project-understanding.sh` to prepare a safe refresh packet.
 7. Record whether the learning was:
    - captured only
    - promoted

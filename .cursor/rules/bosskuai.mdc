@@ -3,164 +3,47 @@ alwaysApply: true
 ---
 # BosskuAI Rules
 
-Apply these rules anywhere inside this repo.
+Apply these rules anywhere inside this repo. Root `AGENTS.md` is the tool-neutral source of truth; this file keeps Cursor-specific deltas only.
 
-**Cross-reference:** Tool-neutral contract (full skill roster, memory, future skill gaps) is in root **`AGENTS.md`** — see § **Entry points and intentional overlap**. Expanded **Definition of Done** checklist is in **`CLAUDE.md`**.
+## Activation and routing
 
-## Bossku activation keyword
+- Standalone `bossku` in a prompt activates BosskuAI mode for that request.
+- For meaningful work: classify via root `AGENTS.md`, load the minimum relevant skill set, plan first, then execute.
+- Keep routing/meta internal in normal mode. Debug/Handoff only: use root compact forms `[Route] ...` and `[Done] ...`.
+- Do not duplicate root skill tables or quick-reference content here.
 
-If the user includes the standalone word `bossku` anywhere in the prompt, treat that as an explicit request to activate BosskuAI mode for that request.
+## Cursor model split
 
-- Apply the BosskuAI workspace rules before answering.
-- Classify the task and automatically load the minimum relevant local BosskuAI skills.
-- Do not require the user to name a specific skill after saying `bossku` unless scope is still ambiguous.
+| Phase | Model |
+|-------|-------|
+| Planning / architecture / analysis | strongest available reasoning model in Plan mode |
+| Execution / implementation | `Composer 2` |
 
-## Model assignment (mandatory)
+- Always enter Plan mode first for meaningful tasks.
+- Quick/trivial tasks may skip the split.
+- If the current path is stuck or missing capability, load `bosskuai-cross-model-escalation` before retrying.
 
-**Two-phase model split — always enforced for meaningful tasks in Cursor:**
-
-| Phase | Model | Why |
-|-------|-------|-----|
-| Planning, architecture, strategy, analysis (Plan mode) | **Claude Opus 4.6**, **GPT-5.4**, or **Gemini Pro 3.1** (pick strongest available for the task) | Deepest reasoning for complex/ambiguous problems |
-| Implementation, execution, code generation | **Cursor Composer 2** (always) | Default execution surface; fast, tool-capable agent for concrete work |
-
-- Always enter **Plan mode** first with **Opus 4.6, GPT-5.4, or Gemini Pro 3.1** (whichever is available and best suited). Never skip to execution on meaningful tasks.
-- **Execution** (implementation, edits, codegen): always use **Composer 2**, not ad-hoc chat models.
-- If the current model is stuck, low-confidence, or missing a capability, load `bosskuai-cross-model-escalation` and switch to a better-fit helper model or tool surface instead of retrying the same path.
-- Quick/trivial tasks (single-line fixes, factual lookups) may skip the split.
-
-## Shared memory (mandatory)
+## Shared memory
 
 - `ai-assistant/memory/` is shared durable memory across Claude, Codex, and Cursor.
-- **Memory-first protocol:** [`ai-assistant/references/memory-first-handoff-protocol.md`](mdc:ai-assistant/references/memory-first-handoff-protocol.md) — before substantive edits, follow the read order there; before declaring done on **non-trivial** work, persist a structured handoff (usually append `learning-log.md`). Trivial prompts: no log append, but state explicitly in the reply that memory was unchanged.
-- Never treat memory as tool-local — any insight written here must be usable by all tools.
-- Read order enforced by [TASK START] header — blank 'Memory read:' on non-trivial turn = protocol violation.
+- Read `active-continuation.md` directly first.
+- If `semantic-memory.sqlite3` exists, query it with `python3 ./ai-assistant/scripts/vector_memory.py query "<task summary>" --limit 3` before opening broad memory files.
+- For non-trivial tasks, if the plan is durable enough to matter later, append a compact pre-execution entry to `ai-assistant/memory/plan-log.md` and sync before executing.
+- Follow [`ai-assistant/references/memory-first-handoff-protocol.md`](mdc:ai-assistant/references/memory-first-handoff-protocol.md) for write thresholds and sparse reporting.
+- If indexed memory changed, refresh semantic recall with `python3 ./ai-assistant/scripts/vector_memory.py sync`.
 
-## Clarify first (ambiguity protocol)
+## Core execution rules
 
-**When a prompt is general, ambiguous, or touches many files and you are unsure of the intended scope — stop and ask before acting.**
-
-- Ask a numbered bullet list of yes/no (or short-answer) questions.
-- Include explicit answer format so the user can reply concisely (e.g. `1-yes 2-no 3-A`).
-- Do NOT guess, assume, or make changes across multiple files without confirmation.
-
-## Task routing (mandatory — never skip)
-
-**Before acting on any meaningful task, you MUST:**
-
-1. Classify the task type (product / engineering / design / security / marketing / sales / architecture / etc.)
-2. Open root `AGENTS.md` → Quick reference to identify the matching skill(s)
-3. Read the relevant `ai-assistant/skills/<skill-name>/SKILL.md` file(s)
-4. State which skill(s) you loaded at the start of your response
-5. Then proceed with plan → execute
-
-**This is not optional.** Skipping skill loading means giving generic responses instead of domain-specific expertise. The user built this system to be used on every task.
-
-- Load the **minimum relevant skills** — do not load everything, but do not skip applicable ones.
-- When scope is ambiguous, default to the closest skill and note the assumption.
-
-**Mandatory output format — emit before any planning or code:**
-```text
-[TASK START]
-Memory read: <files, or "trivial">
-Skill(s): <name + path, or "trivial">
-Phase: <Plan/strongest model | Execute/Composer 2 | Trivial>
-Type: <cluster/intent>
-```
-
-**Closing block — emit before the final sentence of every non-trivial response:**
-```text
-[TASK END]
-Meaningful: <yes|no>
-Memory: <paths updated, or "none">
-Learning: <artifact+path, or "deferred: reason">
-```
-
-## Core rules
-
-> Full skill roster, task-type list, and working rules are in root **`AGENTS.md`**. Rules here are Cursor-specific additions only — do not duplicate `AGENTS.md` content.
-
-- If the user says `bossku`, treat that as activation for the whole BosskuAI system in this workspace before task routing.
-- Auto-emit [TASK START] at the start of every non-trivial response. Do not wait to be asked.
-- Always plan first in **Plan mode** (Opus 4.6 / GPT-5.4 / Gemini Pro 3.1). State phase and model at the start of each meaningful task.
-- Execute in **Composer 2** only — not ad-hoc chat. Never skip to Composer 2 before Plan mode outcome is stated.
 - If repo or product context is unclear, use `bosskuai-project-understanding` first.
-- Read source code before making architecture or bug claims.
-- Prefer the smallest safe change. Use code revamp only when the structure materially blocks delivery.
-- Triple-check important work. Be skeptical; push for clearer acceptance criteria.
+- Read source before making architecture, bug, or product claims.
+- Prefer the smallest safe change that fits the current structure.
 - Treat security, UX, business rules, and operational risk as part of correctness.
-- Treat `ai-assistant/memory/` as shared durable memory across all tools.
-- Non-trivial **Composer** turns end with a repo memory update per the protocol **or** an explicit one-line skip reason; never silent skip.
-- After meaningful tasks, promote durable learnings to memory, checklist, pitfall, playbook, or skill.
-- If continuation risk is high, preserve compact handoff state; ask user to continue in a fresh prompt.
-- When a task has ≥ 2 independent workstreams or ≥ 5 independent files: open parallel Composer tabs — one per workstream, each scoped to its own files and goal. Do not run sequentially in one Composer unless there is an ordering dependency.
-- When one planning model or Composer path is blocked after two serious attempts, escalate with `bosskuai-cross-model-escalation` and use another planning model or tool surface for a scoped second opinion.
+- When a task has at least 2 independent workstreams or 5 independent files, use parallel Composer tabs instead of one long serial run when dependencies allow it.
 - If something material is unconfirmed, ask the user instead of guessing.
 - Run `bash ./ai-assistant/scripts/learning-doctor.sh` before large maintenance passes.
 
-## Skill routing
+## Cursor ecosystem notes
 
-Full skill roster with routing guidance: root `AGENTS.md` § **Skill roster**. All skill files at `ai-assistant/skills/bosskuai-<name>/SKILL.md`.
-
-## MCP servers in this workspace
-
-Configured in `mcp-configs/cursor-mcp-servers.json`. Copy relevant blocks to your Cursor MCP settings.
-
-| Server | Tool prefix | Auth required | Notes |
-|--------|-------------|---------------|-------|
-| Exa | `mcp__exa__*` | `EXA_API_KEY` env var | Web search — use for deep-research, competitor, lead skills |
-| Firecrawl | `mcp__firecrawl__*` | `FIRECRAWL_API_KEY` env var | Full-page scraping |
-| Context7 | `mcp__context7__*` | None | Live framework/library docs |
-| GitHub | `mcp__github__*` | `GITHUB_PAT` env var | Repo ops, PR reviews |
-| code-review-graph | varies by client | Local graph, blast-radius review, caller/test tracing |
-| Pencil | `mcp__pencil__*` | None (installed at `~/.pencil/`) | Browser automation — native in Cursor |
-
-**Cursor browser automation:** Use Pencil MCP (already installed). Playwright MCP is for Claude Code / Codex only.
-
-## Subagent delegation (Cursor)
-
-Cursor does not have native agent spawning. When a task matches an agent's description, adopt that agent's **role**, **process**, and **output format** from `agents/<agent>.md` using the mapped model.
-
-**Delegate when:** task ≥5 independent files, ≥2 parallel workstreams, or research requiring live web search.
-
-**Open parallel Composer tabs** (one per workstream) for tasks with independent parts instead of running serially.
-
-### Agent roster quick-ref
-
-| Agent | Model | Purpose |
-|-------|-------|---------|
-| `agents/planner.md` | Opus | Implementation planning |
-| `agents/code-reviewer.md` | Opus | Code quality review |
-| `agents/security-reviewer.md` | Opus | Vulnerability detection |
-| `agents/build-fixer.md` | Sonnet/Composer 2 | Resolve build errors |
-| `agents/refactor-cleaner.md` | Sonnet/Composer 2 | Dead code, duplication |
-| `agents/doc-updater.md` | Sonnet/Composer 2 | Docs sync |
-| `agents/market-researcher.md` | Opus | Market research with Exa |
-| `agents/competitor-tracker.md` | Opus | Competitor monitoring |
-| `agents/financial-analyst.md` | Opus | Financial modeling, runway |
-| `agents/growth-experimenter.md` | Opus | Experiment design |
-| `agents/lead-finder.md` | Opus | Lead discovery + outreach |
-| `agents/customer-researcher.md` | Opus | User interviews, personas |
-| `agents/browser-agent.md` | Sonnet/Composer 2 | Browser automation (Pencil) |
-| `agents/prototype-builder.md` | Sonnet/Composer 2 | Time-boxed prototyping |
-| `agents/tdd-guide.md` | Sonnet/Composer 2 | TDD red/green/refactor |
-| `agents/e2e-runner.md` | Sonnet/Composer 2 | E2E tests via Playwright/Pencil |
-| `agents/docs-lookup.md` | Sonnet/Composer 2 | Live docs via Context7 |
-| `agents/harness-optimizer.md` | Opus | bosskuAI health check |
-
-Full agent definitions: [`agents/`](mdc:agents) — [`agents/README.md`](mdc:agents/README.md)
-
-## References
-
-- Root instructions: [AGENTS.md](mdc:AGENTS.md)
-- Claude entry + full DoD: [CLAUDE.md](mdc:CLAUDE.md)
-- Assistant knowledge: [`ai-assistant/`](mdc:ai-assistant)
-- Agents: [`agents/`](mdc:agents)
-- MCP configs: [`mcp-configs/`](mdc:mcp-configs)
-- Continuous-learning skill: [`ai-assistant/skills/bosskuai-continuous-learning/SKILL.md`](mdc:ai-assistant/skills/bosskuai-continuous-learning/SKILL.md)
-- Checklists: [`ai-assistant/references/checklists/`](mdc:ai-assistant/references/checklists)
-- Playbooks: [`ai-assistant/references/playbooks/`](mdc:ai-assistant/references/playbooks)
-- Session handoff: [`ai-assistant/references/session-handoff-template.md`](mdc:ai-assistant/references/session-handoff-template.md)
-- Memory-first handoff protocol: [`ai-assistant/references/memory-first-handoff-protocol.md`](mdc:ai-assistant/references/memory-first-handoff-protocol.md)
-- Agent profile: [`ai-assistant/memory/agent-profile.md`](mdc:ai-assistant/memory/agent-profile.md)
-- Project understanding memory: [`ai-assistant/memory/project-understanding.md`](mdc:ai-assistant/memory/project-understanding.md)
+- MCP config blocks live in [`mcp-configs/cursor-mcp-servers.json`](mdc:mcp-configs/cursor-mcp-servers.json).
+- Use Pencil MCP for browser automation in Cursor.
+- Agent role definitions live in [`agents/`](mdc:agents) and [`agents/README.md`](mdc:agents/README.md); adopt the closest role/process when it helps.

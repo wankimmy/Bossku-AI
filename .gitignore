@@ -30,5 +30,14 @@ tmp/
 temp/
 
 # AI assistant (local)
-ai-assistant/memory/
+ai-assistant/memory/*
+!ai-assistant/memory/README.md
+!ai-assistant/memory/agent-profile.md
+!ai-assistant/memory/bug-patterns.md
+!ai-assistant/memory/learning-log.md
+!ai-assistant/memory/market-notes.md
+!ai-assistant/memory/plan-log.md
+!ai-assistant/memory/project-understanding.md
+!ai-assistant/memory/vector-config.json
+ai-assistant/memory/semantic-memory.sqlite3
 **/project-understanding.md

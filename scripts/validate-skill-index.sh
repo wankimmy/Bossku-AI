@@ -125,6 +125,7 @@ required_memory=(
   "agent-profile.md"
   "project-understanding.md"
   "active-continuation.md"
+  "plan-log.md"
   "learning-log.md"
   "bug-patterns.md"
   "market-notes.md"

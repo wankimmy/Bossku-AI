@@ -41,7 +41,7 @@ if [[ -n "$required_var" ]] && [[ -z "${!required_var:-}" ]]; then
     echo "── BosskuAI MCP Health Warning ─────────────────────────"
     echo "  ⚠  MCP server \"$server_name\" requires env var: $required_var"
     echo "     Setup: export $required_var=\"your-key\""
-    echo "     Docs: bosskuAI/mcp-configs/README.md"
+    echo "     Docs: bosskuAI/README.md and bosskuAI/mcp-configs/README.md"
     echo "────────────────────────────────────────────────────────"
   } >&2
 fi

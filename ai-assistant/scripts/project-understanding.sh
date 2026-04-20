@@ -5,14 +5,14 @@ set -euo pipefail
 usage() {
   cat <<'EOF'
 Usage:
-  ./ai-assistant/scripts/relearn-project-understanding.sh [workspace-root] [--write-active-continuation]
+  ./ai-assistant/scripts/project-understanding.sh [workspace-root] [--write-active-continuation]
 
-Create a safe refresh packet for re-learning the current project understanding and codebase analysis
+Prepare a safe refresh packet for re-learning the current project understanding
 without wiping existing BosskuAI memory.
 
 Behavior:
-  - snapshots the current ai-assistant/memory/project-understanding.md
-  - preserves all existing memory files
+  - snapshots ai-assistant/memory/project-understanding.md
+  - snapshots ai-assistant/memory/agent-profile.md
   - writes a timestamped refresh prompt into .bosskuai-backups/
   - optionally writes the refresh task into ai-assistant/memory/active-continuation.md
 EOF
@@ -75,17 +75,16 @@ cp "$agent_profile" "$snapshot_agent_profile"
 cat >"$refresh_prompt_file" <<EOF
 Use bosskuai-project-understanding and bosskuai-codebase-analysis.
 
-This workspace needs a fresh understanding pass after BosskuAI changes. Re-read the current repo from source instead of trusting existing memory.
+Refresh the current workspace understanding from source.
 
 Rules:
-- Treat ai-assistant/memory/project-understanding.md as the stale baseline, not source of truth.
-- Compare against this snapshot only to preserve still-correct durable facts and to detect drift:
+- Treat ai-assistant/memory/project-understanding.md as a stale baseline, not the source of truth.
+- Compare against this snapshot only to preserve still-correct durable facts:
   $snapshot_project_understanding
 - Preserve other memory files. Do not wipe agent-profile.md, learning-log.md, bug-patterns.md, or market-notes.md.
-- Update ai-assistant/memory/project-understanding.md in place with the refreshed view.
-- If repo evidence has materially changed who this project serves or how it should be operated, propose a minimal update to ai-assistant/memory/agent-profile.md too.
+- Update ai-assistant/memory/project-understanding.md in place.
+- If repo evidence materially changes who this project serves or how it should be operated, propose a minimal update to ai-assistant/memory/agent-profile.md too.
 - Separate confirmed facts, inference, and unknowns.
-- Call out what changed since the snapshot.
 
 Deliver:
 1. refreshed project summary
@@ -100,17 +99,13 @@ if (( write_active_continuation == 1 )); then
   cat >"$active_continuation" <<EOF
 # Active continuation (ephemeral)
 
-Use this file only when work must **pause** because context is nearly full, usage/quota is tight, or you are **switching to another model or chat** to finish the same task.
-
-**Clear or trim this file when the task is finished** so the next session does not confuse stale state with current work.
-
----
+Use this file only when work must pause because context is nearly full, usage is tight, or you are switching tools/sessions to finish the same task.
 
 ## Last updated
 
 - **Date:** $timestamp
-- **Tool:** BosskuAI relearn-project-understanding script
-- **Reason:** planned project-understanding refresh after repo improvements
+- **Tool:** BosskuAI project-understanding script
+- **Reason:** refresh workspace understanding after repo changes
 - **Phase:** plan
 
 ## Goal
@@ -134,40 +129,7 @@ Refresh ai-assistant/memory/project-understanding.md from current repo evidence 
 
 ## Next action
 
-Paste the refresh prompt from $refresh_prompt_file into the current AI tool and ask it to update project-understanding.md from source.
-
-## Key files / artifacts
-
-- ai-assistant/memory/project-understanding.md
-- ai-assistant/memory/agent-profile.md
-- $snapshot_project_understanding
-- $refresh_prompt_file
-
-## Verified working
-
-- Existing memory was preserved.
-- Snapshot files and refresh prompt were created successfully.
-
-## Open risks or unknowns
-
-- If the assistant trusts old memory more than source code, the refresh may stay stale; tell it explicitly to treat memory as a baseline only.
-
-## Recommended next model (for the *remaining* work)
-
-- **Primary:** strongest available planning / reasoning model in the current tool
-- **Fallback:** fast implementation-capable model after the refresh plan is settled
-- **Why (one line):** this task is mostly evidence gathering, synthesis, and drift detection before any edits.
-
-## Paste block for the next session
-
-\`\`\`text
-Goal: Refresh ai-assistant/memory/project-understanding.md from source after BosskuAI repo changes.
-Done: Snapshotted the previous project understanding and prepared a refresh prompt.
-Next action: Use bosskuai-project-understanding and bosskuai-codebase-analysis, compare against the snapshot, and overwrite project-understanding.md with the refreshed version.
-Key files: ai-assistant/memory/project-understanding.md, ai-assistant/memory/agent-profile.md, $snapshot_project_understanding, $refresh_prompt_file.
-Risks: Old memory may bias the refresh if source evidence is not re-read first.
-Model used so far: N/A.
-\`\`\`
+Paste the refresh prompt from $refresh_prompt_file into the current AI tool.
 EOF
 fi
 

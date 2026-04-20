@@ -1,0 +1,23 @@
+{
+  "database_path": "ai-assistant/memory/semantic-memory.sqlite3",
+  "embedding": {
+    "provider": "local-hash",
+    "dimensions": 256,
+    "seed": "bosskuai-vector-v1"
+  },
+  "chunking": {
+    "max_chars": 900,
+    "overlap_chars": 120
+  },
+  "include": [
+    "ai-assistant/memory/agent-profile.md",
+    "ai-assistant/memory/project-understanding.md",
+    "ai-assistant/memory/plan-log.md",
+    "ai-assistant/memory/learning-log.md",
+    "ai-assistant/memory/bug-patterns.md",
+    "ai-assistant/memory/market-notes.md"
+  ],
+  "exclude": [
+    "ai-assistant/memory/active-continuation.md"
+  ]
+}

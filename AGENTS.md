@@ -79,13 +79,14 @@ Per-turn behavior: use the sparse **Task Start Protocol** below.
 
 - `ai-assistant/memory/` is **shared durable memory across all tools** — Claude, Codex, and Cursor.
 - Never treat memory as tool-local. What is written here must be usable by any tool in any session.
-- Memory files: `agent-profile.md`, `project-understanding.md`, `learning-log.md`, `bug-patterns.md`, `market-notes.md`, `active-continuation.md` (ephemeral handoffs only; clear when done).
+- Memory files: `agent-profile.md`, `project-understanding.md`, `plan-log.md`, `learning-log.md`, `bug-patterns.md`, `market-notes.md`, `active-continuation.md` (ephemeral handoffs only; clear when done), plus `semantic-memory.sqlite3` + `vector-config.json` for semantic recall.
 - **Canonical template:** `ai-assistant/references/memory-first-handoff-protocol.md` — retrieval order, write threshold, compact `learning-log.md` fields, sparse reporting, `FOR_NEXT_MODEL` block.
 
 ### Memory-first protocol
 
-- **Read before act:** Before substantive edits or repo-specific conclusions, retrieve the **minimum relevant memory** per `memory-first-handoff-protocol.md`. Prefer continuation state, recent handoff entries, and task-specific memory over dumping every memory file into context. Read broad profile/project files only when the task needs repo/product orientation or durable context might affect the answer.
-- **Write before done:** Persist memory only when the task creates a durable delta, a cross-tool handoff, or an importance score of **4/5 or higher** per the protocol. Batch memory writes at task completion instead of writing after every turn.
+- **Read before act:** Before substantive edits or repo-specific conclusions, retrieve the **minimum relevant memory** per `memory-first-handoff-protocol.md`. Read `active-continuation.md` directly, then prefer vector hits from `semantic-memory.sqlite3` over broad file dumps. Open profile/project/plan files only when the task needs that wider context.
+- **Plan-store-execute (gated):** For non-trivial tasks, plan first. If the plan is durable enough to matter later, write a compact entry to `ai-assistant/memory/plan-log.md`, sync vector memory, then execute.
+- **Write before done:** After execution, persist durable outcomes, learnings, or handoff state per the protocol. Refresh semantic recall with `python3 ./ai-assistant/scripts/vector_memory.py sync` whenever indexed memory changed.
 - **Trivial/no-delta exception:** Single-line fixes, pure lookups, no-repo-impact Q&A, or meaningful work with no durable delta do **not** require a `learning-log.md` append. In normal execution mode, do not print a memory skip line unless the user asks for debug/protocol output.
 
 ## Token-efficient operating standard
@@ -105,8 +106,10 @@ Rules for token control:
 - Use short status notes only when useful, e.g. `Memory updated: learning-log.md` or `[Debug: engineering-delivery/gpt-5.4]`.
 - Do not repeat static rules, personality, or long memory dumps in dynamic prompts. Cache static instructions where the runtime supports it.
 - Retrieve memory by relevance: top 3-5 chunks/files for the task, using filenames, keywords, or embeddings if an orchestrator provides retrieval.
+- Tool-specific entry points should carry deltas only. Do not duplicate the full skill roster, quick-reference tables, or root operating rules into `.codex/AGENTS.md`, `.cursor/rules/`, or `.claude/rules/`.
 - Route to one model/tool by default. Use multi-model or parallel work only for independent workstreams, validation, or a clear capability gap.
 - Be concise by default. Explain reasoning when asked, when risk is high, or when a decision needs tradeoff clarity.
+- Default reply style is caveman-compressed unless clarity or safety needs normal prose.
 
 ## Task classifier (run first)
 
@@ -407,6 +410,7 @@ Deprecated alias skills (routing compatibility only):
 - If a design decision becomes an explicit rule, capture it in an ADR or equivalent decision record.
 - Use `ai-assistant/references/checklists/learning-promotion-checklist.md` to decide where a learning belongs.
 - Run `bash ./ai-assistant/scripts/learning-doctor.sh` periodically or before large maintenance passes to catch stale memory, contradictory counts, and consumed continuation state.
+- Use `bash ./ai-assistant/scripts/project-understanding.sh` when the repo itself changed enough that `project-understanding.md` should be refreshed from source.
 
 ### Post-task reporting (sparse)
 
@@ -522,7 +526,7 @@ This agent should think like:
 
 ## References
 
-- **References by division** (checklists and playbooks per division): `ai-assistant/references/README.md`
+- **References by division**: use `ai-assistant/references/checklists/`, `ai-assistant/references/playbooks/`, `ai-assistant/references/pitfalls/`, and `ai-assistant/references/adr/`
 - Checklists: `ai-assistant/references/checklists/`
 - Playbooks: `ai-assistant/references/playbooks/`
 - Pitfalls: `ai-assistant/references/pitfalls/` (domain-specific lists + `general-known-pitfalls.md`)
@@ -531,3 +535,12 @@ This agent should think like:
 - Skill ↔ file reference integrity: run `./scripts/verify-skill-references.sh` from repo root
 - Session handoff: `ai-assistant/references/session-handoff-template.md`
 - Memory: `ai-assistant/memory/`
+
+
+<claude-mem-context>
+# Memory Context
+
+# $CMEM putra-saas 2026-04-15 11:39pm GMT+8
+
+No previous sessions found.
+</claude-mem-context>
