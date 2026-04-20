@@ -51,6 +51,21 @@ Windows:
 .\bosskuAI\scripts\install.ps1 C:\path\to\your\project
 ```
 
+### Install it as a Claude Code plugin
+
+If you want to distribute BosskuAI through GitHub as a Claude Code plugin marketplace:
+
+```bash
+/plugin marketplace add wankimmy/Bossku-AI
+/plugin install bossku-ai@bosskuai-marketplace
+```
+
+For local testing before pushing:
+
+```bash
+claude --plugin-dir .
+```
+
 ### 2. Open your real project
 
 Open the target project root in Claude Code, Cursor, or Codex.
@@ -96,6 +111,8 @@ python3 ./ai-assistant/scripts/vector_memory.py query "auth retry policy"
 
 - [AGENTS.md](AGENTS.md): main rules, routing, memory protocol
 - [CLAUDE.md](CLAUDE.md): Claude entry point
+- [.claude-plugin/plugin.json](.claude-plugin/plugin.json): Claude Code plugin manifest
+- [.claude-plugin/marketplace.json](.claude-plugin/marketplace.json): GitHub-installable plugin marketplace catalog
 - [WORKSPACE-ONBOARDING.md](WORKSPACE-ONBOARDING.md): first-run setup
 - [skill-index.json](skill-index.json): machine-readable skill index
 - [`ai-assistant/skills/`](ai-assistant/skills): local expert workflows
