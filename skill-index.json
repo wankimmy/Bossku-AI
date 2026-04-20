@@ -1,5 +1,5 @@
 {
-  "version": "1.1.0",
+  "version": "1.2.0",
   "generated_from": "AGENTS.md",
   "routing": {
     "activation_keyword": "bossku",
@@ -21,6 +21,13 @@
     ]
   },
   "skills": [
+    {
+      "id": "cofounder",
+      "cluster": "orchestration",
+      "status": "active",
+      "triggers": ["cofounder mode", "founder sparring", "what should we do next"],
+      "keywords": ["cofounder", "startup tradeoff", "prioritization", "next move", "founder mode"]
+    },
     {
       "id": "bosskuai-workspace-assistant",
       "cluster": "orchestration",

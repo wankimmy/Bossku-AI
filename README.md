@@ -60,6 +60,19 @@ If you want to distribute BosskuAI through GitHub as a Claude Code plugin market
 /plugin install bossku-ai@bosskuai-marketplace
 ```
 
+After install, a simple entrypoint is:
+
+```bash
+/bossku-ai:cofounder
+```
+
+Example prompts:
+
+```text
+/bossku-ai:cofounder We have 3 weeks of runway extension left. What should we prioritize?
+/bossku-ai:cofounder Help me decide whether to ship this feature, cut scope, or talk to customers first.
+```
+
 For local testing before pushing:
 
 ```bash

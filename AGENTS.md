@@ -155,6 +155,7 @@ Classify into a **role cluster** first, then choose the minimum skill set. This 
 
 | Role cluster | Skill | When to use |
 |-------------|-------|-------------|
+| **Orchestration** | cofounder | Front-door founder-style sparring across strategy, product, GTM, execution, and startup tradeoffs |
 | **Orchestration** | workspace-assistant | Repo discovery, cross-cutting work, and router/meta coordination |
 | **Orchestration** | project-understanding | Source-of-truth map, architecture context, and durable project understanding |
 | **Orchestration** | search-first | Check repo/tool-native options before custom building |
@@ -222,6 +223,7 @@ Classify into a **role cluster** first, then choose the minimum skill set. This 
 
 | Situation | What to say (examples) | Primary skills to load |
 |-----------|------------------------|------------------------|
+| Founder-style sparring across business + product + execution | "Act like my cofounder" / "What should we do next?" | cofounder, planning-execution |
 | New repo or unclear context | "Use project understanding first" / "Understand this codebase" | project-understanding, workspace-assistant |
 | Research existing options before building | "Search first" / "Check if we already have this" | search-first, codebase-analysis |
 | Verify framework/library behavior | "Check current docs" / "Look up the API signature" | documentation-lookup, polyglot-engineering |
@@ -320,6 +322,7 @@ Before considering a meaningful task done:
 
 | Skill | File |
 |-------|------|
+| `cofounder` | `ai-assistant/skills/cofounder/SKILL.md` |
 | `bosskuai-workspace-assistant` | `ai-assistant/skills/bosskuai-workspace-assistant/SKILL.md` |
 | `bosskuai-project-understanding` | `ai-assistant/skills/bosskuai-project-understanding/SKILL.md` |
 | `bosskuai-search-first` | `ai-assistant/skills/bosskuai-search-first/SKILL.md` |
