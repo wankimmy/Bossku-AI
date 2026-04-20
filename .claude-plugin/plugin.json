@@ -17,6 +17,5 @@
     "product-strategy",
     "engineering"
   ],
-  "skills": "./ai-assistant/skills/",
-  "agents": "./agents/"
+  "skills": "./ai-assistant/skills/"
 }
