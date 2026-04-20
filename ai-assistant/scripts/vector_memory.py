@@ -16,6 +16,7 @@ from pathlib import Path
 TOKEN_RE = re.compile(r"[A-Za-z0-9_./:-]{2,}")
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.*)$")
 DATE_RE = re.compile(r"\b(20\d{2}-\d{2}-\d{2})\b")
+INDEX_SCHEMA_VERSION = "2026-04-hardening-1"
 
 
 @dataclass
@@ -96,6 +97,7 @@ def sha256_text(text: str) -> str:
 
 def config_signature(config: dict) -> str:
     relevant = {
+        "index_schema_version": INDEX_SCHEMA_VERSION,
         "embedding": config.get("embedding", {}),
         "chunking": config.get("chunking", {}),
         "include": config.get("include", []),
@@ -200,6 +202,10 @@ def split_sections(text: str) -> list[Section]:
             body = "\n".join(current_lines).strip()
             if body:
                 sections.append(Section(current_heading, body, start_line, lineno - 1))
+            current_heading = heading_match.group(2).strip()
+            current_lines = [line]
+            start_line = lineno
+        elif heading_match:
             current_heading = heading_match.group(2).strip()
             current_lines = [line]
             start_line = lineno
@@ -321,6 +327,40 @@ def parse_date(text: str) -> str | None:
     return match.group(1) if match else None
 
 
+def normalize_text(text: str) -> str:
+    return " ".join(TOKEN_RE.findall(text.lower()))
+
+
+def humanize_stem(path: str) -> str:
+    stem = Path(path).stem
+    return re.sub(r"[-_]+", " ", stem).strip()
+
+
+def generic_headings(config: dict) -> set[str]:
+    defaults = [
+        "document",
+        "entries",
+        "entry template",
+        "what to store",
+        "what belongs here",
+        "what not to store",
+        "suggested format",
+        "promotion guidance",
+        "active entries",
+        "bosskuai",
+    ]
+    return {normalize_text(item) for item in config.get("generic_headings", defaults) if normalize_text(item)}
+
+
+def document_title_for_chunks(chunks: list[Chunk], fallback_path: Path, config: dict) -> str:
+    generic = generic_headings(config)
+    for chunk in chunks:
+        normalized_heading = normalize_text(chunk.heading)
+        if normalized_heading and normalized_heading not in generic:
+            return chunk.heading
+    return humanize_stem(str(fallback_path))
+
+
 def build_chunks(text: str, source_path: Path, config: dict) -> list[Chunk]:
     chunk_cfg = config.get("chunking", {})
     target_chars = int(chunk_cfg.get("target_chars", 700))
@@ -369,6 +409,110 @@ def source_weight(path: str, config: dict) -> float:
     return float(weights.get(basename, weights.get(path, 0.0)))
 
 
+def document_aliases(path: str, document_title: str, config: dict) -> list[str]:
+    basename = Path(path).name
+    aliases = [humanize_stem(path), document_title]
+    aliases.extend(config.get("document_aliases", {}).get(basename, []))
+    seen = set()
+    ordered = []
+    for alias in aliases:
+        normalized = normalize_text(alias)
+        if normalized and normalized not in seen:
+            seen.add(normalized)
+            ordered.append(alias)
+    return ordered
+
+
+def phrase_in_query(query_text: str, phrase: str) -> bool:
+    normalized_query = normalize_text(query_text)
+    normalized_phrase = normalize_text(phrase)
+    if not normalized_phrase:
+        return False
+    if normalized_phrase in normalized_query:
+        return True
+    phrase_tokens = set(TOKEN_RE.findall(normalized_phrase))
+    query_tokens = set(TOKEN_RE.findall(normalized_query))
+    return bool(phrase_tokens) and phrase_tokens.issubset(query_tokens)
+
+
+def document_name_score(query_text: str, row: sqlite3.Row, document_metadata: dict, config: dict) -> float:
+    aliases = document_aliases(row["path"], str(document_metadata.get("document_title", "")), config)
+    query_terms = tokenize(query_text)
+    normalized_query = normalize_text(query_text)
+    best = 0.0
+    for alias in aliases:
+        normalized_alias = normalize_text(alias)
+        if not normalized_alias:
+            continue
+        overlap = overlap_score(query_terms, tokenize(normalized_alias))
+        boost = 1.0 if normalized_alias in normalized_query else 0.0
+        best = max(best, overlap + boost)
+    return round(min(best, 1.5), 6)
+
+
+def intent_hint_score(query_text: str, row: sqlite3.Row, document_metadata: dict, config: dict) -> float:
+    basename = Path(row["path"]).name
+    document_kind = row["document_kind"]
+    best = 0.0
+    for hint in config.get("intent_hints", []):
+        phrases = hint.get("phrases", [])
+        if not any(phrase_in_query(query_text, phrase) for phrase in phrases):
+            continue
+        target_files = set(hint.get("boost_files", []))
+        target_kinds = set(hint.get("boost_kinds", []))
+        if basename not in target_files and document_kind not in target_kinds:
+            continue
+        title_phrases = hint.get("title_phrases", [])
+        if title_phrases and not any(
+            phrase_in_query(str(document_metadata.get("document_title", "")), phrase) for phrase in title_phrases
+        ):
+            continue
+        best = max(best, float(hint.get("boost", 1.0)))
+    return round(best, 6)
+
+
+def noise_penalty(
+    heading: str,
+    content: str,
+    lexical: float,
+    document_name: float,
+    intent: float,
+    config: dict,
+) -> float:
+    retrieval_cfg = config.get("retrieval", {})
+    penalty = 0.0
+    lowered = content.lower()
+    if normalize_text(heading) in generic_headings(config) and document_name == 0 and intent == 0:
+        penalty += float(retrieval_cfg.get("generic_heading_penalty", 0.04))
+    markers = [marker.lower() for marker in config.get("noise_markers", [])]
+    if any(marker in lowered for marker in markers) and lexical < 0.3 and intent == 0:
+        penalty += float(retrieval_cfg.get("noise_penalty", 0.06))
+    return round(penalty, 6)
+
+
+def retrieval_weights(config: dict, strategy: str) -> dict[str, float]:
+    retrieval_cfg = config.get("retrieval", {})
+    if strategy == "semantic-only":
+        return {
+            "semantic": 1.0,
+            "lexical": 0.0,
+            "heading": 0.0,
+            "document_name": 0.0,
+            "intent": 0.0,
+            "recency": 0.0,
+            "source": 0.0,
+        }
+    return {
+        "semantic": float(retrieval_cfg.get("semantic_weight", 0.45)),
+        "lexical": float(retrieval_cfg.get("lexical_weight", 0.2)),
+        "heading": float(retrieval_cfg.get("heading_weight", 0.08)),
+        "document_name": float(retrieval_cfg.get("document_name_weight", 0.12)),
+        "intent": float(retrieval_cfg.get("intent_weight", 0.08)),
+        "recency": float(retrieval_cfg.get("recency_weight", 0.03)),
+        "source": float(retrieval_cfg.get("source_weight", 0.04)),
+    }
+
+
 def sync_command(root: Path, config: dict, config_file: Path) -> int:
     db_path = resolve_path(root, config.get("database_path", "ai-assistant/memory/semantic-memory.sqlite3"))
     include_paths = [str(path) for path in config.get("include", [])]
@@ -400,9 +544,11 @@ def sync_command(root: Path, config: dict, config_file: Path) -> int:
 
         chunks = build_chunks(text, absolute_path, config)
         timestamp = utc_now()
+        document_title = document_title_for_chunks(chunks, absolute_path, config)
         document_metadata = {
             "source_file": absolute_path.name,
             "document_kind": classify_document(absolute_path),
+            "document_title": document_title,
             "mtime": dt.datetime.fromtimestamp(absolute_path.stat().st_mtime, tz=dt.timezone.utc).replace(microsecond=0).isoformat(),
         }
         with conn:
@@ -511,6 +657,8 @@ def should_skip_hit(
     lexical: float,
     combined: float,
     content: str,
+    document_name: float,
+    intent: float,
     config: dict,
 ) -> bool:
     retrieval_cfg = config.get("retrieval", {})
@@ -518,24 +666,18 @@ def should_skip_hit(
     min_semantic_without_lexical = float(retrieval_cfg.get("min_semantic_without_lexical", 0.18))
     if combined < min_combined:
         return True
-    if lexical == 0 and semantic < min_semantic_without_lexical:
+    if lexical == 0 and semantic < min_semantic_without_lexical and document_name == 0 and intent == 0:
         return True
     markers = [marker.lower() for marker in config.get("noise_markers", [])]
     lowered = content.lower()
-    if any(marker in lowered for marker in markers) and lexical == 0:
+    if any(marker in lowered for marker in markers) and lexical == 0 and intent == 0:
         return True
     return False
 
 
-def score_hit(query_text: str, query_vector: list[float], row: sqlite3.Row, config: dict) -> dict | None:
+def score_hit(query_text: str, query_vector: list[float], row: sqlite3.Row, config: dict, strategy: str) -> dict | None:
     retrieval_cfg = config.get("retrieval", {})
-    weights = {
-        "semantic": float(retrieval_cfg.get("semantic_weight", 0.55)),
-        "lexical": float(retrieval_cfg.get("lexical_weight", 0.25)),
-        "heading": float(retrieval_cfg.get("heading_weight", 0.1)),
-        "recency": float(retrieval_cfg.get("recency_weight", 0.05)),
-        "source": float(retrieval_cfg.get("source_weight", 0.05)),
-    }
+    weights = retrieval_weights(config, strategy)
     query_terms = tokenize(query_text)
     content = row["content"]
     chunk_metadata = json.loads(row["chunk_metadata"] or "{}")
@@ -544,21 +686,27 @@ def score_hit(query_text: str, query_vector: list[float], row: sqlite3.Row, conf
     semantic = max(semantic_raw, 0.0)
     lexical = overlap_score(query_terms, tokenize(content))
     heading = overlap_score(query_terms, tokenize(row["heading"] or ""))
+    document_name = document_name_score(query_text, row, document_metadata, config)
+    intent = intent_hint_score(query_text, row, document_metadata, config)
     recency = recency_score(
         chunk_metadata.get("date_hint") or str(document_metadata.get("mtime", ""))[:10],
         dt.datetime.now(dt.timezone.utc),
     )
     source = source_weight(row["path"], config)
+    penalty = noise_penalty(row["heading"] or "", content, lexical, document_name, intent, config)
     combined = (
         semantic * weights["semantic"]
         + lexical * weights["lexical"]
         + heading * weights["heading"]
+        + document_name * weights["document_name"]
+        + intent * weights["intent"]
         + recency * weights["recency"]
         + source * weights["source"]
+        - penalty
     )
     combined = round(combined, 6)
 
-    if should_skip_hit(semantic, lexical, combined, content, config):
+    if should_skip_hit(semantic, lexical, combined, content, document_name, intent, config):
         return None
 
     return {
@@ -571,19 +719,23 @@ def score_hit(query_text: str, query_vector: list[float], row: sqlite3.Row, conf
             "semantic": round(semantic, 6),
             "lexical": round(lexical, 6),
             "heading": round(heading, 6),
+            "document_name": round(document_name, 6),
+            "intent": round(intent, 6),
             "recency": round(recency, 6),
             "source": round(source, 6),
+            "penalty": round(penalty, 6),
         },
         "metadata": {
             "document_kind": row["document_kind"],
             "source_file": Path(row["path"]).name,
             "structure": chunk_metadata.get("structure", "text"),
             "date_hint": chunk_metadata.get("date_hint"),
+            "document_title": document_metadata.get("document_title"),
         },
     }
 
 
-def query_command(root: Path, config: dict, query_text: str, limit: int, json_output: bool) -> int:
+def query_command(root: Path, config: dict, query_text: str, limit: int, json_output: bool, strategy: str) -> int:
     db_path = resolve_path(root, config.get("database_path", "ai-assistant/memory/semantic-memory.sqlite3"))
     if not db_path.exists():
         print(f"Vector memory missing: {db_path}. Run sync first.", file=sys.stderr)
@@ -610,11 +762,23 @@ def query_command(root: Path, config: dict, query_text: str, limit: int, json_ou
 
     scored: list[dict] = []
     for row in rows:
-        hit = score_hit(query_text, query_vector, row, config)
+        hit = score_hit(query_text, query_vector, row, config, strategy)
         if hit:
             scored.append(hit)
 
-    scored.sort(key=lambda item: (item["score"], item["components"]["lexical"], item["components"]["semantic"]), reverse=True)
+    scored.sort(
+        key=lambda item: (
+            item["score"],
+            item["components"]["intent"],
+            item["components"]["document_name"],
+            item["components"]["heading"],
+            item["components"]["lexical"],
+            item["components"]["source"],
+            item["components"]["semantic"],
+            -item["ordinal"],
+        ),
+        reverse=True,
+    )
 
     max_per_document = int(config.get("retrieval", {}).get("max_per_document", 2))
     top_hits: list[dict] = []
@@ -639,7 +803,8 @@ def query_command(root: Path, config: dict, query_text: str, limit: int, json_ou
         components = hit["components"]
         print(
             f"#{index} score={hit['score']} path={hit['path']} heading={hit['heading']} chunk={hit['ordinal']} "
-            f"(semantic={components['semantic']} lexical={components['lexical']} heading={components['heading']})"
+            f"(semantic={components['semantic']} lexical={components['lexical']} heading={components['heading']} "
+            f"doc={components['document_name']} intent={components['intent']} penalty={components['penalty']})"
         )
         print(f"    {hit['preview']}")
     return 0
@@ -667,12 +832,14 @@ def status_command(root: Path, config: dict, config_file: Path) -> int:
     print(f"Last sync: {last_sync['value'] if last_sync else 'unknown'}")
     print("Retrieval weights:")
     print(
-        "  semantic={semantic} lexical={lexical} heading={heading} recency={recency} source={source}".format(
-            semantic=retrieval_cfg.get("semantic_weight", 0.55),
-            lexical=retrieval_cfg.get("lexical_weight", 0.25),
-            heading=retrieval_cfg.get("heading_weight", 0.1),
-            recency=retrieval_cfg.get("recency_weight", 0.05),
-            source=retrieval_cfg.get("source_weight", 0.05),
+        "  semantic={semantic} lexical={lexical} heading={heading} document_name={document_name} intent={intent} recency={recency} source={source}".format(
+            semantic=retrieval_cfg.get("semantic_weight", 0.45),
+            lexical=retrieval_cfg.get("lexical_weight", 0.2),
+            heading=retrieval_cfg.get("heading_weight", 0.08),
+            document_name=retrieval_cfg.get("document_name_weight", 0.12),
+            intent=retrieval_cfg.get("intent_weight", 0.08),
+            recency=retrieval_cfg.get("recency_weight", 0.03),
+            source=retrieval_cfg.get("source_weight", 0.04),
         )
     )
     print("Indexed files:")
@@ -703,6 +870,12 @@ def build_parser() -> argparse.ArgumentParser:
     query_parser = subparsers.add_parser("query", help="Query semantic memory.")
     query_parser.add_argument("text", help="Natural-language query.")
     query_parser.add_argument("--limit", type=int, default=5, help="Max hits to return.")
+    query_parser.add_argument(
+        "--strategy",
+        choices=["hybrid", "semantic-only"],
+        default="hybrid",
+        help="Ranking strategy. 'hybrid' is the default local BosskuAI scorer; 'semantic-only' is a baseline approximation.",
+    )
     query_parser.add_argument("--json", action="store_true", help="Emit JSON instead of text.")
 
     subparsers.add_parser("status", help="Show vector memory status.")
@@ -719,7 +892,14 @@ def main() -> int:
     if args.command == "sync":
         return sync_command(root, config, config_file)
     if args.command == "query":
-        return query_command(root, config, query_text=args.text, limit=args.limit, json_output=args.json)
+        return query_command(
+            root,
+            config,
+            query_text=args.text,
+            limit=args.limit,
+            json_output=args.json,
+            strategy=args.strategy,
+        )
     if args.command == "status":
         return status_command(root, config, config_file)
 

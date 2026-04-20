@@ -12,11 +12,15 @@
     "overlap_blocks": 1
   },
   "retrieval": {
-    "semantic_weight": 0.55,
-    "lexical_weight": 0.25,
-    "heading_weight": 0.1,
-    "recency_weight": 0.05,
-    "source_weight": 0.05,
+    "semantic_weight": 0.4,
+    "lexical_weight": 0.16,
+    "heading_weight": 0.08,
+    "document_name_weight": 0.18,
+    "intent_weight": 0.12,
+    "recency_weight": 0.02,
+    "source_weight": 0.04,
+    "generic_heading_penalty": 0.04,
+    "noise_penalty": 0.08,
     "min_combined_score": 0.08,
     "min_semantic_without_lexical": 0.12,
     "max_per_document": 2,
@@ -31,6 +35,122 @@
     "market-notes.md": 0.08
   },
   "noise_markers": [],
+  "document_aliases": {
+    "agent-profile.md": [
+      "agent profile",
+      "company context",
+      "product context",
+      "who this workspace is for"
+    ],
+    "project-understanding.md": [
+      "project understanding",
+      "repo purpose",
+      "source of truth",
+      "workspace structure",
+      "how this repo works"
+    ],
+    "plan-log.md": [
+      "plan log",
+      "execution plan",
+      "planned approach"
+    ],
+    "learning-log.md": [
+      "learning log",
+      "verification history",
+      "durable lessons"
+    ],
+    "bug-patterns.md": [
+      "bug patterns",
+      "recurring defects",
+      "failure modes"
+    ],
+    "market-notes.md": [
+      "market notes",
+      "positioning notes",
+      "gtm notes"
+    ]
+  },
+  "intent_hints": [
+    {
+      "name": "repo-foundation",
+      "phrases": [
+        "source of truth",
+        "repo purpose",
+        "workspace structure",
+        "how this repo works",
+        "instructions routing memory validation",
+        "agents md",
+        "skill index"
+      ],
+      "boost_files": ["project-understanding.md"],
+      "boost_kinds": ["project"],
+      "boost": 1.0
+    },
+    {
+      "name": "workspace-identity",
+      "phrases": [
+        "company context",
+        "product context",
+        "who this workspace is for",
+        "default users",
+        "audience"
+      ],
+      "boost_files": ["agent-profile.md"],
+      "boost_kinds": ["profile"],
+      "boost": 1.0
+    },
+    {
+      "name": "stored-plan",
+      "phrases": [
+        "planned approach",
+        "execution plan",
+        "stored plan",
+        "plan log"
+      ],
+      "boost_files": ["plan-log.md"],
+      "boost_kinds": ["plan"],
+      "boost": 0.9
+    },
+    {
+      "name": "durable-learning",
+      "phrases": [
+        "durable lesson",
+        "verification history",
+        "what changed and verified",
+        "learning history",
+        "what changed already",
+        "verified already",
+        "follow-up"
+      ],
+      "boost_files": ["learning-log.md"],
+      "boost_kinds": ["learning"],
+      "boost": 0.9
+    },
+    {
+      "name": "recurring-bugs",
+      "phrases": [
+        "recurring defect",
+        "failure pattern",
+        "bug class",
+        "bug pattern"
+      ],
+      "boost_files": ["bug-patterns.md"],
+      "boost_kinds": ["bugs"],
+      "boost": 0.9
+    },
+    {
+      "name": "market-positioning",
+      "phrases": [
+        "market note",
+        "positioning",
+        "gtm note",
+        "pricing signal"
+      ],
+      "boost_files": ["market-notes.md"],
+      "boost_kinds": ["market"],
+      "boost": 0.9
+    }
+  ],
   "include": [
     "evals/retrieval-fixtures/agent-profile.md",
     "evals/retrieval-fixtures/project-understanding.md",

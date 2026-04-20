@@ -1,38 +1,58 @@
 [
   {
-    "name": "agent profile context",
-    "query": "company or product context for this workspace",
+    "name": "workspace audience and identity",
+    "query": "who is this workspace for and what product context should I assume",
     "expected_path": "evals/retrieval-fixtures/agent-profile.md",
-    "top_k": 3
+    "top_k": 4,
+    "expect_top1": true
   },
   {
-    "name": "project understanding",
-    "query": "AGENTS.md skill-index.json ai-assistant memory source of truth files",
+    "name": "repo purpose and source of truth",
+    "query": "what file explains the repo purpose source of truth files AGENTS.md and skill-index.json",
     "expected_path": "evals/retrieval-fixtures/project-understanding.md",
-    "top_k": 3
+    "top_k": 4,
+    "expect_top1": true
   },
   {
-    "name": "stored plans",
-    "query": "planned approach and execution plan log",
+    "name": "paraphrased project understanding",
+    "query": "before I trust this setup where is the durable understanding of how the workspace is organized I mean the repo map not a change log",
+    "expected_path": "evals/retrieval-fixtures/project-understanding.md",
+    "top_k": 4,
+    "expect_top1": true
+  },
+  {
+    "name": "stored plan not retrospective",
+    "query": "show me the stored plan for reducing prompt weight not the retrospective lessons",
     "expected_path": "evals/retrieval-fixtures/plan-log.md",
-    "top_k": 3
+    "top_k": 4,
+    "expect_top1": true
   },
   {
-    "name": "learning history",
-    "query": "completed work and verification history",
+    "name": "durable lesson and verification",
+    "query": "what durable lesson records what changed and what was verified already",
     "expected_path": "evals/retrieval-fixtures/learning-log.md",
-    "top_k": 3
+    "top_k": 4,
+    "expect_top1": true
   },
   {
-    "name": "bug patterns",
-    "query": "recurring defect patterns and bug classes",
+    "name": "recurring defects memory",
+    "query": "which file tracks recurring failure modes like duplicated instructions across entry files",
     "expected_path": "evals/retrieval-fixtures/bug-patterns.md",
-    "top_k": 3
+    "top_k": 4,
+    "expect_top1": true
   },
   {
-    "name": "market notes",
-    "query": "market or GTM notes",
+    "name": "positioning notes to avoid",
+    "query": "what positioning notes say which messaging to avoid for this workspace",
     "expected_path": "evals/retrieval-fixtures/market-notes.md",
-    "top_k": 3
+    "top_k": 4,
+    "expect_top1": true
+  },
+  {
+    "name": "ambiguous change history versus plan",
+    "query": "what changed already and what still needs follow-up in this workspace refactor",
+    "expected_path": "evals/retrieval-fixtures/learning-log.md",
+    "top_k": 4,
+    "expect_top1": true
   }
 ]

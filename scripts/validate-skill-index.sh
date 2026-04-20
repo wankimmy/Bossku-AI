@@ -5,7 +5,7 @@
 # Checks:
 #   1. Every indexed skill in skill-index.json has a folder with SKILL.md
 #   2. No orphan skill folders exist without an index entry
-#   3. Required memory files are present
+#   3. Required memory files are present and optional starter memory is noted
 #   4. Deprecated aliases point to a real replacement skill
 #   5. Core routing skills exist in the index and on disk
 #
@@ -120,13 +120,12 @@ else
 fi
 
 echo
-echo "── Check 3: required memory files ───────────────────────────────────────"
+echo "── Check 3: memory files ────────────────────────────────────────────────"
 
 # ── 3. Required memory files ─────────────────────────────────────────────────
 required_memory=(
   "agent-profile.md"
   "project-understanding.md"
-  "active-continuation.md"
   "plan-log.md"
   "learning-log.md"
   "bug-patterns.md"
@@ -137,6 +136,17 @@ for mf in "${required_memory[@]}"; do
     check "memory/$mf" "PASS"
   else
     check "memory/$mf" "FAIL" "missing"
+  fi
+done
+
+optional_memory=(
+  "active-continuation.md"
+)
+for mf in "${optional_memory[@]}"; do
+  if [[ -f "$memory_dir/$mf" ]]; then
+    check "memory/$mf (optional starter)" "PASS"
+  else
+    echo "  NOTE  memory/$mf (optional starter): missing"
   fi
 done
 

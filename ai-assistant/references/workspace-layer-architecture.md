@@ -43,6 +43,10 @@ These are the lightweight defaults that should handle most routing:
 
 Everything else is specialist. A specialist skill should load only when the user request or repo evidence clearly points to that domain.
 
+### Manual-only specialists
+
+Some specialist skills are intentionally too niche to auto-route from vague wording. Framework-specific, animation-specific, or fundraising-specific skills should usually load only when the prompt names that domain directly.
+
 ### Alias skills
 
 Deprecated alias skills stay for compatibility, but they should route directly to the maintained replacement.
@@ -62,6 +66,7 @@ BosskuAI memory is file-based first:
 - `ai-assistant/memory/*.md` is the durable source of truth.
 - `semantic-memory.sqlite3` is an index over selected memory files.
 - `active-continuation.md` is ephemeral handoff state, not long-term memory.
+- `active-continuation.md` ships as a starter template, but it is optional. Validation should not fail just because it has been deleted after a handoff.
 
 The default retrieval backend is `local-hash`:
 
@@ -79,5 +84,6 @@ The included evals measure:
 - prompt-surface size for always-loaded files
 - routing-fit on curated sample tasks
 - retrieval hit quality on curated memory queries
+- small workflow proxies that compare a plain baseline path against the BosskuAI layer
 
 They do not measure true model intelligence or guarantee end-task accuracy. They are local health checks and regression alarms.

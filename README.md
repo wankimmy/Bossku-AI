@@ -39,6 +39,7 @@ For a full setup guide, use [`WORKSPACE-ONBOARDING.md`](WORKSPACE-ONBOARDING.md)
 1. A small always-loaded rule layer sets the cross-tool contract.
 2. The assistant routes into one primary skill and, at most, one secondary skill.
 3. Durable context is stored in files under `ai-assistant/memory/`.
+   `active-continuation.md` is an optional handoff scratchpad, not a required permanent record.
 4. Optional retrieval narrows memory lookup before broad file reads.
 5. Local evals report prompt-surface size, routing-fit proxies, and retrieval hit quality.
 
@@ -60,6 +61,8 @@ Default mode uses a `local-hash` embedding approximation:
 
 It is not equivalent to a real embedding service. It can miss nuance, and it can still overmatch generic text. Important conclusions should be checked against the underlying memory file.
 
+`ai-assistant/memory/active-continuation.md` is shipped as a starter template, but it is optional at runtime. Use it only for unfinished handoffs, then clear or delete it when the task is done.
+
 ## Measurement
 
 Run the included evals to inspect the workspace layer itself:
@@ -75,8 +78,25 @@ These checks are intended to support modest, defensible claims:
 - prompt-surface size can be compared before vs after
 - retrieval hit quality can be checked on sample queries
 - routing-fit can be checked on sample task prompts
+- a small workflow proxy can compare plain baseline behavior against the BosskuAI layer
 
 They do not prove end-task answer accuracy.
+
+## What Is Measured Vs What Is Inferred
+
+Measured locally by this repo:
+
+- prompt surface size for the always-loaded entry files
+- retrieval success on curated sample queries
+- routing-fit on curated prompts, including harder ambiguous cases
+- workflow proxies that compare a plain baseline path against the BosskuAI layer
+
+Inferred rather than guaranteed:
+
+- lower token usage on your real tasks
+- better answer quality on every request
+- better specialist routing in repos with sparse or stale memory
+- safer execution without project-specific review discipline
 
 ## Strongest Use Cases
 
@@ -88,6 +108,7 @@ They do not prove end-task answer accuracy.
 ## Known Limitations
 
 - The built-in retrieval backend is approximate and weaker than real embeddings.
+- Broad paraphrased retrieval queries still perform best when `project-understanding.md` and related memory files are kept current.
 - The eval suite measures workspace health, not true model intelligence.
 - Skill quality still depends on the model loading the right specialist at the right time.
 - Repo-local memory requires maintenance; stale memory can still reduce answer quality if left unchecked.

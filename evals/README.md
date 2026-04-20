@@ -7,6 +7,7 @@ They measure:
 - prompt-surface size for always-loaded files
 - routing-fit on curated task prompts
 - retrieval relevance on curated memory queries
+- a small workflow proxy that compares baseline behavior against the BosskuAI layer
 
 They do not measure true model intelligence or guarantee answer quality.
 

@@ -1,42 +1,62 @@
 [
   {
-    "name": "workspace audit",
-    "prompt": "This is cross-cutting work. Route task across the local skills with minimal context overhead.",
+    "name": "default ambiguous router",
+    "prompt": "This mixes product questions, implementation work, and launch concerns. First classify the task and route the smallest useful skill set.",
     "expected_skill": "bosskuai-workspace-assistant"
   },
   {
-    "name": "repo understanding",
-    "prompt": "This is a new repo with unclear context. Understand the codebase before making recommendations.",
+    "name": "repo understanding from vague wording",
+    "prompt": "I just opened an unfamiliar repo. Before suggesting changes, map the stack, source-of-truth files, and where the shared instructions and memory live.",
     "expected_skill": "bosskuai-project-understanding"
   },
   {
-    "name": "search before build",
-    "prompt": "Check whether we already have a maintained option before we build custom code.",
+    "name": "search before custom build",
+    "prompt": "Before we add a new internal helper, check whether a maintained existing option already fits.",
     "expected_skill": "bosskuai-search-first"
   },
   {
-    "name": "implementation workflow",
-    "prompt": "Implement feature code changes with plan-first, test-guided verification.",
+    "name": "mixed docs then implementation",
+    "prompt": "We need the change landed. Read the right evidence first, then implement feature code changes and verify with tests.",
     "expected_skill": "bosskuai-engineering-delivery"
   },
   {
-    "name": "review",
-    "prompt": "Run a strict PR review with a skeptical review of regressions and test gaps.",
+    "name": "review over style",
+    "prompt": "Review this risky auth patch like a skeptical PR reviewer. I care about regressions, callers, and missing tests more than style.",
     "expected_skill": "bosskuai-rigorous-code-review"
   },
   {
-    "name": "live docs",
-    "prompt": "Look up the current framework API and confirm the version-specific behavior.",
+    "name": "live docs over recollection",
+    "prompt": "Look up the current Nuxt framework API and confirm the version-specific behavior instead of guessing.",
     "expected_skill": "bosskuai-documentation-lookup"
   },
   {
-    "name": "memory promotion",
-    "prompt": "Capture learnings and promote lessons into the right memory artifact.",
+    "name": "durable learning promotion",
+    "prompt": "We finished the change. Capture learnings, promote the durable lesson, and put it in the right memory artifact instead of dumping raw notes.",
     "expected_skill": "bosskuai-continuous-learning"
   },
   {
-    "name": "handoff",
-    "prompt": "We are near the context limit and need a clean handoff for the next session.",
+    "name": "context limit handoff",
+    "prompt": "Quota is tight. Leave a clean next-session handoff with the single next action and open risks.",
     "expected_skill": "bosskuai-context-limit-continuation"
+  },
+  {
+    "name": "no specialist for generic brevity request",
+    "prompt": "Keep the answer short and practical.",
+    "expected_skill": null
+  },
+  {
+    "name": "explicit manual-only nuxt",
+    "prompt": "This is a Nuxt audit. Check SSR, Nitro, auto-imports, and file-based routing.",
+    "expected_skill": "bosskuai-nuxt-development"
+  },
+  {
+    "name": "explicit manual-only gsap",
+    "prompt": "We need GSAP ScrollTrigger timeline animation guidance for this hero section.",
+    "expected_skill": "bosskuai-gsap-animation"
+  },
+  {
+    "name": "workspace security hardening",
+    "prompt": "This is an agent workspace hardening task about prompt-injection risk in an MCP-enabled setup. Figure out the right hardening approach.",
+    "acceptable_skills": ["bosskuai-agent-security-hardening", "bosskuai-cybersecurity-risk"]
   }
 ]

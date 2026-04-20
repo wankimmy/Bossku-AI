@@ -1,5 +1,5 @@
 {
-  "version": "1.3.0",
+  "version": "1.4.0",
   "generated_from": [
     "AGENTS.md",
     "ai-assistant/references/workspace-layer-architecture.md"
@@ -9,6 +9,9 @@
     "activation_match": "standalone_case_insensitive_word",
     "max_primary_skills": 1,
     "max_secondary_skills": 1,
+    "default_skill_id": "bosskuai-workspace-assistant",
+    "no_specialist_min_score": 1.2,
+    "ambiguity_margin": 1.2,
     "core_skill_ids": [
       "bosskuai-workspace-assistant",
       "bosskuai-project-understanding",
@@ -19,9 +22,30 @@
       "bosskuai-continuous-learning",
       "bosskuai-context-limit-continuation"
     ],
+    "manual_only_skill_ids": [
+      "cofounder",
+      "bosskuai-caveman",
+      "bosskuai-3d-web-development",
+      "bosskuai-gsap-animation",
+      "bosskuai-lenis-smooth-scroll",
+      "bosskuai-browser-automation",
+      "bosskuai-nuxt-development",
+      "bosskuai-mongodb",
+      "bosskuai-claude-code-setup",
+      "bosskuai-claude-md-management",
+      "bosskuai-investor-prep",
+      "bosskuai-financial-modeling",
+      "bosskuai-lead-intelligence"
+    ],
+    "archived_alias_skill_ids": [
+      "bosskuai-root-cause-investigation",
+      "bosskuai-project-management",
+      "bosskuai-social-content-calendar"
+    ],
     "specialist_policy": "Load specialist skills only when the user request or repo evidence clearly requires them.",
+    "manual_only_policy": "Manual-only specialists should activate only from explicit wording or strong domain evidence, not from vague overlap.",
     "alias_policy": "Deprecated alias skills remain for compatibility and should route to their replacement skill.",
-    "evaluation_note": "Routing benchmarks are task-fit proxies, not guarantees of answer accuracy.",
+    "evaluation_note": "Routing benchmarks are task-fit and workflow proxies, not guarantees of answer accuracy.",
     "clusters": [
       "orchestration",
       "product",

@@ -33,6 +33,7 @@ temp/
 ai-assistant/memory/*
 !ai-assistant/memory/README.md
 !ai-assistant/memory/agent-profile.md
+!ai-assistant/memory/active-continuation.md
 !ai-assistant/memory/bug-patterns.md
 !ai-assistant/memory/learning-log.md
 !ai-assistant/memory/market-notes.md

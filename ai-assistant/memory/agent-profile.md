@@ -23,7 +23,7 @@ Suggested drafting rule:
 ## Identity
 
 - Company or project name: Confirmed: BosskuAI (repo name and README)
-- Product name: Confirmed: BosskuAI — AI cofounder starter kit
+- Product name: Confirmed: BosskuAI — reusable AI workspace layer
 - Industry: Confirmed: AI tooling / developer productivity
 - Business model: Inferred: Open-source starter (MIT License); no monetization layer visible in the repo
 - Stage: Confirmed: Active development (CHANGELOG shows ongoing skill additions); Inferred: pre-commercial / personal or small-team use
@@ -37,10 +37,10 @@ Suggested drafting rule:
 
 ## Product context
 
-- Core problem: Confirmed: AI tools default to narrow code generators; this starter makes them think like a pragmatic cofounder across product, engineering, security, marketing, and sales
-- Main workflow: Confirmed: Clone → layer into project root → run workspace onboarding prompt → customize agent-profile and project-understanding → use skill-based expert activation per task
-- Key differentiator: Confirmed: 25 expert skills covering all phases (discovery → strategy → build → harden → launch); tool-agnostic (Claude, Cursor, Codex); durable memory system; learning promotion policy
-- Main competitors: Inferred: Generic system prompt templates; Cursor rule bundles; custom GPT instructions; other "AI second brain" or "AI rules" repos — no direct competitors named in the repo
+- Core problem: Confirmed: AI coding tools often lose continuity, duplicate rules across surfaces, and provide weak shared memory. BosskuAI packages a repeatable local workspace layer to reduce that drift.
+- Main workflow: Confirmed: Clone → install into a project root → run workspace onboarding → customize `agent-profile.md` and `project-understanding.md` → use minimal skill routing per task → validate with local scripts and evals.
+- Key differentiator: Confirmed: Tool-agnostic workspace contract; repo-local memory; install/sync scripts; lean always-loaded entry files; optional local-first retrieval and evaluation scaffolding.
+- Main competitors: Inferred: Generic system prompt templates, Cursor rule bundles, personal instruction repos, and other local AI workspace overlays — no direct competitors named in the repo
 
 ## Operating preferences
 

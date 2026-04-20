@@ -58,6 +58,8 @@ Review and edit:
 - [`ai-assistant/memory/agent-profile.md`](ai-assistant/memory/agent-profile.md)
 - [`ai-assistant/memory/project-understanding.md`](ai-assistant/memory/project-understanding.md)
 
+`ai-assistant/memory/active-continuation.md` is optional. Keep it empty, trim it, or delete it unless you are preparing a real handoff between sessions or tools.
+
 Correct anything that is still inferred or unknown.
 
 ## Sync Retrieval

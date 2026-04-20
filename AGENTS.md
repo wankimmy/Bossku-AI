@@ -69,6 +69,7 @@ The machine-readable router lives in [`skill-index.json`](skill-index.json). The
 Shared memory lives under [`ai-assistant/memory/`](ai-assistant/memory).
 
 - Read [`active-continuation.md`](ai-assistant/memory/active-continuation.md) first when it contains a live handoff.
+- That file is optional starter state, not a permanent required artifact. Clear it after the handoff is consumed.
 - If [`semantic-memory.sqlite3`](ai-assistant/memory/semantic-memory.sqlite3) exists, query it before opening broad memory files.
 - Treat vector retrieval as a narrowing tool, not as proof. Confirm important claims from the underlying source file.
 - Follow [`ai-assistant/references/memory-first-handoff-protocol.md`](ai-assistant/references/memory-first-handoff-protocol.md) for read/write order and templates.

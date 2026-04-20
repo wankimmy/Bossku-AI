@@ -74,7 +74,6 @@ full_required_paths=(
   ".claude/commands/rules-distill.md"
   "ai-assistant/memory/agent-profile.md"
   "ai-assistant/memory/project-understanding.md"
-  "ai-assistant/memory/active-continuation.md"
   "ai-assistant/memory/plan-log.md"
   "ai-assistant/memory/vector-config.json"
   "ai-assistant/skills/bosskuai-workspace-assistant/SKILL.md"
@@ -99,6 +98,10 @@ skills_only_required_paths=(
   "ai-assistant/scripts/vector_memory.py"
 )
 
+full_optional_paths=(
+  "ai-assistant/memory/active-continuation.md"
+)
+
 case "$profile" in
   full)
     required_paths=("${full_required_paths[@]}")
@@ -119,6 +122,15 @@ for path in "${required_paths[@]}"; do
   fi
 done
 
+optional_missing=()
+if [[ "$profile" == "full" ]]; then
+  for path in "${full_optional_paths[@]}"; do
+    if [[ ! -e "$target_dir/$path" ]]; then
+      optional_missing+=("$path")
+    fi
+  done
+fi
+
 echo "BosskuAI workspace check"
 echo "Target: $target_dir"
 echo "Profile: $profile"
@@ -135,6 +147,14 @@ fi
 
 echo "Status: PASS"
 echo "Expected workspace files are present."
+if (( ${#optional_missing[@]} > 0 )); then
+  echo
+  echo "Optional starter files not present:"
+  for path in "${optional_missing[@]}"; do
+    echo "  - $path"
+  done
+  echo "    This is allowed. BosskuAI treats active continuation as ephemeral handoff state."
+fi
 echo
 echo "Optional integrity checks:"
 echo "  ./scripts/verify-skill-references.sh   # skill SKILL.md → references/ paths"
