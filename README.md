@@ -1,44 +1,25 @@
 # BosskuAI
 
-## What is this?
+BosskuAI is a reusable workspace layer for Claude Code, Cursor, and Codex. It gives those tools a shared local setup for instructions, routing, memory, validation, and optional memory retrieval.
 
-BosskuAI is a reusable AI workspace layer for **Claude Code, Cursor, and Codex**.
+It is strongest when you want:
 
-It gives those tools:
+- one repo-local AI operating layer across multiple tools
+- better continuity than chat history alone
+- reusable routing through local skills
+- a practical memory and handoff workflow for small teams or solo power users
 
-- shared rules
-- shared memory
-- task routing through local skills
-- plan-first behavior for meaningful work
-- optional vector-backed long-term memory retrieval
+It helps with consistency and recall. It does not guarantee lower token usage, perfect routing, or higher answer quality on every task.
 
-You install it into a real project so the assistant behaves more like a practical teammate than a generic chatbot.
+## What the repo includes
 
-## Who is this for?
+- shared entry files: [`AGENTS.md`](AGENTS.md), [`CLAUDE.md`](CLAUDE.md), [`.codex/AGENTS.md`](.codex/AGENTS.md)
+- shared memory under [`ai-assistant/memory/`](ai-assistant/memory)
+- local skills under [`ai-assistant/skills/`](ai-assistant/skills)
+- local-first retrieval in [`ai-assistant/scripts/vector_memory.py`](ai-assistant/scripts/vector_memory.py)
+- validation and eval scripts under [`scripts/`](scripts)
 
-Use BosskuAI if you:
-
-- work across Claude Code, Cursor, or Codex
-- want one shared assistant setup across projects
-- want better continuity across chats and sessions
-- want built-in workflows for engineering, product, design, security, growth, and research
-- are tired of re-explaining project context every time
-
-## Why use this?
-
-BosskuAI helps when normal AI usage starts to feel stateless or inconsistent.
-
-Main benefits:
-
-- **Shared memory**: plans, learnings, and project context live in files, not only chat history
-- **Better routing**: the assistant loads the right local skill instead of giving generic answers
-- **Less drift**: rules stay consistent across Claude, Cursor, and Codex
-- **Longer continuity**: vector retrieval helps recall relevant durable memory across sessions
-- **Safer execution**: meaningful tasks are expected to plan first, then execute, then log durable outcomes
-
-## How do I use it?
-
-### 1. Install it into your project
+## Install
 
 ```bash
 git clone https://github.com/wankimmy/Bossku-AI bosskuAI
@@ -51,95 +32,75 @@ Windows:
 .\bosskuAI\scripts\install.ps1 C:\path\to\your\project
 ```
 
-### Install it as a Claude Code plugin
+For a full setup guide, use [`WORKSPACE-ONBOARDING.md`](WORKSPACE-ONBOARDING.md).
 
-If you want to distribute BosskuAI through GitHub as a Claude Code plugin marketplace:
+## How it works
 
-```bash
-/plugin marketplace add wankimmy/Bossku-AI
-/plugin install bossku-ai@bosskuai-marketplace
-```
+1. A small always-loaded rule layer sets the cross-tool contract.
+2. The assistant routes into one primary skill and, at most, one secondary skill.
+3. Durable context is stored in files under `ai-assistant/memory/`.
+4. Optional retrieval narrows memory lookup before broad file reads.
+5. Local evals report prompt-surface size, routing-fit proxies, and retrieval hit quality.
 
-After install, a simple entrypoint is:
+## Local-First Retrieval
 
-```bash
-/bossku-ai:cofounder
-```
-
-Example prompts:
-
-```text
-/bossku-ai:cofounder We have 3 weeks of runway extension left. What should we prioritize?
-/bossku-ai:cofounder Help me decide whether to ship this feature, cut scope, or talk to customers first.
-```
-
-For local testing before pushing:
-
-```bash
-claude --plugin-dir .
-```
-
-### 2. Open your real project
-
-Open the target project root in Claude Code, Cursor, or Codex.
-
-### 3. Run onboarding once
-
-Use [WORKSPACE-ONBOARDING.md](WORKSPACE-ONBOARDING.md) to initialize project memory and confirm the setup.
-
-### 4. Prompt normally
-
-Say `bossku` in the prompt when you want BosskuAI behavior explicitly activated.
-
-Examples:
-
-```text
-bossku review this PR for security and business-logic risks
-bossku plan the safest implementation for this feature
-bossku investigate why this flow keeps regressing
-```
-
-### 5. Let memory improve over time
-
-BosskuAI stores durable context in `ai-assistant/memory/`.
-
-For non-trivial work, the intended flow is:
-
-1. read memory
-2. plan
-3. store compact reusable plan when it matters
-4. sync vector memory
-5. execute
-6. store durable outcomes or learnings
-7. sync again if indexed memory changed
-
-Vector memory commands:
+BosskuAI ships with a local SQLite-backed retrieval path.
 
 ```bash
 python3 ./ai-assistant/scripts/vector_memory.py sync
 python3 ./ai-assistant/scripts/vector_memory.py query "auth retry policy"
+python3 ./ai-assistant/scripts/vector_memory.py status
 ```
 
-## Key files
+Default mode uses a `local-hash` embedding approximation:
 
-- [AGENTS.md](AGENTS.md): main rules, routing, memory protocol
-- [CLAUDE.md](CLAUDE.md): Claude entry point
-- [.claude-plugin/plugin.json](.claude-plugin/plugin.json): Claude Code plugin manifest
-- [.claude-plugin/marketplace.json](.claude-plugin/marketplace.json): GitHub-installable plugin marketplace catalog
-- [WORKSPACE-ONBOARDING.md](WORKSPACE-ONBOARDING.md): first-run setup
-- [skill-index.json](skill-index.json): machine-readable skill index
-- [`ai-assistant/skills/`](ai-assistant/skills): local expert workflows
-- [`ai-assistant/memory/`](ai-assistant/memory): shared durable memory
-- [`ai-assistant/scripts/project-understanding.sh`](ai-assistant/scripts/project-understanding.sh): refresh project understanding safely
-- [`mcp-configs/README.md`](mcp-configs/README.md): optional MCP setup guide
+- no extra Python dependency by default
+- local-first and fast to sync
+- useful for narrowing which memory files to open next
 
-## Customize
+It is not equivalent to a real embedding service. It can miss nuance, and it can still overmatch generic text. Important conclusions should be checked against the underlying memory file.
 
-- Edit `ai-assistant/memory/agent-profile.md` for company/product context
-- Edit `ai-assistant/memory/project-understanding.md` for repo understanding
-- Add or remove skills under `ai-assistant/skills/`
-- Adjust rules in `AGENTS.md`, `.claude/rules/`, `.cursor/rules/`, and `.codex/`
+## Measurement
+
+Run the included evals to inspect the workspace layer itself:
+
+```bash
+bash ./scripts/check-workspace.sh
+bash ./scripts/validate-skill-index.sh
+python3 ./scripts/eval_workspace.py
+```
+
+These checks are intended to support modest, defensible claims:
+
+- prompt-surface size can be compared before vs after
+- retrieval hit quality can be checked on sample queries
+- routing-fit can be checked on sample task prompts
+
+They do not prove end-task answer accuracy.
+
+## Strongest Use Cases
+
+- teams that switch between Claude Code, Cursor, and Codex
+- projects that need durable handoff files, not just chat transcripts
+- users who want local skills and shared workflows without a hosted control plane
+- repositories that benefit from a lightweight memory and verification discipline
+
+## Known Limitations
+
+- The built-in retrieval backend is approximate and weaker than real embeddings.
+- The eval suite measures workspace health, not true model intelligence.
+- Skill quality still depends on the model loading the right specialist at the right time.
+- Repo-local memory requires maintenance; stale memory can still reduce answer quality if left unchecked.
+- This layer improves workflow consistency, but it cannot guarantee safer execution on its own.
+
+## Key Files
+
+- [`AGENTS.md`](AGENTS.md): canonical workspace contract
+- [`skill-index.json`](skill-index.json): routing registry
+- [`ai-assistant/references/workspace-layer-architecture.md`](ai-assistant/references/workspace-layer-architecture.md): architecture notes
+- [`ai-assistant/references/memory-first-handoff-protocol.md`](ai-assistant/references/memory-first-handoff-protocol.md): shared memory protocol
+- [`WORKSPACE-ONBOARDING.md`](WORKSPACE-ONBOARDING.md): first-run setup
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT — see [`LICENSE`](LICENSE).

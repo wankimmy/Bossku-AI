@@ -2,13 +2,39 @@
   "database_path": "ai-assistant/memory/semantic-memory.sqlite3",
   "embedding": {
     "provider": "local-hash",
-    "dimensions": 256,
-    "seed": "bosskuai-vector-v1"
+    "dimensions": 384,
+    "seed": "bosskuai-vector-v2"
   },
   "chunking": {
-    "max_chars": 900,
-    "overlap_chars": 120
+    "target_chars": 700,
+    "max_chars": 1100,
+    "min_chars": 180,
+    "overlap_blocks": 1
   },
+  "retrieval": {
+    "semantic_weight": 0.55,
+    "lexical_weight": 0.25,
+    "heading_weight": 0.1,
+    "recency_weight": 0.05,
+    "source_weight": 0.05,
+    "min_combined_score": 0.12,
+    "min_semantic_without_lexical": 0.18,
+    "max_per_document": 2,
+    "preview_chars": 220
+  },
+  "source_weights": {
+    "agent-profile.md": 0.12,
+    "project-understanding.md": 0.12,
+    "plan-log.md": 0.08,
+    "learning-log.md": 0.06,
+    "bug-patterns.md": 0.08,
+    "market-notes.md": 0.06
+  },
+  "noise_markers": [
+    "none yet",
+    "append using the format above.",
+    "use this file to store"
+  ],
   "include": [
     "ai-assistant/memory/agent-profile.md",
     "ai-assistant/memory/project-understanding.md",

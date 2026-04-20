@@ -3,49 +3,11 @@ alwaysApply: true
 ---
 # BosskuAI Rules
 
-Apply these rules anywhere inside this repo. Root `AGENTS.md` is the tool-neutral source of truth; this file keeps Cursor-specific deltas only.
+Use [`AGENTS.md`](mdc:AGENTS.md) as the canonical contract.
 
-## Activation and routing
-
-- Standalone `bossku` in a prompt activates BosskuAI mode for that request.
-- For meaningful work: classify via root `AGENTS.md`, load the minimum relevant skill set, plan first, then execute.
-- Keep routing/meta internal in normal mode. Debug/Handoff only: use root compact forms `[Route] ...` and `[Done] ...`.
-- Do not duplicate root skill tables or quick-reference content here.
-
-## Cursor model split
-
-| Phase | Model |
-|-------|-------|
-| Planning / architecture / analysis | strongest available reasoning model in Plan mode |
-| Execution / implementation | `Composer 2` |
-
-- Always enter Plan mode first for meaningful tasks.
-- Quick/trivial tasks may skip the split.
-- If the current path is stuck or missing capability, load `bosskuai-cross-model-escalation` before retrying.
-
-## Shared memory
-
-- `ai-assistant/memory/` is shared durable memory across Claude, Codex, and Cursor.
-- Read `active-continuation.md` directly first.
-- If `semantic-memory.sqlite3` exists, query it with `python3 ./ai-assistant/scripts/vector_memory.py query "<task summary>" --limit 3` before opening broad memory files.
-- For non-trivial tasks, if the plan is durable enough to matter later, append a compact pre-execution entry to `ai-assistant/memory/plan-log.md` and sync before executing.
-- Follow [`ai-assistant/references/memory-first-handoff-protocol.md`](mdc:ai-assistant/references/memory-first-handoff-protocol.md) for write thresholds and sparse reporting.
-- If indexed memory changed, refresh semantic recall with `python3 ./ai-assistant/scripts/vector_memory.py sync`.
-
-## Core execution rules
-
-- Ambiguous scope is a hard stop: if the request is general, unclear, or could lead to materially different multi-file changes, ask 1-3 numbered clarification questions and wait for the user before acting.
-- Include one explicit `Please answer: 1-... 2-...` line so the user can reply quickly.
-- If repo or product context is unclear, use `bosskuai-project-understanding` first.
-- Read source before making architecture, bug, or product claims.
-- Prefer the smallest safe change that fits the current structure.
-- Treat security, UX, business rules, and operational risk as part of correctness.
-- When a task has at least 2 independent workstreams or 5 independent files, use parallel Composer tabs instead of one long serial run when dependencies allow it.
-- If something material is unconfirmed, ask the user instead of guessing.
-- Run `bash ./ai-assistant/scripts/learning-doctor.sh` before large maintenance passes.
-
-## Cursor ecosystem notes
-
-- MCP config blocks live in [`mcp-configs/cursor-mcp-servers.json`](mdc:mcp-configs/cursor-mcp-servers.json).
-- Use Pencil MCP for browser automation in Cursor.
-- Agent role definitions live in [`agents/`](mdc:agents) and [`agents/README.md`](mdc:agents/README.md); adopt the closest role/process when it helps.
+- `bossku` activates BosskuAI mode for the current request.
+- For meaningful work: classify, load the minimum relevant skill set, plan first, then execute.
+- Ask clarification questions before broad multi-file changes when scope is unclear.
+- Read [`ai-assistant/memory/active-continuation.md`](mdc:ai-assistant/memory/active-continuation.md) first when it contains live work.
+- If [`semantic-memory.sqlite3`](mdc:ai-assistant/memory/semantic-memory.sqlite3) exists, query it before opening broad memory files.
+- Keep protocol chatter minimal unless the user asks for it or a handoff needs it.

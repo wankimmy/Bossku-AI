@@ -1,7 +1,7 @@
 ---
 name: bosskuai-caveman
 description: >
-  Compressed caveman-style responses cutting ~75% output tokens while keeping full technical accuracy.
+  Compressed caveman-style responses intended to reduce reply length materially while keeping the important technical substance.
   Supports intensity levels: lite, full (default), ultra, wenyan-lite, wenyan-full, wenyan-ultra.
   Use when token efficiency requested, or invoke /caveman. Always-on in bosskuAI sessions.
 ---

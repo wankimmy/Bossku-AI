@@ -166,9 +166,9 @@ if (( sync_layer )); then
   echo "BosskuAI layer synced (docs + agents + tool configs + ai-assistant/* except memory) to: $target_dir"
   if (( skip_check == 0 )); then
     echo
-    "$script_dir/check-workspace.sh" "$target_dir"
+    "$script_dir/check-workspace.sh" "$target_dir" --profile full
   else
-    echo "Skipped workspace check (--skip-check). Run: ./scripts/check-workspace.sh \"$target_dir\""
+    echo "Skipped workspace check (--skip-check). Run: ./scripts/check-workspace.sh \"$target_dir\" --profile full"
   fi
   exit 0
 fi
@@ -189,9 +189,9 @@ if (( skills_only )); then
   echo "BosskuAI skills layer (skills + references + scripts) installed under: $assistant_dir"
   if (( skip_check == 0 )); then
     echo
-    "$script_dir/check-workspace.sh" "$target_dir"
+    "$script_dir/check-workspace.sh" "$target_dir" --profile skills-only
   else
-    echo "Skipped workspace check (--skip-check). Run: ./scripts/check-workspace.sh \"$target_dir\""
+    echo "Skipped workspace check (--skip-check). Run: ./scripts/check-workspace.sh \"$target_dir\" --profile skills-only"
   fi
   exit 0
 fi
@@ -264,7 +264,7 @@ fi
 
 if (( skip_check == 0 )); then
   echo
-  "$script_dir/check-workspace.sh" "$target_dir"
+  "$script_dir/check-workspace.sh" "$target_dir" --profile full
 else
-  echo "Skipped workspace check (--skip-check). Run: ./scripts/check-workspace.sh \"$target_dir\""
+  echo "Skipped workspace check (--skip-check). Run: ./scripts/check-workspace.sh \"$target_dir\" --profile full"
 fi

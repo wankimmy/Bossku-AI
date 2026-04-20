@@ -1,0 +1,42 @@
+[
+  {
+    "name": "workspace audit",
+    "prompt": "This is cross-cutting work. Route task across the local skills with minimal context overhead.",
+    "expected_skill": "bosskuai-workspace-assistant"
+  },
+  {
+    "name": "repo understanding",
+    "prompt": "This is a new repo with unclear context. Understand the codebase before making recommendations.",
+    "expected_skill": "bosskuai-project-understanding"
+  },
+  {
+    "name": "search before build",
+    "prompt": "Check whether we already have a maintained option before we build custom code.",
+    "expected_skill": "bosskuai-search-first"
+  },
+  {
+    "name": "implementation workflow",
+    "prompt": "Implement feature code changes with plan-first, test-guided verification.",
+    "expected_skill": "bosskuai-engineering-delivery"
+  },
+  {
+    "name": "review",
+    "prompt": "Run a strict PR review with a skeptical review of regressions and test gaps.",
+    "expected_skill": "bosskuai-rigorous-code-review"
+  },
+  {
+    "name": "live docs",
+    "prompt": "Look up the current framework API and confirm the version-specific behavior.",
+    "expected_skill": "bosskuai-documentation-lookup"
+  },
+  {
+    "name": "memory promotion",
+    "prompt": "Capture learnings and promote lessons into the right memory artifact.",
+    "expected_skill": "bosskuai-continuous-learning"
+  },
+  {
+    "name": "handoff",
+    "prompt": "We are near the context limit and need a clean handoff for the next session.",
+    "expected_skill": "bosskuai-context-limit-continuation"
+  }
+]

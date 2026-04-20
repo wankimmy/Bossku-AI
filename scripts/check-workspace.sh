@@ -5,23 +5,61 @@ set -euo pipefail
 usage() {
   cat <<'EOF'
 Usage:
-  ./scripts/check-workspace.sh [target-dir]
+  ./scripts/check-workspace.sh [target-dir] [--profile auto|full|skills-only]
 
 Validate that a workspace has the expected BosskuAI layer installed.
-Defaults to the current directory.
+Defaults to the current directory and auto-detects the install profile.
 EOF
 }
 
-target_dir="${1:-.}"
+target_dir="."
+profile="auto"
 
-if [[ "${target_dir}" == "-h" || "${target_dir}" == "--help" ]]; then
-  usage
-  exit 0
-fi
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    --profile)
+      profile="${2:-auto}"
+      shift 2
+      ;;
+    --profile=*)
+      profile="${1#--profile=}"
+      shift
+      ;;
+    *)
+      target_dir="$1"
+      shift
+      ;;
+  esac
+done
 
 target_dir="$(cd "$target_dir" && pwd)"
 
-required_paths=(
+detect_profile() {
+  if [[ "$profile" != "auto" ]]; then
+    echo "$profile"
+    return
+  fi
+
+  if [[ -e "$target_dir/AGENTS.md" || -d "$target_dir/.claude" || -d "$target_dir/.codex" ]]; then
+    echo "full"
+    return
+  fi
+
+  if [[ -d "$target_dir/ai-assistant/skills" ]]; then
+    echo "skills-only"
+    return
+  fi
+
+  echo "full"
+}
+
+profile="$(detect_profile)"
+
+full_required_paths=(
   "AGENTS.md"
   "CLAUDE.md"
   "WORKSPACE-ONBOARDING.md"
@@ -54,6 +92,26 @@ required_paths=(
   "ai-assistant/hooks/session-end-reminder.sh"
 )
 
+skills_only_required_paths=(
+  "ai-assistant/skills"
+  "ai-assistant/references"
+  "ai-assistant/scripts"
+  "ai-assistant/scripts/vector_memory.py"
+)
+
+case "$profile" in
+  full)
+    required_paths=("${full_required_paths[@]}")
+    ;;
+  skills-only)
+    required_paths=("${skills_only_required_paths[@]}")
+    ;;
+  *)
+    echo "Error: unknown profile '$profile'. Use auto, full, or skills-only." >&2
+    exit 2
+    ;;
+esac
+
 missing=()
 for path in "${required_paths[@]}"; do
   if [[ ! -e "$target_dir/$path" ]]; then
@@ -63,6 +121,7 @@ done
 
 echo "BosskuAI workspace check"
 echo "Target: $target_dir"
+echo "Profile: $profile"
 echo
 
 if (( ${#missing[@]} > 0 )); then
@@ -75,11 +134,16 @@ if (( ${#missing[@]} > 0 )); then
 fi
 
 echo "Status: PASS"
-echo "Core workspace files are present."
+echo "Expected workspace files are present."
 echo
 echo "Optional integrity checks:"
 echo "  ./scripts/verify-skill-references.sh   # skill SKILL.md → references/ paths"
 echo "  ./scripts/validate-skill-index.sh      # skill-index.json ↔ skill folders"
+echo "  python3 ./scripts/eval_workspace.py    # prompt surface, routing-fit, retrieval relevance"
 echo
 echo "Recommended next step:"
-echo "  Open this workspace root in Codex, Claude, or Cursor and run the onboarding prompt in WORKSPACE-ONBOARDING.md"
+if [[ "$profile" == "skills-only" ]]; then
+  echo "  Open the target repo and verify the installed skills and references match your local workflow."
+else
+  echo "  Open this workspace root in Codex, Claude, or Cursor and run the onboarding prompt in WORKSPACE-ONBOARDING.md"
+fi

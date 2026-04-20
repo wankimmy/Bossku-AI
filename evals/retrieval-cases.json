@@ -1,0 +1,38 @@
+[
+  {
+    "name": "agent profile context",
+    "query": "company or product context for this workspace",
+    "expected_path": "evals/retrieval-fixtures/agent-profile.md",
+    "top_k": 3
+  },
+  {
+    "name": "project understanding",
+    "query": "AGENTS.md skill-index.json ai-assistant memory source of truth files",
+    "expected_path": "evals/retrieval-fixtures/project-understanding.md",
+    "top_k": 3
+  },
+  {
+    "name": "stored plans",
+    "query": "planned approach and execution plan log",
+    "expected_path": "evals/retrieval-fixtures/plan-log.md",
+    "top_k": 3
+  },
+  {
+    "name": "learning history",
+    "query": "completed work and verification history",
+    "expected_path": "evals/retrieval-fixtures/learning-log.md",
+    "top_k": 3
+  },
+  {
+    "name": "bug patterns",
+    "query": "recurring defect patterns and bug classes",
+    "expected_path": "evals/retrieval-fixtures/bug-patterns.md",
+    "top_k": 3
+  },
+  {
+    "name": "market notes",
+    "query": "market or GTM notes",
+    "expected_path": "evals/retrieval-fixtures/market-notes.md",
+    "top_k": 3
+  }
+]

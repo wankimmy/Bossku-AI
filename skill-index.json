@@ -1,11 +1,27 @@
 {
-  "version": "1.2.0",
-  "generated_from": "AGENTS.md",
+  "version": "1.3.0",
+  "generated_from": [
+    "AGENTS.md",
+    "ai-assistant/references/workspace-layer-architecture.md"
+  ],
   "routing": {
     "activation_keyword": "bossku",
     "activation_match": "standalone_case_insensitive_word",
     "max_primary_skills": 1,
     "max_secondary_skills": 1,
+    "core_skill_ids": [
+      "bosskuai-workspace-assistant",
+      "bosskuai-project-understanding",
+      "bosskuai-search-first",
+      "bosskuai-engineering-delivery",
+      "bosskuai-rigorous-code-review",
+      "bosskuai-documentation-lookup",
+      "bosskuai-continuous-learning",
+      "bosskuai-context-limit-continuation"
+    ],
+    "specialist_policy": "Load specialist skills only when the user request or repo evidence clearly requires them.",
+    "alias_policy": "Deprecated alias skills remain for compatibility and should route to their replacement skill.",
+    "evaluation_note": "Routing benchmarks are task-fit proxies, not guarantees of answer accuracy.",
     "clusters": [
       "orchestration",
       "product",

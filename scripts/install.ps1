@@ -131,15 +131,15 @@ if ($SyncLayer) {
         $Bash = Get-Command bash -ErrorAction SilentlyContinue
         if ($Bash) {
             Write-Host ""
-            & bash $CheckScript $ResolvedTarget
+            & bash $CheckScript $ResolvedTarget --profile full
             exit $LASTEXITCODE
         }
         Write-Host ""
         Write-Host "Install complete. Run validation from Git Bash or WSL:" -ForegroundColor Yellow
-        Write-Host "  ./scripts/check-workspace.sh `"$ResolvedTarget`""
+        Write-Host "  ./scripts/check-workspace.sh `"$ResolvedTarget`" --profile full"
         exit 0
     }
-    Write-Host "Skipped workspace check (-SkipCheck). Run: ./scripts/check-workspace.sh `"$ResolvedTarget`""
+    Write-Host "Skipped workspace check (-SkipCheck). Run: ./scripts/check-workspace.sh `"$ResolvedTarget`" --profile full"
     exit 0
 }
 
@@ -164,15 +164,15 @@ if ($SkillsOnly) {
         $Bash = Get-Command bash -ErrorAction SilentlyContinue
         if ($Bash) {
             Write-Host ""
-            & bash $CheckScript $ResolvedTarget
+            & bash $CheckScript $ResolvedTarget --profile skills-only
             exit $LASTEXITCODE
         }
         Write-Host ""
         Write-Host "Install complete. Run validation from Git Bash or WSL:" -ForegroundColor Yellow
-        Write-Host "  ./scripts/check-workspace.sh `"$ResolvedTarget`""
+        Write-Host "  ./scripts/check-workspace.sh `"$ResolvedTarget`" --profile skills-only"
         exit 0
     }
-    Write-Host "Skipped workspace check (-SkipCheck). Run: ./scripts/check-workspace.sh `"$ResolvedTarget`""
+    Write-Host "Skipped workspace check (-SkipCheck). Run: ./scripts/check-workspace.sh `"$ResolvedTarget`" --profile skills-only"
     exit 0
 }
 
@@ -264,13 +264,13 @@ if (-not $SkipCheck) {
     $Bash = Get-Command bash -ErrorAction SilentlyContinue
     if ($Bash) {
         Write-Host ""
-        & bash $CheckScript $ResolvedTarget
+        & bash $CheckScript $ResolvedTarget --profile full
         exit $LASTEXITCODE
     }
     Write-Host ""
     Write-Host "Install complete. Run validation from Git Bash or WSL:" -ForegroundColor Yellow
-    Write-Host "  ./scripts/check-workspace.sh `"$ResolvedTarget`""
+    Write-Host "  ./scripts/check-workspace.sh `"$ResolvedTarget`" --profile full"
     exit 0
 }
 
-Write-Host "Skipped workspace check (-SkipCheck). Run: ./scripts/check-workspace.sh `"$ResolvedTarget`""
+Write-Host "Skipped workspace check (-SkipCheck). Run: ./scripts/check-workspace.sh `"$ResolvedTarget`" --profile full"

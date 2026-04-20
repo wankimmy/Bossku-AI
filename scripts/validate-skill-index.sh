@@ -3,9 +3,11 @@
 # Run from BosskuAI repo root: ./scripts/validate-skill-index.sh [target-dir]
 #
 # Checks:
-#   1. Every active/deprecated skill in skill-index.json has a folder with SKILL.md
+#   1. Every indexed skill in skill-index.json has a folder with SKILL.md
 #   2. No orphan skill folders exist without an index entry
 #   3. Required memory files are present
+#   4. Deprecated aliases point to a real replacement skill
+#   5. Core routing skills exist in the index and on disk
 #
 # Exit codes:
 #   0 = PASS (all checks passed)
@@ -137,6 +139,49 @@ for mf in "${required_memory[@]}"; do
     check "memory/$mf" "FAIL" "missing"
   fi
 done
+
+echo
+echo "── Check 4: alias replacements are valid ────────────────────────────────"
+
+while IFS=$'\t' read -r alias_id replacement_id; do
+  [[ -z "$alias_id" ]] && continue
+  if [[ -z "$replacement_id" ]]; then
+    check "$alias_id" "FAIL" "deprecated alias is missing replaced_by"
+    continue
+  fi
+  if [[ ! -f "$skills_dir/$replacement_id/SKILL.md" ]]; then
+    check "$alias_id" "FAIL" "replacement skill missing: $replacement_id"
+  else
+    check "$alias_id -> $replacement_id" "PASS"
+  fi
+done < <(python3 - <<PY
+import json
+with open("$index_file", "r", encoding="utf-8") as f:
+    data = json.load(f)
+for skill in data.get("skills", []):
+    if skill.get("status") == "deprecated_alias":
+        print(f"{skill['id']}\t{skill.get('replaced_by','')}")
+PY
+)
+
+echo
+echo "── Check 5: core routing skills are valid ───────────────────────────────"
+
+while IFS= read -r core_id; do
+  [[ -z "$core_id" ]] && continue
+  if [[ ! -f "$skills_dir/$core_id/SKILL.md" ]]; then
+    check "$core_id" "FAIL" "listed as core in routing.core_skill_ids but missing on disk"
+  else
+    check "$core_id" "PASS"
+  fi
+done < <(python3 - <<PY
+import json
+with open("$index_file", "r", encoding="utf-8") as f:
+    data = json.load(f)
+for core_id in data.get("routing", {}).get("core_skill_ids", []):
+    print(core_id)
+PY
+)
 
 echo
 echo "── Summary ───────────────────────────────────────────────────────────────"
