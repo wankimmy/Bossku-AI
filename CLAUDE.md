@@ -6,12 +6,14 @@ Use [`AGENTS.md`](AGENTS.md) as the canonical cross-tool contract. This file kee
 
 For meaningful tasks:
 
-- Planning, architecture, and ambiguous analysis: `claude-opus-4-6`
-- Execution and implementation: `claude-sonnet-4-6`
+- Planning, architecture, long-horizon coding, and ambiguous analysis: `claude-opus-4-7`
+- Routine execution and implementation: `claude-sonnet-4-6`; escalate to `claude-opus-4-7` for complex multi-file refactors, agentic coding, vision-heavy UI review, or repeated failed attempts
 
 Trivial tasks may skip the two-phase split.
 
 ## Claude Defaults
+
+- For Claude Opus 4.7 API usage, prefer adaptive thinking / effort controls where available; do not assume manual extended-thinking budgets are accepted.
 
 - Load the minimum relevant BosskuAI skill set from [`skill-index.json`](skill-index.json).
 - Ask clarification questions before broad multi-file changes when scope is unclear.

@@ -57,6 +57,39 @@
   {
     "name": "workspace security hardening",
     "prompt": "This is an agent workspace hardening task about prompt-injection risk in an MCP-enabled setup. Figure out the right hardening approach.",
-    "acceptable_skills": ["bosskuai-agent-security-hardening", "bosskuai-cybersecurity-risk"]
+    "acceptable_skills": [
+      "bosskuai-agent-security-hardening",
+      "bosskuai-cybersecurity-risk"
+    ]
+  },
+  {
+    "name": "metric ratchet loop",
+    "prompt": "Improve this prompt with a ratchet loop: capture baseline token count, make one change, rerun the eval, and keep or revert based on the metric.",
+    "expected_skill": "bosskuai-ratchet-loop"
+  },
+  {
+    "name": "explicit Laravel specialist",
+    "prompt": "Audit this Laravel app for Eloquent, policies, Form Requests, queues, migrations, and performance best practices.",
+    "expected_skill": "bosskuai-laravel-development"
+  },
+  {
+    "name": "explicit database engineering",
+    "prompt": "Review this MariaDB/MySQL/PostgreSQL schema and SQL indexes. Check constraints, partial indexes, query plans, and safe migrations.",
+    "expected_skill": "bosskuai-database-engineering"
+  },
+  {
+    "name": "explicit VPS Docker deployment",
+    "prompt": "Help me deploy this Laravel and Nuxt app to a VPS using Docker Compose, Nginx reverse proxy, SSL, backups, and rollback.",
+    "expected_skill": "bosskuai-vps-docker-deployment"
+  },
+  {
+    "name": "explicit Redis queues",
+    "prompt": "Review Redis cache invalidation, Laravel queue workers, failed jobs, rate limits, locks, and Horizon settings.",
+    "expected_skill": "bosskuai-redis-caching-queues"
+  },
+  {
+    "name": "explicit content calendar",
+    "prompt": "Create a 90 days content calendar with Hooks, CTA, Threads posts, TikTok scripts, and Malay English tone.",
+    "expected_skill": "bosskuai-content-calendar"
   }
 ]

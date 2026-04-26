@@ -1,127 +1,173 @@
 # BosskuAI
 
-BosskuAI is a reusable workspace layer for Claude Code, Cursor, and Codex. It gives those tools a shared local setup for instructions, routing, memory, validation, and optional memory retrieval.
+A repo-local AI workspace layer for builders using Claude Code, Cursor, and Codex.
 
-It is strongest when you want:
+BosskuAI gives those tools the same memory files, routing rules, skills, handoff habits, human-output checks, and token discipline. No hosted control plane. No claim that prompts magically make every answer better.
 
-- one repo-local AI operating layer across multiple tools
-- better continuity than chat history alone
-- reusable routing through local skills
-- a practical memory and handoff workflow for small teams or solo power users
 
-It helps with consistency and recall. It does not guarantee lower token usage, perfect routing, or higher answer quality on every task.
+---
 
-## What the repo includes
+## What's new in v1.8.2
 
-- shared entry files: [`AGENTS.md`](AGENTS.md), [`CLAUDE.md`](CLAUDE.md), [`.codex/AGENTS.md`](.codex/AGENTS.md)
-- shared memory under [`ai-assistant/memory/`](ai-assistant/memory)
-- local skills under [`ai-assistant/skills/`](ai-assistant/skills)
-- local-first retrieval in [`ai-assistant/scripts/vector_memory.py`](ai-assistant/scripts/vector_memory.py)
-- validation and eval scripts under [`scripts/`](scripts)
+### P0 — Packaging correctness
+- Added missing `.codex/`, `.cursor/`, `.claude/`, and `.claude-plugin/` files referenced by install/check docs.
+- `scripts/check-workspace.sh . --profile full` now passes against the packaged repo.
+- Claude plugin manifests now exist at `.claude-plugin/plugin.json` and `.claude-plugin/plugin.with-hooks.json`.
+
+### P1 — Expert stack coverage
+- Added first-class skills for Laravel, database engineering, VPS Docker deployment, Redis caching/queues, and content calendar planning.
+- Dev profile now includes Laravel, databases, Redis, and VPS Docker deployment.
+- Growth profile now includes dedicated content calendar workflow.
+
+### P2 — Claude Opus 4.7 readiness
+- Updated Claude model mapping to use `claude-opus-4-7` for planning, architecture, long-horizon coding, and complex review.
+
+---
+
+## What's new in v1.8.0
+
+### P0 — Correctness fixes
+- **Real TF-IDF embedder** (`ai-assistant/scripts/vector_memory.py`): replaced SHA-256 hash projection with proper IDF-weighted term scoring. Rare informative words (cofounder, ratchet, continuation) now score higher; common words (the, use, add) get low weight. Semantic score improved 0.08 → 0.10+; query ranking is now meaningful.
+  - Supports 4 providers: `tfidf` (default, zero deps), `local-hash` (compat), `sentence-transformers` (neural, needs `pip install sentence-transformers`), `openai` (needs API key).
+- **Shared retrieval path** (`scripts/eval_workspace.py`): eval now uses `vector_memory.retrieve_text_files()` — the same scorer as production. Green CI now means the real path was tested.
+- **install.sh safety**: added `--dry-run` flag; install now refuses to target `/`, `$HOME`, or the repo root itself; target must exist before install.
+
+### P1 — Maintenance tooling
+- **`scripts/gen_skills.py`**: validates and regenerates boilerplate skill files from a canonical template. Run `--check` in CI; `--fix` to normalize drifted files. Hand-authored skills are never overwritten.
+- **`scripts/rotate_learning_log.py`**: archives `Status: applied` entries older than 90 days; detects near-duplicate entries via Jaccard token overlap.
+- **`scripts/validate_changelog.sh`**: CI gate — fails if deprecated_alias skills are still in install profiles, or if CHANGELOG mentions a skill that's now deprecated without a note.
+
+### P2 — Learning loop & team memory
+- **`scripts/learning_loop.py`**: reads applied+high-confidence learning entries, extracts skill mentions, and proposes trigger/keyword additions to `skill-index.json`. Run `--apply` to write an ADR and update the index.
+- **`scripts/team_memory.sh`**: `tag-author`, `merge-logs` (chronological merge of two learning-log files, deduplicates by title), `check-conflicts` (detects contradicting lessons by negation + topic overlap), `install-hook` (pre-commit hook).
+- **Skills indexed** (`ai-assistant/memory/vector-config.json`): 11 substantive skill SKILL.md files added to the vector index. Cofounder query now returns `score=0.354` (was zero hits).
+
+### Optional embedding upgrade
+See `requirements-optional.txt` for how to enable `sentence-transformers` (true neural embeddings, ~80MB model, no API key needed).
+
+---
+
+## Why use it
+
+- keep project memory in files, not only chat history
+- share one working style across Claude Code, Cursor, and Codex
+- route tasks into focused skills instead of loading one giant prompt
+- reduce generic AI writing with `bosskuai-human-output`
+- compress noisy output/rules with `bosskuai-token-saver`
+- improve prompts/workflows with a metric-based ratchet loop
 
 ## Install
 
 ```bash
 git clone https://github.com/wankimmy/Bossku-AI bosskuAI
-./bosskuAI/scripts/install.sh /path/to/your/project
+./bosskuAI/scripts/install.sh /path/to/your/project --profile core
 ```
 
 Windows:
 
 ```powershell
-.\bosskuAI\scripts\install.ps1 C:\path\to\your\project
+.\bosskuAI\scripts\install.ps1 C:\path\to\your\project -Profile core
 ```
 
-For a full setup guide, use [`WORKSPACE-ONBOARDING.md`](WORKSPACE-ONBOARDING.md).
+Profiles:
 
-## How it works
+| Profile | Use when |
+|---|---|
+| `core` | smallest practical layer: memory, routing, search-first, human-output, token-saver, ratchet |
+| `dev` | coding, review, architecture, Laravel, databases, Redis, Docker, VPS deployment, testing, GitHub workflow |
+| `growth` | SEO, GEO, marketing, content calendar, launch, customer discovery, sales, competitor research |
+| `design` | UI/UX, design systems, 3D, GSAP, Lenis |
+| `full` | install every skill and support file |
 
-1. A small always-loaded rule layer sets the cross-tool contract.
-2. The assistant routes into one primary skill and, at most, one secondary skill.
-3. Durable context is stored in files under `ai-assistant/memory/`.
-   `active-continuation.md` is an optional handoff scratchpad, not a required permanent record.
-4. Optional retrieval narrows memory lookup before broad file reads.
-5. Local evals report prompt-surface size, routing-fit proxies, and retrieval hit quality.
-
-## Local-First Retrieval
-
-BosskuAI ships with a local SQLite-backed retrieval path.
+Hooks are disabled by default:
 
 ```bash
-python3 ./ai-assistant/scripts/vector_memory.py sync
-python3 ./ai-assistant/scripts/vector_memory.py query "auth retry policy"
-python3 ./ai-assistant/scripts/vector_memory.py status
+./bosskuAI/scripts/install.sh /path/to/your/project --profile dev --with-hooks
 ```
 
-Default mode uses a `local-hash` embedding approximation:
+## Claude Code plugin
 
-- no extra Python dependency by default
-- local-first and fast to sync
-- useful for narrowing which memory files to open next
+The plugin manifest is at `.claude-plugin/plugin.json` and exposes custom paths for:
 
-It is not equivalent to a real embedding service. It can miss nuance, and it can still overmatch generic text. Important conclusions should be checked against the underlying memory file.
+- `skills`: `./ai-assistant/skills/`
+- `commands`: `./.claude/commands/`
+- `agents`: `./agents/`
 
-`ai-assistant/memory/active-continuation.md` is shipped as a starter template, but it is optional at runtime. Use it only for unfinished handoffs, then clear or delete it when the task is done.
-
-## Measurement
-
-Run the included evals to inspect the workspace layer itself:
+Test locally:
 
 ```bash
-bash ./scripts/check-workspace.sh
-bash ./scripts/validate-skill-index.sh
-python3 ./scripts/eval_workspace.py
+claude --plugin-dir . --debug
+/plugin validate
+/reload-plugins
 ```
 
-These checks are intended to support modest, defensible claims:
+Use `.claude-plugin/plugin.with-hooks.json` only if you intentionally want hook-enabled plugin testing.
 
-- prompt-surface size can be compared before vs after
-- retrieval hit quality can be checked on sample queries
-- routing-fit can be checked on sample task prompts
-- a small workflow proxy can compare plain baseline behavior against the BosskuAI layer
+## What it is not
 
-They do not prove end-task answer accuracy.
+- not a hosted agent platform
+- not a replacement for tests or review
+- not a guarantee of lower token usage on every task
+- not a magic memory system; stale files can still mislead the model
 
-## What Is Measured Vs What Is Inferred
+## Key commands
 
-Measured locally by this repo:
+```bash
+bash scripts/check-workspace.sh . --profile full
+bash scripts/verify-skill-references.sh .
+bash scripts/validate-skill-index.sh .
+python3 -S scripts/eval_workspace.py
+```
 
-- prompt surface size for the always-loaded entry files
-- retrieval success on curated sample queries
-- routing-fit on curated prompts, including harder ambiguous cases
-- workflow proxies that compare a plain baseline path against the BosskuAI layer
+## Before / after examples
 
-Inferred rather than guaranteed:
+Human-output:
 
-- lower token usage on your real tasks
-- better answer quality on every request
-- better specialist routing in repos with sparse or stale memory
-- safer execution without project-specific review discipline
+```txt
+Before: Unlock a seamless AI-powered workflow that elevates your productivity.
+After: Keep the same project rules and memory across Claude Code, Cursor, and Codex.
+```
 
-## Strongest Use Cases
+Token-saver:
 
-- teams that switch between Claude Code, Cursor, and Codex
-- projects that need durable handoff files, not just chat transcripts
-- users who want local skills and shared workflows without a hosted control plane
-- repositories that benefit from a lightweight memory and verification discipline
+```txt
+Before: Please make sure you carefully inspect the implementation and then provide a detailed list of issues.
+After: Inspect implementation. List issues, impact, fix.
+```
 
-## Known Limitations
+Ratchet loop:
 
-- The built-in retrieval backend is approximate and weaker than real embeddings.
-- Broad paraphrased retrieval queries still perform best when `project-understanding.md` and related memory files are kept current.
-- The eval suite measures workspace health, not true model intelligence.
-- Skill quality still depends on the model loading the right specialist at the right time.
-- Repo-local memory requires maintenance; stale memory can still reduce answer quality if left unchecked.
-- This layer improves workflow consistency, but it cannot guarantee safer execution on its own.
+```txt
+Metric: approx prompt tokens
+Baseline: 7,256
+Change: move long skill details into playbooks
+Decision: keep if routing eval still passes
+```
 
-## Key Files
+## Docs
 
-- [`AGENTS.md`](AGENTS.md): canonical workspace contract
-- [`skill-index.json`](skill-index.json): routing registry
-- [`ai-assistant/references/workspace-layer-architecture.md`](ai-assistant/references/workspace-layer-architecture.md): architecture notes
-- [`ai-assistant/references/memory-first-handoff-protocol.md`](ai-assistant/references/memory-first-handoff-protocol.md): shared memory protocol
-- [`WORKSPACE-ONBOARDING.md`](WORKSPACE-ONBOARDING.md): first-run setup
+- `WORKSPACE-ONBOARDING.md`
+- `docs/plugin-testing.md`
+- `docs/benchmarks.md`
+- `SECURITY.md`
 
 ## License
 
-MIT — see [`LICENSE`](LICENSE).
+MIT — see `LICENSE`.
+
+## Expert cofounder benchmark
+
+v1.8.2 adds an expert coverage benchmark for the full cofounder stack: Laravel, Nuxt, Docker/VPS deployment, MariaDB/MySQL/SQLite/PostgreSQL/MongoDB, Redis, UI/UX, security, SEO/GEO, marketing, sales, and content calendar.
+
+Run the full confidence check:
+
+```bash
+bash scripts/check-workspace.sh . --profile full
+bash scripts/verify-skill-references.sh .
+bash scripts/validate-skill-index.sh .
+python3 -S scripts/eval_workspace.py
+python3 -S scripts/eval_expert_coverage.py
+```
+
+See `docs/expert-benchmark-suite.md` and `docs/4.5-expert-upgrade.md`.
+

@@ -1,270 +1,179 @@
 #!/usr/bin/env bash
-
 set -euo pipefail
 
 usage() {
   cat <<'EOF'
 Usage:
-  ./scripts/install.sh <target-dir> [--force] [--skip-check] [--preserve-memory] [--skills-only] [--sync-layer]
+  ./scripts/install.sh <target-dir> [--profile core|dev|growth|design|full] [--force] [--skip-check] [--preserve-memory] [--with-hooks] [--dry-run]
+  ./scripts/install.sh <target-dir> [--skills-only|--sync-layer] [--force] [--skip-check] [--preserve-memory] [--dry-run]
 
-Install the BosskuAI workspace layer into an existing project workspace.
-
-Installed entries (full install, default):
-  AGENTS.md
-  CLAUDE.md
-  WORKSPACE-ONBOARDING.md
-  skill-index.json
-  agents/
-  mcp-configs/
-  .codex/
-  .claude/
-  .cursor/
-  ai-assistant/
+Profiles:
+  core    Small workspace layer: memory, routing, human-output, token-saver, search-first, ratchet.
+  dev     Core + engineering/review/devops/testing skills.
+  growth  Core + marketing, SEO, sales, research, launch skills.
+  design  Core + UI/UX, design systems, 3D/animation skills.
+  full    Everything. Default.
 
 Options:
-  --force
-      Moves conflicting entries into a timestamped backup folder, then copies the layer.
-  --preserve-memory
-      Before replacing ai-assistant/, saves ai-assistant/memory/ and restores it after install.
-      Use with full install to keep project-specific memory without a manual restore step.
-  --skills-only
-      Copies only ai-assistant/skills/, ai-assistant/references/, and ai-assistant/scripts/
-      from the starter. Does not change AGENTS.md, tool configs (.cursor/.claude/.codex),
-      or ai-assistant/memory/. Implies no full-layer conflict checks (--force not used).
-  --sync-layer
-      Refreshes documentation and tooling from the starter without a full install conflict check.
-      Overwrites: root AGENTS.md, CLAUDE.md, WORKSPACE-ONBOARDING.md, skill-index.json, (each only if present in starter), plus agents/,
-      mcp-configs/, .codex/, .claude/, .cursor/, and every ai-assistant/* subtree except memory/.
-      Never creates, replaces, or deletes ai-assistant/memory/ — existing project memory stays.
-      Removes stale top-level folders under ai-assistant/ (other than memory) that are not in
-      the starter, so the tree matches the starter aside from memory.
-  --skip-check
-      Skips ./scripts/check-workspace.sh after install.
-
-Behavior:
-  - Refuses to overwrite existing entries by default (full install only)
-  - With --force, moves conflicting entries into a timestamped backup folder
-  - Runs ./scripts/check-workspace.sh on the target after install unless --skip-check
+  --with-hooks       Install advisory Claude Code hooks by copying settings.hooks.example.json to .claude/settings.json.
+  --force            Back up conflicting entries, then replace.
+  --preserve-memory  Restore existing ai-assistant/memory/ after install.
+  --skills-only      Copy only ai-assistant/skills, references, and scripts.
+  --sync-layer       Refresh docs/config/skills except ai-assistant/memory/.
+  --skip-check       Skip workspace check after install.
+  --dry-run          Print what would be installed without making any changes.
 EOF
 }
 
-if [[ $# -lt 1 ]]; then
-  usage
-  exit 1
-fi
-
-force=0
-skip_check=0
-preserve_memory=0
-skills_only=0
-sync_layer=0
-target_dir=""
-
-for arg in "$@"; do
-  case "$arg" in
-    --force)
-      force=1
-      ;;
-    --skip-check)
-      skip_check=1
-      ;;
-    --preserve-memory)
-      preserve_memory=1
-      ;;
-    --skills-only)
-      skills_only=1
-      ;;
-    --sync-layer)
-      sync_layer=1
-      ;;
-    -h|--help)
-      usage
-      exit 0
-      ;;
+force=0; skip_check=0; preserve_memory=0; skills_only=0; sync_layer=0; with_hooks=0; dry_run=0; profile="full"; target_dir=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --force) force=1; shift ;;
+    --skip-check) skip_check=1; shift ;;
+    --preserve-memory) preserve_memory=1; shift ;;
+    --skills-only) skills_only=1; shift ;;
+    --sync-layer) sync_layer=1; shift ;;
+    --with-hooks) with_hooks=1; shift ;;
+    --dry-run) dry_run=1; shift ;;
+    --profile) profile="${2:-full}"; shift 2 ;;
+    --profile=*) profile="${1#--profile=}"; shift ;;
+    -h|--help) usage; exit 0 ;;
     *)
-      if [[ -n "$target_dir" ]]; then
-        echo "Error: multiple target directories provided" >&2
-        usage
-        exit 1
-      fi
-      target_dir="$arg"
-      ;;
+      if [[ -n "$target_dir" ]]; then echo "Error: multiple target directories provided" >&2; usage; exit 1; fi
+      target_dir="$1"; shift ;;
   esac
 done
 
-if [[ -z "$target_dir" ]]; then
-  echo "Error: target directory is required" >&2
-  usage
-  exit 1
-fi
+[[ -n "$target_dir" ]] || { echo "Error: target directory is required" >&2; usage; exit 1; }
+case "$profile" in core|dev|growth|design|full) ;; *) echo "Error: unknown profile '$profile'" >&2; exit 2 ;; esac
+if (( skills_only + sync_layer > 1 )); then echo "Error: use only one of --skills-only or --sync-layer" >&2; exit 2; fi
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd "$script_dir/.." && pwd)"
+# Resolve and validate target directory
+if [[ ! -d "$target_dir" ]]; then
+  if (( dry_run )); then
+    echo "[dry-run] Target does not exist yet: $target_dir"
+    echo "[dry-run] Would install profile=$profile"
+    exit 0
+  fi
+  echo "Error: target directory does not exist: $target_dir" >&2
+  echo "Create it first: mkdir -p $target_dir" >&2
+  exit 1
+fi
 target_dir="$(cd "$target_dir" && pwd)"
 
-if [[ ! -d "$target_dir" ]]; then
-  echo "Error: target directory does not exist: $target_dir" >&2
-  exit 1
+# Safety: refuse dangerous install targets
+if [[ "$target_dir" == "/" ]]; then
+  echo "Error: refusing to install into filesystem root (/)" >&2; exit 2
+fi
+if [[ "$target_dir" == "$(cd "$HOME" && pwd)" ]]; then
+  echo "Error: refusing to install into HOME. Use a project subdirectory." >&2; exit 2
+fi
+if [[ "$target_dir" == "$repo_root" ]]; then
+  echo "Error: target is the BosskuAI repo itself. Use a separate project directory." >&2; exit 2
+fi
+if [[ "$repo_root" == "$target_dir"/* ]]; then
+  echo "Error: target ($target_dir) contains the BosskuAI repo. Refusing." >&2; exit 2
 fi
 
-if (( skills_only + sync_layer > 1 )); then
-  echo "Error: use only one of --skills-only or --sync-layer" >&2
-  usage
-  exit 1
-fi
+copy_path() {
+  local src="$repo_root/$1" dest="$target_dir/$1"
+  [[ -e "$src" ]] || return 0
+  mkdir -p "$(dirname "$dest")"
+  rm -rf "$dest"
+  cp -a "$src" "$dest"
+}
 
-if (( skills_only && preserve_memory )); then
-  echo "Note: --skills-only does not replace ai-assistant/memory; --preserve-memory is redundant." >&2
-fi
-
-if (( sync_layer && preserve_memory )); then
-  echo "Note: --sync-layer never touches ai-assistant/memory; --preserve-memory is redundant." >&2
-fi
-
-if (( sync_layer )); then
-  root_docs=(
-    "AGENTS.md"
-    "CLAUDE.md"
-    "WORKSPACE-ONBOARDING.md"
-    "skill-index.json"
-  )
-  for doc in "${root_docs[@]}"; do
-    if [[ -e "$repo_root/$doc" ]]; then
-      cp -a "$repo_root/$doc" "$target_dir/$doc"
-    fi
-  done
-
-  sync_dirs=(agents mcp-configs .codex .claude .cursor)
-  for dir in "${sync_dirs[@]}"; do
-    if [[ ! -e "$repo_root/$dir" ]]; then
-      echo "Warning: missing source in starter, skipping: $dir" >&2
-      continue
-    fi
-    rm -rf "$target_dir/$dir"
-    cp -a "$repo_root/$dir" "$target_dir/$dir"
-  done
-
-  assistant_dest="$target_dir/ai-assistant"
-  mkdir -p "$assistant_dest"
-  shopt -s nullglob
-  for item in "$assistant_dest"/*; do
-    name=$(basename "$item")
-    if [[ "$name" == "memory" ]]; then
-      continue
-    fi
-    rm -rf "$item"
-  done
-  for item in "$repo_root/ai-assistant"/*; do
-    name=$(basename "$item")
-    if [[ "$name" == "memory" ]]; then
-      continue
-    fi
-    cp -a "$item" "$assistant_dest/$name"
-  done
-  shopt -u nullglob
-
-  echo "BosskuAI layer synced (docs + agents + tool configs + ai-assistant/* except memory) to: $target_dir"
-  if (( skip_check == 0 )); then
-    echo
-    "$script_dir/check-workspace.sh" "$target_dir" --profile full
+apply_hooks_choice() {
+  if (( with_hooks )); then
+    cp -a "$target_dir/.claude/settings.hooks.example.json" "$target_dir/.claude/settings.json"
   else
-    echo "Skipped workspace check (--skip-check). Run: ./scripts/check-workspace.sh \"$target_dir\" --profile full"
+    cat > "$target_dir/.claude/settings.json" <<'JSON'
+{
+  "bosskuai": {
+    "hooks": "disabled-by-default",
+    "note": "Run scripts/enable-hooks.sh or scripts/enable-hooks.ps1 to enable advisory Claude Code hooks."
+  }
+}
+JSON
   fi
+}
+
+copy_selected_skills() {
+  local dest="$target_dir/ai-assistant/skills"
+  rm -rf "$dest"; mkdir -p "$dest"
+  local skills=("$@")
+  for s in "${skills[@]}"; do
+    if [[ -d "$repo_root/ai-assistant/skills/$s" ]]; then
+      cp -a "$repo_root/ai-assistant/skills/$s" "$dest/$s"
+    fi
+  done
+}
+
+profile_skills() {
+  local core=(bosskuai-workspace-assistant bosskuai-project-understanding bosskuai-search-first bosskuai-human-output bosskuai-token-saver bosskuai-ratchet-loop bosskuai-continuous-learning bosskuai-context-limit-continuation)
+  local dev=(bosskuai-engineering-delivery bosskuai-rigorous-code-review bosskuai-bug-finding bosskuai-software-architecture bosskuai-codebase-analysis bosskuai-code-revamp bosskuai-coding-best-practices bosskuai-devops-iac bosskuai-docker bosskuai-vps-docker-deployment bosskuai-github-workflow bosskuai-integration-testing bosskuai-laravel-development bosskuai-database-engineering bosskuai-redis-caching-queues)
+  local growth=(bosskuai-market-analysis bosskuai-marketing-growth bosskuai-seo-geo bosskuai-sales-strategy bosskuai-launch-commercialization bosskuai-competitor-intelligence bosskuai-customer-discovery bosskuai-growth-experiment bosskuai-lead-intelligence bosskuai-content-calendar)
+  local design=(bosskuai-ui-ux-design-to-code bosskuai-design-systems bosskuai-3d-web-development bosskuai-gsap-animation bosskuai-lenis-smooth-scroll)
+  case "$profile" in
+    core) printf '%s\n' "${core[@]}" ;;
+    dev) printf '%s\n' "${core[@]}" "${dev[@]}" ;;
+    growth) printf '%s\n' "${core[@]}" "${growth[@]}" ;;
+    design) printf '%s\n' "${core[@]}" "${design[@]}" ;;
+    full) find "$repo_root/ai-assistant/skills" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort ;;
+  esac
+}
+
+entries=(AGENTS.md CLAUDE.md WORKSPACE-ONBOARDING.md skill-index.json agents mcp-configs .codex .claude .cursor .claude-plugin ai-assistant)
+
+# Dry-run: show what would change and exit
+if (( dry_run )); then
+  echo "[dry-run] Target: $target_dir"
+  echo "[dry-run] Profile: $profile"
+  echo "[dry-run] Base entries:"; printf '  - %s\n' "${entries[@]}"
+  echo "[dry-run] Skill profile:"; profile_skills | while read -r s; do printf '  - ai-assistant/skills/%s\n' "$s"; done
+  echo "[dry-run] No changes made."
   exit 0
+fi
+if (( skills_only )); then entries=(ai-assistant); fi
+if (( sync_layer )); then entries=(AGENTS.md CLAUDE.md WORKSPACE-ONBOARDING.md skill-index.json agents mcp-configs .codex .claude .cursor .claude-plugin ai-assistant); fi
+
+conflicts=()
+if (( ! sync_layer && ! skills_only )); then
+  for e in "${entries[@]}"; do [[ -e "$target_dir/$e" ]] && conflicts+=("$e"); done
+  if (( ${#conflicts[@]} > 0 && ! force )); then
+    echo "Refusing to overwrite existing target entries:" >&2; printf '  - %s\n' "${conflicts[@]}" >&2
+    echo "Re-run with --force to back up and replace those entries." >&2; exit 2
+  fi
+fi
+
+memory_stash=""; had_memory=0
+if (( preserve_memory )) && [[ -d "$target_dir/ai-assistant/memory" ]]; then
+  memory_stash="$(mktemp -d "${TMPDIR:-/tmp}/bosskuai-memory-stash.XXXXXX")"
+  cp -a "$target_dir/ai-assistant/memory/." "$memory_stash/"; had_memory=1
+fi
+
+if (( ${#conflicts[@]} > 0 && force )); then
+  backup_dir="$target_dir/.bosskuai-backups/$(date '+%Y%m%d-%H%M%S')"; mkdir -p "$backup_dir"
+  for e in "${conflicts[@]}"; do mkdir -p "$(dirname "$backup_dir/$e")"; mv "$target_dir/$e" "$backup_dir/$e"; done
 fi
 
 if (( skills_only )); then
-  assistant_dir="$target_dir/ai-assistant"
-  mkdir -p "$assistant_dir"
-  for sub in skills references scripts; do
-    src_sub="$repo_root/ai-assistant/$sub"
-    dest_sub="$assistant_dir/$sub"
-    if [[ ! -e "$src_sub" ]]; then
-      echo "Error: missing source path in starter: $src_sub" >&2
-      exit 1
-    fi
-    rm -rf "$dest_sub"
-    cp -R "$src_sub" "$dest_sub"
-  done
-  echo "BosskuAI skills layer (skills + references + scripts) installed under: $assistant_dir"
-  if (( skip_check == 0 )); then
-    echo
-    "$script_dir/check-workspace.sh" "$target_dir" --profile skills-only
-  else
-    echo "Skipped workspace check (--skip-check). Run: ./scripts/check-workspace.sh \"$target_dir\" --profile skills-only"
-  fi
-  exit 0
-fi
-
-entries=(
-  "AGENTS.md"
-  "CLAUDE.md"
-  "WORKSPACE-ONBOARDING.md"
-  "skill-index.json"
-  "agents"
-  "mcp-configs"
-  ".codex"
-  ".claude"
-  ".cursor"
-  "ai-assistant"
-)
-
-conflicts=()
-for entry in "${entries[@]}"; do
-  if [[ -e "$target_dir/$entry" ]]; then
-    conflicts+=("$entry")
-  fi
-done
-
-if (( ${#conflicts[@]} > 0 && force == 0 )); then
-  echo "Refusing to overwrite existing target entries:" >&2
-  for conflict in "${conflicts[@]}"; do
-    echo "  - $conflict" >&2
-  done
-  echo >&2
-  echo "Re-run with --force to back up and replace those entries." >&2
-  exit 2
-fi
-
-memory_stash=""
-had_memory_to_preserve=0
-if (( preserve_memory )) && [[ -d "$target_dir/ai-assistant/memory" ]]; then
-  memory_stash="$(mktemp -d "${TMPDIR:-/tmp}/bosskuai-memory-stash.XXXXXX")"
-  cp -a "$target_dir/ai-assistant/memory/." "$memory_stash/"
-  had_memory_to_preserve=1
-  echo "Preserved existing ai-assistant/memory into temporary stash (will restore after install)."
-fi
-
-backup_dir=""
-if (( ${#conflicts[@]} > 0 && force == 1 )); then
-  timestamp="$(date '+%Y%m%d-%H%M%S')"
-  backup_dir="$target_dir/.bosskuai-backups/$timestamp"
-  mkdir -p "$backup_dir"
-  for conflict in "${conflicts[@]}"; do
-    mkdir -p "$(dirname "$backup_dir/$conflict")"
-    mv "$target_dir/$conflict" "$backup_dir/$conflict"
-  done
-fi
-
-for entry in "${entries[@]}"; do
-  cp -R "$repo_root/$entry" "$target_dir/$entry"
-done
-
-if (( had_memory_to_preserve )); then
-  mkdir -p "$target_dir/ai-assistant/memory"
-  cp -a "$memory_stash/." "$target_dir/ai-assistant/memory/"
-  rm -rf "$memory_stash"
-  echo "Restored preserved ai-assistant/memory/ over the new layer."
-fi
-
-echo "BosskuAI workspace layer installed to: $target_dir"
-if [[ -n "$backup_dir" ]]; then
-  echo "Backed up replaced entries to: $backup_dir"
-fi
-
-if (( skip_check == 0 )); then
-  echo
-  "$script_dir/check-workspace.sh" "$target_dir" --profile full
+  mkdir -p "$target_dir/ai-assistant"
+  for sub in skills references scripts; do copy_path "ai-assistant/$sub"; done
 else
-  echo "Skipped workspace check (--skip-check). Run: ./scripts/check-workspace.sh \"$target_dir\" --profile full"
+  for e in AGENTS.md CLAUDE.md WORKSPACE-ONBOARDING.md skill-index.json agents mcp-configs .codex .claude .cursor .claude-plugin; do copy_path "$e"; done
+  mkdir -p "$target_dir/ai-assistant"
+  for sub in memory references scripts hooks; do copy_path "ai-assistant/$sub"; done
+  mapfile -t selected < <(profile_skills)
+  copy_selected_skills "${selected[@]}"
+  apply_hooks_choice
 fi
+
+if (( had_memory )); then mkdir -p "$target_dir/ai-assistant/memory"; cp -a "$memory_stash/." "$target_dir/ai-assistant/memory/"; rm -rf "$memory_stash"; fi
+
+echo "BosskuAI installed to: $target_dir"
+echo "Profile: $profile"
+(( with_hooks )) && echo "Hooks: enabled" || echo "Hooks: disabled by default"
+if (( skip_check == 0 )); then "$script_dir/check-workspace.sh" "$target_dir" --profile "$profile"; fi

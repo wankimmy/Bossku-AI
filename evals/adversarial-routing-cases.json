@@ -1,0 +1,50 @@
+[
+  {
+    "name": "memory leak under load (no Laravel keyword)",
+    "prompt": "Our PHP app is leaking memory after a few thousand requests when running in long-lived workers. Help me find the cause and fix it.",
+    "acceptable_skills": ["bosskuai-laravel-development", "bosskuai-engineering-delivery", "bosskuai-bug-finding"],
+    "rationale": "Octane/Swoole singleton-state leak; should reach Laravel or at minimum a senior debugging skill without saying 'Octane' or 'Laravel'."
+  },
+  {
+    "name": "order created but customer email never arrives",
+    "prompt": "We commit an order in a transaction and dispatch a confirmation email from a listener, but customers sometimes get the email before the order is actually persisted, or they never get it when the commit later rolls back.",
+    "acceptable_skills": ["bosskuai-laravel-development", "bosskuai-business-logic-review", "bosskuai-rigorous-code-review"],
+    "rationale": "Classic event-after-commit issue. Prompt avoids 'event', 'transaction-after-commit', or framework names."
+  },
+  {
+    "name": "background worker double-charges card",
+    "prompt": "Sometimes the same payment is captured twice when our worker retries after a crash. Help me make this safe.",
+    "acceptable_skills": ["bosskuai-laravel-development", "bosskuai-redis-caching-queues", "bosskuai-cybersecurity-risk"],
+    "rationale": "Idempotency / job retry-safety. Prompt avoids 'idempotent', 'job', 'queue'."
+  },
+  {
+    "name": "page slow on second pageload only",
+    "prompt": "Our product list page is fast on first load but slows down dramatically as users scroll and load more pages. Looking at the database it's doing a lot of small reads per row.",
+    "acceptable_skills": ["bosskuai-laravel-development", "bosskuai-database-engineering", "bosskuai-rigorous-code-review"],
+    "rationale": "N+1 on list/pagination. Prompt does not say 'N+1', 'eager load', or 'eloquent'."
+  },
+  {
+    "name": "users seeing other tenant data",
+    "prompt": "A customer reported they can see invoices that belong to a different company when they hit a particular search endpoint.",
+    "acceptable_skills": ["bosskuai-cybersecurity-risk", "bosskuai-business-logic-review", "bosskuai-laravel-development"],
+    "rationale": "Tenant isolation / Broken Access Control. Prompt does not say 'authorization', 'tenant scope', 'OWASP'."
+  },
+  {
+    "name": "deploy works locally but not on server",
+    "prompt": "Compose stack runs perfectly on my laptop but on the production box, the app container can't reach the database for the first 20 seconds and the proxy gives 502s.",
+    "acceptable_skills": ["bosskuai-vps-docker-deployment", "bosskuai-docker", "bosskuai-devops-iac"],
+    "rationale": "Health check / startup ordering on a VPS. Prompt avoids 'health check', 'depends_on', 'reverse proxy'."
+  },
+  {
+    "name": "blog page invisible to search",
+    "prompt": "We launched a new help-center page two months ago and Google still won't show it for our top keywords even though competitors rank for the same terms.",
+    "acceptable_skills": ["bosskuai-seo-geo", "bosskuai-content-calendar"],
+    "rationale": "SEO indexing / intent / authority issue. Prompt avoids 'SEO', 'GEO', 'sitemap', 'schema'."
+  },
+  {
+    "name": "site looks generic and fake",
+    "prompt": "Our landing page works but every visitor says it 'feels like a template' and bounces. The hero, cards and gradients all look like every other startup site.",
+    "acceptable_skills": ["bosskuai-ui-ux-design-to-code", "bosskuai-design-systems"],
+    "rationale": "Anti-AI / generic visual problem. Prompt does not say 'anti-AI', 'design system', 'visual hierarchy'."
+  }
+]

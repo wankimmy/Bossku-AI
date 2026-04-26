@@ -1,0 +1,20 @@
+# BosskuAI optional dependencies — install to upgrade the embedding provider.
+#
+# Default (no install needed):
+#   vector-config.json: "provider": "tfidf"  — proper IDF weights, zero downloads.
+#
+# Upgrade options (change provider in ai-assistant/memory/vector-config.json):
+#
+# 1. Neural embeddings — sentence-transformers (recommended, ~80MB model):
+#    pip install sentence-transformers
+#    Set: "provider": "sentence-transformers"
+#
+# 2. OpenAI embeddings (requires OPENAI_API_KEY):
+#    pip install openai
+#    Set: "provider": "openai"
+#
+# Dev / eval tooling (already in stdlib — no install needed):
+#   sqlite3, json, re, hashlib, math, pathlib, datetime, argparse
+
+sentence-transformers>=2.7.0    ; extra == "neural"
+openai>=1.0.0                   ; extra == "openai"

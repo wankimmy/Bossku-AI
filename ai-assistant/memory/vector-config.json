@@ -1,7 +1,7 @@
 {
   "database_path": "ai-assistant/memory/semantic-memory.sqlite3",
   "embedding": {
-    "provider": "local-hash",
+    "provider": "tfidf",
     "dimensions": 384,
     "seed": "bosskuai-vector-v2"
   },
@@ -32,12 +32,25 @@
     "plan-log.md": 0.08,
     "learning-log.md": 0.06,
     "bug-patterns.md": 0.08,
-    "market-notes.md": 0.06
+    "market-notes.md": 0.06,
+    "ai-assistant/skills/cofounder/SKILL.md": 0.04,
+    "ai-assistant/skills/bosskuai-workspace-assistant/SKILL.md": 0.04,
+    "ai-assistant/skills/bosskuai-continuous-learning/SKILL.md": 0.04,
+    "ai-assistant/skills/bosskuai-context-limit-continuation/SKILL.md": 0.04,
+    "ai-assistant/skills/bosskuai-documentation-lookup/SKILL.md": 0.04,
+    "ai-assistant/skills/bosskuai-token-saver/SKILL.md": 0.04,
+    "ai-assistant/skills/bosskuai-human-output/SKILL.md": 0.04,
+    "ai-assistant/skills/bosskuai-coding-best-practices/SKILL.md": 0.04,
+    "ai-assistant/skills/bosskuai-product-strategy/SKILL.md": 0.04,
+    "ai-assistant/skills/bosskuai-project-understanding/SKILL.md": 0.04,
+    "ai-assistant/skills/bosskuai-rigorous-code-review/SKILL.md": 0.04
   },
   "noise_markers": [
     "none yet",
     "append using the format above.",
-    "use this file to store"
+    "use this file to store",
+    "fast path",
+    "when to open the playbook"
   ],
   "document_aliases": {
     "agent-profile.md": [
@@ -72,6 +85,17 @@
       "market notes",
       "positioning notes",
       "gtm notes"
+    ],
+    "cofounder/SKILL.md": [
+      "cofounder",
+      "ai cofounder",
+      "startup advisor",
+      "strategic decision"
+    ],
+    "bosskuai-workspace-assistant/SKILL.md": [
+      "workspace",
+      "general routing",
+      "assistant"
     ]
   },
   "intent_hints": [
@@ -86,8 +110,12 @@
         "agents md",
         "skill index"
       ],
-      "boost_files": ["project-understanding.md"],
-      "boost_kinds": ["project"],
+      "boost_files": [
+        "project-understanding.md"
+      ],
+      "boost_kinds": [
+        "project"
+      ],
       "boost": 1.0
     },
     {
@@ -99,8 +127,12 @@
         "default users",
         "audience"
       ],
-      "boost_files": ["agent-profile.md"],
-      "boost_kinds": ["profile"],
+      "boost_files": [
+        "agent-profile.md"
+      ],
+      "boost_kinds": [
+        "profile"
+      ],
       "boost": 1.0
     },
     {
@@ -111,8 +143,12 @@
         "stored plan",
         "plan log"
       ],
-      "boost_files": ["plan-log.md"],
-      "boost_kinds": ["plan"],
+      "boost_files": [
+        "plan-log.md"
+      ],
+      "boost_kinds": [
+        "plan"
+      ],
       "boost": 0.9
     },
     {
@@ -126,8 +162,12 @@
         "verified already",
         "follow-up"
       ],
-      "boost_files": ["learning-log.md"],
-      "boost_kinds": ["learning"],
+      "boost_files": [
+        "learning-log.md"
+      ],
+      "boost_kinds": [
+        "learning"
+      ],
       "boost": 0.9
     },
     {
@@ -138,8 +178,12 @@
         "bug class",
         "bug pattern"
       ],
-      "boost_files": ["bug-patterns.md"],
-      "boost_kinds": ["bugs"],
+      "boost_files": [
+        "bug-patterns.md"
+      ],
+      "boost_kinds": [
+        "bugs"
+      ],
       "boost": 0.9
     },
     {
@@ -150,8 +194,46 @@
         "gtm note",
         "pricing signal"
       ],
-      "boost_files": ["market-notes.md"],
-      "boost_kinds": ["market"],
+      "boost_files": [
+        "market-notes.md"
+      ],
+      "boost_kinds": [
+        "market"
+      ],
+      "boost": 0.9
+    },
+    {
+      "name": "cofounder-mode",
+      "phrases": [
+        "cofounder",
+        "think like my cofounder",
+        "what should we do next",
+        "founder sparring",
+        "startup decision"
+      ],
+      "boost_files": [
+        "cofounder/SKILL.md"
+      ],
+      "boost_kinds": [
+        "skill"
+      ],
+      "boost": 1.2
+    },
+    {
+      "name": "token-compression",
+      "phrases": [
+        "compress",
+        "save tokens",
+        "token budget",
+        "shorten",
+        "too verbose"
+      ],
+      "boost_files": [
+        "bosskuai-token-saver/SKILL.md"
+      ],
+      "boost_kinds": [
+        "skill"
+      ],
       "boost": 0.9
     }
   ],
@@ -161,7 +243,18 @@
     "ai-assistant/memory/plan-log.md",
     "ai-assistant/memory/learning-log.md",
     "ai-assistant/memory/bug-patterns.md",
-    "ai-assistant/memory/market-notes.md"
+    "ai-assistant/memory/market-notes.md",
+    "ai-assistant/skills/cofounder/SKILL.md",
+    "ai-assistant/skills/bosskuai-workspace-assistant/SKILL.md",
+    "ai-assistant/skills/bosskuai-continuous-learning/SKILL.md",
+    "ai-assistant/skills/bosskuai-context-limit-continuation/SKILL.md",
+    "ai-assistant/skills/bosskuai-documentation-lookup/SKILL.md",
+    "ai-assistant/skills/bosskuai-token-saver/SKILL.md",
+    "ai-assistant/skills/bosskuai-human-output/SKILL.md",
+    "ai-assistant/skills/bosskuai-coding-best-practices/SKILL.md",
+    "ai-assistant/skills/bosskuai-product-strategy/SKILL.md",
+    "ai-assistant/skills/bosskuai-project-understanding/SKILL.md",
+    "ai-assistant/skills/bosskuai-rigorous-code-review/SKILL.md"
   ],
   "exclude": [
     "ai-assistant/memory/active-continuation.md"

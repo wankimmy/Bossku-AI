@@ -1,276 +1,110 @@
 param(
-    [Parameter(Position = 0)]
-    [string]$TargetDir,
-
+    [Parameter(Position = 0)][string]$TargetDir,
+    [ValidateSet("core","dev","growth","design","full")][string]$Profile = "full",
     [switch]$Force,
-
     [switch]$SkipCheck,
-
     [switch]$PreserveMemory,
-
     [switch]$SkillsOnly,
-
-    [switch]$SyncLayer
+    [switch]$SyncLayer,
+    [switch]$WithHooks
 )
 
-function Show-Usage {
-    @"
-Usage:
-  ./scripts/install.ps1 <target-dir> [-Force] [-SkipCheck] [-PreserveMemory] [-SkillsOnly] [-SyncLayer]
-
-Install the BosskuAI workspace layer into an existing project workspace.
-
-Installed entries (full install, default):
-  AGENTS.md
-  CLAUDE.md
-  WORKSPACE-ONBOARDING.md
-  skill-index.json
-  agents/
-  mcp-configs/
-  .codex/
-  .claude/
-  .cursor/
-  ai-assistant/
-
-Switches:
-  -Force
-      Moves conflicting entries into a timestamped backup folder, then copies the layer.
-  -PreserveMemory
-      Before replacing ai-assistant/, saves ai-assistant/memory/ and restores it after install.
-  -SkillsOnly
-      Copies only ai-assistant/skills, references, and scripts. Does not change root files,
-      tool configs, or ai-assistant/memory. (-Force is not used for this mode.)
-  -SyncLayer
-      Refreshes root docs, agents/, mcp-configs/, .codex/, .claude/, .cursor/, and ai-assistant/*
-      except memory/. Never overwrites ai-assistant/memory/.
-  -SkipCheck
-      Skips check-workspace.sh unless bash is unavailable (same as before).
-
-Behavior:
-  - Refuses to overwrite existing entries by default (full install only)
-  - With -Force, moves conflicting entries into a timestamped backup folder
-  - Runs check-workspace.sh via bash when available unless -SkipCheck
-"@
-}
-
 if (-not $TargetDir) {
-    Show-Usage
+    Write-Host "Usage: .\scripts\install.ps1 <target-dir> [-Profile core|dev|growth|design|full] [-Force] [-SkipCheck] [-PreserveMemory] [-WithHooks]"
     exit 1
 }
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RepoRoot = Split-Path -Parent $ScriptDir
+try { $ResolvedTarget = (Resolve-Path $TargetDir).Path } catch { Write-Error "Target directory does not exist: $TargetDir"; exit 1 }
 
-try {
-    $ResolvedTarget = (Resolve-Path $TargetDir).Path
-} catch {
-    Write-Error "Target directory does not exist: $TargetDir"
-    exit 1
+function Copy-Path($Rel) {
+    $src = Join-Path $RepoRoot $Rel
+    $dst = Join-Path $ResolvedTarget $Rel
+    if (-not (Test-Path $src)) { return }
+    $parent = Split-Path -Parent $dst
+    if ($parent) { New-Item -ItemType Directory -Path $parent -Force | Out-Null }
+    if (Test-Path $dst) { Remove-Item -LiteralPath $dst -Recurse -Force }
+    Copy-Item -LiteralPath $src -Destination $dst -Recurse -Force
 }
 
-if ($SkillsOnly -and $SyncLayer) {
-    Write-Error "Use only one of -SkillsOnly or -SyncLayer"
-    Show-Usage
-    exit 1
+function Get-ProfileSkills($Profile) {
+    $core = @("bosskuai-workspace-assistant","bosskuai-project-understanding","bosskuai-search-first","bosskuai-human-output","bosskuai-token-saver","bosskuai-ratchet-loop","bosskuai-continuous-learning","bosskuai-context-limit-continuation")
+    $dev = @("bosskuai-engineering-delivery","bosskuai-rigorous-code-review","bosskuai-bug-finding","bosskuai-software-architecture","bosskuai-codebase-analysis","bosskuai-code-revamp","bosskuai-coding-best-practices","bosskuai-devops-iac","bosskuai-docker","bosskuai-vps-docker-deployment","bosskuai-github-workflow","bosskuai-integration-testing","bosskuai-laravel-development","bosskuai-database-engineering","bosskuai-redis-caching-queues")
+    $growth = @("bosskuai-market-analysis","bosskuai-marketing-growth","bosskuai-seo-geo","bosskuai-sales-strategy","bosskuai-launch-commercialization","bosskuai-competitor-intelligence","bosskuai-customer-discovery","bosskuai-growth-experiment","bosskuai-lead-intelligence","bosskuai-content-calendar")
+    $design = @("bosskuai-ui-ux-design-to-code","bosskuai-design-systems","bosskuai-3d-web-development","bosskuai-gsap-animation","bosskuai-lenis-smooth-scroll")
+    switch ($Profile) {
+        "core" { return $core }
+        "dev" { return $core + $dev }
+        "growth" { return $core + $growth }
+        "design" { return $core + $design }
+        default { return (Get-ChildItem -LiteralPath (Join-Path $RepoRoot "ai-assistant\skills") -Directory | Select-Object -ExpandProperty Name) }
+    }
 }
 
-if ($SkillsOnly -and $PreserveMemory) {
-    Write-Host "Note: -SkillsOnly does not replace ai-assistant/memory; -PreserveMemory is redundant." -ForegroundColor DarkYellow
+$Entries = @("AGENTS.md","CLAUDE.md","WORKSPACE-ONBOARDING.md","skill-index.json","agents","mcp-configs",".codex",".claude",".cursor",".claude-plugin",".claude-plugin","ai-assistant")
+if (-not $SkillsOnly -and -not $SyncLayer) {
+    $conflicts = @($Entries | Where-Object { Test-Path (Join-Path $ResolvedTarget $_) })
+    if ($conflicts.Count -gt 0 -and -not $Force) {
+        Write-Host "Refusing to overwrite existing target entries:" -ForegroundColor Yellow
+        $conflicts | ForEach-Object { Write-Host "  - $_" }
+        Write-Host "Re-run with -Force to back up and replace those entries." -ForegroundColor Yellow
+        exit 2
+    }
+    if ($conflicts.Count -gt 0 -and $Force) {
+        $backup = Join-Path $ResolvedTarget (".bosskuai-backups\" + (Get-Date -Format "yyyyMMdd-HHmmss"))
+        New-Item -ItemType Directory -Path $backup -Force | Out-Null
+        foreach ($c in $conflicts) { Move-Item -LiteralPath (Join-Path $ResolvedTarget $c) -Destination (Join-Path $backup $c) -Force }
+    }
 }
 
-if ($SyncLayer -and $PreserveMemory) {
-    Write-Host "Note: -SyncLayer never touches ai-assistant/memory; -PreserveMemory is redundant." -ForegroundColor DarkYellow
-}
-
-if ($SyncLayer) {
-    $RootDocs = @(
-        "AGENTS.md",
-        "CLAUDE.md",
-        "WORKSPACE-ONBOARDING.md",
-        "skill-index.json",
-    )
-    foreach ($Doc in $RootDocs) {
-        $SrcDoc = Join-Path $RepoRoot $Doc
-        if (Test-Path $SrcDoc) {
-            Copy-Item -LiteralPath $SrcDoc -Destination (Join-Path $ResolvedTarget $Doc) -Force
-        }
-    }
-
-    $SyncDirs = @("agents", "mcp-configs", ".codex", ".claude", ".cursor")
-    foreach ($Dir in $SyncDirs) {
-        $SrcDir = Join-Path $RepoRoot $Dir
-        if (-not (Test-Path $SrcDir)) {
-            Write-Host "Warning: missing source in starter, skipping: $Dir" -ForegroundColor DarkYellow
-            continue
-        }
-        $DestDir = Join-Path $ResolvedTarget $Dir
-        if (Test-Path $DestDir) {
-            Remove-Item -Path $DestDir -Recurse -Force
-        }
-        Copy-Item -Path $SrcDir -Destination $DestDir -Recurse
-    }
-
-    $AssistantDest = Join-Path $ResolvedTarget "ai-assistant"
-    New-Item -ItemType Directory -Path $AssistantDest -Force | Out-Null
-    Get-ChildItem -LiteralPath $AssistantDest -Force -ErrorAction SilentlyContinue | ForEach-Object {
-        if ($_.Name -ne "memory") {
-            Remove-Item -LiteralPath $_.FullName -Recurse -Force
-        }
-    }
-    $SrcAssistant = Join-Path $RepoRoot "ai-assistant"
-    Get-ChildItem -LiteralPath $SrcAssistant -Force | ForEach-Object {
-        if ($_.Name -ne "memory") {
-            $DestItem = Join-Path $AssistantDest $_.Name
-            Copy-Item -LiteralPath $_.FullName -Destination $DestItem -Recurse -Force
-        }
-    }
-
-    Write-Host "BosskuAI layer synced (docs + agents + tool configs + ai-assistant/* except memory) to: $ResolvedTarget"
-    if (-not $SkipCheck) {
-        $CheckScript = Join-Path $ScriptDir "check-workspace.sh"
-        $Bash = Get-Command bash -ErrorAction SilentlyContinue
-        if ($Bash) {
-            Write-Host ""
-            & bash $CheckScript $ResolvedTarget --profile full
-            exit $LASTEXITCODE
-        }
-        Write-Host ""
-        Write-Host "Install complete. Run validation from Git Bash or WSL:" -ForegroundColor Yellow
-        Write-Host "  ./scripts/check-workspace.sh `"$ResolvedTarget`" --profile full"
-        exit 0
-    }
-    Write-Host "Skipped workspace check (-SkipCheck). Run: ./scripts/check-workspace.sh `"$ResolvedTarget`" --profile full"
-    exit 0
+$memoryStash = $null
+if ($PreserveMemory -and (Test-Path (Join-Path $ResolvedTarget "ai-assistant\memory"))) {
+    $memoryStash = Join-Path ([System.IO.Path]::GetTempPath()) ("bosskuai-memory-stash-" + [guid]::NewGuid().ToString())
+    New-Item -ItemType Directory -Path $memoryStash -Force | Out-Null
+    Copy-Item -LiteralPath (Join-Path $ResolvedTarget "ai-assistant\memory\*") -Destination $memoryStash -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 if ($SkillsOnly) {
-    $AssistantDir = Join-Path $ResolvedTarget "ai-assistant"
-    New-Item -ItemType Directory -Path $AssistantDir -Force | Out-Null
-    foreach ($sub in @("skills", "references", "scripts")) {
-        $SrcSub = Join-Path $RepoRoot "ai-assistant\$sub"
-        $DestSub = Join-Path $AssistantDir $sub
-        if (-not (Test-Path $SrcSub)) {
-            Write-Error "Missing source path in starter: $SrcSub"
-            exit 1
-        }
-        if (Test-Path $DestSub) {
-            Remove-Item -Path $DestSub -Recurse -Force
-        }
-        Copy-Item -Path $SrcSub -Destination $DestSub -Recurse
+    foreach ($sub in @("ai-assistant\skills","ai-assistant\references","ai-assistant\scripts")) { Copy-Path $sub }
+} else {
+    foreach ($e in @("AGENTS.md","CLAUDE.md","WORKSPACE-ONBOARDING.md","skill-index.json","agents","mcp-configs",".codex",".claude",".cursor",".claude-plugin")) { Copy-Path $e }
+    foreach ($sub in @("ai-assistant\memory","ai-assistant\references","ai-assistant\scripts","ai-assistant\hooks")) { Copy-Path $sub }
+    $destSkills = Join-Path $ResolvedTarget "ai-assistant\skills"
+    if (Test-Path $destSkills) { Remove-Item -LiteralPath $destSkills -Recurse -Force }
+    New-Item -ItemType Directory -Path $destSkills -Force | Out-Null
+    foreach ($s in (Get-ProfileSkills $Profile)) {
+        $src = Join-Path $RepoRoot "ai-assistant\skills\$s"
+        if (Test-Path $src) { Copy-Item -LiteralPath $src -Destination (Join-Path $destSkills $s) -Recurse -Force }
     }
-    Write-Host "BosskuAI skills layer (skills + references + scripts) installed under: $AssistantDir"
-    if (-not $SkipCheck) {
-        $CheckScript = Join-Path $ScriptDir "check-workspace.sh"
-        $Bash = Get-Command bash -ErrorAction SilentlyContinue
-        if ($Bash) {
-            Write-Host ""
-            & bash $CheckScript $ResolvedTarget --profile skills-only
-            exit $LASTEXITCODE
-        }
-        Write-Host ""
-        Write-Host "Install complete. Run validation from Git Bash or WSL:" -ForegroundColor Yellow
-        Write-Host "  ./scripts/check-workspace.sh `"$ResolvedTarget`" --profile skills-only"
-        exit 0
-    }
-    Write-Host "Skipped workspace check (-SkipCheck). Run: ./scripts/check-workspace.sh `"$ResolvedTarget`" --profile skills-only"
-    exit 0
+    $settings = Join-Path $ResolvedTarget ".claude\settings.json"
+    if ($WithHooks) {
+        Copy-Item -LiteralPath (Join-Path $ResolvedTarget ".claude\settings.hooks.example.json") -Destination $settings -Force
+    } else {
+@'
+{
+  "bosskuai": {
+    "hooks": "disabled-by-default",
+    "note": "Run scripts/enable-hooks.sh or scripts/enable-hooks.ps1 to enable advisory Claude Code hooks."
+  }
 }
-
-$Entries = @(
-    "AGENTS.md",
-    "CLAUDE.md",
-    "WORKSPACE-ONBOARDING.md",
-    "skill-index.json",
-    "agents",
-    "mcp-configs",
-    ".codex",
-    ".claude",
-    ".cursor",
-    "ai-assistant"
-)
-
-$Conflicts = @()
-foreach ($Entry in $Entries) {
-    if (Test-Path (Join-Path $ResolvedTarget $Entry)) {
-        $Conflicts += $Entry
+'@ | Set-Content -LiteralPath $settings -Encoding UTF8
     }
 }
 
-if ($Conflicts.Count -gt 0 -and -not $Force) {
-    Write-Host "Refusing to overwrite existing target entries:" -ForegroundColor Yellow
-    foreach ($Conflict in $Conflicts) {
-        Write-Host "  - $Conflict"
-    }
-    Write-Host ""
-    Write-Host "Re-run with -Force to back up and replace those entries." -ForegroundColor Yellow
-    exit 2
+if ($memoryStash) {
+    $memDest = Join-Path $ResolvedTarget "ai-assistant\memory"
+    New-Item -ItemType Directory -Path $memDest -Force | Out-Null
+    Copy-Item -LiteralPath (Join-Path $memoryStash "*") -Destination $memDest -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $memoryStash -Recurse -Force
 }
 
-$MemoryStash = $null
-$HadMemoryToPreserve = $false
-if ($PreserveMemory) {
-    $MemoryPath = Join-Path $ResolvedTarget "ai-assistant\memory"
-    if (Test-Path $MemoryPath) {
-        $MemoryStash = Join-Path ([System.IO.Path]::GetTempPath()) ("bosskuai-memory-stash-" + [guid]::NewGuid().ToString())
-        New-Item -ItemType Directory -Path $MemoryStash -Force | Out-Null
-        Get-ChildItem -LiteralPath $MemoryPath -Force | ForEach-Object {
-            Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $MemoryStash $_.Name) -Recurse -Force
-        }
-        $HadMemoryToPreserve = $true
-        Write-Host "Preserved existing ai-assistant/memory into temporary stash (will restore after install)."
-    }
-}
-
-$BackupDir = $null
-if ($Conflicts.Count -gt 0 -and $Force) {
-    $Timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
-    $BackupDir = Join-Path $ResolvedTarget ".bosskuai-backups\$Timestamp"
-    New-Item -ItemType Directory -Path $BackupDir -Force | Out-Null
-
-    foreach ($Conflict in $Conflicts) {
-        $SourcePath = Join-Path $ResolvedTarget $Conflict
-        $BackupPath = Join-Path $BackupDir $Conflict
-        $BackupParent = Split-Path -Parent $BackupPath
-        if ($BackupParent) {
-            New-Item -ItemType Directory -Path $BackupParent -Force | Out-Null
-        }
-        Move-Item -Path $SourcePath -Destination $BackupPath
-    }
-}
-
-foreach ($Entry in $Entries) {
-    $SourcePath = Join-Path $RepoRoot $Entry
-    $DestinationPath = Join-Path $ResolvedTarget $Entry
-    Copy-Item -Path $SourcePath -Destination $DestinationPath -Recurse
-}
-
-if ($HadMemoryToPreserve -and $MemoryStash) {
-    $DestMemory = Join-Path $ResolvedTarget "ai-assistant\memory"
-    New-Item -ItemType Directory -Path $DestMemory -Force | Out-Null
-    Get-ChildItem -LiteralPath $MemoryStash -Force | ForEach-Object {
-        Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $DestMemory $_.Name) -Recurse -Force
-    }
-    Remove-Item -Path $MemoryStash -Recurse -Force
-    Write-Host "Restored preserved ai-assistant/memory/ over the new layer."
-}
-
-Write-Host "BosskuAI workspace layer installed to: $ResolvedTarget"
-if ($BackupDir) {
-    Write-Host "Backed up replaced entries to: $BackupDir"
-}
+Write-Host "BosskuAI installed to: $ResolvedTarget"
+Write-Host "Profile: $Profile"
+if ($WithHooks) { Write-Host "Hooks: enabled" } else { Write-Host "Hooks: disabled by default" }
 
 if (-not $SkipCheck) {
-    $CheckScript = Join-Path $ScriptDir "check-workspace.sh"
-    $Bash = Get-Command bash -ErrorAction SilentlyContinue
-    if ($Bash) {
-        Write-Host ""
-        & bash $CheckScript $ResolvedTarget --profile full
-        exit $LASTEXITCODE
-    }
-    Write-Host ""
-    Write-Host "Install complete. Run validation from Git Bash or WSL:" -ForegroundColor Yellow
-    Write-Host "  ./scripts/check-workspace.sh `"$ResolvedTarget`" --profile full"
-    exit 0
+    $bash = Get-Command bash -ErrorAction SilentlyContinue
+    if ($bash) { & bash (Join-Path $ScriptDir "check-workspace.sh") $ResolvedTarget --profile $Profile; exit $LASTEXITCODE }
+    Write-Host "Run validation from Git Bash/WSL: ./scripts/check-workspace.sh `"$ResolvedTarget`" --profile $Profile"
 }
-
-Write-Host "Skipped workspace check (-SkipCheck). Run: ./scripts/check-workspace.sh `"$ResolvedTarget`" --profile full"

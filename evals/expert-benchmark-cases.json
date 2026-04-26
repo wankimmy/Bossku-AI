@@ -1,0 +1,235 @@
+[
+  {
+    "name": "Laravel backend production audit",
+    "prompt": "Audit this Laravel 12 app for Eloquent, Form Requests, policies, queues, jobs, migrations, tenant scoping, webhooks, PHPStan/Pint, and production performance.",
+    "expected_skill": "bosskuai-laravel-development",
+    "expected_references": [
+      "ai-assistant/references/playbooks/bosskuai-laravel-development-playbook.md"
+    ],
+    "must_cover": [
+      "Form Request",
+      "policy",
+      "transaction",
+      "tenant",
+      "queue",
+      "idempotent",
+      "PHPStan",
+      "Pint",
+      "webhook",
+      "Octane"
+    ]
+  },
+  {
+    "name": "Nuxt SSR SEO performance audit",
+    "prompt": "Audit this Nuxt 4 frontend for SSR, Nitro, useFetch, useAsyncData, hydration, route rules, metadata, sitemap, and Core Web Vitals.",
+    "expected_skill": "bosskuai-nuxt-development",
+    "expected_references": [
+      "ai-assistant/references/playbooks/bosskuai-nuxt-development-playbook.md"
+    ],
+    "must_cover": [
+      "SSR",
+      "Nitro",
+      "useFetch",
+      "useAsyncData",
+      "hydration",
+      "route rules",
+      "Core Web Vitals",
+      "metadata",
+      "sitemap"
+    ]
+  },
+  {
+    "name": "VPS Docker deployment hardening",
+    "prompt": "Deploy Laravel and Nuxt on a VPS using Docker Compose, Nginx/Caddy reverse proxy, SSL, Redis, database volume, backup, rollback, firewall, and health checks.",
+    "expected_skill": "bosskuai-vps-docker-deployment",
+    "expected_references": [
+      "ai-assistant/references/playbooks/bosskuai-vps-docker-deployment-playbook.md"
+    ],
+    "must_cover": [
+      "Docker Compose",
+      "reverse proxy",
+      "SSL",
+      "backup",
+      "rollback",
+      "firewall",
+      "health checks",
+      "non-root",
+      "queue:restart"
+    ]
+  },
+  {
+    "name": "SQL schema and partial unique index review",
+    "prompt": "Review this MariaDB MySQL PostgreSQL SQLite schema for constraints, soft delete uniqueness, partial indexes, composite indexes, safe migrations, and EXPLAIN query plans.",
+    "expected_skill": "bosskuai-database-engineering",
+    "expected_references": [
+      "ai-assistant/references/playbooks/bosskuai-database-engineering-playbook.md"
+    ],
+    "must_cover": [
+      "MariaDB",
+      "MySQL",
+      "PostgreSQL",
+      "SQLite",
+      "partial unique indexes",
+      "generated column",
+      "composite indexes",
+      "EXPLAIN",
+      "migration safety"
+    ]
+  },
+  {
+    "name": "MongoDB document model review",
+    "prompt": "Review this MongoDB design for document shape, compound indexes, aggregation pipeline, schema validation, write concern, and unbounded arrays.",
+    "expected_skill": "bosskuai-mongodb",
+    "expected_references": [
+      "ai-assistant/references/playbooks/bosskuai-mongodb-playbook.md"
+    ],
+    "must_cover": [
+      "MongoDB",
+      "document",
+      "compound index",
+      "aggregation",
+      "schema validation",
+      "write concern",
+      "unbounded arrays"
+    ]
+  },
+  {
+    "name": "Redis cache queue incident review",
+    "prompt": "Review Redis cache invalidation, tenant scoped cache keys, Laravel queue workers, Horizon, failed jobs, locks, rate limits, timeout, retry_after, TTL, and eviction policy.",
+    "expected_skill": "bosskuai-redis-caching-queues",
+    "expected_references": [
+      "ai-assistant/references/playbooks/bosskuai-redis-caching-queues-playbook.md"
+    ],
+    "must_cover": [
+      "cache invalidation",
+      "tenant",
+      "TTL",
+      "lock",
+      "Horizon",
+      "failed jobs",
+      "retry_after",
+      "timeout",
+      "eviction policy",
+      "SLOWLOG"
+    ]
+  },
+  {
+    "name": "Humanized UI UX design audit",
+    "prompt": "Audit this UI UX so it does not look AI generated. Check responsive design, accessibility, visual hierarchy, empty state, loading state, error state, copy, and mobile-first behavior.",
+    "expected_skill": "bosskuai-ui-ux-design-to-code",
+    "expected_references": [
+      "ai-assistant/references/playbooks/bosskuai-ui-ux-design-to-code-playbook.md"
+    ],
+    "must_cover": [
+      "anti-AI",
+      "visual hierarchy",
+      "empty",
+      "loading",
+      "error",
+      "accessibility",
+      "mobile",
+      "focus states",
+      "contrast"
+    ]
+  },
+  {
+    "name": "Application security threat model",
+    "prompt": "Security audit this app for OWASP, STRIDE, broken access control, auth, tenant isolation, secrets, PII, webhook replay, dependency CVE, logging, and incident rollback.",
+    "expected_skill": "bosskuai-cybersecurity-risk",
+    "expected_references": [
+      "ai-assistant/references/playbooks/bosskuai-cybersecurity-risk-playbook.md"
+    ],
+    "must_cover": [
+      "STRIDE",
+      "OWASP",
+      "Broken Access Control",
+      "secrets",
+      "PII",
+      "webhook",
+      "replay",
+      "CVE",
+      "rollback"
+    ]
+  },
+  {
+    "name": "SEO GEO landing page audit",
+    "prompt": "Audit this landing page for SEO and GEO: search intent, answer engine optimization, schema, internal linking, canonical URL, sitemap, metadata, FAQ, and citeable claims.",
+    "expected_skill": "bosskuai-seo-geo",
+    "expected_references": [
+      "ai-assistant/references/playbooks/bosskuai-seo-geo-playbook.md"
+    ],
+    "must_cover": [
+      "search intent",
+      "answer-engine",
+      "structured data",
+      "schema",
+      "internal links",
+      "canonical",
+      "sitemap",
+      "metadata",
+      "FAQ",
+      "citeable"
+    ]
+  },
+  {
+    "name": "90 day marketing content calendar",
+    "prompt": "Create a 90 days content calendar for Malaysian audience with Malay English tone, hooks, CTA, content pillars, Threads posts, TikTok scripts, vendor and customer segments, and metrics.",
+    "expected_skill": "bosskuai-content-calendar",
+    "expected_references": [
+      "ai-assistant/references/playbooks/bosskuai-content-calendar-playbook.md"
+    ],
+    "must_cover": [
+      "audience",
+      "CTA",
+      "content pillars",
+      "Malay",
+      "English",
+      "Threads",
+      "TikTok",
+      "metrics",
+      "customer",
+      "vendor"
+    ]
+  },
+  {
+    "name": "Sales GTM strategy review",
+    "prompt": "Act as my cofounder and review our B2B sales strategy: ICP, lead qualification, outreach, objection handling, pricing, proposal, pipeline, CRM, close plan, and success metrics.",
+    "expected_skill": "bosskuai-sales-strategy",
+    "expected_references": [
+      "ai-assistant/references/playbooks/bosskuai-sales-strategy-playbook.md"
+    ],
+    "must_cover": [
+      "ICP",
+      "lead qualification",
+      "outreach",
+      "objection",
+      "pricing",
+      "pipeline",
+      "metric",
+      "tradeoff",
+      "smallest proof"
+    ]
+  },
+  {
+    "name": "Expert cofounder repo audit",
+    "prompt": "Audit this cofounder agent and tell me if it is expert in Nuxt, Laravel, Docker, VPS deployment, MariaDB, MySQL, SQLite, PostgreSQL, MongoDB, Redis, performance, UI UX, security, SEO GEO, marketing, sales, and content calendar.",
+    "expected_skill": "cofounder",
+    "expected_references": [
+      "ai-assistant/references/checklists/expert-cofounder-stack-checklist.md"
+    ],
+    "must_cover": [
+      "Laravel",
+      "Nuxt",
+      "Docker",
+      "VPS",
+      "MariaDB",
+      "PostgreSQL",
+      "MongoDB",
+      "Redis",
+      "UI/UX",
+      "security",
+      "SEO/GEO",
+      "sales"
+    ]
+  }
+]
