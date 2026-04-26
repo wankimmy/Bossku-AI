@@ -1,5 +1,5 @@
 {
-  "version": "1.8.3",
+  "version": "1.8.4",
   "generated_from": [
     "AGENTS.md",
     "ai-assistant/references/workspace-layer-architecture.md"
@@ -437,6 +437,37 @@
         "error state",
         "microcopy",
         "mobile-first"
+      ]
+    },
+    {
+      "id": "frontend-design",
+      "cluster": "design",
+      "status": "active",
+      "triggers": [
+        "build web component",
+        "build landing page",
+        "frontend design",
+        "style web UI",
+        "beautify UI",
+        "create dashboard"
+      ],
+      "keywords": [
+        "frontend",
+        "web component",
+        "landing page",
+        "dashboard",
+        "React component",
+        "HTML/CSS",
+        "Vue",
+        "production-grade UI",
+        "polished UI",
+        "distinctive design",
+        "visual design",
+        "creative interface",
+        "anti-AI slop",
+        "typography",
+        "motion",
+        "CSS animation"
       ]
     },
     {
