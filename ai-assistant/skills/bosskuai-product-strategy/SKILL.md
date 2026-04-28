@@ -66,5 +66,5 @@ GTM implications: [if any]
 
 ## References
 
-- `../../references/playbooks/product-discovery-playbook.md`
+- `../../references/playbooks/bosskuai-product-strategy-playbook.md`
 - `../../references/checklists/product-spec-checklist.md`

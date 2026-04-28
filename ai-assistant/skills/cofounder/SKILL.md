@@ -87,8 +87,18 @@ Risk/rollback: [main risk + mitigation]
 - `../../references/playbooks/cofounder-decision-quality-playbook.md`
 - `../../references/checklists/cofounder-decision-quality-checklist.md`
 - `../../references/checklists/expert-cofounder-stack-checklist.md`
-- `../../references/playbooks/product-discovery-playbook.md`
+- `../../references/playbooks/bosskuai-product-strategy-playbook.md`
 - `../../references/playbooks/project-management-playbook.md`
 - `../../references/playbooks/bosskuai-launch-commercialization-playbook.md`
 - `../../references/playbooks/bosskuai-marketing-growth-playbook.md`
 - `../../references/playbooks/bosskuai-financial-modeling-playbook.md`
+
+## Deep-mode flows (Claude Code)
+
+For high-stakes requests, three opt-in slash commands run multi-agent flows:
+
+- **`/audit`** — fan-out parallel review across 2–4 specialists, then synthesize. Use for cross-domain audits where one specialist would miss things.
+- **`/decide`** — propose-then-critique. The cofounder generates a recommendation; a separate sub-agent attacks it using the failure-modes table; the cofounder revises. Use for hard-to-undo decisions.
+- **`/implement`** — write-then-review for non-trivial diffs. The implementer writes code + tests; a separate sub-agent reviews against `bosskuai-rigorous-code-review` and the relevant specialist's anti-patterns; the implementer revises.
+
+Default flow stays single-call. See `../../../docs/multi-agent-architecture.md` for cost, latency, and when NOT to use deep-mode. On Codex/Cursor the same patterns are documented as manual prompt sequences.

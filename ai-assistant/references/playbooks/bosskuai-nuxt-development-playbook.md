@@ -1,189 +1,382 @@
-# bosskuai-nuxt-development Full Playbook
+# BosskuAI Nuxt Development Playbook
 
-Original detailed operating notes moved out of SKILL.md to reduce prompt bloat.
+Senior-level audit and implementation reference for Nuxt 3/4 production apps. Each section pairs the wrong-way pattern with the right-way fix and the verification step that proves it.
 
----
+## Audit flow
 
----
-name: bosskuai-nuxt-development
-description: Use for expert Nuxt 4.x development, code auditing, and best-practice guidance grounded in official docs via Context7.
----
+1. Read `nuxt.config.ts`, `app.vue`, `app/router.options.ts`, `pages/`, `layouts/`, `composables/`, `server/api/`, `server/middleware/`, `nitro.config.ts` (if present), and module imports.
+2. Identify Nuxt version, Nitro preset, and rendering mode per route (SSR / SSG / hybrid / client-only).
+3. Trace one critical page end-to-end: route → middleware → page setup → useFetch/useAsyncData calls → server route → Nitro handler → external service → response → hydration.
+4. Check route rules, metadata, sitemap, robots, redirects, error pages, and SEO/structured data.
+5. Verify with `nuxt build --analyze`, `nuxt typecheck`, Lighthouse / WebPageTest, and `curl -I` for headers.
 
-# BosskuAI Nuxt Development
+## Nuxt 3/4 best-practice checks (one-liner version)
 
-Use this skill when building, reviewing, or auditing Nuxt applications. Covers Nuxt 4.x as the primary target with Nuxt 3 compatibility notes. Always grounds guidance in official documentation fetched via Context7 MCP — never rely on assumptions about API signatures, config options, or framework behavior.
+- `useFetch` for component-bound data; `useAsyncData` when you need full control over the key/handler.
+- Same call site executes once on the server and reuses on hydration — never duplicate fetches.
+- Server routes (`server/api/*`) own external API calls, not page components.
+- Route rules (`routeRules` in `nuxt.config.ts`) declare SSR/SSG/ISR/CDN behavior per path.
+- `useHead` / `useSeoMeta` is set in `setup()`, not inside `onMounted` (or it won't render server-side).
+- Sitemap and robots come from real modules (`@nuxtjs/sitemap`, `@nuxtjs/robots`) wired to actual routes.
+- Hydration payload audited — no full DB rows or secrets serialized into the page.
+- Core Web Vitals measured on real device profiles, not just localhost.
+- Nitro middleware terminates requests fast; long work goes to a background queue.
 
-## How this differs from nearby skills
-
-- **vs polyglot-engineering**: polyglot gives general stack guidance across languages and frameworks; this skill provides Nuxt-specific architecture, conventions, anti-patterns, and idiomatic patterns.
-- **vs coding-best-practices**: best practices applies universal quality patterns; this skill applies them through the Nuxt lens with framework-specific idioms (auto-imports, composables, rendering modes).
-- **vs documentation-lookup**: documentation-lookup fetches any library's docs generically; this skill knows *what* to look up, *how* to interpret Nuxt docs in context, and which anti-patterns to check.
-- **vs rigorous-code-review**: code review is stack-agnostic skeptical review; this skill audits specifically for Nuxt anti-patterns and missed built-in framework features.
-
-## MCP requirements
-
-- **Context7 (mandatory for docs).** Before giving Nuxt-specific guidance, resolve the Nuxt library via Context7's `resolve-library-id` and fetch the relevant section with `get-library-docs`. Do not rely on training data for API signatures, config options, or behavior specifics.
-- **Graceful degradation:** If Context7 is unavailable, answer from training data and explicitly state: *"This is from training data — verify against https://nuxt.com/docs/4.x before using in production."*
-
-## Mindset
-
-- **Use Nuxt conventions instead of fighting them.** File-based routing, auto-imports, and built-in composables exist for a reason — use them.
-- **Check built-in features before adding libraries.** Nuxt does more than most developers realize. Before installing a package or writing a custom solution, check if Nuxt already provides it.
-- **Minimal changes, no redundant code.** If Nuxt auto-imports it, do not manually import it. If file-based routing handles it, do not add a manual route. If a composable exists, do not reinvent it.
-- **Server-side by default.** Understand the rendering mode before writing code. Know what runs on server vs client.
-- **Always verify against official Nuxt 4.x docs.** Do not guess. Fetch, read, then recommend.
-
-## Nuxt 4.x core concepts
-
-| Area | Key guidance |
-|------|-------------|
-| **File-based routing** | `app/pages/` directory. Dynamic params: `[id].vue`. Catch-all: `[...slug].vue`. Nested layouts via directory structure. |
-| **Auto-imports** | Components, composables, and utils are auto-imported. Never manually import from `#imports` unless disambiguation is needed. |
-| **Composables** | `useFetch`, `useAsyncData`, `useState`, `useHead`, `useSeoMeta`, `useRuntimeConfig`, `useRoute`, `useRouter`, `navigateTo`, `useNuxtApp`. |
-| **Data fetching** | `useFetch` for simple fetches, `useAsyncData` for complex logic. Always handle `pending` and `error` states. Use `$fetch` only in event handlers or server routes — never in `<script setup>`. |
-| **Server routes** | `server/api/` and `server/routes/` with Nitro. Use `defineEventHandler`, `getQuery`, `readBody`. Validate all inputs server-side. |
-| **Middleware** | `middleware/` directory. Route middleware (named or inline) vs global. Use `defineNuxtRouteMiddleware`. |
-| **Plugins** | `plugins/` directory. Use `defineNuxtPlugin`. Provide/inject pattern. Order via filename numbering. |
-| **Modules** | `modules/` for local modules, `nuxt.config.ts` for installed modules. Prefer published modules over custom solutions when available. |
-| **State management** | `useState` for SSR-safe shared state. Pinia for complex state. Never use plain `ref()` for cross-component shared state — it is not SSR-safe. |
-| **Rendering modes** | SSR (default), SPA, SSG (`nuxt generate`), hybrid (`routeRules`). Use `routeRules` for per-route rendering mode configuration. |
-| **SEO** | `useHead` and `useSeoMeta` for meta tags. `defineOgImage` if using `nuxt-og-image`. `useSchemaOrg` for structured data. |
-| **Error handling** | `error.vue` for fatal errors, `<NuxtErrorBoundary>` for component-level, `createError` for server errors with status codes. |
-| **Layers** | Nuxt layers for shared config/components across projects. `extends` in `nuxt.config.ts`. |
-| **TypeScript** | Nuxt 4 is TypeScript-first. Run `nuxi typecheck`. Auto-generated types in `.nuxt/`. |
-
-## Nuxt 3 → 4 migration notes
-
-When working with existing Nuxt 3 codebases, be aware of these key changes:
-
-- **Directory structure**: Nuxt 4 uses `app/` prefix for application code (`app/pages/`, `app/components/`, `app/composables/`, `app/layouts/`). Source files previously at root move under `app/`.
-- **Compatibility flag**: Set `compatibilityVersion: 4` in `nuxt.config.ts` to opt into Nuxt 4 behavior while on Nuxt 3.
-- **Import paths**: Some auto-import paths change. Verify against official migration guide via Context7.
-- **Do not migrate unless asked**: If the project is on Nuxt 3 and migration is not the task, give Nuxt 3–compatible guidance. Do not silently apply Nuxt 4 patterns to a Nuxt 3 project.
-
-## Workflow: Development
-
-1. **Verify the Nuxt version** — Check `package.json` for the `nuxt` dependency version. Confirm whether the project uses Nuxt 3 or 4.
-2. **Fetch official docs via Context7** — Resolve `nuxt` library ID, then query for the specific topic (composable, config option, module, etc.).
-3. **Check existing project conventions** — Read `nuxt.config.ts`, existing components, composables, and middleware to understand the project's patterns before adding new code.
-4. **Apply framework conventions first** — Use file-based routing, auto-imports, and built-in composables before reaching for custom solutions or third-party packages.
-5. **Implement minimally** — Write only what is needed. No wrapper functions around built-in composables. No manual imports of auto-imported utilities. No abstraction layers that duplicate framework behavior.
-6. **Validate** — Run `nuxi typecheck` and `nuxi build`. Test the route behavior. Verify SSR/hydration works correctly.
-
-## Workflow: Audit
-
-Use this when reviewing an existing Nuxt codebase for quality, correctness, and adherence to framework conventions.
-
-1. **Identify the Nuxt version and config** — Read `nuxt.config.ts`, `package.json`, and `tsconfig.json`. Note modules, rendering mode, and any custom configuration.
-2. **Fetch current docs** — Use Context7 to confirm correct patterns for the project's Nuxt version.
-3. **Scan for anti-patterns** — Check every file against the anti-pattern table below. Focus on correctness and security first, then convention adherence.
-4. **Report findings** — Use the audit output format. Categorize by severity: critical (broken behavior or security risk), warning (correctness issue or performance problem), info (convention deviation).
-
-## Common Nuxt anti-patterns
-
-| Anti-pattern | Why it is wrong | Fix |
-|-------------|----------------|-----|
-| Manual imports of auto-imported composables | Redundant, fights the framework | Remove the import statement |
-| `$fetch` in `<script setup>` or component `setup()` | Causes double-fetch (server + client), no SSR payload deduplication | Use `useFetch` or `useAsyncData` |
-| Plain `ref()` for shared cross-component state | Not SSR-safe, causes hydration mismatch | Use `useState` or Pinia |
-| Manually defining routes instead of using `pages/` | Bypasses file-based routing conventions | Move to `pages/` directory structure |
-| Not handling `useFetch` error/pending states | Poor UX, potential runtime errors on null data | Always destructure `{ data, pending, error }` and handle each |
-| Server route without input validation | Security risk — unvalidated user input | Use `zod`, `h3-zod`, or manual validation in event handlers |
-| `useHead` with reactive data but no `computed` | Meta tags won't update on client navigation | Wrap in `computed()` or use the function form of `useHead` |
-| Importing from `vue` what Nuxt auto-imports | Redundant imports that add noise | Remove `import { ref, computed } from 'vue'` etc. |
-| Using `process.env` instead of `useRuntimeConfig` | Not SSR-safe, not type-safe, not reactive | Use `useRuntimeConfig().public.*` for client-accessible values |
-| Fat `nuxt.config.ts` with inline logic | Hard to maintain and test | Extract to modules or composables |
-
-## Guardrails
-
-- If the request is general, ambiguous, or touches many files — ask clarifying yes/no questions **before acting**. Use numbered bullets with explicit answer format: e.g. `1-yes/no  2-A/B`.
-- **Always fetch Nuxt docs via Context7** before giving framework-specific advice. Do not guess API signatures or config options.
-- Do not add dependencies that duplicate built-in Nuxt functionality (e.g., do not install `vue-router` or `vue-meta` manually).
-- Do not recommend patterns from React/Next.js/SvelteKit and assume they apply to Nuxt. Surface the Nuxt-native equivalent.
-- Prefer the smallest safe change. Do not refactor a working Nuxt 3 app to Nuxt 4 patterns unless migration is the explicit task.
-- When auditing, do not propose changes that are cosmetic-only. Focus on correctness, performance, security, and convention adherence.
-- When adding a new composable or utility, check if an equivalent already exists in the project before creating a new one.
-
-## Output format
-
-### Development mode
-```
-Nuxt version: [version from package.json]
-Docs verified via: [Context7 / training data fallback]
-
-Implementation:
-  [component/route/composable] — [what and why] — [Nuxt convention applied]
-
-Minimal change rationale:
-  [why this is the smallest correct implementation]
-```
-
-### Audit mode
-```
-Nuxt version: [version]
-Config reviewed: [nuxt.config.ts highlights]
-
-Findings (by severity):
-  [critical/warning/info] — [file:line] — [anti-pattern] — [fix]
-
-Recommendations:
-  [recommendation] — [effort: low/medium/high] — [impact: correctness/performance/convention]
-```
-
-## References
-
-- `../../references/checklists/nuxt-development-checklist.md`
-- `../../references/playbooks/nuxt-development-playbook.md`
-- Official docs: https://nuxt.com/docs/4.x/getting-started/introduction
-
-## Deep Nuxt 4 audit matrix
-
-### App architecture
-
-- Check `nuxt.config`, `app/`, `pages/`, `components/`, `composables/`, `server/`, `plugins/`, middleware, and route rules.
-- Confirm SSR/SSG/ISR/hybrid rendering choice per route, not globally by habit.
-- Keep server-only secrets in server runtime config; never expose private keys to public runtime config.
-- Use server routes for sensitive API integration instead of calling secrets from the client.
-
-### Data fetching
-
-- Use `useFetch`/`useAsyncData` intentionally; avoid duplicate client/server requests.
-- Provide stable keys when caching or sharing async data.
-- Handle loading, empty, error, and stale states.
-- Avoid hydration mismatch from non-deterministic server/client rendering.
-- Validate server route inputs and external API responses.
-
-### Performance
-
-- Audit route bundle size, image loading, lazy components, and payload size.
-- Use route rules for cache headers, prerendering, and server behavior.
-- Avoid shipping admin-only or heavy libraries to public routes.
-- Prefer Nuxt image optimization or explicit responsive image attributes.
-- Check Core Web Vitals: LCP, INP, CLS.
-
-### SEO/GEO in Nuxt
-
-- Use page-level title, description, canonical URL, Open Graph, and structured data.
-- Ensure dynamic pages have crawlable server-rendered content where search matters.
-- Generate sitemap and robots rules intentionally.
-- Keep answer-style sections, FAQs, and citations/source references for GEO/AEO pages.
-
-### Verification commands
+## Recommended commands
 
 ```bash
-pnpm lint
-pnpm typecheck
-pnpm test
-pnpm build
-pnpm preview
-npx nuxi analyze
+pnpm nuxt typecheck
+pnpm nuxt build --analyze            # bundle visualizer
+pnpm nuxt preview                    # production-like local run
+npx unlighthouse                     # site-wide Lighthouse audit
+curl -sI https://example.com/page    # check cache + render headers
 ```
 
-## Metadata verification
+---
 
-Every SEO-sensitive Nuxt route must define metadata explicitly: title, description, canonical URL, Open Graph, Twitter/X card data, and structured data when relevant.
+## Worked anti-patterns and fixes
+
+### 1. SSR fetch waterfall
+
+**Wrong**
+
+```vue
+<script setup>
+const { data: user } = await useFetch('/api/user/me')
+const { data: orders } = await useFetch(`/api/orders?userId=${user.value.id}`)
+const { data: stats } = await useFetch(`/api/orders/stats?userId=${user.value.id}`)
+</script>
+```
+
+Each `await` blocks the next. SSR walltime = sum of three round trips.
+
+**Right**
+
+```vue
+<script setup>
+const { data: user } = await useFetch('/api/user/me')
+
+const [orders, stats] = await Promise.all([
+  useFetch('/api/orders', { query: { userId: user.value.id } }),
+  useFetch('/api/orders/stats', { query: { userId: user.value.id } }),
+])
+</script>
+```
+
+Or move the dependency into a single server route that fetches in parallel server-side, returning one payload.
+
+**Verify** — measure server-side render time before/after with `console.time` in the server middleware, or look at the `x-response-time` header. The composite endpoint should match the slowest single dependency, not the sum.
+
+### 2. Duplicate fetch on hydration
+
+**Wrong**
+
+```vue
+<script setup>
+const route = useRoute()
+const { data } = await useFetch('/api/post/' + route.params.slug)
+</script>
+```
+
+`useFetch` keys on the URL. If the URL is built dynamically without a stable key and the params change between SSR and client, the client refetches.
+
+**Right**
+
+```vue
+<script setup>
+const route = useRoute()
+const { data } = await useFetch('/api/post', {
+  query: { slug: route.params.slug },
+  key: `post-${route.params.slug}`,
+})
+</script>
+```
+
+**Verify** — open Network in DevTools, hard-reload the page. Inspect: SSR-fetched calls should appear in the HTML payload (`<script id="__NUXT_DATA__">`) and **not** as a duplicate XHR after hydration.
+
+### 3. Hydration mismatch from non-deterministic render
+
+**Wrong**
+
+```vue
+<template>
+  <p>Item ID: {{ Math.random() }}</p>
+  <p>Now: {{ new Date().toLocaleString() }}</p>
+</template>
+```
+
+Server rendered with one value; client rerendered with a different value → console warning, sometimes broken interactivity.
+
+**Right**
+
+```vue
+<script setup>
+const id = useState('item-id', () => crypto.randomUUID())
+const now = ref(new Date())
+onMounted(() => { now.value = new Date() })
+</script>
+
+<template>
+  <p>Item ID: {{ id }}</p>
+  <ClientOnly><p>Now: {{ now.toLocaleString() }}</p></ClientOnly>
+</template>
+```
+
+**Verify** — Vue Devtools → Components panel should not show hydration warnings. Run `pnpm nuxt build && pnpm nuxt preview` and check the dev console on first load.
+
+### 4. `useFetch` vs `useAsyncData` confusion
+
+**Wrong** — calling `$fetch` directly inside `setup()`:
+
+```vue
+<script setup>
+const data = await $fetch('/api/users')
+</script>
+```
+
+This re-runs on the client and fails to leverage SSR caching.
+
+**Right rules:**
+
+- **`useFetch`**: for `/api/...` calls bound to a component, default reactivity, automatic key from URL.
+- **`useAsyncData('key', () => $fetch(...))`**: when you need a custom key, transform, or call something that isn't a URL (e.g. multiple fetches combined).
+- **`$fetch`**: only inside server routes, event handlers, or `onMounted`/`onClick` (client-only).
+
+```vue
+<script setup>
+const { data } = await useAsyncData('top-products', () =>
+  Promise.all([
+    $fetch('/api/products/featured'),
+    $fetch('/api/products/popular'),
+  ]).then(([featured, popular]) => ({ featured, popular }))
+)
+</script>
+```
+
+### 5. Route rules and rendering mode
+
+**Wrong** — every page rendered fresh per request:
+
+```ts
+// nuxt.config.ts
+export default defineNuxtConfig({ ssr: true })
+```
+
+Marketing pages re-render under traffic; static content pays request-time cost.
+
+**Right** — declarative route rules per path:
+
+```ts
+export default defineNuxtConfig({
+  routeRules: {
+    '/':                  { prerender: true },
+    '/blog/**':           { isr: 3600 },
+    '/pricing':           { swr: 600 },
+    '/dashboard/**':      { ssr: true, headers: { 'cache-control': 'no-store' } },
+    '/admin/**':          { ssr: false },
+    '/api/**':            { cors: true, headers: { 'cache-control': 'no-store' } },
+    '/old-path':          { redirect: '/new-path' },
+  },
+})
+```
+
+**Verify** — `curl -I` each path and inspect the `cache-control`, `x-nitro-prerendered`, and CDN headers. Run a load test and confirm prerendered pages don't hit the origin.
+
+### 6. SEO metadata set after hydration
+
+**Wrong**
+
+```vue
+<script setup>
+onMounted(() => {
+  useHead({ title: post.value.title })
+})
+</script>
+```
+
+Crawlers see the empty SSR title.
+
+**Right**
+
+```vue
+<script setup>
+const { data: post } = await useFetch(`/api/post/${slug}`)
+
+useSeoMeta({
+  title:       () => post.value.title,
+  description: () => post.value.excerpt,
+  ogTitle:     () => post.value.title,
+  ogImage:     () => post.value.heroImage,
+  twitterCard: 'summary_large_image',
+})
+</script>
+```
+
+**Verify** — `curl https://example.com/post/x | grep -i 'og:title\|<title>'` — values must appear in the raw HTML, not just after JS executes.
+
+### 7. Sitemap and structured data
+
+**Wrong** — handwritten static `sitemap.xml` in `public/`. Goes stale.
+
+**Right** — generate from real source via `@nuxtjs/sitemap`:
+
+```ts
+// nuxt.config.ts
+modules: ['@nuxtjs/sitemap', '@nuxtjs/robots'],
+sitemap: {
+  sources: ['/api/__sitemap'],
+},
+
+// server/api/__sitemap.ts
+export default defineSitemapEventHandler(async () => {
+  const posts = await db.post.findMany({ select: { slug: true, updatedAt: true } })
+  return posts.map(p => ({
+    loc: `/blog/${p.slug}`,
+    lastmod: p.updatedAt,
+    changefreq: 'weekly',
+  }))
+})
+```
+
+For structured data, emit JSON-LD in `useHead`:
+
+```vue
+<script setup>
+useHead({
+  script: [{
+    type: 'application/ld+json',
+    children: JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'Article',
+      headline: post.value.title,
+      datePublished: post.value.publishedAt,
+      author: { '@type': 'Person', name: post.value.author.name },
+    }),
+  }],
+})
+</script>
+```
+
+**Verify** — paste rendered HTML into Google's Rich Results Test and Schema.org validator. Submit `sitemap.xml` to Search Console and watch coverage.
+
+### 8. Hydration payload bloat
+
+**Wrong**
+
+```vue
+<script setup>
+const { data: user } = await useFetch('/api/user/me')
+</script>
+```
+
+Server returns the entire user row, including internal flags, password hash, etc. The whole thing serializes into the client payload.
+
+**Right** — server route returns only what the page needs:
+
+```ts
+// server/api/user/me.get.ts
+export default defineEventHandler(async (event) => {
+  const session = await requireSession(event)
+  return {
+    id:          session.user.id,
+    displayName: session.user.displayName,
+    avatarUrl:   session.user.avatarUrl,
+  }
+})
+```
+
+**Verify** — view source on the rendered page, find `__NUXT_DATA__`, paste into a JSON formatter, and grep for any field that shouldn't be there. Set a budget: payload < 100KB gzipped on landing pages.
+
+### 9. Core Web Vitals — LCP, CLS, INP
+
+**Common LCP regressions:**
+
+- Hero image not preloaded → `<link rel="preload" as="image" imagesrcset="...">` via `useHead`.
+- Wrong `<NuxtImg>` `sizes` attribute → browser fetches the largest variant unnecessarily.
+- Webfont swap blocking text render → use `font-display: swap` and self-host primary font.
+
+**Common CLS regressions:**
+
+- Images without explicit `width`/`height` → reserve space.
+- Ads / embeds inserting after layout → reserve a fixed slot.
+- Late-arriving banners (cookie consent, promo) → render server-side or in a slot that doesn't push content.
+
+**Common INP regressions:**
+
+- Heavy hydration on first interaction → break the page into islands, lazy-hydrate non-critical components.
+- Synchronous third-party scripts (analytics, chat widgets) → `defineNuxtPlugin` with `parallel: true`, or use a `nuxt-third-parties` integration.
+
+**Verify** — run `npx unlighthouse` against the production build, not dev mode. Open the WebPageTest filmstrip. Use the Web Vitals overlay on a real mid-tier Android device for INP.
+
+### 10. Nitro server route doing slow work synchronously
+
+**Wrong**
+
+```ts
+// server/api/checkout.post.ts
+export default defineEventHandler(async (event) => {
+  const body = await readBody(event)
+  const order = await createOrder(body)
+  await sendConfirmationEmail(order)
+  await chargeCard(order)
+  return { id: order.id }
+})
+```
+
+The browser waits for email + Stripe.
+
+**Right** — return fast, queue the side effects:
+
+```ts
+export default defineEventHandler(async (event) => {
+  const body = await readBody(event)
+  const order = await createOrder(body)
+  await queue.publish('order.created', { orderId: order.id })
+  return { id: order.id, status: 'received' }
+})
+```
+
+**Verify** — `time curl -X POST https://example.com/api/checkout -d '...'` should return in well under 500ms. Email and payment confirmations land in the worker logs.
+
+### 11. Nuxt 4 migration gotchas
+
+Nuxt 4 moved app code under `app/`. Common migration mistakes:
+
+- Aliases (`~`, `@`) referring to `pages/` instead of `app/pages/`.
+- Test setup files importing from old paths.
+- Custom modules that hard-code `srcDir`.
+
+Fix: set `future.compatibilityVersion: 4` in `nuxt.config.ts` first, then move files in one PR. Run `pnpm nuxt typecheck` and the test suite at each step.
+
+---
+
+## Performance and SEO audit matrix
+
+| Layer       | Check                                                | Tool / command                              |
+|-------------|------------------------------------------------------|---------------------------------------------|
+| Routing     | Each path has a route rule (or default is correct)   | review `routeRules` against sitemap         |
+| SSR/Nitro   | No fetch waterfalls; payload < 100KB gzipped         | server-side timing logs + view source       |
+| Hydration   | No mismatch warnings in production build             | `pnpm nuxt build && pnpm nuxt preview`      |
+| SEO         | `<title>`, OG, JSON-LD present in raw HTML           | `curl` + Rich Results Test                  |
+| Sitemap     | All published URLs present, lastmod current          | open `/sitemap.xml`, diff vs DB             |
+| Bundle      | No accidental client imports of server-only deps     | `nuxt build --analyze`                      |
+| LCP         | < 2.5s on 4G mobile profile                          | unlighthouse / WebPageTest                  |
+| CLS         | < 0.1                                                 | Lighthouse                                  |
+| INP         | < 200ms on mid-tier Android                           | Web Vitals extension on real device         |
+| Edge        | CDN caches prerendered/ISR pages, not personalized   | check `cache-control` and CDN hit headers   |
+| Errors      | `error.vue` page renders correctly for 404/500       | `curl https://example.com/nope -I`          |
+
+## Output expectation
+
+When auditing, return:
+
+1. **Findings table** — file:line, severity, evidence, fix.
+2. **Smallest fix sequence** — minimum P0/P1 set to ship.
+3. **Verification** — exact command, header, or metric that proves each fix.
+4. **De-scope** — what is intentionally not touched yet, and why.
 
 ## Further reading
 
-- `nuxt-development-detailed-playbook.md` — extended step-by-step workflow and detailed templates that complement this playbook.
-
+- `nuxt-development-detailed-playbook.md` — extended step-by-step workflow and template scaffolds.
+- `bosskuai-ui-ux-design-to-code-playbook.md` — visual hierarchy, accessibility, anti-AI design checks.
+- `bosskuai-seo-geo-playbook.md` — schema, internal linking, answer-engine optimization.

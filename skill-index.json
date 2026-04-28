@@ -1,5 +1,5 @@
 {
-  "version": "1.8.4",
+  "version": "1.8.9",
   "generated_from": [
     "AGENTS.md",
     "ai-assistant/references/workspace-layer-architecture.md"
@@ -399,6 +399,30 @@
       ]
     },
     {
+      "id": "bosskuai-engineering-principles",
+      "cluster": "engineering",
+      "status": "active",
+      "triggers": [
+        "engineering principles",
+        "apply principles before coding",
+        "think before coding",
+        "simplicity first",
+        "surgical changes",
+        "goal-driven execution",
+        "Karpathy principles",
+        "frame the work",
+        "before I write code"
+      ],
+      "keywords": [
+        "principles",
+        "minimum diff",
+        "speculative abstractions",
+        "verifiable goal",
+        "drive-by refactor",
+        "test-first"
+      ]
+    },
+    {
       "id": "bosskuai-polyglot-engineering",
       "cluster": "engineering",
       "status": "active",
@@ -418,7 +442,11 @@
       "status": "active",
       "triggers": [
         "UI review",
-        "design to code"
+        "design to code",
+        "feels like a template",
+        "look like every other",
+        "looks generic",
+        "looks AI generated"
       ],
       "keywords": [
         "UX",
@@ -437,37 +465,6 @@
         "error state",
         "microcopy",
         "mobile-first"
-      ]
-    },
-    {
-      "id": "frontend-design",
-      "cluster": "design",
-      "status": "active",
-      "triggers": [
-        "build web component",
-        "build landing page",
-        "frontend design",
-        "style web UI",
-        "beautify UI",
-        "create dashboard"
-      ],
-      "keywords": [
-        "frontend",
-        "web component",
-        "landing page",
-        "dashboard",
-        "React component",
-        "HTML/CSS",
-        "Vue",
-        "production-grade UI",
-        "polished UI",
-        "distinctive design",
-        "visual design",
-        "creative interface",
-        "anti-AI slop",
-        "typography",
-        "motion",
-        "CSS animation"
       ]
     },
     {
@@ -592,7 +589,14 @@
         "application security audit",
         "threat model",
         "OWASP review",
-        "STRIDE review"
+        "STRIDE review",
+        "different company",
+        "see invoices different",
+        "see other customer data",
+        "cross-tenant leak",
+        "data from another",
+        "showing data from",
+        "belong to another"
       ],
       "keywords": [
         "auth",
@@ -798,7 +802,14 @@
       "status": "active",
       "triggers": [
         "SEO strategy",
-        "GEO strategy"
+        "GEO strategy",
+        "won't show in google",
+        "google won't show",
+        "competitors rank",
+        "not ranking",
+        "nowhere on google",
+        "not appearing on google",
+        "not indexed by google"
       ],
       "keywords": [
         "discoverability",
@@ -1336,7 +1347,15 @@
         "Laravel best practices",
         "Eloquent review",
         "artisan command",
-        "Laravel queue"
+        "Laravel queue",
+        "long-lived workers",
+        "PHP memory leak",
+        "rolls back",
+        "email before order",
+        "listener dispatch",
+        "worker crashes",
+        "queue worker crash",
+        "background process leak"
       ],
       "keywords": [
         "Laravel",
@@ -1370,7 +1389,14 @@
         "MariaDB schema",
         "PostgreSQL partial index",
         "SQLite migration",
-        "database migration"
+        "database migration",
+        "small reads per row",
+        "many small queries",
+        "loading more pages slows",
+        "queries per row",
+        "later pages slow",
+        "pagination slow",
+        "page gets slow"
       ],
       "keywords": [
         "MariaDB",
@@ -1403,7 +1429,16 @@
         "production docker compose",
         "Nginx reverse proxy",
         "SSL deployment",
-        "docker deployment"
+        "docker deployment",
+        "compose stack",
+        "container can't reach",
+        "production box",
+        "502 on first deploy",
+        "works locally not on server",
+        "certificate expired",
+        "can't talk to",
+        "first request after deploy",
+        "can't reach the database"
       ],
       "keywords": [
         "VPS",
@@ -1435,7 +1470,15 @@
         "queue worker",
         "cache invalidation",
         "distributed lock",
-        "rate limit"
+        "rate limit",
+        "worker retries",
+        "captured twice",
+        "cache stampede",
+        "job runs twice",
+        "lock no expiry",
+        "charged more than once",
+        "charged multiple times",
+        "duplicate charges"
       ],
       "keywords": [
         "Redis",

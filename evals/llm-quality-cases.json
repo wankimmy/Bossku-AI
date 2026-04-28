@@ -1,0 +1,100 @@
+[
+  {
+    "id": "laravel-double-charge",
+    "skill": "bosskuai-laravel-development",
+    "task": "We have a Laravel 12 app with a queue job ChargeInvoiceJob. After every deploy our customers occasionally see two charges for the same invoice. Show me what's most likely wrong, the minimal fix, and the verification step that would prove the fix held.",
+    "rubric": [
+      {"weight": 3, "criterion": "Names timeout >= retry_after as the structural cause, not just 'job ran twice'."},
+      {"weight": 3, "criterion": "Recommends idempotency at TWO layers: in-app guard (already-paid check + lockForUpdate) AND Stripe-level idempotency_key."},
+      {"weight": 2, "criterion": "Specifies the verification: a forced-retry test where the same job runs twice and the customer is only charged once."},
+      {"weight": 2, "criterion": "Mentions failed-job alerting and Horizon tags so the next incident is detectable, not detective work."},
+      {"weight": 2, "criterion": "Does NOT recommend disabling retries or removing the queue (cargo-cult fixes)."},
+      {"weight": 1, "criterion": "Recognizes ShouldBeUnique / uniqueId() as a complementary mechanism, not a substitute for the in-app guard."}
+    ],
+    "must_avoid": ["just lower the timeout", "use a database transaction (without explaining what gets locked)", "add a try/catch and ignore the duplicate"]
+  },
+  {
+    "id": "laravel-tenant-leak",
+    "skill": "bosskuai-laravel-development",
+    "task": "A Laravel multi-tenant app uses a tenant_id column on most tables. A bug report says searching for items by SKU returns matches from other tenants. Walk me through the audit, the fix, and a regression test that prevents this from coming back.",
+    "rubric": [
+      {"weight": 3, "criterion": "Identifies that the global scope on Item exists but search probably bypasses it (raw SQL, whereHas across an unscoped model, scout/elasticsearch, or scopeFresh chain)."},
+      {"weight": 3, "criterion": "Fix uses a global scope on EVERY tenant-owned model including join tables, plus a creating-event default for tenant_id."},
+      {"weight": 2, "criterion": "Regression test boots two tenants, runs the search as user A, and asserts ONLY tenant A's rows are returned."},
+      {"weight": 2, "criterion": "Mentions reviewing API Resource fields for leaks and adding a policy at the controller level."},
+      {"weight": 1, "criterion": "Notes that fixing only the search endpoint is insufficient — every endpoint must be audited."},
+      {"weight": 1, "criterion": "Does NOT propose adding tenant_id checks one route at a time as the durable fix."}
+    ],
+    "must_avoid": ["just add a where clause to that one endpoint", "use middleware (without explaining why a scope is also needed)"]
+  },
+  {
+    "id": "nuxt-ssr-waterfall",
+    "skill": "bosskuai-nuxt-development",
+    "task": "Our Nuxt 4 dashboard takes 2.4s to first byte. Profiling shows the page does five sequential await useFetch() calls in setup(). Give me the rewrite and the metric that proves it's faster.",
+    "rubric": [
+      {"weight": 3, "criterion": "Replaces the await chain with Promise.all (or a single composite server route)."},
+      {"weight": 2, "criterion": "Specifies stable keys for useFetch / useAsyncData if any of the URLs are dynamic."},
+      {"weight": 2, "criterion": "Verification uses real metric: TTFB or x-response-time header before/after, not just claim."},
+      {"weight": 2, "criterion": "Considers moving the fanout to a single server route when the dependencies share a base record."},
+      {"weight": 1, "criterion": "Notes that useAsyncData is preferable when combining results from multiple sources."},
+      {"weight": 1, "criterion": "Does NOT recommend disabling SSR or moving the page to client-only as the fix."}
+    ],
+    "must_avoid": ["disable SSR", "move to onMounted", "set ssr: false"]
+  },
+  {
+    "id": "redis-cache-stampede",
+    "skill": "bosskuai-redis-caching-queues",
+    "task": "We have a hot cache key 'top-products' with 600s TTL. When traffic spikes and the key expires, the database falls over for 5-10 seconds. Show me the fix and how to verify it works under load.",
+    "rubric": [
+      {"weight": 3, "criterion": "Identifies cache stampede / dog-pile and recommends single-flight via Cache::lock OR stale-while-revalidate."},
+      {"weight": 2, "criterion": "Stale-while-revalidate path: serve old value, dispatch async refresh job, return immediately."},
+      {"weight": 2, "criterion": "Verification: load test (oha/wrk/ab) hitting the endpoint after Redis flush; before fix DB CPU spikes, after fix only one query runs."},
+      {"weight": 2, "criterion": "Mentions reviewing the eviction policy (cache should be allkeys-lru, distinct from queue Redis with noeviction)."},
+      {"weight": 1, "criterion": "Recognizes that increasing TTL is not the fix (just delays the same incident)."},
+      {"weight": 1, "criterion": "Cache key includes tenant scoping if the app is multi-tenant."}
+    ],
+    "must_avoid": ["just increase the TTL", "remove the cache entirely", "add more Redis nodes (without addressing the stampede)"]
+  },
+  {
+    "id": "vps-deploy-502",
+    "skill": "bosskuai-vps-docker-deployment",
+    "task": "Every deploy gives users 502s for 20-30 seconds while the app container restarts. Help me get to zero-downtime deploys without moving off Docker Compose on a single VPS.",
+    "rubric": [
+      {"weight": 3, "criterion": "Adds healthcheck to the app container AND has the proxy depend on service_healthy."},
+      {"weight": 3, "criterion": "Recommends running TWO app replicas behind the proxy and rolling them, OR using the proxy's retry/lb_try_duration to bridge restart gap."},
+      {"weight": 2, "criterion": "Specifies graceful shutdown (SIGTERM handling, drain in-flight requests) on the app container."},
+      {"weight": 2, "criterion": "Verification: continuous curl loop during deploy; expects zero 502 responses."},
+      {"weight": 1, "criterion": "Mentions queue:restart on the new container to avoid stale workers."},
+      {"weight": 1, "criterion": "Does NOT recommend introducing Kubernetes as the fix (overkill for the stated constraint)."}
+    ],
+    "must_avoid": ["just add Kubernetes", "deploy at low-traffic times", "ignore it"]
+  },
+  {
+    "id": "db-pagination-slow",
+    "skill": "bosskuai-database-engineering",
+    "task": "Reports page is fast on page 1-3 but slow on page 50+. The query is `SELECT * FROM events WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 25 OFFSET ?`. Tell me the cause and fix.",
+    "rubric": [
+      {"weight": 3, "criterion": "Identifies OFFSET pagination as the cause (DB still scans skipped rows). Composite index helps but doesn't eliminate the cost at high offsets."},
+      {"weight": 3, "criterion": "Fix: keyset (cursor) pagination using WHERE created_at < :last_seen ORDER BY created_at DESC LIMIT 25, with an index on (tenant_id, created_at DESC)."},
+      {"weight": 2, "criterion": "Provides EXPLAIN before/after as the verification: rows examined drops from O(offset) to O(limit)."},
+      {"weight": 2, "criterion": "Notes the API contract change: cursor instead of page number."},
+      {"weight": 1, "criterion": "Mentions covering index if SELECT * is needed, or trimming the column list."},
+      {"weight": 1, "criterion": "Does NOT recommend caching the entire result set as the primary fix."}
+    ],
+    "must_avoid": ["just cache it", "denormalize", "just add LIMIT (without offset fix)"]
+  },
+  {
+    "id": "cofounder-prioritization",
+    "skill": "cofounder",
+    "task": "I'm a solo founder. I have three things on my plate this week: (a) close two warm B2B leads who asked for a proposal, (b) ship a payments bug that's blocking 3 customers from upgrading, (c) write the first draft of our SEO landing page strategy. I have ~25 working hours. What should I do, in what order, and what should I explicitly NOT do?",
+    "rubric": [
+      {"weight": 3, "criterion": "Picks ONE recommendation, not 'it depends'. The recommendation explains tradeoff (revenue at risk vs scope blocked vs growth investment)."},
+      {"weight": 3, "criterion": "Explicit de-scope: states what NOT to do this week, not just what to do."},
+      {"weight": 2, "criterion": "Routes to specialist skills (sales-strategy, laravel-development or bug-finding, seo-geo) rather than answering all three from the cofounder skill alone."},
+      {"weight": 2, "criterion": "Defines a measurable signal of success per item (e.g. 'proposal sent by Wed', '3 customers unblocked', 'SEO draft reviewed by Fri')."},
+      {"weight": 1, "criterion": "Calls out the smallest proof step for the de-scoped item so it isn't dropped, just deferred."},
+      {"weight": 1, "criterion": "Does NOT moralize, motivate, or tell the founder to 'work smarter not harder'."}
+    ],
+    "must_avoid": ["it depends", "you got this", "balance is important", "everything is a priority"]
+  }
+]
