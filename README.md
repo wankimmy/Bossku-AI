@@ -62,6 +62,99 @@ The dashboard (v1.8.8+) provides a safer alternative — dry-run plan, confirm t
 
 ---
 
+## Install into a specific tool
+
+### Claude Code
+
+1. **Clone and install:**
+
+   ```bash
+   git clone https://github.com/wankimmy/Bossku-AI bosskuAI
+   ./bosskuAI/scripts/install.sh /path/to/your/project --profile dev
+   ```
+
+   This copies `CLAUDE.md`, `.claude/` (commands, rules, settings), `.claude-plugin/`, `ai-assistant/`, and `AGENTS.md` into your project.
+
+2. **Open the project in Claude Code** (`claude` CLI or the Claude Code VS Code/JetBrains extension).
+
+3. **Test plugin loading** (optional):
+
+   ```bash
+   cd /path/to/your/project
+   claude --plugin-dir . --debug
+   /plugin validate
+   ```
+
+4. **Activate** — start any prompt with `bossku`.
+
+5. **(Optional) Enable hooks:**
+
+   ```bash
+   ./bosskuAI/scripts/install.sh /path/to/your/project --profile dev --with-hooks
+   ```
+
+6. **(Optional) Wire MCPs** — merge `mcp-configs/claude-mcp-servers.json` into `~/.claude.json` under `mcpServers`, restart Claude Code, and verify with `/mcp`. Full guide in `mcp-configs/README.md`.
+
+---
+
+### Cursor
+
+1. **Clone and install:**
+
+   ```bash
+   git clone https://github.com/wankimmy/Bossku-AI bosskuAI
+   ./bosskuAI/scripts/install.sh /path/to/your/project --profile dev
+   ```
+
+   This places `.cursor/rules/bosskuai.mdc` (with `alwaysApply: true`) and `AGENTS.md` into your project.
+
+2. **Open the project in Cursor.** The `.cursor/rules/` file is picked up automatically — no manual step needed.
+
+3. **Verify the rule loaded:**
+   - Open **Cursor Settings** (`Cmd+Shift+J` / `Ctrl+Shift+J`) → **Rules**
+   - You should see `bosskuai` listed under project rules
+   - Toggle it on if it appears disabled
+
+4. **Activate** — start any Composer or chat prompt with `bossku`.
+
+5. **(Optional) Wire MCPs** — go to **Cursor Settings → Features → MCP Servers**, click **Add MCP Server**, and use the `command`/`args` values from `mcp-configs/cursor-mcp-servers.json`. Full guide in `mcp-configs/README.md`.
+
+> Multi-agent flows (`/audit`, `/decide`, `/implement`) are Claude Code–only. On Cursor they work as manual prompt sequences — see `docs/multi-agent-architecture.md`.
+
+---
+
+### Codex
+
+1. **Clone and install:**
+
+   ```bash
+   git clone https://github.com/wankimmy/Bossku-AI bosskuAI
+   ./bosskuAI/scripts/install.sh /path/to/your/project --profile dev
+   ```
+
+   This copies `AGENTS.md` and `.codex/` (including `config.toml` and `AGENTS.md`) into your project. Codex reads `AGENTS.md` from the project root automatically.
+
+2. **Open the project in Codex.**
+
+3. **(Optional) Wire MCPs** — edit `.codex/config.toml`, uncomment the `[mcp_servers.<name>]` blocks you want, and add your API keys. Full guide in `mcp-configs/README.md`.
+
+4. **Activate** — start any prompt with `bossku`.
+
+---
+
+### After installing on any tool
+
+Run the workspace validation to confirm everything landed correctly:
+
+```bash
+bash scripts/check-workspace.sh . --profile full
+python3 scripts/eval_workspace.py
+```
+
+Then follow `WORKSPACE-ONBOARDING.md` to initialize project memory.
+
+---
+
 ## Local dashboard (v1.8.8+)
 
 Self-hosted, loopback-only UI for inspecting the workspace.
