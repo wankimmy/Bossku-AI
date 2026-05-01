@@ -111,6 +111,7 @@
   .eval-card h4 { margin: 0; font-size: 13px; }
   .eval-card .headline { color: var(--good); font-family: monospace; font-size: 12px; margin: 4px 0; }
   .eval-card.fail .headline { color: var(--bad); }
+  .eval-card .target { color: var(--muted); font-size: 11px; margin-top: 4px; }
 
   .vector-result { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 10px; margin-bottom: 8px; font-size: 12px; }
   .vector-result .src { color: var(--muted); font-size: 11px; }
@@ -177,7 +178,7 @@
     <!-- Evals view -->
     <div class="view panel-view" id="view-evals">
       <h2>Eval status</h2>
-      <p class="muted">Live results from the eval suite. Click "Run all" to refresh.</p>
+      <p class="muted">Live results from the eval suite, including the Codex plugin package score. Click "Run all" to refresh.</p>
       <button onclick="runEvals()">Run all evals</button>
       <span id="evals-running" class="muted" style="margin-left: 8px;"></span>
       <div id="evals-out" style="margin-top: 14px;"></div>

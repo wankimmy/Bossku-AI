@@ -331,6 +331,81 @@ EVAL_SCRIPTS = [
     ("routing_generalization", "scripts/eval_routing_generalization.py", []),
 ]
 
+PLUGIN_EVAL_PACKAGE = ROOT / "packages" / "bossku-ai"
+
+
+def _plugin_eval_command(target: Path) -> list[str] | None:
+    """Return a runnable plugin-eval command for this local machine."""
+    cli = shutil.which("plugin-eval")
+    if cli:
+        return [cli, "analyze", str(target), "--format", "markdown"]
+
+    script = (
+        Path.home()
+        / ".codex"
+        / "plugins"
+        / "cache"
+        / "openai-curated"
+        / "plugin-eval"
+        / "6807e4de"
+        / "scripts"
+        / "plugin-eval.js"
+    )
+    if script.exists() and shutil.which("node"):
+        return ["node", str(script), "analyze", str(target), "--format", "markdown"]
+    return None
+
+
+def _headline_from_plugin_eval(output: str) -> str:
+    score = grade = risk = ""
+    for line in output.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("- Score:"):
+            score = score or stripped.removeprefix("- Score:").strip()
+        elif stripped.startswith("- Grade:"):
+            grade = grade or stripped.removeprefix("- Grade:").strip()
+        elif stripped.startswith("- Risk:"):
+            risk = risk or stripped.removeprefix("- Risk:").strip()
+    parts = [
+        part
+        for part in (
+            f"Score {score}" if score else "",
+            f"Grade {grade}" if grade else "",
+            f"Risk {risk}" if risk else "",
+        )
+        if part
+    ]
+    return " · ".join(parts) if parts else (output.splitlines()[0][:120] if output else "")
+
+
+def run_plugin_package_eval() -> dict:
+    target_rel = str(PLUGIN_EVAL_PACKAGE.relative_to(ROOT))
+    if not PLUGIN_EVAL_PACKAGE.exists():
+        return {"status": "missing", "target": target_rel}
+    command = _plugin_eval_command(PLUGIN_EVAL_PACKAGE)
+    if command is None:
+        return {
+            "status": "missing",
+            "target": target_rel,
+            "headline": "plugin-eval CLI not found",
+            "output_tail": "Install or expose plugin-eval, or keep the local Codex plugin-eval cache available.",
+        }
+    try:
+        p = subprocess.run(command, cwd=str(ROOT), capture_output=True, text=True, timeout=120)
+        output = p.stdout
+        return {
+            "status": "pass" if p.returncode == 0 else "fail",
+            "exit": p.returncode,
+            "target": target_rel,
+            "command": " ".join(command),
+            "headline": _headline_from_plugin_eval(output),
+            "output_tail": "\n".join(output.splitlines()[-12:]),
+        }
+    except subprocess.TimeoutExpired:
+        return {"status": "timeout", "target": target_rel}
+    except Exception as e:
+        return {"status": "error", "target": target_rel, "message": str(e)}
+
 
 def run_evals() -> dict:
     results = {}
@@ -380,6 +455,7 @@ def run_evals() -> dict:
             results[name] = {"status": "timeout"}
         except Exception as e:
             results[name] = {"status": "error", "message": str(e)}
+    results["codex_plugin_package"] = run_plugin_package_eval()
     return results
 
 

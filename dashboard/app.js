@@ -305,10 +305,14 @@ async function runEvals() {
   $("#evals-running").textContent = "";
   $("#evals-out").innerHTML = Object.entries(data).map(([name, r]) => {
     const cls = r.status === "pass" ? "" : "fail";
+    const target = r.target ? `<div class="target">Target: <code>${escapeHtml(r.target)}</code></div>` : "";
+    const command = r.command ? `<div class="target">Command: <code>${escapeHtml(r.command)}</code></div>` : "";
     return `
       <div class="eval-card ${cls}">
         <h4>${escapeHtml(name)} <span class="pill ${r.status === "pass" ? "good" : "bad"}">${r.status}</span></h4>
         <div class="headline">${escapeHtml(r.headline || "")}</div>
+        ${target}
+        ${command}
         <pre style="font-size: 11px;">${escapeHtml(r.output_tail || "")}</pre>
       </div>
     `;
