@@ -1,7 +1,3 @@
-Here is a **full simplified README** — clean, public-friendly, easy to understand, no overload.
-
----
-
 # BosskuAI
 
 BosskuAI is a **local AI cofounder layer** for developers.
