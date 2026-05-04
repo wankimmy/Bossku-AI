@@ -4,7 +4,7 @@ $Dest = Join-Path $Root ".claude\settings.json"
 {
   "bosskuai": {
     "hooks": "disabled-by-default",
-    "note": "Run scripts/enable-hooks.sh or scripts/enable-hooks.ps1 to enable advisory Claude Code hooks."
+    "note": "Run scripts/enable-hooks.sh or scripts/enable-hooks.ps1 to enable advisory Claude Code hooks with auto memory capture."
   }
 }
 '@ | Set-Content -LiteralPath $Dest -Encoding UTF8

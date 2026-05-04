@@ -5,7 +5,7 @@ cat > "$root/.claude/settings.json" <<'JSON'
 {
   "bosskuai": {
     "hooks": "disabled-by-default",
-    "note": "Run scripts/enable-hooks.sh or scripts/enable-hooks.ps1 to enable advisory Claude Code hooks."
+    "note": "Run scripts/enable-hooks.sh or scripts/enable-hooks.ps1 to enable advisory Claude Code hooks with auto memory capture."
   }
 }
 JSON

@@ -8,14 +8,14 @@ Usage:
   ./scripts/install.sh <target-dir> [--skills-only|--sync-layer] [--force] [--skip-check] [--preserve-memory] [--dry-run]
 
 Profiles:
-  core    Small workspace layer: memory, routing, human-output, token-saver, search-first, ratchet.
+  core    Small workspace layer: permanent memory, routing, human-output, token-saver, search-first, ratchet.
   dev     Core + engineering/review/devops/testing skills.
   growth  Core + marketing, SEO, sales, research, launch skills.
   design  Core + UI/UX, design systems, 3D/animation skills.
   full    Everything. Default.
 
 Options:
-  --with-hooks       Install advisory Claude Code hooks by copying settings.hooks.example.json to .claude/settings.json.
+  --with-hooks       Install Claude Code advisory hooks, including auto memory capture and vector sync.
   --force            Back up conflicting entries, then replace.
   --preserve-memory  Restore existing ai-assistant/memory/ after install.
   --skills-only      Copy only ai-assistant/skills, references, and scripts.
@@ -93,7 +93,7 @@ apply_hooks_choice() {
 {
   "bosskuai": {
     "hooks": "disabled-by-default",
-    "note": "Run scripts/enable-hooks.sh or scripts/enable-hooks.ps1 to enable advisory Claude Code hooks."
+    "note": "Run scripts/enable-hooks.sh or scripts/enable-hooks.ps1 to enable advisory Claude Code hooks with auto memory capture."
   }
 }
 JSON
@@ -112,7 +112,7 @@ copy_selected_skills() {
 }
 
 profile_skills() {
-  local core=(bosskuai-workspace-assistant bosskuai-project-understanding bosskuai-search-first bosskuai-human-output bosskuai-token-saver bosskuai-ratchet-loop bosskuai-continuous-learning bosskuai-context-limit-continuation)
+  local core=(bosskuai-workspace-assistant bosskuai-project-understanding bosskuai-permanent-memory-orchestration bosskuai-search-first bosskuai-human-output bosskuai-token-saver bosskuai-ratchet-loop bosskuai-continuous-learning bosskuai-context-limit-continuation)
   local dev=(bosskuai-engineering-delivery bosskuai-rigorous-code-review bosskuai-bug-finding bosskuai-software-architecture bosskuai-codebase-analysis bosskuai-code-revamp bosskuai-coding-best-practices bosskuai-devops-iac bosskuai-docker bosskuai-vps-docker-deployment bosskuai-github-workflow bosskuai-integration-testing bosskuai-laravel-development bosskuai-database-engineering bosskuai-redis-caching-queues)
   local growth=(bosskuai-market-analysis bosskuai-marketing-growth bosskuai-seo-geo bosskuai-sales-strategy bosskuai-launch-commercialization bosskuai-competitor-intelligence bosskuai-customer-discovery bosskuai-growth-experiment bosskuai-lead-intelligence bosskuai-content-calendar)
   local design=(bosskuai-ui-ux-design-to-code bosskuai-design-systems bosskuai-3d-web-development bosskuai-gsap-animation bosskuai-lenis-smooth-scroll)
@@ -175,5 +175,5 @@ if (( had_memory )); then mkdir -p "$target_dir/ai-assistant/memory"; cp -a "$me
 
 echo "BosskuAI installed to: $target_dir"
 echo "Profile: $profile"
-(( with_hooks )) && echo "Hooks: enabled" || echo "Hooks: disabled by default"
+(( with_hooks )) && echo "Hooks: enabled with auto memory capture" || echo "Hooks: disabled by default"
 if (( skip_check == 0 )); then "$script_dir/check-workspace.sh" "$target_dir" --profile "$profile"; fi

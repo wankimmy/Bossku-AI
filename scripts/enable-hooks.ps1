@@ -6,4 +6,4 @@ if (-not (Test-Path $Src)) {
     exit 1
 }
 Copy-Item -LiteralPath $Src -Destination $Dest -Force
-Write-Host "BosskuAI advisory hooks enabled in .claude/settings.json"
+Write-Host "BosskuAI advisory hooks enabled in .claude/settings.json (auto memory capture + vector sync included)"

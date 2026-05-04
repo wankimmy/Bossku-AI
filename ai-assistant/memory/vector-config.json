@@ -43,7 +43,9 @@
     "ai-assistant/skills/bosskuai-coding-best-practices/SKILL.md": 0.04,
     "ai-assistant/skills/bosskuai-product-strategy/SKILL.md": 0.04,
     "ai-assistant/skills/bosskuai-project-understanding/SKILL.md": 0.04,
-    "ai-assistant/skills/bosskuai-rigorous-code-review/SKILL.md": 0.04
+    "ai-assistant/skills/bosskuai-rigorous-code-review/SKILL.md": 0.04,
+    "conversation-memory.md": 0.1,
+    "durable-memory.md": 0.14
   },
   "noise_markers": [
     "none yet",
@@ -96,6 +98,23 @@
       "workspace",
       "general routing",
       "assistant"
+    ],
+    "conversation-memory.md": [
+      "conversation memory",
+      "past conversation",
+      "chat history",
+      "user asked before",
+      "cross tool conversation",
+      "claude cursor codex memory"
+    ],
+    "durable-memory.md": [
+      "durable memory",
+      "permanent memory",
+      "saved memory",
+      "stable decision",
+      "user preference",
+      "workspace constraint",
+      "cross tool memory"
     ]
   },
   "intent_hints": [
@@ -235,10 +254,48 @@
         "skill"
       ],
       "boost": 0.9
+    },
+    {
+      "name": "past-conversation",
+      "phrases": [
+        "past conversation",
+        "previous chat",
+        "what did user ask",
+        "across claude cursor codex",
+        "conversation history",
+        "chat history"
+      ],
+      "boost_files": [
+        "conversation-memory.md"
+      ],
+      "boost_kinds": [
+        "memory"
+      ],
+      "boost": 1.0
+    },
+    {
+      "name": "permanent-memory",
+      "phrases": [
+        "permanent memory",
+        "durable memory",
+        "saved memory",
+        "remembered decision",
+        "stable constraint",
+        "user preference"
+      ],
+      "boost_files": [
+        "durable-memory.md"
+      ],
+      "boost_kinds": [
+        "memory"
+      ],
+      "boost": 1.1
     }
   ],
   "include": [
     "ai-assistant/memory/agent-profile.md",
+    "ai-assistant/memory/conversation-memory.md",
+    "ai-assistant/memory/durable-memory.md",
     "ai-assistant/memory/project-understanding.md",
     "ai-assistant/memory/plan-log.md",
     "ai-assistant/memory/learning-log.md",

@@ -8,4 +8,4 @@ if [[ ! -f "$src" ]]; then
   exit 1
 fi
 cp "$src" "$dest"
-echo "BosskuAI advisory hooks enabled in .claude/settings.json"
+echo "BosskuAI advisory hooks enabled in .claude/settings.json (auto memory capture + vector sync included)"

@@ -1,0 +1,11 @@
+# BosskuAI local automation cron example.
+# Replace /path/to/BosskuAI with your actual repo path.
+
+# Extract durable memory candidates from captured cross-tool conversations hourly.
+0 * * * * cd /path/to/BosskuAI && scripts/bosskuai memory extract >/tmp/bosskuai-memory-extract.log 2>&1
+
+# Re-sync vector memory hourly after extraction / manual approval.
+5 * * * * cd /path/to/BosskuAI && python3 ai-assistant/scripts/auto_memory.py sync >/tmp/bosskuai-memory-sync.log 2>&1
+
+# Run workspace evals daily.
+0 3 * * * cd /path/to/BosskuAI && scripts/bosskuai eval latest >/tmp/bosskuai-eval.log 2>&1

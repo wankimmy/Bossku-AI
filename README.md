@@ -4,14 +4,14 @@ A repo-local AI workspace layer for builders using Claude Code, Cursor, and Code
 
 BosskuAI gives those tools the same memory files, routing rules, skills, handoff habits, human-output checks, and token discipline. No hosted control plane. No claim that prompts magically make every answer better.
 
-Current version: **v1.8.9**. Skill count: **75**. Marquee playbooks at senior depth: **9**. Always-loaded prompt surface: ~877 tokens (−87.91% vs the pre-refactor baseline).
+Current version: **v1.9.5**. Skill count: **85**. Marquee playbooks at senior depth: **9**. Always-loaded prompt surface stays small; permanent memory and model routing load on demand.
 
 ---
 
 ## Why use it
 
-- Keep project memory in files, not only chat history.
-- Share one working style across Claude Code, Cursor, and Codex.
+- Keep project memory in files and local vector DB, not only chat history.
+- Share one working style and permanent memory across Claude Code, Cursor, and Codex.
 - Route tasks into focused skills instead of loading one giant prompt.
 - Reduce generic AI writing with `bosskuai-human-output`.
 - Compress noisy output/rules with `bosskuai-token-saver`.
@@ -24,7 +24,7 @@ Current version: **v1.8.9**. Skill count: **75**. Marquee playbooks at senior de
 - Not a hosted agent platform.
 - Not a replacement for tests or review.
 - Not a guarantee of lower token usage on every task.
-- Not a magic memory system; stale files can still mislead the model.
+- Not magic memory; stale or noisy memory can still mislead the model.
 - Not faster — multi-agent flows take 30–90s and cost more tokens. They earn their cost only on cross-domain audits, hard-to-undo decisions, and non-trivial code changes.
 
 ---
@@ -46,7 +46,7 @@ Profiles:
 
 | Profile | Use when |
 |---|---|
-| `core` | smallest practical layer: memory, routing, search-first, human-output, token-saver, ratchet |
+| `core` | smallest practical layer: permanent memory, routing, search-first, human-output, token-saver, ratchet |
 | `dev` | coding, review, architecture, Laravel, databases, Redis, Docker, VPS deployment, testing, GitHub workflow |
 | `growth` | SEO, GEO, marketing, content calendar, launch, customer discovery, sales, competitor research |
 | `design` | UI/UX, design systems, 3D, GSAP, Lenis |
@@ -155,6 +155,52 @@ Then follow `WORKSPACE-ONBOARDING.md` to initialize project memory.
 
 ---
 
+
+## Permanent memory + always-on model router
+
+BosskuAI now has a local-first permanent memory path:
+
+```bash
+python3 ai-assistant/scripts/auto_memory.py query "what did we decide about payments?" --limit 5
+python3 ai-assistant/scripts/auto_memory.py remember --tool cursor --kind durable "Decision: use PostgreSQL for the trend SaaS."
+python3 ai-assistant/scripts/auto_memory.py sync
+python3 ai-assistant/scripts/auto_memory.py status
+```
+
+Memory targets:
+
+| Kind | File | Indexed into vector DB |
+|---|---|---|
+| conversation | `ai-assistant/memory/conversation-memory.md` | yes |
+| durable | `ai-assistant/memory/durable-memory.md` | yes |
+| plan | `ai-assistant/memory/plan-log.md` | yes |
+| learning | `ai-assistant/memory/learning-log.md` | yes |
+| bug | `ai-assistant/memory/bug-patterns.md` | yes |
+| market | `ai-assistant/memory/market-notes.md` | yes |
+| raw audit | `ai-assistant/memory/conversation-log.jsonl` | no, kept as audit trail |
+
+Claude Code hooks can capture user prompts and sync the vector DB automatically:
+
+```bash
+bash scripts/enable-hooks.sh
+```
+
+Cursor and Codex do not expose the same universal hook surface in every environment, so BosskuAI enforces the behavior through project rules/config and the shared `auto_memory.py` CLI.
+
+Meaningful work uses this model flow by default:
+
+1. retrieve memory
+2. plan with frontier model
+3. execute with lower-cost model when safe
+4. audit with frontier model
+5. save durable memory and sync vector DB
+
+High-risk work escalates execution back to the frontier model: auth, payments, privacy, migrations, data loss, security, multi-service architecture, or repeated failed attempts.
+
+See `ai-assistant/references/always-on-model-router.md` and `ai-assistant/skills/bosskuai-permanent-memory-orchestration/SKILL.md`.
+
+---
+
 ## Local dashboard (v1.8.8+)
 
 Self-hosted, loopback-only UI for inspecting the workspace.
@@ -241,24 +287,24 @@ bash scripts/check-workspace.sh . --profile full       # workspace structure
 bash scripts/verify-skill-references.sh .              # all references resolve
 bash scripts/validate-skill-index.sh .                 # index <-> folders match
 python3 -S scripts/eval_workspace.py                   # routing/retrieval/workflow + token surface
-python3 -S scripts/eval_expert_coverage.py             # 12 expert benchmark cases
+python3 -S scripts/eval_expert_coverage.py             # 21 expert benchmark cases
 python3 -S scripts/eval_adversarial_routing.py         # 8 symptom-language cases (no skill jargon)
 python3 -S scripts/eval_routing_generalization.py      # 8 fresh cases not used to design triggers
 python3 -S scripts/eval_token_budget.py --emit-prompts # generates prompts for cost comparison
 python3 -S scripts/eval_llm_quality.py --emit-prompts  # generates prompts for graded LLM-quality runs
 ```
 
-Current scores (v1.8.9):
+Current scores (v1.9.5):
 
 | Eval | Score | Notes |
 |---|---|---|
 | Workspace routing-fit | 18/18 | keyword-matched (regression check) |
 | Workspace retrieval | 8/8 (top-1 8/8) | uses production vector_memory scorer |
 | Workspace workflow | 3/3 | end-to-end skill chains |
-| Workspace prompt-surface | −87.91% | vs pre-refactor baseline |
-| Expert coverage | 12/12 | each marquee skill must satisfy a `must_cover` keyword list |
+| Workspace prompt-surface | −77.09% | vs pre-refactor baseline; reliability/continuation rules add some always-loaded instructions |
+| Expert coverage | 21/21 | expanded cofounder expert coverage, including billing, tenant isolation, observability, QA, PDPA, cost, support, prompt-injection defense, and agent evals |
 | Adversarial routing | 8/8 GREEN | symptom-language cases |
-| Routing generalization | 7/8 GREEN | fresh symptom cases (the remaining failure is preserved honestly, not over-fitted) |
+| Routing generalization | 8/8 GREEN | fresh symptom cases not used to design the original routing set |
 | LLM-quality | scaffold | run-graded; harness produces deterministic scores from external grader output |
 | Token-budget | scaffold | run-graded; reads token usage JSONs from real Claude Code sessions |
 
@@ -349,6 +395,9 @@ Risk/rollback: [main risk + mitigation]
 
 | Version | Headline | Notes |
 |---|---|---|
+| **v1.9.5** | Reliability hardening + 5/5 audit fixes | Fixed non-blocking memory capture, added guaranteed run/continuation lifecycle, session commands, tenant/security routing, token-budget command, memory doctor, and 9 missing cofounder expert skills. |
+| **v1.9.4** | No-UI command center + memory inbox | Added CLI command center, structured run packets, risk-aware model routing, memory inbox approval flow, system state, and cron automation examples. |
+| **v1.9.3** | Permanent vector memory + always-on model router | Added `auto_memory.py`, durable/conversation memory files, Claude hook capture, cross-tool model phase policy, and `bosskuai-permanent-memory-orchestration`. |
 | **v1.8.9** | Engineering principles skill (Karpathy frame) | New tiny skill, on-demand load, properly attributed (MIT). Did not duplicate existing skills. |
 | **v1.8.8** | Local dashboard | D3 mindmap, memory viewer, vector DB query, eval status, safe action buttons with dry-run + backup. Pure stdlib. |
 | **v1.8.7** | Token economics + minimum-context dispatch | Slash commands enforce explicit per-sub-agent context budget. Token-budget eval scaffold. Per-surface caching guide. |
@@ -370,7 +419,7 @@ A few things this README will not claim:
 - The release-history table above does not say "answers got better." That requires running `eval_llm_quality.py` with a real grader, which is the user's measurement, not this repo's claim.
 - The token-budget table does not say "deep-mode is always cheaper." With caching working it's 1.1–1.5×; without, 2–3×. The `eval_token_budget.py` harness measures which world a given session is in.
 - The marquee-playbook depth table does not say "Bossku is now expert at all 9 domains." It says nine playbooks contain senior-level worked examples and verification steps. Whether the agent applies them well in any given task is a separate measurement.
-- The skill count (75) is not a quality signal. Most of the load-bearing work happens in the 9 marquee playbooks plus the cofounder skill. The other ~65 are checklists ranging from adequate to thin.
+- The skill count (76) is not a quality signal. Most of the load-bearing work happens in the 9 marquee playbooks plus the cofounder skill. The other ~65 are checklists ranging from adequate to thin.
 
 The next-step checklist for anyone serious about validating this:
 

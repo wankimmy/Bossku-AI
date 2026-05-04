@@ -1,3 +1,78 @@
+# Changelog
+
+## v1.9.5 - Reliability Hardening and 5/5 Audit Fixes
+
+- Fixed orchestrator memory subprocess calls so they never inherit stdin and cannot hang during `scripts/bosskuai run`.
+- Added structured run completion with outcome/audit memory save and active-continuation clearing.
+- Added `scripts/bosskuai continuation show|claim|clear` for honest cross-tool takeover between Claude Code, Cursor, and Codex.
+- Added `scripts/bosskuai session start|end` plus session-log support for every tool.
+- Added memory doctor, memory autopromote, stronger secret redaction, non-blocking stdin reads, and Claude Stop-hook extraction.
+- Strengthened risk detection and routing for tenant isolation/cross-organization data exposure.
+- Added 9 missing cofounder expert skills: SaaS billing ops, tenant isolation security, observability/SRE, QA automation, Malaysia PDPA privacy, cost optimization, customer success/support, prompt-injection defense, and eval-driven agent improvement.
+- Expanded expert coverage evals from 12 to 21 cases.
+- Updated version to v1.9.5 and skill count to 85.
+
+## v1.9.3 — Permanent vector memory + always-on model router
+
+## v1.9.4 - No-UI Command Center, Run Orchestration, and Memory Inbox
+
+- Added `scripts/bosskuai` CLI command center.
+- Added structured Plan → Execute → Audit → Memory run packets under `ai-assistant/runs/`.
+- Added always-on model routing scripts with risk escalation for auth, payments, security, privacy, migrations, production, secrets, and data-loss work.
+- Added local memory extraction into `ai-assistant/memory/inbox.jsonl`.
+- Added memory approval/rejection CLI flow that promotes approved memories into durable memory and syncs vector DB.
+- Added `ai-assistant/runtime/system_state.json` for command-center state without a UI.
+- Added cron example for memory extraction, vector sync, and eval checks.
+
+
+Adds the missing runtime layer for the workflow: durable cross-tool memory and a plan/execution/audit model policy.
+
+### Added
+
+- **`ai-assistant/scripts/auto_memory.py`** — local-first memory CLI for Claude Code, Cursor, and Codex.
+  - `query` wraps vector DB retrieval.
+  - `remember` writes durable entries to the right memory file and syncs vector DB.
+  - `capture` supports hook payloads and deduplicates repeated events.
+  - `status` shows memory health.
+- **`ai-assistant/memory/conversation-memory.md`** — indexed cross-tool conversation/request memory.
+- **`ai-assistant/memory/durable-memory.md`** — indexed stable decisions, preferences, and constraints.
+- **`ai-assistant/memory/conversation-log.jsonl`** — raw local audit trail, intentionally not indexed.
+- **`ai-assistant/skills/bosskuai-permanent-memory-orchestration/SKILL.md`** — routing skill for permanent memory, vector DB sync, and cross-tool context.
+- **`ai-assistant/references/always-on-model-router.md`** — frontier plan → lower-cost execute → frontier audit protocol.
+- **`.claude/settings.hooks.example.json`** — Claude Code hook config that captures user prompts and syncs vector memory automatically.
+
+### Changed
+
+- `AGENTS.md`, `CLAUDE.md`, `.cursor/rules/bosskuai.mdc`, and `.codex/AGENTS.md` now enforce:
+  1. retrieve memory first,
+  2. plan with frontier model,
+  3. execute with lower-cost model when safe,
+  4. audit with frontier model,
+  5. save durable memory and sync vector DB.
+- `vector-config.json` now indexes `conversation-memory.md` and `durable-memory.md` with retrieval hints for past conversations and permanent memory.
+- `scripts/install.sh` core profile includes the permanent-memory orchestration skill.
+- `scripts/enable-hooks.*` now enable auto memory capture plus vector sync.
+
+### Honest framing
+
+- Claude Code can use hooks for automatic capture when enabled.
+- Cursor and Codex do not expose one universal hook surface in every environment, so BosskuAI enforces the behavior through rules/config plus the shared `auto_memory.py` CLI.
+- This captures future conversations and durable summaries. It cannot recover old chat history from tools that never wrote it to the repo.
+
+### Validation
+
+Run before release:
+
+```bash
+bash scripts/check-workspace.sh . --profile full
+bash scripts/validate-skill-index.sh .
+python3 -S scripts/eval_workspace.py
+python3 ai-assistant/scripts/auto_memory.py remember --tool test --kind durable "Decision: test durable memory write."
+python3 ai-assistant/scripts/auto_memory.py query "test durable memory" --limit 3
+```
+
+---
+
 ## v1.8.9 — Engineering principles skill (Karpathy framing)
 
 A new tiny skill that codifies four widely-recognized engineering principles as a routable BosskuAI skill, with attribution to the public framing they came from.

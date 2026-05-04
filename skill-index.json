@@ -1,5 +1,5 @@
 {
-  "version": "1.8.9",
+  "version": "1.9.5",
   "generated_from": [
     "AGENTS.md",
     "ai-assistant/references/workspace-layer-architecture.md"
@@ -54,7 +54,7 @@
     "specialist_policy": "Load specialist skills only when the request or repo evidence clearly requires them. Prefer human-output for public copy and token-saver only when compression is explicit.",
     "manual_only_policy": "Manual-only specialists should activate only from explicit wording or strong domain evidence, not from vague overlap.",
     "alias_policy": "Deprecated alias skills remain for compatibility and should route to their replacement skill.",
-    "evaluation_note": "Routing benchmarks are task-fit and workflow proxies, not guarantees of answer accuracy. v1.8.2 adds Laravel, database, Redis, VPS Docker deployment, and content calendar specialists.",
+    "evaluation_note": "Routing benchmarks are task-fit and workflow proxies, not guarantees of answer accuracy. v1.9.5 adds reliability hardening, continuation, token measurement, tenant isolation, billing ops, observability, QA automation, PDPA privacy, cost control, customer success, prompt-injection defense, and eval-driven agent improvement.",
     "clusters": [
       "orchestration",
       "product",
@@ -123,6 +123,29 @@
         "understand codebase",
         "architecture map",
         "source of truth"
+      ]
+    },
+    {
+      "id": "bosskuai-permanent-memory-orchestration",
+      "cluster": "orchestration",
+      "status": "active",
+      "triggers": [
+        "permanent memory",
+        "vector db memory",
+        "cross-tool memory",
+        "auto save memory",
+        "past conversation across tools"
+      ],
+      "keywords": [
+        "semantic memory",
+        "conversation memory",
+        "durable memory",
+        "vector db",
+        "sqlite memory",
+        "claude cursor codex",
+        "auto_memory",
+        "memory sync",
+        "model router"
       ]
     },
     {
@@ -596,7 +619,14 @@
         "cross-tenant leak",
         "data from another",
         "showing data from",
-        "belong to another"
+        "belong to another",
+        "account showing rows",
+        "rows belong to",
+        "belong to BetaCorp",
+        "another organization data",
+        "different organization data",
+        "other organization rows",
+        "tenant data leak"
       ],
       "keywords": [
         "auth",
@@ -614,7 +644,12 @@
         "replay",
         "dependency CVE",
         "incident rollback",
-        "authorization"
+        "authorization",
+        "organization data",
+        "company rows",
+        "account rows",
+        "cross tenant access",
+        "tenant data leak"
       ]
     },
     {
@@ -652,12 +687,19 @@
       "status": "active",
       "triggers": [
         "workflow correctness",
-        "state transitions"
+        "state transitions",
+        "wrong organization rows",
+        "workflow exposes wrong account",
+        "tenant workflow bug"
       ],
       "keywords": [
         "invariants",
         "approval flow",
-        "edge cases"
+        "edge cases",
+        "organization scope",
+        "tenant scope",
+        "business rule access",
+        "approval boundary"
       ]
     },
     {
@@ -1355,7 +1397,10 @@
         "listener dispatch",
         "worker crashes",
         "queue worker crash",
-        "background process leak"
+        "background process leak",
+        "policy scope bug",
+        "Eloquent tenant scope",
+        "Laravel tenant data leak"
       ],
       "keywords": [
         "Laravel",
@@ -1375,7 +1420,11 @@
         "service container",
         "Octane",
         "tenant",
-        "webhook"
+        "webhook",
+        "tenant_id",
+        "global scope",
+        "policy scope",
+        "organization_id"
       ]
     },
     {
@@ -1523,6 +1572,257 @@
         "Instagram",
         "Malay English",
         "campaign"
+      ]
+    },
+    {
+      "id": "bosskuai-saas-billing-ops",
+      "cluster": "startup",
+      "status": "active",
+      "triggers": [
+        "SaaS billing ops",
+        "subscription lifecycle",
+        "failed payment dunning",
+        "invoice receipt flow",
+        "plan upgrade downgrade",
+        "entitlement gating"
+      ],
+      "keywords": [
+        "subscription",
+        "billing",
+        "invoice",
+        "receipt",
+        "dunning",
+        "failed payment",
+        "proration",
+        "trial",
+        "plan change",
+        "entitlement",
+        "tax",
+        "recurring payment",
+        "cancellation"
+      ]
+    },
+    {
+      "id": "bosskuai-tenant-isolation-security",
+      "cluster": "security",
+      "status": "active",
+      "triggers": [
+        "tenant isolation",
+        "cross-tenant data leak",
+        "user sees another organization data",
+        "different company rows",
+        "organization scoping bug",
+        "multi tenant security",
+        "rows that belong",
+        "rows belong to",
+        "organization scoping",
+        "tenant organization scoping",
+        "multi tenant organization scoping",
+        "cross tenant data leak risk",
+        "sees rows that belong"
+      ],
+      "keywords": [
+        "tenant",
+        "organization",
+        "organisation",
+        "company rows",
+        "other customer data",
+        "cross tenant",
+        "tenant_id",
+        "row level security",
+        "policy scope",
+        "authorization",
+        "data leak",
+        "multi tenant",
+        "Acme BetaCorp",
+        "rows belong",
+        "organization scoping"
+      ]
+    },
+    {
+      "id": "bosskuai-observability-sre",
+      "cluster": "engineering",
+      "status": "active",
+      "triggers": [
+        "observability setup",
+        "SLO alerts",
+        "production monitoring",
+        "logs metrics tracing",
+        "incident alerting",
+        "health check dashboard"
+      ],
+      "keywords": [
+        "observability",
+        "logs",
+        "metrics",
+        "tracing",
+        "alerts",
+        "SLO",
+        "SLI",
+        "APM",
+        "uptime",
+        "health check",
+        "dashboard",
+        "incident",
+        "monitoring",
+        "error budget"
+      ]
+    },
+    {
+      "id": "bosskuai-qa-automation-strategy",
+      "cluster": "quality",
+      "status": "active",
+      "triggers": [
+        "QA automation strategy",
+        "Playwright test plan",
+        "Cypress regression",
+        "automated test coverage",
+        "CI test gate",
+        "release testing"
+      ],
+      "keywords": [
+        "QA",
+        "automation",
+        "Playwright",
+        "Cypress",
+        "Pest",
+        "PHPUnit",
+        "feature test",
+        "integration test",
+        "regression",
+        "fixtures",
+        "CI gate",
+        "test pyramid"
+      ]
+    },
+    {
+      "id": "bosskuai-malaysia-pdpa-privacy",
+      "cluster": "security",
+      "status": "active",
+      "triggers": [
+        "Malaysia PDPA",
+        "PDPA privacy review",
+        "personal data Malaysia",
+        "data retention policy",
+        "privacy notice Malaysia",
+        "data processor review"
+      ],
+      "keywords": [
+        "PDPA",
+        "Malaysia privacy",
+        "personal data",
+        "consent",
+        "retention",
+        "data subject",
+        "processor",
+        "privacy notice",
+        "data minimization",
+        "cross border transfer"
+      ]
+    },
+    {
+      "id": "bosskuai-cost-optimization",
+      "cluster": "startup",
+      "status": "active",
+      "triggers": [
+        "cost optimization",
+        "reduce cloud bill",
+        "model cost control",
+        "token budget measurement",
+        "API spend too high",
+        "server cost review"
+      ],
+      "keywords": [
+        "cost",
+        "bill",
+        "spend",
+        "token budget",
+        "unit economics",
+        "cloud cost",
+        "API cost",
+        "server cost",
+        "FinOps",
+        "cache cost",
+        "LLM cost",
+        "usage JSON"
+      ]
+    },
+    {
+      "id": "bosskuai-customer-success-support",
+      "cluster": "startup",
+      "status": "active",
+      "triggers": [
+        "customer success SOP",
+        "support ticket workflow",
+        "onboarding checklist",
+        "churn reduction",
+        "customer support playbook",
+        "retention workflow"
+      ],
+      "keywords": [
+        "customer success",
+        "support",
+        "ticket",
+        "SOP",
+        "onboarding",
+        "retention",
+        "churn",
+        "FAQ",
+        "helpdesk",
+        "escalation",
+        "CSAT",
+        "NPS",
+        "feedback loop"
+      ]
+    },
+    {
+      "id": "bosskuai-prompt-injection-defense",
+      "cluster": "security",
+      "status": "active",
+      "triggers": [
+        "prompt injection defense",
+        "memory poisoning",
+        "untrusted document attack",
+        "tool abuse",
+        "agent permission hardening",
+        "AI agent security"
+      ],
+      "keywords": [
+        "prompt injection",
+        "memory poisoning",
+        "untrusted content",
+        "tool abuse",
+        "MCP risk",
+        "agent security",
+        "least privilege",
+        "sandbox",
+        "exfiltration",
+        "malicious instructions"
+      ]
+    },
+    {
+      "id": "bosskuai-eval-driven-agent-improvement",
+      "cluster": "quality",
+      "status": "active",
+      "triggers": [
+        "agent evals",
+        "eval driven improvement",
+        "routing benchmark",
+        "retrieval benchmark",
+        "LLM quality eval",
+        "agent regression test"
+      ],
+      "keywords": [
+        "eval",
+        "benchmark",
+        "routing cases",
+        "retrieval cases",
+        "quality scorecard",
+        "regression harness",
+        "agent improvement",
+        "golden cases",
+        "failure mode",
+        "ratchet loop"
       ]
     }
   ]

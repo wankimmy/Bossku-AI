@@ -231,5 +231,139 @@
       "SEO/GEO",
       "sales"
     ]
+  },
+  {
+    "name": "SaaS billing operations",
+    "prompt": "Review our SaaS subscription lifecycle with failed payment dunning, invoices, receipts, plan upgrades, cancellation, recurring billing, entitlement gating, and refund edge cases.",
+    "expected_skill": "bosskuai-saas-billing-ops",
+    "expected_references": [
+      "ai-assistant/references/playbooks/bosskuai-saas-billing-ops-playbook.md"
+    ],
+    "must_cover": [
+      "subscription",
+      "invoice",
+      "dunning",
+      "entitlement",
+      "refund"
+    ]
+  },
+  {
+    "name": "Tenant isolation security",
+    "prompt": "A user from Acme sees rows that belong to BetaCorp. Audit this multi tenant organization scoping and cross-tenant data leak risk.",
+    "expected_skill": "bosskuai-tenant-isolation-security",
+    "expected_references": [
+      "ai-assistant/references/playbooks/bosskuai-tenant-isolation-security-playbook.md"
+    ],
+    "must_cover": [
+      "cross-tenant",
+      "tenant",
+      "authorization",
+      "regression"
+    ]
+  },
+  {
+    "name": "Observability SRE",
+    "prompt": "Set up production observability with logs, metrics, tracing, health checks, alerts, SLO, dashboard, and incident runbook for our Laravel SaaS.",
+    "expected_skill": "bosskuai-observability-sre",
+    "expected_references": [
+      "ai-assistant/references/playbooks/bosskuai-observability-sre-playbook.md"
+    ],
+    "must_cover": [
+      "logs",
+      "metrics",
+      "tracing",
+      "SLO",
+      "health"
+    ]
+  },
+  {
+    "name": "QA automation strategy",
+    "prompt": "Create a QA automation strategy using Playwright, Cypress, PHPUnit, feature tests, fixtures, regression suite, and CI test gate.",
+    "expected_skill": "bosskuai-qa-automation-strategy",
+    "expected_references": [
+      "ai-assistant/references/playbooks/bosskuai-qa-automation-strategy-playbook.md"
+    ],
+    "must_cover": [
+      "Playwright",
+      "Cypress",
+      "regression",
+      "CI gate",
+      "fixtures"
+    ]
+  },
+  {
+    "name": "Malaysia PDPA privacy",
+    "prompt": "Review Malaysia PDPA privacy for personal data, consent notice, retention, processor vendors, user deletion/export, and cross border transfer.",
+    "expected_skill": "bosskuai-malaysia-pdpa-privacy",
+    "expected_references": [
+      "ai-assistant/references/playbooks/bosskuai-malaysia-pdpa-privacy-playbook.md"
+    ],
+    "must_cover": [
+      "PDPA",
+      "personal data",
+      "retention",
+      "processor",
+      "data minimization"
+    ]
+  },
+  {
+    "name": "Cost optimization",
+    "prompt": "Reduce our cloud, server, model token budget, LLM API cost, queue worker spend, and storage bill without hurting critical quality.",
+    "expected_skill": "bosskuai-cost-optimization",
+    "expected_references": [
+      "ai-assistant/references/playbooks/bosskuai-cost-optimization-playbook.md"
+    ],
+    "must_cover": [
+      "cost",
+      "token budget",
+      "unit economics",
+      "measure",
+      "LLM cost"
+    ]
+  },
+  {
+    "name": "Customer success support",
+    "prompt": "Build customer success SOP for onboarding, support tickets, escalation, retention, churn, FAQ, feedback loop, and CSAT.",
+    "expected_skill": "bosskuai-customer-success-support",
+    "expected_references": [
+      "ai-assistant/references/playbooks/bosskuai-customer-success-support-playbook.md"
+    ],
+    "must_cover": [
+      "customer success",
+      "support",
+      "onboarding",
+      "retention",
+      "churn"
+    ]
+  },
+  {
+    "name": "Prompt injection defense",
+    "prompt": "Harden our AI agent against prompt injection, memory poisoning, untrusted documents, tool abuse, least privilege, and secret exfiltration.",
+    "expected_skill": "bosskuai-prompt-injection-defense",
+    "expected_references": [
+      "ai-assistant/references/playbooks/bosskuai-prompt-injection-defense-playbook.md"
+    ],
+    "must_cover": [
+      "prompt injection",
+      "memory poisoning",
+      "untrusted",
+      "least privilege",
+      "exfiltration"
+    ]
+  },
+  {
+    "name": "Eval driven agent improvement",
+    "prompt": "Improve BosskuAI with routing evals, retrieval benchmarks, LLM quality cases, token budget scoring, golden cases, and regression harness.",
+    "expected_skill": "bosskuai-eval-driven-agent-improvement",
+    "expected_references": [
+      "ai-assistant/references/playbooks/bosskuai-eval-driven-agent-improvement-playbook.md"
+    ],
+    "must_cover": [
+      "routing",
+      "retrieval",
+      "quality",
+      "regression",
+      "token"
+    ]
   }
 ]

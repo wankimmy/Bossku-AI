@@ -11,11 +11,12 @@ repo_root="$(resolve_repo_root "${1:-$script_dir/../..}")"
 
 {
   echo "[BosskuAI] Post-response — verify before done:"
-  echo "  □ DoD checklist passed? (CLAUDE.md)"
-  echo "  □ Non-trivial reusable plan -> stored in plan-log.md before execute?"
-  echo "  □ Memory updated if durable delta exists?"
-  echo "  □ Indexed memory changed -> ran vector_memory.py sync?"
-  echo "  □ Meaningful:yes → continuous-learning run or deferred with reason?"
+  echo "  □ Frontier audit completed for meaningful work?"
+  echo "  □ DoD checklist passed? (CLAUDE.md / AGENTS.md)"
+  echo "  □ Durable plan stored in plan-log.md when useful?"
+  echo "  □ Durable outcome stored in learning-log.md / durable-memory.md when useful?"
+  echo "  □ Vector DB synced with auto_memory.py sync?"
+  echo "  □ Open risks and skipped checks stated?"
   echo "  Changed files:"
   git_changed_files_summary "$repo_root"
 } >&2

@@ -1,0 +1,32 @@
+# BosskuAI always-on model router policy.
+# No provider is hardcoded here. Map these labels to the actual models in Claude Code,
+# Cursor, Codex, or your local wrapper.
+planning:
+  role: frontier
+  purpose: architecture, decomposition, risk, unknowns, testing strategy
+execution:
+  role: lower-cost
+  purpose: safe edits, repetitive implementation, formatting, small refactors
+audit:
+  role: frontier
+  purpose: final review, security, business logic, regression risk, memory quality
+escalation_rules:
+  - auth
+  - payment
+  - security
+  - privacy
+  - migration
+  - production
+  - data_loss
+  - secrets
+  - multi_service_architecture
+  - repeated_failure
+  - legal_compliance
+execution_defaults:
+  allow_lower_cost_when_risk: low
+  force_frontier_when_risk: high
+memory:
+  save_after_plan: true
+  save_after_audit: true
+  sync_vector_after_save: true
+  require_privacy_guard: true

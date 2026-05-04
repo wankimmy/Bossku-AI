@@ -22,9 +22,9 @@ BosskuAI cofounder mode must be able to route to expert skills for:
 
 - **Engineering:** Laravel, Nuxt, Docker, VPS deployment, Redis, MariaDB, MySQL, SQLite, PostgreSQL, MongoDB, performance, testing, code review, architecture.
 - **Product/design:** UI/UX, design-to-code, anti-AI UI, responsive flows, accessibility, user journey, product strategy.
-- **Risk:** application security, agent security, auth, privacy, webhooks, payments, abuse cases, operational recovery.
-- **Growth:** SEO/GEO, AEO, content calendar, marketing, sales, lead generation, launch, commercialization.
-- **Founder operations:** prioritization, build-vs-buy, roadmap sequencing, pricing, runway, metrics, experiments.
+- **Risk:** application security, agent security, prompt-injection defense, auth, privacy/PDPA, tenant isolation, webhooks, payments, abuse cases, operational recovery.
+- **Growth:** SEO/GEO, AEO, content calendar, marketing, sales, lead generation, launch, commercialization, customer success/support.
+- **Founder operations:** prioritization, build-vs-buy, roadmap sequencing, pricing, runway, metrics, experiments, SaaS billing ops, cost optimization, observability, QA automation, eval-driven agent improvement.
 
 ## Core workflow
 
@@ -45,10 +45,19 @@ BosskuAI cofounder mode must be able to route to expert skills for:
 - VPS Docker deployment: `bosskuai-vps-docker-deployment`
 - UI/UX and anti-AI design: `bosskuai-ui-ux-design-to-code`
 - Security/privacy/abuse: `bosskuai-cybersecurity-risk`
+- Tenant isolation/data leak: `bosskuai-tenant-isolation-security`
+- Prompt injection / AI workspace security: `bosskuai-prompt-injection-defense`
+- Malaysia PDPA/privacy: `bosskuai-malaysia-pdpa-privacy`
 - SEO/GEO discoverability: `bosskuai-seo-geo`
 - Marketing/content calendar: `bosskuai-content-calendar`
 - Sales/GTM: `bosskuai-sales-strategy`
 - Product prioritization: `bosskuai-product-strategy`
+- SaaS billing ops: `bosskuai-saas-billing-ops`
+- Observability/SRE: `bosskuai-observability-sre`
+- QA automation: `bosskuai-qa-automation-strategy`
+- Cost optimization/token budget: `bosskuai-cost-optimization`
+- Customer success/support: `bosskuai-customer-success-support`
+- Eval-driven agent improvement: `bosskuai-eval-driven-agent-improvement`
 
 ## Decision quality bar
 
@@ -92,6 +101,11 @@ Risk/rollback: [main risk + mitigation]
 - `../../references/playbooks/bosskuai-launch-commercialization-playbook.md`
 - `../../references/playbooks/bosskuai-marketing-growth-playbook.md`
 - `../../references/playbooks/bosskuai-financial-modeling-playbook.md`
+- `../../references/playbooks/bosskuai-saas-billing-ops-playbook.md`
+- `../../references/playbooks/bosskuai-tenant-isolation-security-playbook.md`
+- `../../references/playbooks/bosskuai-observability-sre-playbook.md`
+- `../../references/playbooks/bosskuai-cost-optimization-playbook.md`
+- `../../references/playbooks/bosskuai-eval-driven-agent-improvement-playbook.md`
 
 ## Deep-mode flows (Claude Code)
 

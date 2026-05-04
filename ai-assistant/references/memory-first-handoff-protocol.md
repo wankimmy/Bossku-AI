@@ -13,10 +13,10 @@ For non-trivial tasks, follow this gated order:
 1. Read continuation state and retrieve relevant long-term memory.
 2. Plan.
 3. If the plan is durable enough to matter later, append a compact entry to `ai-assistant/memory/plan-log.md`.
-4. If `plan-log.md` or any other indexed memory file changed, run `python3 ./ai-assistant/scripts/vector_memory.py sync`.
+4. If `plan-log.md` or any other indexed memory file changed, run `python3 ./ai-assistant/scripts/auto_memory.py sync`.
 5. Execute.
 6. Persist outcomes, decisions, and durable learnings to the right memory file(s), usually `learning-log.md`.
-7. If indexed memory changed again, run `python3 ./ai-assistant/scripts/vector_memory.py sync` again before declaring done.
+7. If indexed memory changed again, run `python3 ./ai-assistant/scripts/auto_memory.py sync` again before declaring done.
 
 This does **not** apply to trivial work.
 
@@ -76,6 +76,19 @@ Persist to disk **before** saying done, complete, or finished:
 5. If any indexed memory file changed, refresh semantic recall before declaring done: `python3 ./ai-assistant/scripts/vector_memory.py sync`
 
 If you only updated `project-understanding.md` (and nothing belongs in `learning-log.md`), state that explicitly in the final reply and still mention the path.
+
+
+## Preferred memory CLI
+
+Use `auto_memory.py` for cross-tool writes because it appends the right memory file, keeps a JSONL audit trail, deduplicates repeated hook events, and syncs the vector DB.
+
+```bash
+python3 ai-assistant/scripts/auto_memory.py query "<task summary>" --limit 5
+python3 ai-assistant/scripts/auto_memory.py remember --tool <claude|cursor|codex> --kind durable "<decision / preference / constraint>"
+python3 ai-assistant/scripts/auto_memory.py remember --tool <claude|cursor|codex> --kind plan "<compact plan>"
+python3 ai-assistant/scripts/auto_memory.py remember --tool <claude|cursor|codex> --kind learning "<outcome / verification / risks / next action>"
+python3 ai-assistant/scripts/auto_memory.py sync
+```
 
 ## `plan-log.md` append template
 
