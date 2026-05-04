@@ -117,5 +117,7 @@ python3 -S ./scripts/eval_workspace.py
 <claude-mem-context>
 # Memory Context
 
-No shared handoff is active in this starter repo. Use `ai-assistant/memory/active-continuation.md` only for unfinished work, then clear it after use.
+# [Bossku-AI] recent context, 2026-05-04 10:39am GMT+8
+
+No previous sessions found.
 </claude-mem-context>
