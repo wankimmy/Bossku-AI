@@ -1,0 +1,32 @@
+{
+  "name": "bosskuai-marketplace",
+  "owner": {
+    "name": "wankimmy"
+  },
+  "metadata": {
+    "description": "BosskuAI plugins for Cursor, Claude Code, and Codex.",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "bossku-ai",
+      "source": ".",
+      "description": "AI cofounder plugin with reusable skills, agents, and memory-first workflows for Cursor and Claude Code.",
+      "version": "1.0.0",
+      "author": {
+        "name": "wankimmy"
+      },
+      "homepage": "https://github.com/wankimmy/Bossku-AI",
+      "repository": "https://github.com/wankimmy/Bossku-AI",
+      "license": "MIT",
+      "keywords": [
+        "cursor",
+        "claude-code",
+        "ai-cofounder",
+        "skills",
+        "agents",
+        "workflow"
+      ]
+    }
+  ]
+}

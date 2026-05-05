@@ -75,6 +75,26 @@ Steps:
 
 ---
 
+## Option 3 — Cursor IDE plugin (marketplace manifest)
+
+BosskuAI ships **two plugin manifests** next to each other:
+
+* **Claude Code** — [`.claude-plugin/`](.claude-plugin/) (`marketplace.json`, `plugin.json`)
+* **Cursor** — [`.cursor-plugin/`](.cursor-plugin/) (`marketplace.json`, `plugin.json`)
+
+The Cursor marketplace entry uses `"source": "."` so plugins resolve inside this repository (skills live under [`./ai-assistant/skills/`](./ai-assistant/skills/), as in [`plugin.json`](.cursor-plugin/plugin.json)).
+
+**Team Marketplace:** Dashboard → Settings → Plugins → import this repo’s Git URL (Teams / Enterprise).
+
+**Local dev:** symlink this repo once [documented layout](https://cursor.com/docs/plugins) is satisfied, then reload the window:
+
+```bash
+mkdir -p ~/.cursor/plugins/local
+ln -sf /path/to/Bossku-AI ~/.cursor/plugins/local/bossku-ai
+```
+
+---
+
 ## After Install (Important)
 
 Run:
