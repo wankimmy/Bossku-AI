@@ -5,14 +5,14 @@
   },
   "metadata": {
     "description": "BosskuAI plugins for Cursor, Claude Code, and Codex.",
-    "version": "1.1.0"
+    "version": "1.1.1"
   },
   "plugins": [
     {
       "name": "bossku-ai",
       "source": "./",
-      "description": "AI cofounder plugin (85+ skills in ai-assistant/skills). After git pull, run scripts/cursor-plugin-refresh.sh so Cursor rescans skills.",
-      "version": "1.1.0",
+      "description": "85 skills on disk; UI may show ~66 (routing.manual_only_skill_ids excludes 19 specialists). Invoke by name after refresh.",
+      "version": "1.1.1",
       "author": {
         "name": "wankimmy"
       },

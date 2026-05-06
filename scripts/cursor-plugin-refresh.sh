@@ -7,6 +7,15 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 echo "Skill packages (SKILL.md under ai-assistant/skills):" \
   "$(find "${ROOT}/ai-assistant/skills" -mindepth 2 -maxdepth 2 -name SKILL.md 2>/dev/null | wc -l | tr -d ' ')"
 
+python3 - "${ROOT}" << 'PY'
+import json, pathlib, sys
+root = pathlib.Path(sys.argv[1])
+idx = json.load(open(root / "skill-index.json"))
+n = len(idx["skills"])
+m = len(idx["routing"].get("manual_only_skill_ids", []))
+print(f"skill-index.json: {n} skills, {m} manual-only routing (often ~{n - m} visible in Cursor UI)")
+PY
+
 STALE=(
   "${HOME}/.cursor/plugins/marketplaces/github.com/wankimmy/bossku-ai"
   "${HOME}/.cursor/plugins/cache/bosskuai-marketplace"

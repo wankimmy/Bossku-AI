@@ -101,20 +101,19 @@ rm -rf ~/.cursor/plugins/marketplaces/github.com/wankimmy/bossku-ai
 
 If `wankimmy/Bossku-AI` on GitHub is still behind your fixed clone, **do not** re-add that marketplace URL until it is updated, or the bad manifest will be downloaded again.
 
-**Skill count looks wrong (e.g. 66 vs 80+):** Cursor often keeps an old indexed copy. From the Bossku repo run:
+**Cursor shows “66 skills” but the repo has 80+:** The disk tree and [`skill-index.json`](skill-index.json) list **85** skills. Bossku also marks **19** specialists as **manual-only** in `routing.manual_only_skill_ids` (explicit domain tools like Laravel, Nuxt, GSAP, etc.). **`85 − 19 = 66`** — Cursor’s Plugins UI commonly lists only the subset it treats as broadly auto-routable; the rest remain in the bundle and load when you name them (`/skill …` / prompt). This is intentional routing, not a failed update.
+
+Still do a refresh after `git pull` so indexes match disk:
 
 ```bash
 git pull   # use your fork/remote if you track updates there
 bash scripts/cursor-plugin-refresh.sh
+python3 -c 'import json; d=json.load(open("skill-index.json")); print(len(d["skills"]), "total;", len(d["routing"]["manual_only_skill_ids"]), "manual-only")'
 ```
 
-Confirm the tally with:
+Then **fully quit Cursor** and reopen (not only Reload Window).
 
-```bash
-python3 -c 'import json; print(len(json.load(open("skill-index.json"))["skills"]))'
-```
-
-Then reload Cursor fully (quit app, reopen).
+In **Plugins**, remove duplicate Bossku entries (marketplace + local) so you are not mixing an old Marketplace build with `~/.cursor/plugins/local/bossku-ai`.
 
 ---
 

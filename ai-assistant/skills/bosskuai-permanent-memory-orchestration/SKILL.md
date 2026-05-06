@@ -1,3 +1,8 @@
+---
+name: bosskuai-permanent-memory-orchestration
+description: Use when the task touches permanent memory, vector DB sync, cross-tool recall, routing memory hygiene, durable plans, or forgetting past decisions.
+---
+
 # bosskuai-permanent-memory-orchestration
 
 ## Purpose
