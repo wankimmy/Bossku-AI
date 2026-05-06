@@ -1,7 +1,7 @@
 {
   "name": "bossku-ai",
-  "version": "1.0.0",
-  "description": "AI cofounder plugin for Cursor with product, engineering, growth, research, and memory-first workflows.",
+  "version": "1.1.0",
+  "description": "AI cofounder plugin for Cursor: 85 agent skills under ai-assistant/skills (see skill-index.json). Pull latest Bossku-AI then run scripts/cursor-plugin-refresh.sh if the skill count looks stale.",
   "author": {
     "name": "wankimmy"
   },

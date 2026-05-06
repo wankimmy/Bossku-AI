@@ -101,6 +101,21 @@ rm -rf ~/.cursor/plugins/marketplaces/github.com/wankimmy/bossku-ai
 
 If `wankimmy/Bossku-AI` on GitHub is still behind your fixed clone, **do not** re-add that marketplace URL until it is updated, or the bad manifest will be downloaded again.
 
+**Skill count looks wrong (e.g. 66 vs 80+):** Cursor often keeps an old indexed copy. From the Bossku repo run:
+
+```bash
+git pull   # use your fork/remote if you track updates there
+bash scripts/cursor-plugin-refresh.sh
+```
+
+Confirm the tally with:
+
+```bash
+python3 -c 'import json; print(len(json.load(open("skill-index.json"))["skills"]))'
+```
+
+Then reload Cursor fully (quit app, reopen).
+
 ---
 
 ## After Install (Important)
