@@ -10,7 +10,7 @@
   "plugins": [
     {
       "name": "bossku-ai",
-      "source": ".",
+      "source": "plugins/bossku-ai",
       "description": "AI cofounder plugin with reusable skills, agents, and memory-first workflows for Cursor and Claude Code.",
       "version": "1.0.0",
       "author": {

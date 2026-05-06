@@ -77,20 +77,22 @@ Steps:
 
 ## Option 3 — Cursor IDE plugin (marketplace manifest)
 
-BosskuAI ships **two plugin manifests** next to each other:
+BosskuAI ships **two plugin systems** side by side:
 
 * **Claude Code** — [`.claude-plugin/`](.claude-plugin/) (`marketplace.json`, `plugin.json`)
-* **Cursor** — [`.cursor-plugin/`](.cursor-plugin/) (`marketplace.json`, `plugin.json`)
+* **Cursor** — [`.cursor-plugin/marketplace.json`](.cursor-plugin/marketplace.json) pointing at [`plugins/bossku-ai/`](plugins/bossku-ai/) ([`plugins/bossku-ai/.cursor-plugin/plugin.json`](plugins/bossku-ai/.cursor-plugin/plugin.json))
 
-The Cursor marketplace entry uses `"source": "."` so plugins resolve inside this repository (skills live under [`./ai-assistant/skills/`](./ai-assistant/skills/), as in [`plugin.json`](.cursor-plugin/plugin.json)).
+Cursor follows the [multi-plugin repo layout](https://cursor.com/docs/reference/plugins.md): marketplace at `/.cursor-plugin/`, bundle under `plugins/<name>/` with its own `.cursor-plugin/plugin.json`. This repo aliases shared trees (`agents`, [`ai-assistant`](ai-assistant), rules) via symlinks under `plugins/bossku-ai/` so manifests stay relative with no parent-segment paths.
+
+Until this layout is merged on GitHub, Cursor may still clone `main` missing `.cursor-plugin/` and fall back to [`.claude-plugin/marketplace.json`](.claude-plugin/marketplace.json)—that Claude-only `source` shape triggers installer errors (**gitPath / unsafe source path**). Use a checkout that includes `.cursor-plugin/`, refresh the marketplace, or install locally below.
 
 **Team Marketplace:** Dashboard → Settings → Plugins → import this repo’s Git URL (Teams / Enterprise).
 
-**Local dev:** symlink this repo once [documented layout](https://cursor.com/docs/plugins) is satisfied, then reload the window:
+**Local dev:** point Cursor at the **bundle directory**, not repo root ([docs](https://cursor.com/docs/plugins)):
 
 ```bash
 mkdir -p ~/.cursor/plugins/local
-ln -sf /path/to/Bossku-AI ~/.cursor/plugins/local/bossku-ai
+ln -sf /path/to/Bossku-AI/plugins/bossku-ai ~/.cursor/plugins/local/bossku-ai
 ```
 
 ---
