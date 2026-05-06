@@ -95,6 +95,8 @@ mkdir -p ~/.cursor/plugins/local
 ln -sf /path/to/Bossku-AI/plugins/bossku-ai ~/.cursor/plugins/local/bossku-ai
 ```
 
+If Cursor previously synced an older upstream commit, delete its cached marketplace folder for this repo (path like `~/.cursor/plugins/marketplaces/github.com/wankimmy/bossku-ai/`), then reinstall or rely on the local symlink above after **Developer: Reload Window**.
+
 ---
 
 ## After Install (Important)
