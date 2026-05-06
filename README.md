@@ -80,22 +80,26 @@ Steps:
 BosskuAI ships **two plugin systems** side by side:
 
 * **Claude Code** — [`.claude-plugin/`](.claude-plugin/) (`marketplace.json`, `plugin.json`)
-* **Cursor** — [`.cursor-plugin/marketplace.json`](.cursor-plugin/marketplace.json) pointing at [`plugins/bossku-ai/`](plugins/bossku-ai/) ([`plugins/bossku-ai/.cursor-plugin/plugin.json`](plugins/bossku-ai/.cursor-plugin/plugin.json))
+* **Cursor** — [`.cursor-plugin/marketplace.json`](.cursor-plugin/marketplace.json) with `"source": "./"` and [`.cursor-plugin/plugin.json`](.cursor-plugin/plugin.json) (same pattern as official single-repo plugins such as Cloudflare: plugin root is the repository root; no symlinked plugin bundles).
 
-Cursor follows the [multi-plugin repo layout](https://cursor.com/docs/reference/plugins.md): marketplace at `/.cursor-plugin/`, bundle under `plugins/<name>/` with its own `.cursor-plugin/plugin.json`. This repo aliases shared trees (`agents`, [`ai-assistant`](ai-assistant), rules) via symlinks under `plugins/bossku-ai/` so manifests stay relative with no parent-segment paths.
-
-Until this layout is merged on GitHub, Cursor may still clone `main` missing `.cursor-plugin/` and fall back to [`.claude-plugin/marketplace.json`](.claude-plugin/marketplace.json)—that Claude-only `source` shape triggers installer errors (**gitPath / unsafe source path**). Use a checkout that includes `.cursor-plugin/`, refresh the marketplace, or install locally below.
+Until `main` on GitHub includes `.cursor-plugin/`, Cursor’s cached clone may only see [`.claude-plugin/marketplace.json`](.claude-plugin/marketplace.json)—that Claude-only `source` shape triggers **gitPath / unsafe source path**. Fix: use this checkout, **or** remove the GitHub marketplace entry and install locally only, **or** merge and re-add the repo after publish.
 
 **Team Marketplace:** Dashboard → Settings → Plugins → import this repo’s Git URL (Teams / Enterprise).
 
-**Local dev:** point Cursor at the **bundle directory**, not repo root ([docs](https://cursor.com/docs/plugins)):
+**Local install** — symlink the **repository root** (not a subfolder):
 
 ```bash
 mkdir -p ~/.cursor/plugins/local
-ln -sf /path/to/Bossku-AI/plugins/bossku-ai ~/.cursor/plugins/local/bossku-ai
+ln -sf /path/to/Bossku-AI ~/.cursor/plugins/local/bossku-ai
 ```
 
-If Cursor previously synced an older upstream commit, delete its cached marketplace folder for this repo (path like `~/.cursor/plugins/marketplaces/github.com/wankimmy/bossku-ai/`), then reinstall or rely on the local symlink above after **Developer: Reload Window**.
+**If you still see the error:** remove the stale GitHub sync cache, then reload Cursor:
+
+```bash
+rm -rf ~/.cursor/plugins/marketplaces/github.com/wankimmy/bossku-ai
+```
+
+If `wankimmy/Bossku-AI` on GitHub is still behind your fixed clone, **do not** re-add that marketplace URL until it is updated, or the bad manifest will be downloaded again.
 
 ---
 

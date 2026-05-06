@@ -1,7 +1,7 @@
 {
   "name": "bossku-ai",
   "version": "1.0.0",
-  "description": "AI cofounder plugin for Cursor and Claude Code with product, engineering, growth, research, and memory-first workflows.",
+  "description": "AI cofounder plugin for Cursor with product, engineering, growth, research, and memory-first workflows.",
   "author": {
     "name": "wankimmy"
   },
@@ -10,14 +10,12 @@
   "license": "MIT",
   "keywords": [
     "cursor",
-    "claude-code",
-    "plugin",
     "skills",
     "ai-cofounder",
     "product-strategy",
     "engineering"
   ],
   "skills": "./ai-assistant/skills/",
-  "rules": ["rules-root", "rules-cursor"],
+  "rules": ["./rules", "./.cursor/rules"],
   "agents": "./agents"
 }
