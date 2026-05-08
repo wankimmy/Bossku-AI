@@ -7,7 +7,6 @@ Thumbs.db
 
 # Env
 .env
-.env.*
 
 # Node
 node_modules/
