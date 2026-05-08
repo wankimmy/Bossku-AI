@@ -20,7 +20,7 @@ class SecurityAuditorService
     public function audit(string $userPrompt, array $route, array $plan, array $executorResult): array
     {
         $cfg = $this->config->securityAuditor();
-        $primary = (string) ($cfg['primary'] ?? 'claude-opus-4.7');
+        $primary = (string) ($cfg['primary'] ?? 'deepseek-v4-pro');
         $models = array_merge([$primary], is_array($cfg['fallback'] ?? null) ? $cfg['fallback'] : []);
         $retry = (int) ($cfg['retry_count'] ?? 1);
 
@@ -64,6 +64,7 @@ SYS;
 
         return array_merge($parsed, [
             '_model_used' => $out['model_used'],
+            '_model_resolved' => $out['model_resolved'] ?? '',
             '_fallback_used' => $out['fallback_used'],
         ]);
     }

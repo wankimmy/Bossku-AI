@@ -5,6 +5,7 @@ namespace Tests\Unit;
 use App\Models\BosskuAi\Memory;
 use App\Services\BosskuAi\MemoryService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -13,9 +14,9 @@ class MemoryServiceSearchTest extends TestCase
     use RefreshDatabase;
 
     #[Test]
-    public function search_text_fallback_matches_without_schema_connection_facade_bug(): void
+    public function search_text_fallback_matches_when_memory_ollama_disabled(): void
     {
-        config(['services.openai.key' => null]);
+        config(['bossku.memory_ollama_enabled' => false]);
 
         Memory::query()->create([
             'type' => 'fact',
@@ -37,9 +38,13 @@ class MemoryServiceSearchTest extends TestCase
     }
 
     #[Test]
-    public function search_skips_vector_path_when_database_is_not_pgsql_and_still_matches_text(): void
+    public function search_falls_back_to_text_when_ollama_embed_fails(): void
     {
-        config(['services.openai.key' => 'sk-test-nonempty']);
+        config(['bossku.memory_ollama_enabled' => true]);
+
+        Http::fake([
+            '*' => Http::response(['error' => 'simulated embed failure'], 503),
+        ]);
 
         Memory::query()->create([
             'type' => 'fact',
@@ -52,13 +57,37 @@ class MemoryServiceSearchTest extends TestCase
             'confidence' => null,
         ]);
 
-        $this->assertNotSame('pgsql', \Illuminate\Support\Facades\DB::connection()->getDriverName());
-
         /** @var MemoryService $svc */
         $svc = app(MemoryService::class);
 
         $hits = $svc->search('token_abc_second', 10);
         $this->assertCount(1, $hits);
         $this->assertStringContainsString('token_abc_second', $hits->first()->content);
+    }
+
+    #[Test]
+    public function store_survives_ollama_embed_http_failure(): void
+    {
+        config(['bossku.memory_ollama_enabled' => true]);
+
+        Http::fake([
+            '*' => Http::response(['error' => 'simulated embed failure'], 503),
+        ]);
+
+        /** @var MemoryService $svc */
+        $svc = app(MemoryService::class);
+
+        $memory = $svc->store(
+            content: 'token_embed_fail_unique',
+            type: 'fact',
+            metadata: [],
+            tags: [],
+            source: 'test'
+        );
+
+        $this->assertSame('token_embed_fail_unique', $memory->content);
+
+        $hits = $svc->search('token_embed_fail_unique', 10);
+        $this->assertCount(1, $hits);
     }
 }

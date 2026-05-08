@@ -55,7 +55,8 @@ return [
         'stack' => [
             'driver' => 'stack',
             'channels' => explode(',', env('LOG_STACK', 'single')),
-            'ignore_exceptions' => false,
+            // Avoid masking app errors when a log handler fails (e.g. Docker bind-mount permissions).
+            'ignore_exceptions' => filter_var(env('LOG_IGNORE_EXCEPTIONS', true), FILTER_VALIDATE_BOOL),
         ],
 
         'single' => [

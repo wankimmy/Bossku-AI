@@ -33,27 +33,57 @@ class RuntimeSettings
 
     public function plannerProvider(): string
     {
-        return $this->getString('planner_provider', env('PLANNER_PROVIDER', 'openai'));
+        return 'ollama';
     }
 
     public function plannerModel(): string
     {
-        return $this->getString('planner_model', env('PLANNER_MODEL', 'gpt-4o-mini'));
+        return $this->getString(
+            'planner_model',
+            env('PLANNER_MODEL', (string) config('bossku_models.orchestrator.primary', 'kimi-k2.6'))
+        );
     }
 
     public function auditorProvider(): string
     {
-        return $this->getString('auditor_provider', env('AUDITOR_PROVIDER', 'openai'));
+        return 'ollama';
     }
 
     public function auditorModel(): string
     {
-        return $this->getString('auditor_model', env('AUDITOR_MODEL', 'gpt-4o-mini'));
+        return $this->getString(
+            'auditor_model',
+            env('AUDITOR_MODEL', (string) config('bossku_models.auditor.primary', 'deepseek-v4-pro'))
+        );
     }
 
     public function embeddingModel(): string
     {
-        return $this->getString('embedding_model', env('EMBEDDING_MODEL', 'text-embedding-3-small'));
+        return $this->getString('embedding_model', (string) config('bossku.ollama_embedding_model', 'nomic-embed-text'));
+    }
+
+    /**
+     * Embedding model passed to Ollama /api/embed (alias-expanded when applicable).
+     */
+    public function ollamaEmbeddingPhysicalModel(): string
+    {
+        $logical = strtolower(trim($this->embeddingModel()));
+        /** @var array<string, string> $aliases */
+        $aliases = config('bossku_models.aliases', []);
+
+        if (isset($aliases[$logical])) {
+            return trim($aliases[$logical]);
+        }
+
+        return trim($this->embeddingModel());
+    }
+
+    public function memoryHumanizeLogicalModel(): string
+    {
+        return $this->getString(
+            'memory_humanize_model',
+            env('BOSSKU_MEMORY_HUMANIZE_MODEL', (string) config('bossku_models.writer.primary', 'kimi-k2.6'))
+        );
     }
 
     public function ollamaBaseUrl(): string

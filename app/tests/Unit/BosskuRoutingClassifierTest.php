@@ -10,6 +10,18 @@ use Tests\TestCase;
 
 class BosskuRoutingClassifierTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Tests are deterministic: don't depend on container .env BOSSKU_* or live LLM router responses.
+        config([
+            'bossku_models.router.enabled' => false,
+            'bossku_models.executor.default.primary' => 'glm-5.1',
+            'bossku_models.executor.high_risk.primary' => 'deepseek-v4-pro',
+        ]);
+    }
+
     private function classify(string $prompt): array
     {
         /** @var PromptRouteClassifier $c */
@@ -115,18 +127,18 @@ class BosskuRoutingClassifierTest extends TestCase
     }
 
     #[Test]
-    public function default_executor_model_is_kimi_not_gpt55(): void
+    public function default_executor_model_is_glm_not_gpt55(): void
     {
         $cfg = app(ModelRoutingConfig::class);
-        $this->assertStringContainsString('kimi', strtolower((string) $cfg->executorProfile('default')['primary']));
+        $this->assertStringContainsString('glm', strtolower((string) $cfg->executorProfile('default')['primary']));
         $this->assertStringNotContainsString('gpt-5.5', strtolower((string) $cfg->executorProfile('default')['primary']));
     }
 
     #[Test]
-    public function high_risk_executor_uses_gpt55(): void
+    public function high_risk_executor_uses_deepseek(): void
     {
         $cfg = app(ModelRoutingConfig::class);
-        $this->assertStringContainsString('gpt', strtolower((string) $cfg->executorProfile('high_risk')['primary']));
+        $this->assertStringContainsString('deepseek', strtolower((string) $cfg->executorProfile('high_risk')['primary']));
     }
 
     #[DataProvider('riskUpgradeProvider')]

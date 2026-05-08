@@ -2,12 +2,12 @@
 
 /**
  * Central BosskuAI model routing configuration.
- * Model names are configurable; map providers via bossku.model_providers.
+ * All chat models resolve to Ollama Cloud tags via bossku_models.aliases.
  */
 return [
     'router' => [
-        'primary' => env('BOSSKU_ROUTER_MODEL', 'gpt-5.5-instant'),
-        'fallback' => ['gpt-5.4', 'gemini-3-pro', 'deepseek-v4-flash'],
+        'primary' => env('BOSSKU_ROUTER_MODEL', 'kimi-k2.6'),
+        'fallback' => ['glm-5.1', 'deepseek-v4-pro'],
         'enabled' => filter_var(env('BOSSKU_ROUTER_LLM_ENABLED', true), FILTER_VALIDATE_BOOL),
         'max_context_files' => 0,
         'max_tokens' => 2000,
@@ -24,8 +24,8 @@ return [
     ],
 
     'orchestrator' => [
-        'primary' => env('BOSSKU_ORCHESTRATOR_MODEL', 'gpt-5.5'),
-        'fallback' => ['claude-opus-4.7', 'gemini-3-pro', 'glm-5.1'],
+        'primary' => env('BOSSKU_ORCHESTRATOR_MODEL', 'kimi-k2.6'),
+        'fallback' => ['glm-5.1', 'deepseek-v4-pro'],
         'enabled' => true,
         'max_context_files' => 20,
         'max_tokens' => 8000,
@@ -43,8 +43,8 @@ return [
 
     'executor' => [
         'default' => [
-            'primary' => env('BOSSKU_EXECUTOR_DEFAULT_MODEL', 'kimi-k2.6'),
-            'fallback' => ['deepseek-v4-pro', 'qwen-3-coder', 'glm-5.1'],
+            'primary' => env('BOSSKU_EXECUTOR_DEFAULT_MODEL', 'glm-5.1'),
+            'fallback' => ['kimi-k2.6', 'deepseek-v4-pro'],
             'max_context_files' => 15,
             'max_tokens' => 12000,
             'temperature' => 0.2,
@@ -52,8 +52,8 @@ return [
             'retry_count' => 1,
         ],
         'frontend_ui' => [
-            'primary' => env('BOSSKU_EXECUTOR_FRONTEND_MODEL', 'kimi-k2.6'),
-            'fallback' => ['deepseek-v4-pro', 'qwen-3-coder', 'gpt-5.5'],
+            'primary' => env('BOSSKU_EXECUTOR_FRONTEND_MODEL', 'glm-5.1'),
+            'fallback' => ['kimi-k2.6', 'deepseek-v4-pro'],
             'max_context_files' => 20,
             'max_tokens' => 14000,
             'temperature' => 0.25,
@@ -61,8 +61,8 @@ return [
             'retry_count' => 1,
         ],
         'backend' => [
-            'primary' => env('BOSSKU_EXECUTOR_BACKEND_MODEL', 'kimi-k2.6'),
-            'fallback' => ['deepseek-v4-pro', 'qwen-3-coder', 'glm-5.1'],
+            'primary' => env('BOSSKU_EXECUTOR_BACKEND_MODEL', 'glm-5.1'),
+            'fallback' => ['kimi-k2.6', 'deepseek-v4-pro'],
             'max_context_files' => 15,
             'max_tokens' => 12000,
             'temperature' => 0.2,
@@ -70,8 +70,8 @@ return [
             'retry_count' => 1,
         ],
         'devops' => [
-            'primary' => env('BOSSKU_EXECUTOR_DEVOPS_MODEL', 'gpt-5.5'),
-            'fallback' => ['claude-opus-4.7', 'deepseek-v4-pro', 'glm-5.1'],
+            'primary' => env('BOSSKU_EXECUTOR_DEVOPS_MODEL', 'glm-5.1'),
+            'fallback' => ['kimi-k2.6', 'deepseek-v4-pro'],
             'max_context_files' => 20,
             'max_tokens' => 14000,
             'temperature' => 0.1,
@@ -79,8 +79,8 @@ return [
             'retry_count' => 1,
         ],
         'high_risk' => [
-            'primary' => env('BOSSKU_EXECUTOR_HIGH_RISK_MODEL', 'gpt-5.5'),
-            'fallback' => ['kimi-k2.6', 'deepseek-v4-pro', 'claude-opus-4.7'],
+            'primary' => env('BOSSKU_EXECUTOR_HIGH_RISK_MODEL', 'deepseek-v4-pro'),
+            'fallback' => ['glm-5.1', 'kimi-k2.6'],
             'max_context_files' => 25,
             'max_tokens' => 16000,
             'temperature' => 0.1,
@@ -99,8 +99,8 @@ return [
     ],
 
     'auditor' => [
-        'primary' => env('BOSSKU_AUDITOR_MODEL', 'claude-opus-4.7'),
-        'fallback' => ['gpt-5.5', 'gemini-3-pro', 'glm-5.1'],
+        'primary' => env('BOSSKU_AUDITOR_MODEL', 'deepseek-v4-pro'),
+        'fallback' => ['glm-5.1', 'kimi-k2.6'],
         'enabled' => true,
         'max_context_files' => 10,
         'max_tokens' => 10000,
@@ -114,8 +114,8 @@ return [
     ],
 
     'security_auditor' => [
-        'primary' => env('BOSSKU_SECURITY_AUDITOR_MODEL', 'claude-opus-4.7'),
-        'fallback' => ['gpt-5.5', 'gemini-3-pro'],
+        'primary' => env('BOSSKU_SECURITY_AUDITOR_MODEL', 'deepseek-v4-pro'),
+        'fallback' => ['glm-5.1', 'kimi-k2.6'],
         'enabled' => true,
         'max_context_files' => 15,
         'max_tokens' => 12000,
@@ -131,8 +131,8 @@ return [
 
     'final_reviewer' => [
         'enabled' => 'conditional',
-        'primary' => env('BOSSKU_FINAL_REVIEWER_MODEL', 'gpt-5.5'),
-        'fallback' => ['claude-opus-4.7', 'gemini-3-pro'],
+        'primary' => env('BOSSKU_FINAL_REVIEWER_MODEL', 'deepseek-v4-pro'),
+        'fallback' => ['glm-5.1', 'kimi-k2.6'],
         'max_context_files' => 8,
         'max_tokens' => 8000,
         'temperature' => 0.1,
@@ -147,8 +147,8 @@ return [
     ],
 
     'writer' => [
-        'primary' => env('BOSSKU_WRITER_MODEL', 'gpt-5.5'),
-        'fallback' => ['claude-sonnet-4.6', 'kimi-k2.6', 'gpt-5.4'],
+        'primary' => env('BOSSKU_WRITER_MODEL', 'kimi-k2.6'),
+        'fallback' => ['glm-5.1', 'deepseek-v4-pro'],
         'max_tokens' => 6000,
         'temperature' => 0.3,
         'timeout_seconds' => 120,
@@ -156,8 +156,8 @@ return [
     ],
 
     'direct_answer' => [
-        'primary' => env('BOSSKU_DIRECT_ANSWER_MODEL', 'gpt-5.5-instant'),
-        'fallback' => ['gpt-5.4', 'deepseek-v4-flash'],
+        'primary' => env('BOSSKU_DIRECT_ANSWER_MODEL', 'kimi-k2.6'),
+        'fallback' => ['glm-5.1', 'deepseek-v4-pro'],
         'max_tokens' => 4000,
         'temperature' => 0.2,
         'timeout_seconds' => 90,
@@ -165,11 +165,32 @@ return [
     ],
 
     /**
-     * Map model id string to LLM gateway provider: openai | anthropic | ollama.
-     * Ollama typically uses short local names; override via env.
+     * Logical BosskuAI model ids → Ollama Cloud (or compatible) ids.
+     */
+    'aliases' => [
+        // Legacy logical labels → Ollama Cloud (stale env cannot open external GPT/Anthropic).
+        'gpt-5.5' => env('BOSSKU_ALIAS_GPT_5_5', 'kimi-k2.6:cloud'),
+        'gpt-5.5-instant' => env('BOSSKU_ALIAS_GPT_5_5_INSTANT', 'kimi-k2.6:cloud'),
+        'gpt-5.4' => env('BOSSKU_ALIAS_GPT_5_4', 'kimi-k2.6:cloud'),
+
+        'claude-opus-4.7' => env('BOSSKU_ALIAS_CLAUDE_OPUS_4_7', 'deepseek-v4-pro:cloud'),
+        'claude-sonnet-4.6' => env('BOSSKU_ALIAS_CLAUDE_SONNET_4_6', 'glm-5.1:cloud'),
+
+        // Primary roles (Ollama Cloud).
+        'kimi-k2.6' => env('BOSSKU_ALIAS_KIMI_K2_6', 'kimi-k2.6:cloud'),
+        'deepseek-v4-pro' => env('BOSSKU_ALIAS_DEEPSEEK_V4_PRO', 'deepseek-v4-pro:cloud'),
+        'deepseek-v4-flash' => env('BOSSKU_ALIAS_DEEPSEEK_V4_FLASH', 'glm-5.1:cloud'),
+        'qwen-3-coder' => env('BOSSKU_ALIAS_QWEN_3_CODER', 'glm-5.1:cloud'),
+
+        'glm-5.1' => env('BOSSKU_ALIAS_GLM_5_1', 'glm-5.1:cloud'),
+        'gemini-3-pro' => env('BOSSKU_ALIAS_GEMINI_3_PRO', 'kimi-k2.6:cloud'),
+    ],
+
+    /**
+     * Map model id string to LLM gateway provider (runtime is Ollama-only).
      */
     'model_providers' => [
-        'default' => env('BOSSKU_DEFAULT_LLM_PROVIDER', 'openai'),
-        'ollama_patterns' => explode('|', env('BOSSKU_OLLAMA_MODEL_PATTERNS', 'llama|mistral|codellama|phi|gemma')),
+        'default' => env('BOSSKU_DEFAULT_LLM_PROVIDER', 'ollama'),
+        'ollama_patterns' => explode('|', env('BOSSKU_OLLAMA_MODEL_PATTERNS', 'llama|mistral|codellama|phi|gemma|qwen|kimi|deepseek|glm|gpt|claude|gemini|o1|o3|o4|chatgpt|cloud|nomic')),
     ],
 ];

@@ -27,7 +27,7 @@ class FinalReviewerService
         array $executorResult
     ): array {
         $cfg = $this->config->finalReviewer();
-        $primary = (string) ($cfg['primary'] ?? 'gpt-5.5');
+        $primary = (string) ($cfg['primary'] ?? 'deepseek-v4-pro');
         $models = array_merge([$primary], is_array($cfg['fallback'] ?? null) ? $cfg['fallback'] : []);
         $retry = (int) ($cfg['retry_count'] ?? 1);
 
@@ -70,6 +70,7 @@ SYS;
 
         return array_merge($parsed, [
             '_model_used' => $out['model_used'],
+            '_model_resolved' => $out['model_resolved'] ?? '',
         ]);
     }
 }

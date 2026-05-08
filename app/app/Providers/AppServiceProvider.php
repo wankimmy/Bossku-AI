@@ -13,9 +13,7 @@ use App\Services\BosskuAi\PromptRouteClassifier;
 use App\Services\BosskuAi\RiskRuleEngine;
 use App\Services\BosskuAi\RuntimeSettings;
 use App\Services\BosskuAi\SkillRouterService;
-use App\Services\Llm\AnthropicClient;
 use App\Services\Llm\OllamaClient;
-use App\Services\Llm\OpenAiClient;
 use App\Services\Orchestrator\AuditorService;
 use App\Services\Orchestrator\DirectAnswerService;
 use App\Services\Orchestrator\ExecutorService;
@@ -32,10 +30,6 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(RuntimeSettings::class);
-
-        $this->app->singleton(OpenAiClient::class, fn () => new OpenAiClient);
-
-        $this->app->singleton(AnthropicClient::class, fn () => new AnthropicClient);
 
         $this->app->singleton(OllamaClient::class, function ($app) {
             $s = $app->make(RuntimeSettings::class);

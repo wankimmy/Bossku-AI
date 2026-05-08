@@ -177,8 +177,21 @@ class OrchestratorService
 
         if (! empty($plan['error'])) {
             $orchModel = (string) ($plan['_planner_model'] ?? $modelsResolved['orchestrator'] ?? '');
-            $this->logStep($run, 2, 'planner', $orchModel, null, null, 'failed', $prompt, json_encode(['router' => $routerCtx, 'route' => $modelRoute]), json_encode($plan), null, null, null, $planMs, $planTokens, (string) ($plan['message'] ?? 'Planner failed'), null);
+            $plannerErr = (string) ($plan['message'] ?? 'Planner failed');
+            $this->logStep($run, 2, 'planner', $orchModel, null, null, 'failed', $prompt, json_encode(['router' => $routerCtx, 'route' => $modelRoute]), json_encode($plan), null, null, null, $planMs, $planTokens, $plannerErr, null);
             $run->update(['status' => 'failed', 'total_latency_ms' => (int) round((microtime(true) - $tRun) * 1000), 'total_token_estimate' => $tokenAcc + $planTokens]);
+
+            $this->emit($emit, $this->basePayload($run, 'planner_failed', [
+                'status' => 'fail',
+                'latency_ms' => $planMs,
+                'model' => $orchModel,
+                'error' => $plannerErr,
+            ]));
+            $this->emit($emit, $this->basePayload($run, 'run_failed', [
+                'status' => 'fail',
+                'stage' => 'planner',
+                'error' => $plannerErr,
+            ]));
 
             return [
                 'run_id' => $run->id,

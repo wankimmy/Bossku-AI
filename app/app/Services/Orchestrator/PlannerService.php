@@ -71,6 +71,7 @@ SYS;
           /** @var array<string, mixed> $decoded */
           $decoded = is_array($out['parsed']) ? $out['parsed'] : [];
           $decoded['_planner_model'] = $out['model_used'];
+          $decoded['_planner_model_resolved'] = $out['model_resolved'] ?? '';
           $decoded['_planner_fallback'] = $out['fallback_used'];
 
           return $decoded;

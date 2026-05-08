@@ -55,4 +55,46 @@ class OllamaClient
     {
         return $this->chatWithUsage($model, $messages, $temperature)['text'];
     }
+
+    /**
+     * @return list<float>
+     */
+    public function embed(string $text, string $model, ?int $dimensions = 1536): array
+    {
+        $url = rtrim($this->baseUrl, '/').'/api/embed';
+
+        $http = Http::timeout(120)->acceptJson();
+        if ($this->apiKey !== null && $this->apiKey !== '') {
+            $http = $http->withToken($this->apiKey);
+        }
+
+        $payload = [
+            'model' => $model,
+            'input' => $text,
+        ];
+
+        if ($dimensions !== null) {
+            $payload['dimensions'] = $dimensions;
+        }
+
+        $res = $http->post($url, $payload);
+
+        try {
+            $res->throw();
+        } catch (RequestException $e) {
+            throw new \RuntimeException(
+                'Ollama embeddings failed at '.$this->baseUrl.'. For Ollama Cloud set OLLAMA_BASE_URL and OLLAMA_API_KEY. Response: '.$res->body(),
+                previous: $e
+            );
+        }
+
+        $j = $res->json();
+        /** @var list<float>|mixed $embedding */
+        $embedding = data_get($j, 'embeddings.0', data_get($j, 'embedding'));
+        if (! is_array($embedding)) {
+            throw new \RuntimeException('Ollama /api/embed returned no embedding array');
+        }
+
+        return array_values(array_map(static fn ($v) => (float) $v, $embedding));
+    }
 }

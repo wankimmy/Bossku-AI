@@ -31,7 +31,7 @@ class AuditorService
         bool $highRiskContext
     ): array {
         $cfg = $this->modelConfig->auditor();
-        $primary = (string) ($cfg['primary'] ?? 'claude-opus-4.7');
+        $primary = (string) ($cfg['primary'] ?? 'deepseek-v4-pro');
         $models = array_merge([$primary], is_array($cfg['fallback'] ?? null) ? $cfg['fallback'] : []);
         $retry = (int) ($cfg['retry_count'] ?? 1);
 
@@ -84,6 +84,7 @@ SYS;
         return array_merge($parsed, [
             '_legacy_pass' => $legacyPass,
             '_auditor_model' => $out['model_used'],
+            '_auditor_model_resolved' => $out['model_resolved'] ?? '',
         ]);
     }
 }

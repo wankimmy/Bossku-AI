@@ -4,6 +4,13 @@ export type SseEvent = Record<string, unknown> & {
   status?: string
 }
 
+/** SSE event types that mean the run ended normally (do not show generic "interrupted"). */
+const TERMINAL_EVENT_TYPES = new Set([
+  'run_completed',
+  'run_failed',
+  'planner_failed',
+])
+
 /** Run via SSE GET /api/runs/stream — returns cleanup fn */
 export function useRunStream() {
   const events = ref<SseEvent[]>([])
@@ -34,7 +41,21 @@ export function useRunStream() {
       }
     }
     src.onerror = () => {
-      error.value = 'Connection to the run stream was interrupted. If Ollama or the API is down, check docker compose services.'
+      const lastType = events.value.at(-1)?.type
+      const reachedTerminal = lastType !== undefined && TERMINAL_EVENT_TYPES.has(String(lastType))
+
+      if (!reachedTerminal) {
+        if (events.value.length === 0) {
+          error.value
+            = 'Stream failed to start: the API closed before any events (often HTTP 500). '
+              + 'Check `docker compose logs -f backend` — bootstrap/cache and storage must be writable. '
+              + 'Rebuild: `docker compose build backend && docker compose up -d backend`.'
+        }
+        else {
+          error.value
+            = 'Connection to the run stream was interrupted mid-run. If Ollama or the API crashed, check `docker compose logs -f backend nginx`.'
+        }
+      }
       stop()
     }
   }

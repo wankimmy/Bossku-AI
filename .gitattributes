@@ -1,0 +1,2 @@
+# Shell scripts in Docker contexts must stay LF-only (avoid CRLF breaking ENTRYPOINT).
+docker/php/*.sh text eol=lf

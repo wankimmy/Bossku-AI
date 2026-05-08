@@ -82,6 +82,7 @@ SYS;
                 $routerMeta['fallback_reason'] = $out['fallback_reason'];
                 $routerMeta['input_tokens'] = $out['input_tokens'];
                 $routerMeta['output_tokens'] = $out['output_tokens'];
+                $routerMeta['router_model_resolved'] = $out['model_resolved'] ?? null;
             } catch (\Throwable) {
                 $llmRoute = null;
             }
@@ -92,12 +93,12 @@ SYS;
         $modelsResolved = [
             'router' => $routerModelUsed,
             'orchestrator' => $this->settings->orchestratorModelOverride() ?? (string) ($this->config->orchestrator()['primary'] ?? $this->settings->plannerModel()),
-            'executor' => (string) ($this->config->executorProfile((string) $route['executor_profile'])['primary'] ?? 'kimi-k2.6'),
-            'auditor' => (string) ($this->config->auditor()['primary'] ?? 'claude-opus-4.7'),
-            'security_auditor' => (string) ($this->config->securityAuditor()['primary'] ?? 'claude-opus-4.7'),
-            'final_reviewer' => (string) ($this->config->finalReviewer()['primary'] ?? 'gpt-5.5'),
+            'executor' => (string) ($this->config->executorProfile((string) $route['executor_profile'])['primary'] ?? 'glm-5.1'),
+            'auditor' => (string) ($this->config->auditor()['primary'] ?? 'deepseek-v4-pro'),
+            'security_auditor' => (string) ($this->config->securityAuditor()['primary'] ?? 'deepseek-v4-pro'),
+            'final_reviewer' => (string) ($this->config->finalReviewer()['primary'] ?? 'deepseek-v4-pro'),
             'direct_answer' => (string) ($this->config->directAnswer()['primary'] ?? $primary),
-            'writer' => (string) ($this->config->writer()['primary'] ?? 'gpt-5.5'),
+            'writer' => (string) ($this->config->writer()['primary'] ?? 'kimi-k2.6'),
         ];
 
         $routerMeta['provider'] = $routerProvider;

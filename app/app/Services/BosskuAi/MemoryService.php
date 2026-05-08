@@ -3,7 +3,7 @@
 namespace App\Services\BosskuAi;
 
 use App\Models\BosskuAi\Memory;
-use App\Services\Llm\OpenAiClient;
+use App\Services\Llm\OllamaClient;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -11,13 +11,19 @@ use Illuminate\Support\Str;
 class MemoryService
 {
     public function __construct(
-        protected OpenAiClient $openAi,
+        protected OllamaClient $ollama,
+        protected LlmGateway $llmGateway,
         protected RuntimeSettings $settings
     ) {}
 
     protected function databaseDriver(): string
     {
         return (string) DB::connection()->getDriverName();
+    }
+
+    protected function memoryOllamaEnabled(): bool
+    {
+        return filter_var(config('bossku.memory_ollama_enabled', true), FILTER_VALIDATE_BOOL);
     }
 
     /** @param array<string,mixed> $metadata */
@@ -30,10 +36,11 @@ class MemoryService
         ?string $source = null
     ): Memory {
         $embedding = null;
-        if (config('services.openai.key')) {
+        if ($this->memoryOllamaEnabled()) {
             try {
-                $vec = $this->openAi->embed($content, $this->settings->embeddingModel());
-                $embedding = $vec;
+                $physical = $this->settings->ollamaEmbeddingPhysicalModel();
+                $vec = $this->ollama->embed($content, $physical);
+                $embedding = $this->normalizeEmbedding($vec);
             } catch (\Throwable) {
                 $embedding = null;
             }
@@ -51,7 +58,7 @@ class MemoryService
             'confidence' => null,
         ]);
 
-        if ($embedding && count($embedding) >= 768) {
+        if ($embedding && count($embedding) >= 64 && $this->databaseDriver() === 'pgsql') {
             $this->persistEmbedding($row->getKey(), $embedding);
         }
 
@@ -65,10 +72,14 @@ class MemoryService
     {
         $limit = $topK ?? $this->settings->maxMemoryResults();
 
-        if (config('services.openai.key') && $this->databaseDriver() === 'pgsql') {
+        if (
+            $this->memoryOllamaEnabled()
+            && $this->databaseDriver() === 'pgsql'
+        ) {
             try {
-                $vec = $this->openAi->embed($query, $this->settings->embeddingModel());
-                if (count($vec) >= 768) {
+                $physical = $this->settings->ollamaEmbeddingPhysicalModel();
+                $vec = $this->normalizeEmbedding($this->ollama->embed($query, $physical));
+                if (count($vec) >= 64) {
                     return $this->vectorSearch($vec, $limit);
                 }
             } catch (\Throwable) {
@@ -97,19 +108,20 @@ class MemoryService
 
     public function humanize(Memory $memory): Memory
     {
-        if (! config('services.openai.key')) {
+        if (! $this->memoryOllamaEnabled()) {
             $memory->human_summary = $memory->human_summary ?: Str::limit(strip_tags($memory->content), 200);
 
             return tap($memory)->save();
         }
 
         try {
-            $text = $this->openAi->chat([
+            $model = $this->settings->memoryHumanizeLogicalModel();
+            $out = $this->llmGateway->chat($model, [
                 ['role' => 'system', 'content' => 'Rewrite the following durable memory note as one short neutral sentence for humans.'],
                 ['role' => 'user', 'content' => $memory->content],
-            ], $this->settings->plannerModel(), 0.2);
+            ], 0.2);
 
-            $memory->human_summary = trim($text);
+            $memory->human_summary = trim($out['text']);
             $memory->save();
         } catch (\Throwable) {
             //
@@ -128,9 +140,10 @@ class MemoryService
         ])->all());
         $m->save();
 
-        if (($data['content'] ?? null) !== null && config('services.openai.key')) {
+        if (($data['content'] ?? null) !== null && $this->memoryOllamaEnabled()) {
             try {
-                $vec = $this->openAi->embed($m->content, $this->settings->embeddingModel());
+                $physical = $this->settings->ollamaEmbeddingPhysicalModel();
+                $vec = $this->normalizeEmbedding($this->ollama->embed($m->content, $physical));
                 $this->persistEmbedding($m->getKey(), $vec);
             } catch (\Throwable) {
                 //
@@ -152,6 +165,21 @@ class MemoryService
     public function deleteMemory(string $id): bool
     {
         return (bool) Memory::query()->whereKey($id)->delete();
+    }
+
+    /**
+     * @param  list<float>  $vec
+     * @return list<float>
+     */
+    protected function normalizeEmbedding(array $vec): array
+    {
+        $vec = array_values(array_map(static fn ($v): float => (float) $v, $vec));
+        $vec = array_slice($vec, 0, 1536);
+        while (count($vec) < 1536) {
+            $vec[] = 0.0;
+        }
+
+        return $vec;
     }
 
     /** @param list<float> $vec */

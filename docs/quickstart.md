@@ -26,7 +26,9 @@ docker compose exec backend php artisan bosskuai:import-knowledge --fresh
 - UI: **http://localhost:3000**
 - API: **http://localhost:8000**
 
-Ensure **`app/.env`** exists and set **`OLLAMA_BASE_URL`** / **`OLLAMA_API_KEY`** (Ollama Cloud) or **`http://host.docker.internal:11434`** (Ollama on your machine). See [`README.md`](../README.md). Also set **`OPENAI_API_KEY`** / **`ANTHROPIC_API_KEY`** as documented there.
+Ensure **`app/.env`** exists and set **`OLLAMA_BASE_URL`** / **`OLLAMA_API_KEY`** (Ollama Cloud) or **`http://host.docker.internal:11434`** (Ollama on your machine). See [`README.md`](../README.md). Optional: **`OLLAMA_EMBEDDING_MODEL`** for vector memory search via Ollama **`/api/embed`**.
+
+**If Stream run fails immediately or `/api/runs` returns 500:** check `docker compose logs -f backend` for `bootstrap/cache` / `storage` not writable. Rebuild the backend image (`docker compose build backend && docker compose up -d backend`); the Dockerfile entrypoint fixes permissions on container start. Validate with `curl -i http://localhost:8000/api/runs`.
 
 ## Next
 

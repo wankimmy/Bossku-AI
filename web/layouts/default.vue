@@ -24,13 +24,13 @@ function toggleDark() {
 }
 
 const links = [
-  { to: '/', label: 'Run' },
+  { to: '/', label: 'Chat' },
   { to: '/skills', label: 'Skills' },
   { to: '/rules', label: 'Rules' },
   { to: '/playbooks', label: 'Playbooks' },
   { to: '/checklists', label: 'Checklists' },
   { to: '/memory', label: 'Memory' },
-  { to: '/runs', label: 'Runs' },
+  { to: '/runs', label: 'History' },
   { to: '/settings', label: 'Settings' },
 ]
 </script>

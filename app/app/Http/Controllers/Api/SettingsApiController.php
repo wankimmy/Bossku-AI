@@ -17,9 +17,7 @@ class SettingsApiController extends Controller
     public function update(Request $request, RuntimeSettings $settings)
     {
         $data = $request->validate([
-            'planner_provider' => 'sometimes|string',
             'planner_model' => 'sometimes|string',
-            'auditor_provider' => 'sometimes|string',
             'auditor_model' => 'sometimes|string',
             'executor_model' => 'sometimes|string',
             'ollama_base_url' => 'sometimes|string',
@@ -30,6 +28,10 @@ class SettingsApiController extends Controller
             'routing_llm_enabled' => 'sometimes|string',
             'orchestrator_model' => 'sometimes|string',
         ]);
+
+        // Runtime is Ollama-only; keep providers canonical even if old DB settings exist.
+        Setting::setValue('planner_provider', 'ollama');
+        Setting::setValue('auditor_provider', 'ollama');
 
         foreach ($data as $k => $v) {
             if (str_ends_with($k, '_enabled')) {

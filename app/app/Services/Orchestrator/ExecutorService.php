@@ -130,6 +130,7 @@ Markdown;
             'known_issues' => is_array($parsed['known_issues'] ?? null) ? $parsed['known_issues'] : [],
             'needs_audit' => (bool) ($parsed['needs_audit'] ?? true),
             '_executor_model' => $out['model_used'],
+            '_executor_model_resolved' => $out['model_resolved'] ?? '',
             '_executor_fallback' => $out['fallback_used'],
             'latency_ms' => $latency,
         ];

@@ -33,6 +33,13 @@ class RiskRuleEngine
     public function deterministicRisk(string $prompt): array
     {
         $lower = mb_strtolower($prompt);
+        $trim = trim($prompt);
+
+        // Prefer explanation-style prompts over generic high-risk vocab (policy/gate/auth wording).
+        if (preg_match('/^(explain|what is|what are|how does|why|define)\b/i', $trim)) {
+            return ['risk' => 'low', 'reasons' => ['heuristic:explanation_question'], 'upgraded' => false];
+        }
+
         $reasons = [];
 
         foreach ($this->highKeywords as $kw) {

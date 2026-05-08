@@ -57,7 +57,7 @@ Details: [`AGENTS.md`](AGENTS.md) · keyword → skill mapping: [`agents/skill-d
 
 | Area | Highlights |
 |---|---|
-| Routing | GPT-5.5-class orchestration, Kimi K2.6-class execution by default (`app/config/bossku_models.php`) |
+| Routing | Kimi-class orchestrator/writer/direct-answer, GLM executor, DeepSeek auditor/reviewer (`app/config/bossku_models.php`, Ollama Cloud) |
 | Skills | Laravel, Nuxt, Docker, DB, security, UX, SEO/GEO, testing, product strategy — see [`skills/`](skills/) |
 | Memory | Policy + schema in [`memory/`](memory/) · CLI `auto_memory.py` |
 | Tokens | [`playbooks/token-saving.md`](playbooks/token-saving.md) |
@@ -80,13 +80,19 @@ docker compose exec backend php artisan migrate --force
 docker compose exec backend php artisan bosskuai:import-knowledge --fresh
 ```
 
-Ensure **`app/.env`** exists (`cp app/.env.example app/.env`) so the backend receives **`OLLAMA_BASE_URL`** (e.g. `https://ollama.com`) and **`OLLAMA_API_KEY`** from [ollama.com/settings/keys](https://ollama.com/settings/keys).
+Ensure **`app/.env`** exists (`cp app/.env.example app/.env`) so the backend receives **`OLLAMA_BASE_URL`** (e.g. `https://ollama.com`), **`OLLAMA_API_KEY`** from [ollama.com/settings/keys](https://ollama.com/settings/keys), and optional **`OLLAMA_EMBEDDING_MODEL`** for pgvector-backed memory embeddings via Ollama **`/api/embed`**.
+
+Docker Compose **`backend`** binds **`OLLAMA_*`** exclusively for LLMs at runtime — there is **no separate OpenAI/Anthropic** configuration in Laravel.
 
 - UI: **http://localhost:3000** · API/SSE base: **http://localhost:8000**
 
-Configure `OPENAI_API_KEY`, optional `ANTHROPIC_API_KEY`, and planner/router envs in **`app/.env`** (the Laravel runtime file). The repo-root **`.env.example`** is a concise template of variable names the code actually reads — copy or merge it into **`app/.env`** for Docker; it is not loaded by Laravel on its own.
+**Role defaults (logical → `:cloud` tags in `bossku_models.php`):**
 
-Models whose names match **`BOSSKU_OLLAMA_MODEL_PATTERNS`** (including Kimi- and DeepSeek-style executor IDs) are routed through **Ollama’s HTTP API** at **`OLLAMA_BASE_URL`** (e.g. [Ollama Cloud](https://ollama.com) or **`http://host.docker.internal:11434`** if you run Ollama on your host). **`OLLAMA_API_KEY`** is required for Cloud and is sent as a Bearer token from [`OllamaClient`](app/app/Services/Llm/OllamaClient.php). They are **not** sent through separate Moonshot or DeepSeek REST API keys.
+- Orchestrator / router / writer / direct-answer: **`kimi-k2.6`**
+- Executor (default/frontend/backend/devops): **`glm-5.1`**
+- High-risk executor + auditor + security auditor + final reviewer: **`deepseek-v4-pro`**
+
+Models whose names match **`BOSSKU_OLLAMA_MODEL_PATTERNS`** are routed through **Ollama** at **`POST {OLLAMA_BASE_URL}/api/chat`**. **`OLLAMA_API_KEY`** is required for Cloud and is sent as a Bearer token from [`OllamaClient`](app/app/Services/Llm/OllamaClient.php).
 
 Docker Compose’s **`backend`** service uses **`env_file: ./app/.env`** (create **`app/.env`** from **`app/.env.example`** before `docker compose up`).
 
@@ -94,9 +100,10 @@ Docker sets `BOSSKU_REPO_PATH=/repo` so the importer reads markdown from this re
 
 **Troubleshooting**
 
+- **Bootstrap 500 / Stream run shows no events:** If logs show `The /var/www/html/bootstrap/cache directory must be present and writable`, the **backend image** runs an entrypoint that `chmod`s `bootstrap/cache` and `storage` on start — rebuild: `docker compose build backend && docker compose up -d backend`. Then verify: `curl -i http://localhost:8000/api/runs`. Clear caches: `docker compose exec backend php artisan optimize:clear` and `docker compose restart backend`.
 - **Ollama / executor unreachable:** Verify **`OLLAMA_BASE_URL`** and **`OLLAMA_API_KEY`** for Cloud ([keys](https://ollama.com/settings/keys)); for local host Ollama use **`OLLAMA_BASE_URL=http://host.docker.internal:11434`** and align **`OLLAMA_EXECUTOR_MODEL`** with a pulled model tag.  
 - **No skills:** `docker compose exec backend php artisan bosskuai:import-knowledge --fresh`  
-- **Planner JSON failed:** validate API keys and planner model envs (`PLANNER_MODEL`, etc.)
+- **Planner JSON failed:** validate **`OLLAMA_API_KEY`**, **`OLLAMA_BASE_URL`**, and role model envs (`BOSSKU_ORCHESTRATOR_MODEL`, `PLANNER_MODEL`, etc.)
 
 UI smoke tests (Nuxt vs a mock API — no Laravel): from **`web/`** run **`npm run e2e:install`** then **`npm run e2e`**. Details: [`web/e2e/README.md`](web/e2e/README.md).
 
