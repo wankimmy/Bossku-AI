@@ -1,0 +1,15 @@
+{
+  "planner_provider": "openai",
+  "planner_model": "gpt-mock",
+  "auditor_provider": "anthropic",
+  "auditor_model": "claude-mock",
+  "executor_provider": "ollama",
+  "executor_model": "qwen-mock",
+  "ollama_base_url": "http://127.0.0.1:11434",
+  "max_memory_results": "5",
+  "audit_enabled": "1",
+  "memory_storage_enabled": "1",
+  "embedding_model": "text-embedding-mock",
+  "routing_llm_enabled": "1",
+  "orchestrator_model": "orch-mock"
+}

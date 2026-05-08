@@ -1,0 +1,12 @@
+{
+  "data": [
+    {
+      "id": "cl_1",
+      "name": "Release QA",
+      "description": "Mock checklist stub.",
+      "is_active": true
+    }
+  ],
+  "current_page": 1,
+  "last_page": 1
+}

@@ -1,5 +1,14 @@
 <script setup lang="ts">
+const route = useRoute()
 const dark = useState('dark-mode', () => false)
+const mobileNavOpen = ref(false)
+
+watch(
+  () => route.fullPath,
+  () => {
+    mobileNavOpen.value = false
+  },
+)
 
 onMounted(() => {
   if (import.meta.client) {
@@ -44,13 +53,46 @@ const links = [
             {{ l.label }}
           </NuxtLink>
         </nav>
-        <button
-          type="button"
-          class="rounded-md border border-zinc-300 px-2 py-1 text-xs font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900"
-          @click="toggleDark"
-        >
-          Theme
-        </button>
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            class="rounded-md border border-zinc-300 px-2 py-1 text-xs font-medium hover:bg-zinc-100 md:hidden dark:border-zinc-700 dark:hover:bg-zinc-900"
+            :aria-expanded="mobileNavOpen"
+            aria-controls="mobile-nav-panel"
+            @click="mobileNavOpen = !mobileNavOpen"
+          >
+            Menu
+          </button>
+          <button
+            type="button"
+            class="rounded-md border border-zinc-300 px-2 py-1 text-xs font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900"
+            @click="toggleDark"
+          >
+            Theme
+          </button>
+        </div>
+      </div>
+
+      <!-- Full primary nav on small screens (header nav is md+ only). -->
+      <div
+        v-show="mobileNavOpen"
+        id="mobile-nav-panel"
+        class="border-t border-zinc-200 bg-zinc-50 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950 md:hidden"
+        role="dialog"
+        aria-label="Site navigation"
+      >
+        <nav class="flex flex-col gap-1 text-sm" aria-label="Main mobile">
+          <NuxtLink
+            v-for="l in links"
+            :key="l.to"
+            :to="l.to"
+            class="rounded-md px-2 py-2 text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-900"
+            active-class="bg-emerald-50 font-medium text-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-300"
+            @click="mobileNavOpen = false"
+          >
+            {{ l.label }}
+          </NuxtLink>
+        </nav>
       </div>
     </header>
 

@@ -1,0 +1,7 @@
+{
+  "id": "pb_1",
+  "name": "Deploy checklist playbook",
+  "description": "Mock playbook detail body.",
+  "content": "## Steps\n\n1. Smoke\n2. Verify\n\nLong marker: MOCK_PLAYBOOK_MARKER_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n",
+  "is_active": true
+}

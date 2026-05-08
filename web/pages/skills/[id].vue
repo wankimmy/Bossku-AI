@@ -7,8 +7,8 @@ const { data, pending } = await useFetch(() => `${base}/api/skills/${route.param
 
 <template>
   <UiSkeleton v-if="pending" class="h-64 w-full" />
-  <div v-else-if="data" class="grid gap-4 lg:grid-cols-2">
-    <div class="rounded-xl border p-4 dark:border-zinc-800">
+  <div v-else-if="data" class="grid min-w-0 gap-4 lg:grid-cols-2">
+    <div class="min-w-0 rounded-xl border p-4 dark:border-zinc-800">
       <h1 class="text-xl font-semibold">
         {{ data.name }}
       </h1>
@@ -19,11 +19,11 @@ const { data, pending } = await useFetch(() => `${base}/api/skills/${route.param
         {{ data.source_path }}
       </p>
     </div>
-    <div class="rounded-xl border p-4 dark:border-zinc-800">
+    <div class="min-w-0 rounded-xl border p-4 dark:border-zinc-800">
       <h2 class="text-sm font-semibold mb-2">
         Source markdown
       </h2>
-      <pre class="max-h-[70vh] overflow-auto whitespace-pre-wrap text-xs">{{ data.content }}</pre>
+      <pre class="max-h-[70vh] min-w-0 max-w-full overflow-x-auto overflow-y-auto whitespace-pre-wrap text-xs">{{ data.content }}</pre>
     </div>
   </div>
 </template>

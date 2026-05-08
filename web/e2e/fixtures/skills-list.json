@@ -1,0 +1,14 @@
+{
+  "data": [
+    {
+      "id": "sk_1",
+      "name": "Laravel playbook",
+      "description": "E2E mock skill tied to playbook metadata.",
+      "source_path": "skills/laravel/playbook/SKILL.md",
+      "is_active": true,
+      "links": []
+    }
+  ],
+  "current_page": 1,
+  "last_page": 1
+}

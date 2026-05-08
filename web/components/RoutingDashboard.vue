@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+
 /**
  * Read-only routing summary from Run.metadata (Laravel API).
  */

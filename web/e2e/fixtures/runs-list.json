@@ -1,0 +1,17 @@
+{
+  "data": [
+    {
+      "id": "r_1",
+      "prompt": "Explain the mock orchestrator smoke run.",
+      "status": "done",
+      "total_latency_ms": 42,
+      "created_at": "2026-01-01T00:00:00.000000Z",
+      "steps_count": 2,
+      "total_token_estimate": null,
+      "metadata": {},
+      "final_output": ""
+    }
+  ],
+  "current_page": 1,
+  "last_page": 1
+}

@@ -78,18 +78,24 @@ docker compose exec backend composer install --no-interaction
 docker compose exec backend php artisan key:generate
 docker compose exec backend php artisan migrate --force
 docker compose exec backend php artisan bosskuai:import-knowledge --fresh
-docker compose exec ollama ollama pull llama3
+docker compose exec ollama ollama pull qwen2.5-coder:32b
 ```
 
 - UI: **http://localhost:3000** · API/SSE base: **http://localhost:8000**
 
-Configure `OPENAI_API_KEY`, optional `ANTHROPIC_API_KEY`, and planner/router envs in `app/.env`. Docker sets `BOSSKU_REPO_PATH=/repo` so the importer reads markdown from this repo.
+Configure `OPENAI_API_KEY`, optional `ANTHROPIC_API_KEY`, and planner/router envs in **`app/.env`** (the Laravel runtime file). The repo-root **`.env.example`** is a concise template of variable names the code actually reads — copy or merge it into **`app/.env`** for Docker; it is not loaded by Laravel on its own.
+
+Models whose names match **`BOSSKU_OLLAMA_MODEL_PATTERNS`** (including Kimi- and DeepSeek-style executor IDs) are routed to **Ollama / Ollama Cloud** via `OLLAMA_BASE_URL`; they are **not** sent through separate Moonshot or DeepSeek REST API keys.
+
+Docker sets `BOSSKU_REPO_PATH=/repo` so the importer reads markdown from this repo.
 
 **Troubleshooting**
 
-- **Ollama unreachable:** `docker compose ps`, confirm `OLLAMA_BASE_URL=http://ollama:11434`, run `docker compose exec ollama ollama pull llama3`  
+- **Ollama unreachable:** `docker compose ps`, confirm `OLLAMA_BASE_URL=http://ollama:11434`, run `docker compose exec ollama ollama pull qwen2.5-coder:32b` (or pull the tag you set in `OLLAMA_EXECUTOR_MODEL`)  
 - **No skills:** `docker compose exec backend php artisan bosskuai:import-knowledge --fresh`  
 - **Planner JSON failed:** validate API keys and planner model envs (`PLANNER_MODEL`, etc.)
+
+UI smoke tests (Nuxt vs a mock API — no Laravel): from **`web/`** run **`npm run e2e:install`** then **`npm run e2e`**. Details: [`web/e2e/README.md`](web/e2e/README.md).
 
 ---
 

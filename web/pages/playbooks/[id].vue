@@ -11,6 +11,6 @@ const { data, pending } = await useFetch(() => `${base}/api/playbooks/${route.pa
     <h1 class="text-xl font-semibold">
       {{ data.name }}
     </h1>
-    <pre class="whitespace-pre-wrap rounded-xl border p-4 text-sm dark:border-zinc-800">{{ data.content }}</pre>
+    <pre class="max-w-full overflow-x-auto whitespace-pre-wrap break-words rounded-xl border p-4 text-sm dark:border-zinc-800">{{ data.content }}</pre>
   </div>
 </template>

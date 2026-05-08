@@ -1,0 +1,14 @@
+{
+  "data": [
+    {
+      "id": "rule_1",
+      "name": "Always cite sources",
+      "rule_text": "When answering factual questions, include references.",
+      "scope": "global",
+      "priority": 100,
+      "is_active": true
+    }
+  ],
+  "current_page": 1,
+  "last_page": 1
+}
