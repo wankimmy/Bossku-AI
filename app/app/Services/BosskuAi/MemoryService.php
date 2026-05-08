@@ -6,7 +6,6 @@ use App\Models\BosskuAi\Memory;
 use App\Services\Llm\OpenAiClient;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class MemoryService
@@ -15,6 +14,11 @@ class MemoryService
         protected OpenAiClient $openAi,
         protected RuntimeSettings $settings
     ) {}
+
+    protected function databaseDriver(): string
+    {
+        return (string) DB::connection()->getDriverName();
+    }
 
     /** @param array<string,mixed> $metadata */
     public function store(
@@ -61,7 +65,7 @@ class MemoryService
     {
         $limit = $topK ?? $this->settings->maxMemoryResults();
 
-        if (config('services.openai.key') && Schema::connection()->getDriverName() === 'pgsql') {
+        if (config('services.openai.key') && $this->databaseDriver() === 'pgsql') {
             try {
                 $vec = $this->openAi->embed($query, $this->settings->embeddingModel());
                 if (count($vec) >= 768) {
@@ -72,11 +76,19 @@ class MemoryService
             }
         }
 
+        return $this->textSearchFallback($query, $limit);
+    }
+
+    /** @return Collection<int, Memory> */
+    protected function textSearchFallback(string $query, int $limit): Collection
+    {
+        $op = $this->databaseDriver() === 'pgsql' ? 'ILIKE' : 'LIKE';
+
         return Memory::query()
             ->where('is_active', true)
-            ->where(function ($q) use ($query) {
-                $q->where('content', 'ILIKE', '%'.$query.'%')
-                    ->orWhere('human_summary', 'ILIKE', '%'.$query.'%');
+            ->where(function ($q) use ($query, $op) {
+                $q->where('content', $op, '%'.$query.'%')
+                    ->orWhere('human_summary', $op, '%'.$query.'%');
             })
             ->orderByDesc('updated_at')
             ->limit($limit)
@@ -145,7 +157,7 @@ class MemoryService
     /** @param list<float> $vec */
     protected function persistEmbedding(string $id, array $vec): void
     {
-        if (Schema::connection()->getDriverName() !== 'pgsql') {
+        if ($this->databaseDriver() !== 'pgsql') {
             return;
         }
         $slice = array_slice($vec, 0, 1536);
