@@ -8,7 +8,8 @@ use Illuminate\Support\Facades\Http;
 class OllamaClient
 {
     public function __construct(
-        protected string $baseUrl = 'http://127.0.0.1:11434'
+        protected string $baseUrl = 'http://127.0.0.1:11434',
+        protected ?string $apiKey = null,
     ) {}
 
     /**
@@ -18,7 +19,13 @@ class OllamaClient
     public function chatWithUsage(string $model, array $messages, ?float $temperature = 0.2): array
     {
         $url = rtrim($this->baseUrl, '/').'/api/chat';
-        $res = Http::timeout(300)->post($url, [
+
+        $http = Http::timeout(300)->acceptJson();
+        if ($this->apiKey !== null && $this->apiKey !== '') {
+            $http = $http->withToken($this->apiKey);
+        }
+
+        $res = $http->post($url, [
             'model' => $model,
             'messages' => $messages,
             'stream' => false,
@@ -29,7 +36,7 @@ class OllamaClient
             $res->throw();
         } catch (RequestException $e) {
             throw new \RuntimeException(
-                'Ollama is not reachable at '.$this->baseUrl.'. Check docker compose service and OLLAMA_BASE_URL. Response: '.$res->body(),
+                'Ollama is not reachable at '.$this->baseUrl.'. For Ollama Cloud set OLLAMA_BASE_URL (e.g. https://ollama.com) and OLLAMA_API_KEY. Response: '.$res->body(),
                 previous: $e
             );
         }

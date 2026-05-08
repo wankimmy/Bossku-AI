@@ -5,6 +5,8 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     working_dir: /var/www/html
+    env_file:
+      - ./app/.env
     environment:
       BOSSKU_REPO_PATH: /repo
       DB_CONNECTION: pgsql
@@ -83,18 +85,8 @@ services:
       - "6379:6379"
     networks: [bossku]
 
-  ollama:
-    image: ollama/ollama:latest
-    restart: unless-stopped
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-    networks: [bossku]
-
 volumes:
   pgdata:
-  ollama_data:
   node_modules:
 
 networks:

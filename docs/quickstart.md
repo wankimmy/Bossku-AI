@@ -21,13 +21,12 @@ docker compose exec backend composer install --no-interaction
 docker compose exec backend php artisan key:generate
 docker compose exec backend php artisan migrate --force
 docker compose exec backend php artisan bosskuai:import-knowledge --fresh
-docker compose exec ollama ollama pull llama3
 ```
 
 - UI: **http://localhost:3000**
 - API: **http://localhost:8000**
 
-Set API keys in `app/.env` as documented in the main README.
+Ensure **`app/.env`** exists and set **`OLLAMA_BASE_URL`** / **`OLLAMA_API_KEY`** (Ollama Cloud) or **`http://host.docker.internal:11434`** (Ollama on your machine). See [`README.md`](../README.md). Also set **`OPENAI_API_KEY`** / **`ANTHROPIC_API_KEY`** as documented there.
 
 ## Next
 

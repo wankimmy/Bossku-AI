@@ -78,20 +78,23 @@ docker compose exec backend composer install --no-interaction
 docker compose exec backend php artisan key:generate
 docker compose exec backend php artisan migrate --force
 docker compose exec backend php artisan bosskuai:import-knowledge --fresh
-docker compose exec ollama ollama pull qwen2.5-coder:32b
 ```
+
+Ensure **`app/.env`** exists (`cp app/.env.example app/.env`) so the backend receives **`OLLAMA_BASE_URL`** (e.g. `https://ollama.com`) and **`OLLAMA_API_KEY`** from [ollama.com/settings/keys](https://ollama.com/settings/keys).
 
 - UI: **http://localhost:3000** · API/SSE base: **http://localhost:8000**
 
 Configure `OPENAI_API_KEY`, optional `ANTHROPIC_API_KEY`, and planner/router envs in **`app/.env`** (the Laravel runtime file). The repo-root **`.env.example`** is a concise template of variable names the code actually reads — copy or merge it into **`app/.env`** for Docker; it is not loaded by Laravel on its own.
 
-Models whose names match **`BOSSKU_OLLAMA_MODEL_PATTERNS`** (including Kimi- and DeepSeek-style executor IDs) are routed to **Ollama / Ollama Cloud** via `OLLAMA_BASE_URL`; they are **not** sent through separate Moonshot or DeepSeek REST API keys.
+Models whose names match **`BOSSKU_OLLAMA_MODEL_PATTERNS`** (including Kimi- and DeepSeek-style executor IDs) are routed through **Ollama’s HTTP API** at **`OLLAMA_BASE_URL`** (e.g. [Ollama Cloud](https://ollama.com) or **`http://host.docker.internal:11434`** if you run Ollama on your host). **`OLLAMA_API_KEY`** is required for Cloud and is sent as a Bearer token from [`OllamaClient`](app/app/Services/Llm/OllamaClient.php). They are **not** sent through separate Moonshot or DeepSeek REST API keys.
+
+Docker Compose’s **`backend`** service uses **`env_file: ./app/.env`** (create **`app/.env`** from **`app/.env.example`** before `docker compose up`).
 
 Docker sets `BOSSKU_REPO_PATH=/repo` so the importer reads markdown from this repo.
 
 **Troubleshooting**
 
-- **Ollama unreachable:** `docker compose ps`, confirm `OLLAMA_BASE_URL=http://ollama:11434`, run `docker compose exec ollama ollama pull qwen2.5-coder:32b` (or pull the tag you set in `OLLAMA_EXECUTOR_MODEL`)  
+- **Ollama / executor unreachable:** Verify **`OLLAMA_BASE_URL`** and **`OLLAMA_API_KEY`** for Cloud ([keys](https://ollama.com/settings/keys)); for local host Ollama use **`OLLAMA_BASE_URL=http://host.docker.internal:11434`** and align **`OLLAMA_EXECUTOR_MODEL`** with a pulled model tag.  
 - **No skills:** `docker compose exec backend php artisan bosskuai:import-knowledge --fresh`  
 - **Planner JSON failed:** validate API keys and planner model envs (`PLANNER_MODEL`, etc.)
 
