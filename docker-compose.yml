@@ -1,0 +1,102 @@
+services:
+  backend:
+    build:
+      context: ./docker/php
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    working_dir: /var/www/html
+    environment:
+      BOSSKU_REPO_PATH: /repo
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: bossku
+      DB_USERNAME: bossku
+      DB_PASSWORD: bossku
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      CACHE_STORE: redis
+      SESSION_DRIVER: redis
+      QUEUE_CONNECTION: redis
+    volumes:
+      - ./app:/var/www/html
+      - ./:/repo:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks: [bossku]
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+    volumes:
+      - ./app:/var/www/html:ro
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - backend
+    networks: [bossku]
+
+  frontend:
+    build:
+      context: ./docker/node
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./web:/app
+      - node_modules:/app/node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      - NUXT_PUBLIC_API_BASE=http://localhost:8000
+    depends_on:
+      - nginx
+    networks: [bossku]
+    command: sh -c "npm install && npx nuxi dev --host 0.0.0.0 --port 3000"
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: bossku
+      POSTGRES_USER: bossku
+      POSTGRES_PASSWORD: bossku
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bossku -d bossku"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [bossku]
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks: [bossku]
+
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks: [bossku]
+
+volumes:
+  pgdata:
+  ollama_data:
+  node_modules:
+
+networks:
+  bossku:
+    driver: bridge

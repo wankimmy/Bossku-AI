@@ -42,3 +42,10 @@ ai-assistant/memory/*
 !ai-assistant/memory/vector-config.json
 ai-assistant/memory/semantic-memory.sqlite3
 **/project-understanding.md
+
+# Laravel orchestrator backend + Nuxt frontend
+app/vendor/
+app/storage/*.key
+web/node_modules/
+web/.nuxt/
+web/.output/

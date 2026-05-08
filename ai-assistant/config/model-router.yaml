@@ -1,15 +1,38 @@
-# BosskuAI always-on model router policy.
-# No provider is hardcoded here. Map these labels to the actual models in Claude Code,
-# Cursor, Codex, or your local wrapper.
+# BosskuAI model routing (reference — canonical list: `app/config/bossku_models.php`).
+# Human-oriented names; map to your provider’s model IDs via env.
+
 planning:
   role: frontier
-  purpose: architecture, decomposition, risk, unknowns, testing strategy
+  primary_model_hint: gpt-5.5
+  backup_model_hints:
+    - claude-opus-4.7
+    - gemini-3-pro
 execution:
   role: lower-cost
-  purpose: safe edits, repetitive implementation, formatting, small refactors
+  primary_model_hint: kimi-k2.6
+  high_risk_primary_hint: gpt-5.5
+  backup_model_hints:
+    - deepseek-v4-pro
+    - qwen-3-coder
+    - glm-5.1
 audit:
   role: frontier
-  purpose: final review, security, business logic, regression risk, memory quality
+  primary_model_hint: claude-opus-4.7
+  backup_model_hints:
+    - gpt-5.5
+    - gemini-3-pro
+final_review:
+  role: frontier
+  primary_model_hint: gpt-5.5
+  only_when: high_risk
+  backup_model_hints:
+    - claude-opus-4.7
+    - gemini-3-pro
+router:
+  primary_model_hint: gpt-5.5-instant
+  backup_model_hints:
+    - gpt-5.4
+    - gemini-3-pro
 escalation_rules:
   - auth
   - payment

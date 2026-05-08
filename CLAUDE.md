@@ -2,30 +2,44 @@
 
 Use [`AGENTS.md`](AGENTS.md) as the canonical cross-tool contract. This file keeps Claude-specific deltas only.
 
-## Model Mapping
+## Mandatory indicator
 
-For meaningful tasks, use the always-on phase split:
+Every response must begin with:
+
+```text
+[BOSSKUAI]
+Skill: <detected-skill>
+Agent: <orchestrator|executor|auditor|final-reviewer>
+Model Role: <planner|coder|reviewer|researcher>
+Memory Used: <yes|no>
+```
+
+## Model mapping
+
+For meaningful tasks, use the phase split Claude exposes (adapt names to your subscription):
 
 | Phase | Default model | Purpose |
 |---|---|---|
-| Plan | `claude-opus-4-7` | Decompose task, inspect risks, choose approach, decide tests |
+| Plan / orchestrate | `claude-opus-4-7` | Decompose task, inspect risks, choose approach, decide tests |
 | Execute | `claude-sonnet-4-6` | Implement straightforward edits and mechanical changes |
-| Audit | `claude-opus-4-7` | Review diff, security/business logic, verification gaps, next action |
+| Audit / final review | `claude-opus-4-7` | Review diff, security/business logic, verification gaps |
 
-Escalate execution to `claude-opus-4-7` when the task touches payments, auth, secrets, privacy, migrations, data loss, multi-service architecture, or repeated failed attempts.
+This mirrors BosskuAI’s orchestrator→executor→auditor semantics. The **Docker / Laravel orchestrator** uses `app/config/bossku_models.php` for OpenAI/other providers — see [`agents/model-router.md`](agents/model-router.md).
 
-Trivial tasks may skip the split.
+Escalate execution to Opus when the task touches payments, auth, secrets, privacy, migrations, data loss, multi-service architecture, or repeated failed attempts.
 
-## Claude Defaults
+Trivial tasks may skip the phase split (still show the indicator).
+
+## Claude defaults
 
 - For Claude Opus 4.7 API usage, prefer adaptive thinking / effort controls where available; do not assume manual extended-thinking budgets are accepted.
 - Load the minimum relevant BosskuAI skill set from [`skill-index.json`](skill-index.json).
 - Use `bosskuai-permanent-memory-orchestration` when the task involves memory, vector DB, model routing, or cross-tool context.
 - Ask clarification questions before broad multi-file changes when scope is unclear.
-- Keep routing and protocol chatter internal unless the user asks for it or a handoff needs it.
 - Use normal prose when clarity matters; terse output is fine when the task is straightforward.
+- Deep multi-agent flows: see [`.claude/commands/`](.claude/commands/) and [`docs/multi-agent-architecture.md`](docs/multi-agent-architecture.md).
 
-## Shared Memory
+## Shared memory
 
 - Read [`ai-assistant/memory/active-continuation.md`](ai-assistant/memory/active-continuation.md) first when it contains live work.
 - Query vector memory before opening broad memory files:

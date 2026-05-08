@@ -1,0 +1,17 @@
+{
+  "name": "bosskuai-marketplace",
+  "owner": {
+    "name": "wankimmy"
+  },
+  "metadata": {
+    "description": "BosskuAI plugins for Cursor.",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "bossku-ai",
+      "source": "./",
+      "description": "AI cofounder plugin with reusable skills, subagents, and memory-first workflows."
+    }
+  ]
+}

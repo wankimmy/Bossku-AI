@@ -1,0 +1,186 @@
+<?php
+
+namespace App\Services\BosskuAi;
+
+use App\Models\BosskuAi\Memory;
+use App\Services\Llm\OpenAiClient;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
+
+class MemoryService
+{
+    public function __construct(
+        protected OpenAiClient $openAi,
+        protected RuntimeSettings $settings
+    ) {}
+
+    /** @param array<string,mixed> $metadata */
+    public function store(
+        string $content,
+        string $type,
+        array $metadata = [],
+        ?string $humanSummary = null,
+        array $tags = [],
+        ?string $source = null
+    ): Memory {
+        $embedding = null;
+        if (config('services.openai.key')) {
+            try {
+                $vec = $this->openAi->embed($content, $this->settings->embeddingModel());
+                $embedding = $vec;
+            } catch (\Throwable) {
+                $embedding = null;
+            }
+        }
+
+        /** @var Memory $row */
+        $row = Memory::query()->create([
+            'type' => $type,
+            'content' => $content,
+            'human_summary' => $humanSummary,
+            'metadata' => $metadata,
+            'tags' => $tags,
+            'source' => $source,
+            'is_active' => true,
+            'confidence' => null,
+        ]);
+
+        if ($embedding && count($embedding) >= 768) {
+            $this->persistEmbedding($row->getKey(), $embedding);
+        }
+
+        return $row->fresh();
+    }
+
+    /**
+     * @return Collection<int, Memory>
+     */
+    public function search(string $query, ?int $topK = null): Collection
+    {
+        $limit = $topK ?? $this->settings->maxMemoryResults();
+
+        if (config('services.openai.key') && Schema::connection()->getDriverName() === 'pgsql') {
+            try {
+                $vec = $this->openAi->embed($query, $this->settings->embeddingModel());
+                if (count($vec) >= 768) {
+                    return $this->vectorSearch($vec, $limit);
+                }
+            } catch (\Throwable) {
+                //
+            }
+        }
+
+        return Memory::query()
+            ->where('is_active', true)
+            ->where(function ($q) use ($query) {
+                $q->where('content', 'ILIKE', '%'.$query.'%')
+                    ->orWhere('human_summary', 'ILIKE', '%'.$query.'%');
+            })
+            ->orderByDesc('updated_at')
+            ->limit($limit)
+            ->get();
+    }
+
+    public function humanize(Memory $memory): Memory
+    {
+        if (! config('services.openai.key')) {
+            $memory->human_summary = $memory->human_summary ?: Str::limit(strip_tags($memory->content), 200);
+
+            return tap($memory)->save();
+        }
+
+        try {
+            $text = $this->openAi->chat([
+                ['role' => 'system', 'content' => 'Rewrite the following durable memory note as one short neutral sentence for humans.'],
+                ['role' => 'user', 'content' => $memory->content],
+            ], $this->settings->plannerModel(), 0.2);
+
+            $memory->human_summary = trim($text);
+            $memory->save();
+        } catch (\Throwable) {
+            //
+        }
+
+        return $memory;
+    }
+
+    /** @param array<string,mixed> $data */
+    public function updateMemory(string $id, array $data): Memory
+    {
+        /** @var Memory $m */
+        $m = Memory::query()->findOrFail($id);
+        $m->fill(collect($data)->only([
+            'type', 'content', 'human_summary', 'metadata', 'tags', 'confidence', 'source', 'is_active',
+        ])->all());
+        $m->save();
+
+        if (($data['content'] ?? null) !== null && config('services.openai.key')) {
+            try {
+                $vec = $this->openAi->embed($m->content, $this->settings->embeddingModel());
+                $this->persistEmbedding($m->getKey(), $vec);
+            } catch (\Throwable) {
+                //
+            }
+        }
+
+        return $m->fresh();
+    }
+
+    public function disableMemory(string $id): Memory
+    {
+        /** @var Memory $m */
+        $m = Memory::query()->findOrFail($id);
+        $m->update(['is_active' => false]);
+
+        return $m->fresh();
+    }
+
+    public function deleteMemory(string $id): bool
+    {
+        return (bool) Memory::query()->whereKey($id)->delete();
+    }
+
+    /** @param list<float> $vec */
+    protected function persistEmbedding(string $id, array $vec): void
+    {
+        if (Schema::connection()->getDriverName() !== 'pgsql') {
+            return;
+        }
+        $slice = array_slice($vec, 0, 1536);
+        $literal = '['.implode(',', array_map(fn (float $f) => sprintf('%.8f', $f), $slice)).']';
+        DB::update(
+            'UPDATE bossku_ai_memories SET embedding = ?::vector WHERE id = ?::uuid',
+            [$literal, $id]
+        );
+    }
+
+    /** @param list<float> $vec */
+    protected function vectorSearch(array $vec, int $limit): Collection
+    {
+        $slice = array_slice($vec, 0, 1536);
+        $literal = '['.implode(',', array_map(fn (float $f) => sprintf('%.8f', $f), $slice)).']';
+        /** @var list<object{id:string, similarity:float}> $rows */
+        $rows = DB::select(
+            'SELECT id, (1 - (embedding <=> ?::vector))::float AS similarity FROM bossku_ai_memories WHERE is_active = TRUE AND embedding IS NOT NULL ORDER BY embedding <=> ?::vector ASC LIMIT '.$limit,
+            [$literal, $literal]
+        );
+        if ($rows === []) {
+            return collect();
+        }
+        /** @var list<string> $ids */
+        $ids = array_map(fn ($r) => (string) $r->id, $rows);
+        $scores = [];
+        foreach ($rows as $r) {
+            $scores[(string) $r->id] = $r->similarity;
+        }
+
+        /** @var Collection<string, Memory> */
+        return Memory::query()
+            ->whereIn('id', $ids)
+            ->get()
+            ->sortByDesc(fn ($m) => $scores[$m->getKey()] ?? 0)
+            ->values();
+    }
+}

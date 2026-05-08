@@ -39,10 +39,12 @@ Use the frontier model for execution too when any of these are true:
 | Tool | Plan | Execute | Audit |
 |---|---|---|---|
 | Claude Code | `claude-opus-4-7` | `claude-sonnet-4-6` | `claude-opus-4-7` |
-| Codex | `gpt-5.4` planner agent | `gpt-5.4-mini` main agent | reviewer/security reviewer with high reasoning |
-| Cursor | strongest available model | lower-cost available model | strongest available model |
+| Codex | `gpt-5.5`-class planner (when exposed) | `kimi-k2.6`-class or GPT mini for execution | `claude-opus-4.7` or GPT-5.5-class reviewer |
+| Cursor | strongest available model | lower-cost available model when safe | strongest available model for review |
 
-Cursor and Codex model switching depends on what the local tool exposes. BosskuAI enforces the protocol through rules/config; it cannot override a tool UI that does not expose automatic model switching.
+Full role table (orchestrator / executor fallbacks including **Gemini 3 Pro**, **DeepSeek**, **Qwen**): [`agents/model-router.md`](../../agents/model-router.md).
+
+Cursor and Codex model switching depends on what the local tool exposes. BosskuAI encodes intent in [`AGENTS.md`](../../AGENTS.md) and `app/config/bossku_models.php` for the Docker MVP — tools without per-message routing require you to switch models manually.
 
 ## Required memory calls
 

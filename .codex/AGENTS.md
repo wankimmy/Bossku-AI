@@ -2,23 +2,40 @@
 
 Use [`../AGENTS.md`](../AGENTS.md) as the canonical cross-tool contract. This file keeps Codex-specific deltas only.
 
-## Model Mapping
+## Mandatory indicator
 
-For meaningful tasks:
+Every response must begin with:
 
-- Planning and architecture: `gpt-5.4`
-- Execution and implementation: `gpt-5.4-mini`
+```text
+[BOSSKUAI]
+Skill: <detected-skill>
+Agent: <orchestrator|executor|auditor|final-reviewer>
+Model Role: <planner|coder|reviewer|researcher>
+Memory Used: <yes|no>
+```
 
-Trivial tasks may skip the split.
+## Model mapping
 
-## Codex Defaults
+Map Codex’s UI to BosskuAI phases (use whatever models your org enables):
+
+| Phase | Typical Codex mapping | Purpose |
+|---|---|---|
+| Plan / orchestrate | Strong reasoning / planner-capable agent | Scope, risks, tests, target files |
+| Execute | Faster / coding-oriented agent | Diffs and implementation |
+| Audit / review | Strong reasoning reviewer | Correctness, security, gaps |
+
+Suggested alignments when available: GPT-5.5-class for planning and final review; Kimi K2.6-class for execution — see [`agents/model-router.md`](../agents/model-router.md) and [`app/config/bossku_models.php`](../app/config/bossku_models.php).
+
+Trivial tasks may skip the phase split (still show the indicator).
+
+## Codex defaults
 
 - Load the minimum relevant BosskuAI skill set from [`../skill-index.json`](../skill-index.json).
 - Ask 1-3 clarification questions before broad multi-file changes when scope is unclear.
 - Read code and nearby docs before making repo-specific claims.
-- Keep routing chatter internal unless the user asks for it or a handoff needs it.
+- Prefer [`../packages/bossku-ai/skills/bossku-ai/SKILL.md`](../packages/bossku-ai/skills/bossku-ai/SKILL.md) as the slim Codex entrypoint when appropriate.
 
-## Shared Memory
+## Shared memory
 
 - Read [`../ai-assistant/memory/active-continuation.md`](../ai-assistant/memory/active-continuation.md) first when it contains live work.
 - If [`../ai-assistant/memory/semantic-memory.sqlite3`](../ai-assistant/memory/semantic-memory.sqlite3) exists, query it before opening broad memory files.
@@ -28,3 +45,4 @@ Trivial tasks may skip the split.
 
 - [`../AGENTS.md`](../AGENTS.md)
 - [`../ai-assistant/references/workspace-layer-architecture.md`](../ai-assistant/references/workspace-layer-architecture.md)
+- [`../agents/model-router.md`](../agents/model-router.md)

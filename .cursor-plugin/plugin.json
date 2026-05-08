@@ -1,0 +1,21 @@
+{
+  "name": "bossku-ai",
+  "displayName": "BosskuAI",
+  "description": "AI cofounder plugin with reusable skills, subagents, and memory-first workflows.",
+  "version": "1.0.0",
+  "author": {
+    "name": "wankimmy",
+    "url": "https://github.com/wankimmy"
+  },
+  "homepage": "https://github.com/wankimmy/Bossku-AI",
+  "repository": "https://github.com/wankimmy/Bossku-AI",
+  "license": "MIT",
+  "keywords": [
+    "skills",
+    "subagents",
+    "memory",
+    "workflows"
+  ],
+  "skills": "./packages/bossku-ai/skills/",
+  "agents": "./agents/"
+}

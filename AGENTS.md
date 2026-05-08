@@ -1,12 +1,35 @@
 # BosskuAI Workspace Layer
 
-BosskuAI is a repo-local operating layer for Claude Code, Cursor, and Codex. It keeps routing, memory, verification, and handoff behavior consistent across tools.
+BosskuAI is a lightweight agentic orchestration layer for software builders — a repo-local operating layer for **Cursor**, **Claude Code**, **Codex**, and **OpenCode**. It keeps routing, memory, verification, audit discipline, and handoff behavior consistent across tools.
+
+It does **not** replace frameworks like LangChain or CrewAI. See [`docs/comparison.md`](docs/comparison.md).
+
+## Mandatory response indicator
+
+Every BosskuAI response **must** begin with:
+
+```text
+[BOSSKUAI]
+Skill: <detected-skill>
+Agent: <orchestrator|executor|auditor|final-reviewer>
+Model Role: <planner|coder|reviewer|researcher>
+Memory Used: <yes|no>
+```
+
+Rules:
+
+- `Skill`: use [`agents/skill-detector.md`](agents/skill-detector.md); be specific (`laravel`, `general`, etc.). Multiple skills: primary first, compact (`laravel + docker`).
+- `Agent`: the role answering this message (or the phase you are in if the tool only allows one).
+- `Model Role`: **planner** (orchestrate/plan), **coder** (implement), **reviewer** (audit/final review), **researcher** (explore/docs only).
+- `Memory Used`: **yes** if you queried vector memory, read durable memory files, or injected memory into context for this turn; otherwise **no**.
+
+Then answer in normal prose. Do not make the indicator longer than needed.
 
 ## Activation
 
 - The standalone word `bossku` activates BosskuAI mode.
 - If the user names a skill, load that skill first.
-- For trivial tasks, skip heavy routing and answer directly.
+- For trivial tasks, skip heavy routing and answer directly (still show the indicator).
 
 ## Contract
 
@@ -21,6 +44,15 @@ For meaningful work:
 7. Audit with the strongest available model before declaring done.
 8. Write memory for durable plans, decisions, learnings, or unfinished handoff, then sync vector memory.
 9. For unfinished or cross-tool work, update `active-continuation.md` and the run packet before stopping.
+
+**Agentic workflow (tools without native multi-agent dispatch):**
+
+- **Orchestrator** first for non-trivial or multi-file work: understand task, detect skill, decide if memory helps, produce a compact plan (see [`agents/orchestrator.md`](agents/orchestrator.md)).
+- **Executor** only after the plan and scope are clear (see [`agents/executor.md`](agents/executor.md)).
+- **Auditor** after substantive code or config changes (see [`agents/auditor.md`](agents/auditor.md)).
+- **Final reviewer** before declaring the task done for high-stakes or user-facing completion (see [`agents/final-reviewer.md`](agents/final-reviewer.md)).
+
+Prefer small diffs, avoid full-repo scans unless required, and follow [`playbooks/token-saving.md`](playbooks/token-saving.md).
 
 If broad scope is unclear, ask 1-3 numbered clarification questions before editing many files.
 
@@ -43,9 +75,26 @@ Core skills:
 
 Specialists are opt-in by clear task evidence. Deprecated aliases should route to their replacement skill.
 
-## Always-on model flow
+## Model flow
 
-Meaningful work uses a three-phase model pattern by default:
+Same intent in two surfaces — **Docker MVP** enforces routing in code; **editor-only workspaces** follow it manually when each tool’s UI allows model switching. Full role/fallback table: [`agents/model-router.md`](agents/model-router.md).
+
+### Docker MVP (`app/` Laravel orchestrator)
+
+Uses **automatic routing** (see `app/config/bossku_models.php`): a cheap router classifies the task, deterministic rules can raise risk, then only the required workflow runs (direct answer, writer, plan-only, plan→execute→audit, plus optional security audit and final reviewer for high-risk).
+
+Defaults:
+
+1. **Plan / orchestrate:** **GPT-5.5** (strong scoping, target files, tests).
+2. **Execute:** **Kimi K2.6** for normal changes; **GPT-5.5** only for **high-risk** or fallback.
+3. **Audit / security audit:** **Claude Opus 4.7**.
+4. **Final review:** **GPT-5.5**, **only** when risk is **high**.
+
+Token savings: skip executor for pure questions; narrow context to `target_file_list`; skip final reviewer unless high-risk.
+
+### Editor-only workspace (Cursor / Claude / Codex / OpenCode)
+
+When driving work **from skills and rules** (not the Laravel UI), meaningful work follows the same pattern:
 
 1. **Plan:** strongest/frontier model for decomposition, architecture, risk, and test strategy.
 2. **Execute:** lower-cost execution model for concrete edits and straightforward implementation.
@@ -75,7 +124,8 @@ Use `scripts/bosskuai` as the command center when no UI is needed.
 - `scripts/bosskuai memory extract` turns captured conversations into pending memory candidates.
 - `scripts/bosskuai memory inbox` reviews pending memory.
 - `scripts/bosskuai memory approve <n>` promotes a candidate into durable memory and syncs vector DB.
-- `scripts/bosskuai model route "<task>"` explains model routing and risk escalation.
+- `scripts/bosskuai route "<task>"` prints a **detailed** deterministic route (workflow, models, flags) + JSON.
+- `scripts/bosskuai model route "<task>"` prints the legacy **frontier / lower-cost** role map + risk.
 - `scripts/bosskuai continuation show|claim|clear` makes cross-tool continuation explicit.
 - `scripts/bosskuai runs complete <run_id> --summary "..."` saves outcome/audit memory and clears continuation.
 - `scripts/bosskuai memory doctor` checks memory/log/vector health.
@@ -85,7 +135,7 @@ Reference: `ai-assistant/references/no-ui-command-center.md`.
 
 ## Output Quality
 
-- Keep protocol chatter internal unless the user asks for it.
+- Always include the **`[BOSSKUAI]` indicator** at the top (see above).
 - Be concise, but do not compress warnings or ordered steps where precision matters.
 - For public copy, run the human-output check.
 - For UI, reject generic AI/SaaS visuals unless explicitly requested.
@@ -109,15 +159,8 @@ python3 -S ./scripts/eval_workspace.py
 
 ## References
 
+- [`agents/orchestrator.md`](agents/orchestrator.md), [`agents/executor.md`](agents/executor.md), [`agents/auditor.md`](agents/auditor.md), [`agents/final-reviewer.md`](agents/final-reviewer.md), [`agents/model-router.md`](agents/model-router.md), [`agents/skill-detector.md`](agents/skill-detector.md)
 - `skill-index.json`
 - `WORKSPACE-ONBOARDING.md`
 - `ai-assistant/references/workspace-layer-architecture.md`
 - `ai-assistant/references/memory-first-handoff-protocol.md`
-
-<claude-mem-context>
-# Memory Context
-
-# [Bossku-AI] recent context, 2026-05-04 10:39am GMT+8
-
-No previous sessions found.
-</claude-mem-context>
