@@ -103,7 +103,12 @@ class RuntimeSettings
 
     public function auditEnabled(): bool
     {
-        return $this->getBool('audit_enabled', true);
+        return $this->getBool('audit_enabled', filter_var(env('BOSSKUAI_AUDIT_ENABLED', true), FILTER_VALIDATE_BOOL));
+    }
+
+    public function maxRevisionRounds(): int
+    {
+        return $this->getInt('max_revision_rounds', (int) env('BOSSKUAI_MAX_REVISION_ROUNDS', 1));
     }
 
     public function memoryStorageEnabled(): bool
@@ -136,6 +141,7 @@ class RuntimeSettings
             'ollama_base_url' => $this->ollamaBaseUrl(),
             'max_memory_results' => (string) $this->maxMemoryResults(),
             'audit_enabled' => $this->auditEnabled() ? '1' : '0',
+            'max_revision_rounds' => (string) $this->maxRevisionRounds(),
             'memory_storage_enabled' => $this->memoryStorageEnabled() ? '1' : '0',
             'embedding_model' => $this->embeddingModel(),
             'routing_llm_enabled' => $this->routingEnabledString(),

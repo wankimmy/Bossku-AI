@@ -3,7 +3,7 @@ import { mount } from '@vue/test-utils'
 import RoutingDashboard from '../components/RoutingDashboard.vue'
 
 describe('RoutingDashboard', () => {
-  it('renders workflow from metadata', () => {
+  it('renders Ollama role models from metadata', () => {
     const wrapper = mount(RoutingDashboard, {
       props: {
         metadata: {
@@ -17,14 +17,19 @@ describe('RoutingDashboard', () => {
             memory_mode: 'none',
           },
           models_resolved: {
-            router: 'gpt-test',
-            direct_answer: 'gpt-test',
+            router: 'kimi-k2.6',
+            direct_answer: 'kimi-k2.6',
           },
         },
       },
     })
     expect(wrapper.text()).toContain('direct_answer')
     expect(wrapper.text()).toContain('laravel')
-    expect(wrapper.text()).toContain('Memory Used: no')
+    expect(wrapper.text()).toContain('Model backend')
+    expect(wrapper.text()).toContain('Ollama')
+    expect(wrapper.text()).toContain('Fast model')
+    expect(wrapper.text()).toContain('Memory used')
+    expect(wrapper.text()).not.toContain('OpenAI')
+    expect(wrapper.text()).not.toContain('Anthropic')
   })
 })

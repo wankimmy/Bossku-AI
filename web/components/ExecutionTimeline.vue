@@ -5,7 +5,7 @@ defineProps<{ events: Record<string, unknown>[] }>()
 <template>
   <section class="space-y-3" aria-live="polite">
     <h2 class="sr-only">
-      Execution timeline
+      Agent workflow raw events
     </h2>
     <TimelineStepCard
       v-for="(evt, idx) in events"

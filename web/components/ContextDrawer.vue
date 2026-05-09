@@ -4,13 +4,16 @@ const props = defineProps<{
   contextEvents: Record<string, unknown>[]
 }>()
 
-function contextFromEvents(evts: Record<string, unknown>[]) {
-  const lastPlanner = [...evts].reverse().find(e => String(e?.type || '') === 'planner_done')
-  const router = [...evts].reverse().find(e => String(e?.type || '') === 'skill_router_done')
-  return { planner: lastPlanner?.output ?? null, routerOutput: router?.output ?? router }
-}
+const artifacts = computed(() => useRunArtifacts(props.contextEvents))
 
-const snippet = computed(() => contextFromEvents(props.contextEvents))
+const filesInspected = computed(() => artifacts.value.filesRead)
+const memory = computed(() => props.contextEvents.flatMap((event) => {
+  const direct = Array.isArray(event.memory_used) ? event.memory_used : []
+  const nested = event.artifacts && typeof event.artifacts === 'object' && Array.isArray((event.artifacts as Record<string, unknown>).memory_used)
+    ? (event.artifacts as Record<string, unknown>).memory_used as unknown[]
+    : []
+  return [...direct, ...nested]
+}))
 </script>
 
 <template>
@@ -18,18 +21,55 @@ const snippet = computed(() => contextFromEvents(props.contextEvents))
     <h2 class="text-sm font-semibold text-zinc-800 dark:text-zinc-100">
       {{ title }}
     </h2>
-    <div class="rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-      <details class="group">
-        <summary class="cursor-pointer border-b border-zinc-100 px-3 py-2 text-sm dark:border-zinc-800">
-          Router / planner excerpt
-        </summary>
-        <div class="p-3 space-y-2">
-          <p class="text-xs font-semibold uppercase text-zinc-500">
-            Planner output
-          </p>
-          <pre class="overflow-auto whitespace-pre-wrap break-words text-xs">{{ snippet.planner }}</pre>
+    <section class="rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
+      <h3 class="text-xs font-semibold uppercase text-zinc-500">
+        Context used
+      </h3>
+      <dl class="mt-3 space-y-3 text-sm">
+        <div>
+          <dt class="font-medium">
+            Memory used
+          </dt>
+          <dd class="mt-1 text-zinc-600 dark:text-zinc-400">
+            {{ artifacts.memoryUsed ? `${memory.length || 'Some'} item(s)` : 'No memory recorded' }}
+          </dd>
         </div>
+        <div>
+          <dt class="font-medium">
+            Skills used
+          </dt>
+          <dd class="mt-1">
+            {{ artifacts.routingSummary.skill || 'Not recorded' }}
+          </dd>
+        </div>
+        <div>
+          <dt class="font-medium">
+            Files inspected
+          </dt>
+          <dd class="mt-1">
+            <ul v-if="filesInspected.length" class="space-y-1 font-mono text-xs">
+              <li v-for="file in filesInspected" :key="file.path">
+                {{ file.path }}
+              </li>
+            </ul>
+            <span v-else class="text-zinc-500">No inspected files recorded</span>
+          </dd>
+        </div>
+        <div>
+          <dt class="font-medium">
+            Routing reason
+          </dt>
+          <dd class="mt-1 text-zinc-600 dark:text-zinc-400">
+            {{ artifacts.routingSummary.workflow || 'Waiting for routing.' }}
+          </dd>
+        </div>
+      </dl>
+      <details class="mt-4 border-t border-zinc-100 pt-3 dark:border-zinc-800">
+        <summary class="cursor-pointer text-sm font-medium">
+          Raw context
+        </summary>
+        <JsonViewer class="mt-2 max-h-[420px]" :data="contextEvents" />
       </details>
-    </div>
+    </section>
   </aside>
 </template>

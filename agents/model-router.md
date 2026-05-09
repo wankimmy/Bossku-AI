@@ -18,14 +18,16 @@ Tools (Cursor / Codex / OpenCode) cannot always switch models per message — Bo
 
 ## Target role map (authoritative naming for docs)
 
-| Role | Primary | Backup | Fallback |
-|---|---|---|---|
-| Orchestrator | GPT-5.5 | Claude Opus 4.7 | Gemini 3 Pro |
-| Executor | Kimi K2.6 | DeepSeek V4 Pro | Qwen 3 Coder / GLM 5.1 |
-| Auditor | Claude Opus 4.7 | GPT-5.5 | Gemini 3 Pro |
-| Final reviewer | GPT-5.5 | Claude Opus 4.7 | Gemini 3 Pro |
+| Role | Model role | Runtime |
+|---|---|---|
+| Orchestrator | reasoning | Ollama |
+| Executor | coding | Ollama |
+| Auditor | review | Ollama |
+| Security auditor | review | Ollama |
+| Final reviewer | reasoning | Ollama |
+| Router / classify | fast | Ollama |
 
-**Router / classify** (cheap): may use GPT-5.5-instant-class or equivalent before orchestrator — see `bossku_models.php` → `router`, `direct_answer`.
+Concrete model names come from `OLLAMA_REASONING_MODEL`, `OLLAMA_CODING_MODEL`, `OLLAMA_REVIEW_MODEL`, and `OLLAMA_FAST_MODEL` when set, with older `BOSSKU_*` keys kept as compatibility aliases.
 
 ## Routing table
 
@@ -36,6 +38,6 @@ Tools (Cursor / Codex / OpenCode) cannot always switch models per message — Bo
 | Security / auth / payment review | Reviewer | Auditor primary | Strong safety reasoning |
 | Ship checklist / completeness | Reviewer | Final reviewer primary | Consolidates risks + next actions |
 | Trivial Q&A | Planner or Coder | Direct answer / smallest sufficient | Saves orchestration overhead |
-| High-risk execution | Coder (+ reviewer after) | Escalate executor to frontier | Single wrong line is costly |
+| High-risk execution | Coder (+ reviewer after) | Use high-risk Ollama coding/review route | Single wrong line is costly |
 
-Escalate executor toward orchestrator-class models when `bossku_models.php` high-risk triggers apply.
+Escalate executor toward the high-risk Ollama route when `bossku_models.php` high-risk triggers apply.

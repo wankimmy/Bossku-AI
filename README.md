@@ -82,7 +82,7 @@ docker compose exec backend php artisan bosskuai:import-knowledge --fresh
 
 Ensure **`app/.env`** exists (`cp app/.env.example app/.env`) so the backend receives **`OLLAMA_BASE_URL`** (e.g. `https://ollama.com`), **`OLLAMA_API_KEY`** from [ollama.com/settings/keys](https://ollama.com/settings/keys), and optional **`OLLAMA_EMBEDDING_MODEL`** for pgvector-backed memory embeddings via Ollama **`/api/embed`**.
 
-Docker Compose **`backend`** binds **`OLLAMA_*`** exclusively for LLMs at runtime — there is **no separate OpenAI/Anthropic** configuration in Laravel.
+Docker Compose **`backend`** binds **`OLLAMA_*`** exclusively for LLMs at runtime. There is no separate non-Ollama provider configuration in Laravel.
 
 - UI: **http://localhost:3000** · API/SSE base: **http://localhost:8000**
 

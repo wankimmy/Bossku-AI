@@ -30,3 +30,4 @@ Next Step:
 ```
 
 No essay. If blocked, say **exactly what** is blocking.
+For machine-readable runs, include final human-readable answer, files changed, checks run, audit result, remaining risks, and next recommended step.

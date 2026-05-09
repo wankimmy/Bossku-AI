@@ -26,6 +26,8 @@ Risk Level:
 Low / Medium / High
 ```
 
+For machine-readable runs, return `status` as `pass`, `pass_with_notes`, `needs_revision`, or `failed`; include structured findings, required fixes, optional improvements, and a handoff back to executor when revision is required.
+
 ## Checklist dimensions
 
 ### Correctness

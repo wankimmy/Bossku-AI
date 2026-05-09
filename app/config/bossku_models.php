@@ -6,7 +6,7 @@
  */
 return [
     'router' => [
-        'primary' => env('BOSSKU_ROUTER_MODEL', 'kimi-k2.6'),
+        'primary' => env('OLLAMA_FAST_MODEL', env('BOSSKU_ROUTER_MODEL', 'kimi-k2.6')),
         'fallback' => ['glm-5.1', 'deepseek-v4-pro'],
         'enabled' => filter_var(env('BOSSKU_ROUTER_LLM_ENABLED', true), FILTER_VALIDATE_BOOL),
         'max_context_files' => 0,
@@ -24,7 +24,7 @@ return [
     ],
 
     'orchestrator' => [
-        'primary' => env('BOSSKU_ORCHESTRATOR_MODEL', 'kimi-k2.6'),
+        'primary' => env('OLLAMA_REASONING_MODEL', env('BOSSKU_ORCHESTRATOR_MODEL', 'kimi-k2.6')),
         'fallback' => ['glm-5.1', 'deepseek-v4-pro'],
         'enabled' => true,
         'max_context_files' => 20,
@@ -43,7 +43,7 @@ return [
 
     'executor' => [
         'default' => [
-            'primary' => env('BOSSKU_EXECUTOR_DEFAULT_MODEL', 'glm-5.1'),
+            'primary' => env('OLLAMA_CODING_MODEL', env('BOSSKU_EXECUTOR_DEFAULT_MODEL', 'glm-5.1')),
             'fallback' => ['kimi-k2.6', 'deepseek-v4-pro'],
             'max_context_files' => 15,
             'max_tokens' => 12000,
@@ -52,7 +52,7 @@ return [
             'retry_count' => 1,
         ],
         'frontend_ui' => [
-            'primary' => env('BOSSKU_EXECUTOR_FRONTEND_MODEL', 'glm-5.1'),
+            'primary' => env('OLLAMA_CODING_MODEL', env('BOSSKU_EXECUTOR_FRONTEND_MODEL', 'glm-5.1')),
             'fallback' => ['kimi-k2.6', 'deepseek-v4-pro'],
             'max_context_files' => 20,
             'max_tokens' => 14000,
@@ -61,7 +61,7 @@ return [
             'retry_count' => 1,
         ],
         'backend' => [
-            'primary' => env('BOSSKU_EXECUTOR_BACKEND_MODEL', 'glm-5.1'),
+            'primary' => env('OLLAMA_CODING_MODEL', env('BOSSKU_EXECUTOR_BACKEND_MODEL', 'glm-5.1')),
             'fallback' => ['kimi-k2.6', 'deepseek-v4-pro'],
             'max_context_files' => 15,
             'max_tokens' => 12000,
@@ -70,7 +70,7 @@ return [
             'retry_count' => 1,
         ],
         'devops' => [
-            'primary' => env('BOSSKU_EXECUTOR_DEVOPS_MODEL', 'glm-5.1'),
+            'primary' => env('OLLAMA_CODING_MODEL', env('BOSSKU_EXECUTOR_DEVOPS_MODEL', 'glm-5.1')),
             'fallback' => ['kimi-k2.6', 'deepseek-v4-pro'],
             'max_context_files' => 20,
             'max_tokens' => 14000,
@@ -79,7 +79,7 @@ return [
             'retry_count' => 1,
         ],
         'high_risk' => [
-            'primary' => env('BOSSKU_EXECUTOR_HIGH_RISK_MODEL', 'deepseek-v4-pro'),
+            'primary' => env('OLLAMA_CODING_MODEL', env('BOSSKU_EXECUTOR_HIGH_RISK_MODEL', 'deepseek-v4-pro')),
             'fallback' => ['glm-5.1', 'kimi-k2.6'],
             'max_context_files' => 25,
             'max_tokens' => 16000,
@@ -99,7 +99,7 @@ return [
     ],
 
     'auditor' => [
-        'primary' => env('BOSSKU_AUDITOR_MODEL', 'deepseek-v4-pro'),
+        'primary' => env('OLLAMA_REVIEW_MODEL', env('BOSSKU_AUDITOR_MODEL', 'deepseek-v4-pro')),
         'fallback' => ['glm-5.1', 'kimi-k2.6'],
         'enabled' => true,
         'max_context_files' => 10,
@@ -114,7 +114,7 @@ return [
     ],
 
     'security_auditor' => [
-        'primary' => env('BOSSKU_SECURITY_AUDITOR_MODEL', 'deepseek-v4-pro'),
+        'primary' => env('OLLAMA_REVIEW_MODEL', env('BOSSKU_SECURITY_AUDITOR_MODEL', 'deepseek-v4-pro')),
         'fallback' => ['glm-5.1', 'kimi-k2.6'],
         'enabled' => true,
         'max_context_files' => 15,
@@ -131,7 +131,7 @@ return [
 
     'final_reviewer' => [
         'enabled' => 'conditional',
-        'primary' => env('BOSSKU_FINAL_REVIEWER_MODEL', 'deepseek-v4-pro'),
+        'primary' => env('OLLAMA_REASONING_MODEL', env('BOSSKU_FINAL_REVIEWER_MODEL', 'deepseek-v4-pro')),
         'fallback' => ['glm-5.1', 'kimi-k2.6'],
         'max_context_files' => 8,
         'max_tokens' => 8000,
@@ -147,7 +147,7 @@ return [
     ],
 
     'writer' => [
-        'primary' => env('BOSSKU_WRITER_MODEL', 'kimi-k2.6'),
+        'primary' => env('OLLAMA_REASONING_MODEL', env('BOSSKU_WRITER_MODEL', 'kimi-k2.6')),
         'fallback' => ['glm-5.1', 'deepseek-v4-pro'],
         'max_tokens' => 6000,
         'temperature' => 0.3,
@@ -156,7 +156,7 @@ return [
     ],
 
     'direct_answer' => [
-        'primary' => env('BOSSKU_DIRECT_ANSWER_MODEL', 'kimi-k2.6'),
+        'primary' => env('OLLAMA_FAST_MODEL', env('BOSSKU_DIRECT_ANSWER_MODEL', 'kimi-k2.6')),
         'fallback' => ['glm-5.1', 'deepseek-v4-pro'],
         'max_tokens' => 4000,
         'temperature' => 0.2,

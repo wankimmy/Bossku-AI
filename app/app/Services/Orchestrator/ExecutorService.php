@@ -29,7 +29,8 @@ class ExecutorService
         ?string $allowedTool,
         array $plan,
         array $modelRoute,
-        string $executorProfileKey
+        string $executorProfileKey,
+        ?array $auditFeedback = null
     ): array {
         $skillName = (string) ($step['skill'] ?? $skillRow['name'] ?? 'unknown');
         $task = (string) ($step['task'] ?? '');
@@ -63,6 +64,9 @@ Playbook:
 Checklist:
 {$checklistExcerpt}
 
+Audit feedback for revision:
+{$this->jsonEncode($auditFeedback ?? [])}
+
 Task:
 {$task}
 
@@ -74,12 +78,15 @@ You may only read/edit files listed in target_file_list unless allow_broad_repo_
 Output format (JSON only, no markdown):
 {
   "status": "success|partial|failed",
-  "files_changed": [],
-  "commands_run": [],
+  "files_read": [{"path": "relative/path", "reason": "why this file was inspected"}],
+  "files_changed": [{"path": "relative/path", "change_type": "created|modified|deleted|renamed", "summary": "what changed", "why": "why it changed", "diff": "unified diff when available"}],
+  "commands_run": [{"command": "command", "status": "passed|failed|skipped", "exit_code": 0, "duration_ms": 0, "output_summary": "short summary"}],
+  "tests_run": [{"name": "test or suite name", "status": "passed|failed|skipped", "summary": "short summary"}],
   "tests_result": "passed|failed|not_run",
   "patch_summary": "",
   "known_issues": [],
-  "needs_audit": true
+  "needs_audit": true,
+  "handoff_message": "Sending changes to Auditor"
 }
 Markdown;
 
@@ -105,8 +112,10 @@ Markdown;
             return [
                 'step_id' => $step['id'] ?? null,
                 'status' => 'failed',
+                'files_read' => [],
                 'files_changed' => [],
                 'commands_run' => [],
+                'tests_run' => [],
                 'tests_result' => 'not_run',
                 'patch_summary' => '',
                 'known_issues' => [$e->getMessage()],
@@ -120,20 +129,83 @@ Markdown;
         /** @var array<string, mixed> $parsed */
         $parsed = is_array($out['parsed']) ? $out['parsed'] : [];
 
-        return [
+        return $this->normalizeResult([
             'step_id' => $step['id'] ?? null,
             'status' => (string) ($parsed['status'] ?? 'success'),
+            'files_read' => is_array($parsed['files_read'] ?? null) ? $parsed['files_read'] : [],
             'files_changed' => is_array($parsed['files_changed'] ?? null) ? $parsed['files_changed'] : [],
             'commands_run' => is_array($parsed['commands_run'] ?? null) ? $parsed['commands_run'] : [],
+            'tests_run' => is_array($parsed['tests_run'] ?? null) ? $parsed['tests_run'] : [],
             'tests_result' => (string) ($parsed['tests_result'] ?? 'not_run'),
             'patch_summary' => (string) ($parsed['patch_summary'] ?? ''),
             'known_issues' => is_array($parsed['known_issues'] ?? null) ? $parsed['known_issues'] : [],
             'needs_audit' => (bool) ($parsed['needs_audit'] ?? true),
+            'handoff_message' => (string) ($parsed['handoff_message'] ?? 'Sending changes to Auditor.'),
             '_executor_model' => $out['model_used'],
             '_executor_model_resolved' => $out['model_resolved'] ?? '',
             '_executor_fallback' => $out['fallback_used'],
             'latency_ms' => $latency,
-        ];
+        ]);
+    }
+
+    /** @param array<string, mixed> $result */
+    protected function normalizeResult(array $result): array
+    {
+        $result['files_read'] = array_values(array_filter(array_map(function ($item) {
+            if (! is_array($item)) {
+                return null;
+            }
+
+            return [
+                'path' => (string) ($item['path'] ?? ''),
+                'reason' => (string) ($item['reason'] ?? ''),
+            ];
+        }, is_array($result['files_read'] ?? null) ? $result['files_read'] : []), fn ($item) => $item !== null && $item['path'] !== ''));
+
+        $result['files_changed'] = array_values(array_filter(array_map(function ($item) {
+            if (is_string($item)) {
+                return ['path' => $item, 'change_type' => 'modified', 'summary' => '', 'why' => '', 'diff' => null];
+            }
+            if (! is_array($item)) {
+                return null;
+            }
+
+            return [
+                'path' => (string) ($item['path'] ?? ''),
+                'change_type' => (string) ($item['change_type'] ?? 'modified'),
+                'summary' => (string) ($item['summary'] ?? $item['description'] ?? ''),
+                'why' => (string) ($item['why'] ?? ''),
+                'diff' => $item['diff'] ?? null,
+            ];
+        }, is_array($result['files_changed'] ?? null) ? $result['files_changed'] : []), fn ($item) => $item !== null && $item['path'] !== ''));
+
+        $result['commands_run'] = array_values(array_filter(array_map(function ($item) {
+            if (is_string($item)) {
+                return ['command' => $item, 'status' => 'completed'];
+            }
+            if (! is_array($item)) {
+                return null;
+            }
+
+            return [
+                'command' => (string) ($item['command'] ?? ''),
+                'status' => (string) ($item['status'] ?? 'completed'),
+                'exit_code' => $item['exit_code'] ?? null,
+                'duration_ms' => $item['duration_ms'] ?? null,
+                'output_summary' => (string) ($item['output_summary'] ?? ''),
+            ];
+        }, is_array($result['commands_run'] ?? null) ? $result['commands_run'] : []), fn ($item) => $item !== null && $item['command'] !== ''));
+
+        $result['tests_run'] = is_array($result['tests_run'] ?? null) ? $result['tests_run'] : [];
+        if ($result['tests_run'] === [] && ($result['tests_result'] ?? 'not_run') !== 'not_run') {
+            $result['tests_run'] = [[
+                'name' => 'Executor reported tests',
+                'status' => (string) $result['tests_result'],
+                'summary' => 'Executor returned tests_result='.$result['tests_result'],
+            ]];
+        }
+
+        return $result;
     }
 
     /** @param array<string, mixed> $data */

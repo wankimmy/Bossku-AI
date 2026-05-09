@@ -34,7 +34,8 @@ class OrchestratorService
         protected RuntimeSettings $settings,
         protected PromptRouteClassifier $promptRouteClassifier,
         protected ContextBudgetGuard $budgetGuard,
-        protected ModelRoutingConfig $modelConfig
+        protected ModelRoutingConfig $modelConfig,
+        protected RunEventFactory $events
     ) {}
 
     /**
@@ -54,6 +55,8 @@ class OrchestratorService
 
         $this->emit($emit, $this->basePayload($run, 'run_started', [
             'status' => 'success',
+            'summary' => 'Run started.',
+            'message' => 'BosskuAI is preparing the Ollama agent workflow.',
         ]));
 
         $t0 = microtime(true);
@@ -75,10 +78,19 @@ class OrchestratorService
 
         $this->emit($emit, $this->basePayload($run, 'model_router_done', [
             'status' => 'success',
+            'agent' => 'router',
+            'model_role' => 'fast',
+            'model' => $modelsResolved['router'] ?? null,
+            'summary' => 'Model router selected Ollama role models.',
+            'message' => 'Routing is role-based: reasoning, coding, review, and fast.',
             'latency_ms' => $routerMs,
             'routing' => $modelRoute,
             'models' => $modelsResolved,
             'router_meta' => $routerMeta,
+            'artifacts' => [
+                'routing_decision' => $modelRoute,
+                'models_resolved' => $modelsResolved,
+            ],
         ]));
 
         $memoryMode = (string) ($modelRoute['memory_mode'] ?? 'read_only');
@@ -113,9 +125,16 @@ class OrchestratorService
 
             $this->emit($emit, $this->basePayload($run, 'memory_retrieved', [
                 'status' => 'success',
+                'agent' => 'memory',
+                'model_role' => 'fast',
+                'summary' => count($memPayload).' memory item(s) retrieved.',
+                'message' => 'Memory context is available for planning.',
                 'memory_used' => $memPayload,
                 'latency_ms' => $memMs,
                 'token_estimate' => $memTokens,
+                'artifacts' => [
+                    'memory_used' => $memPayload,
+                ],
             ]));
         }
 
@@ -163,13 +182,26 @@ class OrchestratorService
 
         $this->emit($emit, $this->basePayload($run, 'skill_router_done', [
             'status' => 'success',
+            'agent' => 'router',
+            'model_role' => 'fast',
+            'summary' => 'Skill router selected the execution context.',
+            'message' => (string) ($routerCtx['primary_skill']['name'] ?? 'No primary skill selected.'),
             'latency_ms' => $routerMs2,
             'token_estimate' => $routerTokens2,
             'input' => $prompt,
             'output' => json_encode($routerCtx),
+            'artifacts' => [
+                'routing_context' => $routerCtx,
+                'skills_used' => [$routerCtx['primary_skill']['name'] ?? null],
+            ],
         ]));
 
-        $this->emit($emit, $this->basePayload($run, 'planner_started', ['status' => 'running']));
+        $this->emit($emit, $this->basePayload($run, 'planner_started', [
+            'status' => 'running',
+            'agent' => 'orchestrator',
+            'model_role' => 'reasoning',
+            'summary' => 'Orchestrator is planning the task.',
+        ]));
         $t0 = microtime(true);
         $plan = $this->planner->plan($prompt, $memPayload, $routerCtx, $modelRoute);
         $planMs = (int) round((microtime(true) - $t0) * 1000);
@@ -207,17 +239,20 @@ class OrchestratorService
         }
 
         $orchModel = (string) ($plan['_planner_model'] ?? $modelsResolved['orchestrator'] ?? $this->settings->plannerModel());
-        $this->logStep($run, 2, 'planner', $orchModel, null, null, 'success', $prompt, json_encode(['router' => $routerCtx, 'route' => $modelRoute]), json_encode($plan), null, null, null, $planMs, $planTokens, null, null);
+        $this->logStep($run, 2, 'planner', $orchModel, null, null, 'success', $prompt, json_encode(['router' => $routerCtx, 'route' => $modelRoute]), json_encode($plan), null, null, null, $planMs, $planTokens, null, $this->events->metadata(
+            'orchestrator',
+            'reasoning',
+            'Planner created '.count($plan['checklist'] ?? []).'-step execution checklist.',
+            (string) ($plan['handoff_message'] ?? 'Sending execution task to Executor.'),
+            ['plan' => $plan, 'checklist' => $plan['checklist'] ?? []],
+            'orchestrator',
+            'executor'
+        ));
         $tokenAcc += $planTokens;
 
         $modelsResolved['orchestrator'] = $orchModel;
 
-        $this->emit($emit, $this->basePayload($run, 'planner_done', [
-            'status' => 'success',
-            'latency_ms' => $planMs,
-            'token_estimate' => $planTokens,
-            'output' => json_encode($plan),
-        ]));
+        $this->emit($emit, $this->events->plannerDone($run, $plan, $orchModel, $planMs, $planTokens));
 
         $execProfileKey = (string) ($plan['executor_profile'] ?? $modelRoute['executor_profile'] ?? 'default');
         $plan = $this->budgetGuard->narrowPlan($plan, $execProfileKey);
@@ -266,10 +301,15 @@ class OrchestratorService
 
         $this->emit($emit, $this->basePayload($run, 'executor_step_started', [
             'status' => 'running',
+            'agent' => 'executor',
+            'model_role' => 'coding',
+            'from_agent' => 'orchestrator',
+            'to_agent' => 'executor',
+            'summary' => 'Executor is applying the plan.',
+            'message' => (string) ($plan['handoff_message'] ?? 'Executor received the plan.'),
             'step_number' => 3,
             'skill' => $skillName,
             'model' => $modelsResolved['executor'] ?? '',
-            'provider' => 'routed',
         ]));
 
         $execResult = $this->executor->execute(
@@ -286,8 +326,17 @@ class OrchestratorService
         $modelsResolved['executor'] = (string) ($execResult['_executor_model'] ?? $modelsResolved['executor'] ?? '');
 
         $exTok = $this->estimateTokens(json_encode($execResult) ?: '');
-        $this->logStep($run, 3, 'executor', $modelsResolved['executor'], 'routed', $skillName, ($execResult['status'] ?? '') === 'failed' ? 'failed' : 'success', json_encode($step), json_encode($execResult), json_encode($execResult), null, null, null, (int) ($execResult['latency_ms'] ?? 0), $exTok, null, null);
+        $this->logStep($run, 3, 'executor', $modelsResolved['executor'], 'ollama', $skillName, ($execResult['status'] ?? '') === 'failed' ? 'failed' : 'success', json_encode($step), json_encode($execResult), json_encode($execResult), null, null, null, (int) ($execResult['latency_ms'] ?? 0), $exTok, null, $this->events->metadata(
+            'executor',
+            'coding',
+            'Executor completed the requested changes.',
+            (string) ($execResult['handoff_message'] ?? 'Sending changes to Auditor.'),
+            $this->events->executorArtifacts($execResult),
+            'executor',
+            'auditor'
+        ));
         $tokenAcc += $exTok;
+        $this->emit($emit, $this->events->executorDone($run, $execResult, $modelsResolved['executor'], (int) ($execResult['latency_ms'] ?? 0), $exTok));
 
         if (! empty($execResult['tool_request'] ?? null)) {
             $this->tools->invoke($run->id, null, $execResult['tool_request'], $emit);
@@ -296,6 +345,7 @@ class OrchestratorService
         $lastAudit = [];
         $lastSecurity = null;
         $lastFinal = null;
+        $executorOutputs = [$execResult];
         $stepNum = 3;
 
         $needsAuditor = ($modelRoute['needs_auditor'] ?? true)
@@ -303,7 +353,15 @@ class OrchestratorService
             && (str_contains($workflow, 'auditor'));
 
         if ($needsAuditor && ($execResult['needs_audit'] ?? true)) {
-            $this->emit($emit, $this->basePayload($run, 'auditor_started', ['status' => 'running', 'step_number' => $stepNum]));
+            $this->emit($emit, $this->basePayload($run, 'auditor_started', [
+                'status' => 'running',
+                'agent' => 'auditor',
+                'model_role' => 'review',
+                'from_agent' => 'executor',
+                'to_agent' => 'auditor',
+                'summary' => 'Auditor is reviewing executor output.',
+                'step_number' => $stepNum,
+            ]));
             $tA = microtime(true);
             $lastAudit = $this->auditor->auditStep(
                 $prompt,
@@ -320,14 +378,67 @@ class OrchestratorService
             $auditTok = $this->estimateTokens(json_encode($lastAudit) ?: '');
             $modelsResolved['auditor'] = (string) ($lastAudit['_auditor_model'] ?? $modelsResolved['auditor'] ?? '');
             $pass = ($lastAudit['_legacy_pass'] ?? false) === true;
-            $this->logStep($run, $stepNum + 100, 'auditor', $modelsResolved['auditor'], null, $skillName, $pass ? 'success' : 'failed', json_encode($step), json_encode($execResult), json_encode($lastAudit), null, null, null, $auditMs, $auditTok, null, null);
+            $this->logStep($run, $stepNum + 100, 'auditor', $modelsResolved['auditor'], 'ollama', $skillName, $pass ? 'success' : (($lastAudit['status'] ?? '') === 'needs_revision' ? 'needs_revision' : 'failed'), json_encode($step), json_encode($execResult), json_encode($lastAudit), null, null, null, $auditMs, $auditTok, null, $this->events->metadata(
+                'auditor',
+                'review',
+                (string) ($lastAudit['summary'] ?? 'Audit completed.'),
+                (($lastAudit['status'] ?? '') === 'needs_revision') ? 'Returning feedback to Executor.' : 'Sending audit result to Final Reviewer.',
+                ['audit' => $lastAudit, 'audit_findings' => $lastAudit['findings'] ?? []],
+                'auditor',
+                (($lastAudit['status'] ?? '') === 'needs_revision') ? 'executor' : 'final-reviewer'
+            ));
             $tokenAcc += $auditTok;
-            $this->emit($emit, $this->basePayload($run, 'auditor_done', [
-                'status' => $pass ? 'success' : 'fail',
-                'step_number' => $stepNum,
-                'latency_ms' => $auditMs,
-                'output' => json_encode($lastAudit),
-            ]));
+            $this->emit($emit, $this->events->auditorDone($run, $lastAudit, $modelsResolved['auditor'], $auditMs, $auditTok));
+
+            if (($lastAudit['status'] ?? '') === 'needs_revision' && $this->settings->maxRevisionRounds() > 0) {
+                $this->emit($emit, $this->basePayload($run, 'executor_revision_started', [
+                    'status' => 'running',
+                    'agent' => 'executor',
+                    'model_role' => 'coding',
+                    'from_agent' => 'auditor',
+                    'to_agent' => 'executor',
+                    'summary' => 'Executor is applying audit feedback.',
+                    'message' => (string) ($lastAudit['summary'] ?? 'Audit requested a revision.'),
+                ]));
+
+                $revisionStep = array_merge($step, [
+                    'id' => 2,
+                    'title' => 'Fix audit feedback',
+                ]);
+                $revisionResult = $this->executor->execute(
+                    $revisionStep,
+                    $skillRow,
+                    $ruleLines,
+                    $pbExcerpt,
+                    $chkExcerpt,
+                    null,
+                    $plan,
+                    $modelRoute,
+                    $execProfileKey,
+                    [
+                        'original_prompt' => $prompt,
+                        'original_plan' => $plan,
+                        'executor_result' => $execResult,
+                        'audit_findings' => $lastAudit['findings'] ?? [],
+                        'required_fixes' => $lastAudit['required_fixes'] ?? [],
+                    ]
+                );
+                $modelsResolved['executor'] = (string) ($revisionResult['_executor_model'] ?? $modelsResolved['executor'] ?? '');
+                $revTok = $this->estimateTokens(json_encode($revisionResult) ?: '');
+                $this->logStep($run, 4, 'executor_revision', $modelsResolved['executor'], 'ollama', $skillName, ($revisionResult['status'] ?? '') === 'failed' ? 'failed' : 'success', json_encode($revisionStep), json_encode(['audit' => $lastAudit, 'previous_executor' => $execResult]), json_encode($revisionResult), null, null, null, (int) ($revisionResult['latency_ms'] ?? 0), $revTok, null, $this->events->metadata(
+                    'executor',
+                    'coding',
+                    'Executor applied audit follow-up fixes.',
+                    'Sending revised result to Final Reviewer.',
+                    $this->events->executorArtifacts($revisionResult),
+                    'executor',
+                    'final-reviewer'
+                ));
+                $tokenAcc += $revTok;
+                $this->emit($emit, $this->events->executorDone($run, $revisionResult, $modelsResolved['executor'], (int) ($revisionResult['latency_ms'] ?? 0), $revTok, 'executor_revision_done'));
+                $execResult = $revisionResult;
+                $executorOutputs[] = $revisionResult;
+            }
         }
 
         if (($modelRoute['needs_security_auditor'] ?? false)) {
@@ -346,33 +457,31 @@ class OrchestratorService
         }
 
         if (($modelRoute['needs_final_reviewer'] ?? false) && ($modelRoute['risk_level'] ?? '') === 'high') {
-            $this->emit($emit, $this->basePayload($run, 'final_reviewer_started', ['status' => 'running']));
+            $this->emit($emit, $this->basePayload($run, 'final_reviewer_started', [
+                'status' => 'running',
+                'agent' => 'final-reviewer',
+                'model_role' => 'reasoning',
+                'from_agent' => 'auditor',
+                'to_agent' => 'final-reviewer',
+                'summary' => 'Final Reviewer is closing the run.',
+            ]));
             $tF = microtime(true);
             $lastFinal = $this->finalReviewer->review($prompt, $modelRoute, $lastAudit, $lastSecurity, $execResult);
             $fMs = (int) round((microtime(true) - $tF) * 1000);
             $fTok = $this->estimateTokens(json_encode($lastFinal) ?: '');
-            $this->logStep($run, $stepNum + 200, 'final_reviewer', $modelsResolved['final_reviewer'] ?? null, null, $skillName, 'success', null, null, json_encode($lastFinal), null, null, null, $fMs, $fTok, null, null);
+            $this->logStep($run, $stepNum + 200, 'final_reviewer', $modelsResolved['final_reviewer'] ?? null, 'ollama', $skillName, 'success', null, null, json_encode($lastFinal), null, null, null, $fMs, $fTok, null, $this->events->metadata(
+                'final-reviewer',
+                'reasoning',
+                (string) ($lastFinal['reason'] ?? 'Final review completed.'),
+                'Final reviewer closed the run.',
+                ['final_review' => $lastFinal],
+                'final-reviewer',
+                'system'
+            ));
             $tokenAcc += $fTok;
-            $this->emit($emit, $this->basePayload($run, 'final_reviewer_done', [
-                'status' => 'success',
-                'latency_ms' => $fMs,
-                'output' => json_encode($lastFinal),
-            ]));
+            $this->emit($emit, $this->events->finalReviewerDone($run, $lastFinal, $modelsResolved['final_reviewer'] ?? null, $fMs, $fTok));
         }
-
-        $this->emit($emit, $this->basePayload($run, 'executor_step_done', [
-            'status' => ($execResult['status'] ?? '') !== 'failed' ? 'success' : 'fail',
-            'step_number' => $stepNum,
-            'skill' => $skillName,
-            'model' => $modelsResolved['executor'],
-            'provider' => 'routed',
-            'latency_ms' => (int) ($execResult['latency_ms'] ?? 0),
-            'output' => $execResult['patch_summary'] ?? '',
-        ]));
-
-        $finalOutput = $this->composeUserOutput($lastAudit, $execResult, $lastFinal);
-        $indicator = BosskuResponseIndicator::line($modelRoute, array_filter($modelsResolved));
-        $finalOutput = BosskuResponseIndicator::prepend($finalOutput, $indicator);
+        $finalOutput = $this->composeUserOutput($lastAudit, $execResult, $lastFinal, $modelRoute, $modelsResolved, $memPayload);
 
         return $this->completeRun(
             $run,
@@ -383,7 +492,7 @@ class OrchestratorService
             $memPayload,
             $routerCtx,
             $plan,
-            [$execResult],
+            $executorOutputs,
             $lastAudit,
             $lastSecurity,
             $lastFinal,
@@ -484,17 +593,61 @@ class OrchestratorService
         ];
     }
 
-    /** @param array<string, mixed>|null $lastFinal */
-    protected function composeUserOutput(array $lastAudit, array $execResult, ?array $lastFinal): string
+    /**
+     * @param array<string, mixed>|null $lastFinal
+     * @param array<string, mixed> $modelRoute
+     * @param array<string, string> $modelsResolved
+     * @param array<int, array<string, mixed>> $memPayload
+     */
+    protected function composeUserOutput(array $lastAudit, array $execResult, ?array $lastFinal, array $modelRoute, array $modelsResolved, array $memPayload): string
     {
-        if ($lastFinal !== null && $lastFinal !== []) {
-            return trim((string) ($lastFinal['decision'] ?? '')."\n\n".(string) ($lastFinal['reason'] ?? ''));
-        }
-        if ($lastAudit !== []) {
-            return (string) ($lastAudit['final_output'] ?? $execResult['patch_summary'] ?? '');
+        $status = (($execResult['status'] ?? '') === 'failed' || ($lastAudit['status'] ?? '') === 'failed') ? 'Partially Completed' : 'Completed';
+        $files = array_values(array_filter(array_map(fn ($file) => is_array($file) ? (string) ($file['path'] ?? '') : (string) $file, $execResult['files_changed'] ?? [])));
+        $commands = array_values(array_filter(array_map(fn ($command) => is_array($command) ? (string) ($command['command'] ?? '') : (string) $command, $execResult['commands_run'] ?? [])));
+        $risks = $execResult['known_issues'] ?? [];
+        if (($lastAudit['optional_improvements'] ?? []) !== []) {
+            $risks = array_merge($risks, $lastAudit['optional_improvements']);
         }
 
-        return (string) ($execResult['patch_summary'] ?? json_encode($execResult));
+        $auditStatus = (string) ($lastAudit['status'] ?? 'not_run');
+        $nextStep = 'Review the changed files and run any missing checks before merge.';
+        if ($commands === []) {
+            $nextStep = 'Run the relevant test suite before merge.';
+        } elseif ($lastFinal !== null && ($lastFinal['required_actions'] ?? []) !== []) {
+            $nextStep = implode('; ', $lastFinal['required_actions']);
+        }
+
+        $lines = [
+            '[BOSSKUAI]',
+            'Skill: '.(string) ($modelRoute['skill'] ?? 'general'),
+            'Agent: final-reviewer',
+            'Model Role: reviewer',
+            'Model Backend: Ollama',
+            'Memory Used: '.($memPayload !== [] ? 'yes' : 'no'),
+            '',
+            '## Status',
+            $status,
+            '',
+            '## What changed',
+            (string) ($execResult['patch_summary'] ?? $lastAudit['final_output'] ?? 'No change summary recorded.'),
+            '',
+            '## Files changed',
+            ...($files !== [] ? array_map(fn ($file) => '- '.$file, $files) : ['- No files recorded']),
+            '',
+            '## Checks run',
+            ...($commands !== [] ? array_map(fn ($command) => '- '.$command, $commands) : ['- No checks recorded']),
+            '',
+            '## Audit result',
+            $auditStatus,
+            '',
+            '## Remaining risks',
+            ...($risks !== [] ? array_map(fn ($risk) => '- '.(is_scalar($risk) ? (string) $risk : json_encode($risk)), $risks) : ['- Full verification status depends on the checks recorded above.']),
+            '',
+            '## Next recommended step',
+            $nextStep,
+        ];
+
+        return implode("\n", $lines);
     }
 
     /**
@@ -592,15 +745,17 @@ class OrchestratorService
             ],
         ]);
 
-        $this->logStep($run, 9999, 'final', null, null, null, 'success', $prompt, $finalOutput, $finalOutput, null, null, null, null, null, null, [
-            'memory_used' => $memPayload,
-        ]);
+        $this->logStep($run, 9999, 'final', null, 'ollama', null, 'success', $prompt, $finalOutput, $finalOutput, null, null, null, null, null, null, $this->events->metadata(
+            'final-reviewer',
+            'reasoning',
+            'Run completed.',
+            'Final result is ready.',
+            ['final_output' => $finalOutput, 'memory_used' => $memPayload],
+            'final-reviewer',
+            'system'
+        ));
 
-        $this->emit($emit, $this->basePayload($run, 'run_completed', [
-            'status' => 'success',
-            'total_latency_ms' => $totalMs,
-            'output' => $finalOutput,
-        ]));
+        $this->emit($emit, $this->events->runCompleted($run, $finalOutput, $totalMs, $tokenAcc));
 
         $this->writeMemoryIfNeeded(
             (string) ($modelRoute['memory_mode'] ?? 'read_and_write'),
@@ -651,14 +806,7 @@ class OrchestratorService
      */
     protected function basePayload(Run $run, string $type, array $extras = []): array
     {
-        return array_merge([
-            'run_id' => $run->id,
-            'type' => $type,
-            'rules_used' => [],
-            'playbooks_used' => [],
-            'checklists_used' => [],
-            'memory_used' => [],
-        ], $extras);
+        return $this->events->event($run, $type, $extras);
     }
 
     /**

@@ -1,0 +1,124 @@
+export type AgentName =
+  | 'orchestrator'
+  | 'executor'
+  | 'auditor'
+  | 'security-auditor'
+  | 'final-reviewer'
+  | 'router'
+  | 'memory'
+  | 'system'
+
+export type StepStatus =
+  | 'pending'
+  | 'running'
+  | 'completed'
+  | 'success'
+  | 'passed'
+  | 'failed'
+  | 'fail'
+  | 'needs_revision'
+  | 'skipped'
+  | string
+
+export interface PlanChecklistItem {
+  id: string
+  title: string
+  description?: string
+  owner: AgentName | string
+  status: StepStatus
+}
+
+export interface FileRead {
+  path: string
+  reason?: string
+}
+
+export interface FileChange {
+  path: string
+  change_type: 'created' | 'modified' | 'deleted' | 'renamed' | string
+  summary?: string
+  why?: string
+  diff?: string
+}
+
+export interface CommandRun {
+  command: string
+  status: StepStatus | string
+  exit_code?: number
+  duration_ms?: number
+  output_summary?: string
+}
+
+export interface TestRun {
+  name: string
+  status: StepStatus | string
+  summary?: string
+}
+
+export interface AuditFinding {
+  id?: string
+  severity: 'low' | 'medium' | 'high' | 'critical' | string
+  category?: string
+  title: string
+  description?: string
+  suggested_fix?: string
+  status?: 'open' | 'fixed' | 'accepted_risk' | string
+}
+
+export interface AgentMessage {
+  id: string
+  agent: AgentName | string
+  title: string
+  status: StepStatus
+  model_role?: string
+  model?: string
+  summary?: string
+  message?: string
+  from_agent?: string
+  to_agent?: string
+  latency_ms?: number
+  token_estimate?: number
+  artifacts?: Record<string, unknown>
+}
+
+export interface HandoffNode {
+  agent: AgentName | string
+  label: string
+  status: StepStatus
+}
+
+export interface FinalResult {
+  status?: string
+  summary?: string
+  filesChanged: string[]
+  checksRun: string[]
+  auditResult?: string
+  remainingRisks: string[]
+  nextStep?: string
+  raw?: string
+}
+
+export interface RoutingSummary {
+  backend: 'Ollama'
+  reasoningModel?: string
+  codingModel?: string
+  reviewModel?: string
+  fastModel?: string
+  workflow?: string
+  skill?: string
+  riskLevel?: string
+}
+
+export interface NormalizedRunArtifacts {
+  agentMessages: AgentMessage[]
+  handoffNodes: HandoffNode[]
+  checklist: PlanChecklistItem[]
+  filesRead: FileRead[]
+  filesChanged: FileChange[]
+  commandsRun: CommandRun[]
+  testsRun: TestRun[]
+  auditFindings: AuditFinding[]
+  finalResult: FinalResult
+  routingSummary: RoutingSummary
+  memoryUsed: boolean
+}

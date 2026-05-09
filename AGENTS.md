@@ -85,10 +85,11 @@ Uses **automatic routing** (see `app/config/bossku_models.php`): a cheap router 
 
 Defaults:
 
-1. **Plan / orchestrate:** **GPT-5.5** (strong scoping, target files, tests).
-2. **Execute:** **Kimi K2.6** for normal changes; **GPT-5.5** only for **high-risk** or fallback.
-3. **Audit / security audit:** **Claude Opus 4.7**.
-4. **Final review:** **GPT-5.5**, **only** when risk is **high**.
+1. **Plan / orchestrate:** Ollama reasoning model (strong scoping, target files, tests).
+2. **Execute:** Ollama coding model for concrete changes.
+3. **Audit / security audit:** Ollama review model.
+4. **Classify / summarize:** Ollama fast model.
+5. **Final review:** Ollama reasoning model when the route requires final closure.
 
 Token savings: skip executor for pure questions; narrow context to `target_file_list`; skip final reviewer unless high-risk.
 
@@ -96,11 +97,11 @@ Token savings: skip executor for pure questions; narrow context to `target_file_
 
 When driving work **from skills and rules** (not the Laravel UI), meaningful work follows the same pattern:
 
-1. **Plan:** strongest/frontier model for decomposition, architecture, risk, and test strategy.
-2. **Execute:** lower-cost execution model for concrete edits and straightforward implementation.
-3. **Audit:** strongest/frontier model for diff review, security/business-logic risks, verification gaps, and next action.
+1. **Plan:** reasoning model for decomposition, architecture, risk, and test strategy.
+2. **Execute:** coding model for concrete edits and straightforward implementation.
+3. **Audit:** review model for diff review, security/business-logic risks, verification gaps, and next action.
 
-Escalate execution back to the frontier model when the task touches auth, payments, privacy, tenant isolation, prompt injection, billing ops, production, data loss, migrations, security, multi-service architecture, or repeated failed attempts.
+Escalate execution to the configured high-risk coding/review route when the task touches auth, payments, privacy, tenant isolation, prompt injection, billing ops, production, data loss, migrations, security, multi-service architecture, or repeated failed attempts.
 
 ## Memory
 

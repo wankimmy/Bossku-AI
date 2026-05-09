@@ -3,14 +3,12 @@ definePageMeta({ layout: 'default' })
 
 const prompt = ref('')
 const { events, running, error, start, stop } = useRunStream()
-const tab = ref<'chat' | 'timeline' | 'context'>('chat')
+const mobileTab = ref<'chat' | 'plan' | 'changes' | 'audit' | 'memory'>('chat')
 
-const finalOutput = computed(() => {
-  const done = [...events.value].reverse().find(e => String(e?.type) === 'run_completed')
-  if (done?.output !== undefined && done.output !== null) {
-    return String(done.output)
-  }
-  return ''
+const artifacts = computed(() => useRunArtifacts(events.value as Record<string, unknown>[]))
+const status = computed(() => {
+  const last = events.value.at(-1)
+  return last ? String(last.status ?? last.type ?? 'running') : 'idle'
 })
 
 async function syncRun() {
@@ -20,146 +18,180 @@ async function syncRun() {
       method: 'POST',
       body: { prompt: prompt.value },
     })
-
-    alert(res.final_output || 'Completed')
+    events.value.push({
+      type: 'run_completed',
+      agent: 'final-reviewer',
+      status: 'success',
+      output: res.final_output || 'Completed',
+    })
   }
   catch (e: unknown) {
-    alert(`Run failed: ${e instanceof Error ? e.message : String(e)}`)
+    events.value.push({
+      type: 'run_failed',
+      agent: 'system',
+      status: 'fail',
+      summary: 'Run failed.',
+      message: e instanceof Error ? e.message : String(e),
+    })
   }
 }
 
 function submit() {
   if (!prompt.value.trim()) return
+  mobileTab.value = 'chat'
   start(prompt.value.trim())
 }
+
+const navLinks = [
+  { to: '/runs', label: 'Runs' },
+  { to: '/skills', label: 'Skills' },
+  { to: '/memory', label: 'Memory' },
+  { to: '/settings', label: 'Settings' },
+]
 </script>
 
 <template>
-  <div class="flex flex-col gap-4 pb-28 md:pb-6">
-    <div class="md:grid md:grid-cols-12 md:gap-6">
-      <!-- Desktop / tablet left + center -->
-      <section class="space-y-4 md:col-span-12 lg:col-span-8">
-        <!-- Mobile tabs -->
-        <div class="flex gap-1 rounded-lg bg-zinc-100 p-1 dark:bg-zinc-900 md:hidden">
-          <button
-            v-for="x in [{ id:'chat',l:'Chat'},{id:'timeline',l:'Timeline'},{id:'context',l:'Context'}] as const"
-            :key="x.id"
-            type="button"
-            class="flex-1 rounded-md px-2 py-2 text-sm font-medium"
-            :class="tab === x.id ? 'bg-white text-zinc-900 shadow dark:bg-zinc-800 dark:text-zinc-100' : 'text-zinc-600 dark:text-zinc-400'"
-            @click="tab = x.id"
-          >
-            {{ x.l }}
-          </button>
-        </div>
+  <div class="space-y-4 pb-28 md:pb-6">
+    <RunStatusHeader
+      :running="running"
+      :status="status"
+      :memory-used="artifacts.memoryUsed"
+      :routing="artifacts.routingSummary"
+    />
 
-        <div class="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900" :class="tab !== 'chat' ? 'hidden md:block' : ''">
-          <div class="border-b border-zinc-100 px-4 py-3 dark:border-zinc-800">
-            <h1 class="text-lg font-semibold">
+    <div class="flex gap-1 rounded-lg bg-zinc-100 p-1 dark:bg-zinc-900 md:hidden">
+      <button
+        v-for="tab in ['chat', 'plan', 'changes', 'audit', 'memory'] as const"
+        :key="tab"
+        type="button"
+        class="flex-1 rounded-md px-2 py-2 text-xs font-medium capitalize"
+        :class="mobileTab === tab ? 'bg-white text-zinc-900 shadow dark:bg-zinc-800 dark:text-zinc-100' : 'text-zinc-600 dark:text-zinc-400'"
+        @click="mobileTab = tab"
+      >
+        {{ tab }}
+      </button>
+    </div>
+
+    <div class="grid gap-4 lg:grid-cols-[190px_minmax(0,1fr)_380px]">
+      <aside class="hidden space-y-3 lg:block">
+        <section class="rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
+          <h2 class="text-xs font-semibold uppercase text-zinc-500">
+            Workspace
+          </h2>
+          <nav class="mt-3 space-y-1 text-sm" aria-label="Workspace navigation">
+            <NuxtLink
+              v-for="link in navLinks"
+              :key="link.to"
+              :to="link.to"
+              class="block rounded-md px-2 py-1.5 text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            >
+              {{ link.label }}
+            </NuxtLink>
+          </nav>
+        </section>
+        <AgentHandoffFlow :nodes="artifacts.handoffNodes" />
+      </aside>
+
+      <main :class="mobileTab !== 'chat' ? 'hidden md:block' : ''" class="space-y-4">
+        <AgentHandoffFlow class="lg:hidden" :nodes="artifacts.handoffNodes" />
+        <section class="rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
+          <label for="run-prompt" class="text-sm font-semibold">Task prompt</label>
+          <textarea
+            id="run-prompt"
+            v-model="prompt"
+            class="mt-2 block min-h-[110px] w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+            placeholder="Describe the engineering task..."
+          />
+          <div class="mt-3 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              class="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-50 dark:bg-emerald-600 dark:hover:bg-emerald-700"
+              :disabled="running || !prompt.trim()"
+              @click="submit"
+            >
               Run task
-            </h1>
-            <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-              Streams memory retrieval → skill router → planner → executor (Ollama) → auditor.
-            </p>
+            </button>
+            <button
+              type="button"
+              class="rounded-lg border border-zinc-300 px-4 py-2 text-sm hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
+              :disabled="running || !prompt.trim()"
+              @click="syncRun"
+            >
+              Run sync API
+            </button>
+            <button
+              v-if="running"
+              type="button"
+              class="rounded-lg border border-rose-300 px-3 py-2 text-sm text-rose-800 dark:border-rose-900 dark:text-rose-300"
+              @click="stop"
+            >
+              Stop stream
+            </button>
           </div>
-          <div class="space-y-3 p-4">
-            <textarea
-              v-model="prompt"
-              class="block min-h-[100px] w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
-              placeholder="Describe what you want done…"
-            />
-            <div class="flex flex-wrap gap-2">
-              <button
-                type="button"
-                class="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-50 dark:bg-emerald-600 dark:hover:bg-emerald-700"
-                :disabled="running || !prompt.trim()"
-                @click="submit"
-              >
-                Stream run
-              </button>
-              <button
-                type="button"
-                class="rounded-lg border border-zinc-300 px-4 py-2 text-sm hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
-                :disabled="running || !prompt.trim()"
-                @click="syncRun"
-              >
-                Run (sync API)
-              </button>
-              <button
-                v-if="running"
-                type="button"
-                class="rounded-lg border border-rose-300 px-3 py-2 text-sm text-rose-800 dark:border-rose-900 dark:text-rose-300"
-                @click="stop"
-              >
-                Stop stream
-              </button>
-            </div>
-            <p v-if="error" class="text-sm text-rose-700 dark:text-rose-400">
-              {{ error }}
-            </p>
-          </div>
-          <div v-if="finalOutput" class="border-t border-zinc-100 p-4 dark:border-zinc-800">
-            <h2 class="text-sm font-semibold">
-              Final answer
-            </h2>
-            <div class="mt-2 whitespace-pre-wrap text-sm leading-relaxed">
-              {{ finalOutput }}
-            </div>
-          </div>
+          <p v-if="error" class="mt-3 text-sm text-rose-700 dark:text-rose-400">
+            {{ error }}
+          </p>
+        </section>
+
+        <section class="space-y-3" aria-live="polite">
+          <h2 class="text-sm font-semibold">
+            Agent conversation
+          </h2>
+          <AgentMessageCard
+            v-for="message in artifacts.agentMessages"
+            :key="message.id"
+            :message="message"
+          />
+          <UiEmptyState
+            v-if="artifacts.agentMessages.length === 0"
+            title="No agent messages yet."
+            hint="Run a task to see orchestrator, executor, auditor, and final reviewer updates."
+          />
+        </section>
+
+        <FinalResultPanel v-if="artifacts.finalResult.raw" :result="artifacts.finalResult" />
+
+        <details class="rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
+          <summary class="cursor-pointer text-sm font-semibold">
+            Raw JSON
+          </summary>
+          <ExecutionTimeline class="mt-3" :events="events as Record<string, unknown>[]" />
+        </details>
+      </main>
+
+      <aside class="space-y-4">
+        <div :class="mobileTab !== 'plan' ? 'hidden md:block' : ''">
+          <PlanChecklist :items="artifacts.checklist" />
         </div>
-
-        <div :class="tab !== 'timeline' ? 'hidden md:block' : ''">
-          <div class="mb-3 flex flex-wrap items-center gap-2">
-            <h2 class="text-sm font-semibold">
-              Execution timeline
-            </h2>
-            <span v-if="running" class="rounded border border-zinc-300 px-2 py-0.5 font-mono text-xs text-zinc-600 dark:border-zinc-700 dark:text-zinc-400">Streaming…</span>
-
-
-          </div>
-          <ExecutionTimeline :events="events as Record<string, unknown>[]" />
+        <div :class="mobileTab !== 'changes' ? 'hidden md:block' : ''">
+          <ChangeTrackerPanel
+            :files-read="artifacts.filesRead"
+            :files-changed="artifacts.filesChanged"
+            :commands-run="artifacts.commandsRun"
+            :tests-run="artifacts.testsRun"
+          />
         </div>
-      </section>
-
-      <aside class="hidden space-y-4 lg:col-span-4 lg:block">
-        <ContextDrawer title="Active context panel" :context-events="events as Record<string, unknown>[]" />
+        <div :class="mobileTab !== 'audit' ? 'hidden md:block' : ''">
+          <AuditFindingsPanel
+            :status="artifacts.finalResult.auditResult"
+            :findings="artifacts.auditFindings"
+          />
+        </div>
+        <div :class="mobileTab !== 'memory' ? 'hidden md:block' : ''">
+          <ContextDrawer title="Context used" :context-events="events as Record<string, unknown>[]" />
+        </div>
       </aside>
     </div>
 
-    <section :class="tab !== 'context' ? 'hidden md:block lg:hidden' : 'md:hidden'">
-      <ContextDrawer title="Context" :context-events="events as Record<string, unknown>[]" />
-    </section>
-
-    <!-- Sticky prompt mobile -->
-    <div class="fixed inset-x-0 bottom-14 z-30 border-t border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-950 md:hidden">
-      <div class="mx-auto flex max-w-[1600px] gap-2">
-        <button
-          type="button"
-          class="flex-1 rounded-lg bg-emerald-700 px-3 py-2 text-sm font-medium text-white disabled:opacity-40"
-          :disabled="running || !prompt.trim()"
-          @click="submit"
-        >
-          Run task
-        </button>
-      </div>
+    <div class="fixed inset-x-0 bottom-0 z-30 border-t border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-950 md:hidden">
+      <button
+        type="button"
+        class="w-full rounded-lg bg-emerald-700 px-3 py-2 text-sm font-medium text-white disabled:opacity-40"
+        :disabled="running || !prompt.trim()"
+        @click="submit"
+      >
+        Run task
+      </button>
     </div>
-
-    <nav class="fixed inset-x-0 bottom-0 z-30 flex gap-px border-t border-zinc-200 bg-zinc-50 text-[11px] font-medium md:hidden dark:border-zinc-800 dark:bg-zinc-950">
-      <NuxtLink to="/skills" class="flex-1 border-r border-zinc-200 px-1 py-2 text-center dark:border-zinc-800">
-        More
-      </NuxtLink>
-      <button type="button" class="flex-1 px-1 py-2 text-center text-emerald-800 dark:text-emerald-400" @click="tab='chat'">
-        Chat
-      </button>
-      <button type="button" class="flex-1 border-l border-zinc-200 px-1 py-2 text-center dark:border-zinc-800" @click="tab='timeline'">
-        Timeline
-      </button>
-      <button type="button" class="flex-1 border-l border-zinc-200 px-1 py-2 text-center dark:border-zinc-800" @click="tab='context'">
-        Context
-      </button>
-      <NuxtLink to="/memory" class="flex-1 border-l border-zinc-200 px-1 py-2 text-center dark:border-zinc-800">
-        Memory
-      </NuxtLink>
-    </nav>
   </div>
 </template>
