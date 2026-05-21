@@ -4,7 +4,11 @@ import type { ModelRoute } from '~/types/api'
 definePageMeta({ layout: 'default' })
 
 const api = useApi()
-const { data, pending, refresh } = await useAsyncData<ModelRoute[]>('model-routes', () => api.get('/model-routes'))
+const { data, pending, error, refresh } = await useAsyncData<ModelRoute[]>(
+  'model-routes',
+  () => api.get('/model-routes'),
+  { server: false, lazy: true },
+)
 
 const routes = computed<ModelRoute[]>(() => {
   const d = data.value

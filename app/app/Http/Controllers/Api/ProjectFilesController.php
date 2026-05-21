@@ -8,6 +8,7 @@ use App\Models\BosskuAi\Run;
 use App\Services\Governance\ApprovalGateService;
 use App\Services\Governance\RiskClassifier;
 use App\Services\Project\ProjectPathResolver;
+use App\Services\Project\ProjectService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Symfony\Component\Finder\Finder;
@@ -22,15 +23,32 @@ class ProjectFilesController extends Controller
 
     public function __construct(
         protected ProjectPathResolver $paths,
+        protected ProjectService $projects,
         protected ApprovalGateService $approvals,
         protected RiskClassifier $riskClassifier,
     ) {}
 
     public function root()
     {
+        $active = $this->paths->activeProject();
+
+        try {
+            $root = $this->paths->repoRoot();
+            $available = true;
+            $error = null;
+        } catch (\Throwable $e) {
+            $root = $active?->container_path ?? (string) config('bossku.repo_root');
+            $available = false;
+            $error = $e->getMessage();
+        }
+
         return response()->json([
-            'root' => $this->paths->repoRoot(),
+            'root' => $root,
             'relative' => '',
+            'available' => $available,
+            'error' => $error,
+            'active_project' => $active,
+            'workspace' => $this->projects->workspaceMeta(),
         ]);
     }
 

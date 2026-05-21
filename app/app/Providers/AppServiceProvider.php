@@ -36,10 +36,8 @@ class AppServiceProvider extends ServiceProvider
 
         $this->app->singleton(OllamaClient::class, function ($app) {
             $s = $app->make(RuntimeSettings::class);
-            $key = config('bossku.ollama_api_key');
-            $apiKey = is_string($key) && $key !== '' ? $key : null;
 
-            return new OllamaClient($s->ollamaBaseUrl(), $apiKey);
+            return new OllamaClient($s->ollamaBaseUrl(), $s->ollamaApiKey());
         });
 
         $this->app->singleton(ModelRouter::class, function ($app) {
@@ -52,6 +50,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(LlmGateway::class, function ($app) {
             return new LlmGateway(
                 $app->make(OllamaClient::class),
+                $app->make(RuntimeSettings::class),
                 $app->make(ModelRouter::class),
             );
         });

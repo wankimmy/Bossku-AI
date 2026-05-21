@@ -7,7 +7,7 @@ Two common paths:
 From a machine with Git + bash or PowerShell:
 
 ```bash
-git clone https://github.com/wankimmy/Bossku-AI bosskuAI
+git clone https://github.com/YOUR_ORG/Bossku-AI.git bosskuAI
 ./bosskuAI/scripts/install.sh /your/project --profile core
 ```
 

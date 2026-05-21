@@ -29,7 +29,7 @@ class ToolRegistry
         protected RiskClassifier $riskClassifier,
     ) {}
 
-    /** @param callable(string, array): void|null $emit optional event hook */
+    /** @param callable(array<string, mixed>): void|null $emit optional SSE event hook */
     public function invoke(?string $runId, ?string $stepId, mixed $toolRequest, ?callable $emit = null): array
     {
         if (! is_array($toolRequest) || empty($toolRequest['tool'])) {
@@ -79,7 +79,9 @@ class ToolRegistry
         ]);
 
         if ($emit !== null) {
-            $emit('tool_call', [
+            $emit([
+                'type' => 'tool_call',
+                'run_id' => $runId,
                 'tool' => $tool,
                 'latency_ms' => $latency,
                 'status' => $status,

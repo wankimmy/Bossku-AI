@@ -4,16 +4,27 @@ namespace App\Services\BosskuAi;
 
 class ModelRoutingConfig
 {
+    public function __construct(
+        protected RuntimeSettings $settings,
+    ) {}
+
     /** @return array<string, mixed> */
     public function router(): array
     {
-        return config('bossku_models.router', []);
+        $cfg = config('bossku_models.router', []);
+        $cfg['primary'] = $this->settings->routerModel();
+        $cfg['enabled'] = $this->settings->routingLlmEnabled();
+
+        return $cfg;
     }
 
     /** @return array<string, mixed> */
     public function orchestrator(): array
     {
-        return config('bossku_models.orchestrator', []);
+        $cfg = config('bossku_models.orchestrator', []);
+        $cfg['primary'] = $this->settings->orchestratorModelForRouting();
+
+        return $cfg;
     }
 
     /** @return array<string, mixed> */
@@ -27,7 +38,10 @@ class ModelRoutingConfig
             return ['primary' => '', 'fallback' => [], 'max_context_files' => 0, 'max_tokens' => 0, 'temperature' => 0.2, 'timeout_seconds' => 0, 'retry_count' => 0];
         }
 
-        return $profiles[$profile] ?? $profiles['default'] ?? [];
+        $cfg = $profiles[$profile] ?? $profiles['default'] ?? [];
+        $cfg['primary'] = $this->settings->executorProfileModel($profile);
+
+        return $cfg;
     }
 
     /** @return list<string> */
@@ -39,30 +53,45 @@ class ModelRoutingConfig
     /** @return array<string, mixed> */
     public function auditor(): array
     {
-        return config('bossku_models.auditor', []);
+        $cfg = config('bossku_models.auditor', []);
+        $cfg['primary'] = $this->settings->auditorModel();
+
+        return $cfg;
     }
 
     /** @return array<string, mixed> */
     public function securityAuditor(): array
     {
-        return config('bossku_models.security_auditor', []);
+        $cfg = config('bossku_models.security_auditor', []);
+        $cfg['primary'] = $this->settings->securityAuditorModel();
+
+        return $cfg;
     }
 
     /** @return array<string, mixed> */
     public function finalReviewer(): array
     {
-        return config('bossku_models.final_reviewer', []);
+        $cfg = config('bossku_models.final_reviewer', []);
+        $cfg['primary'] = $this->settings->finalReviewerModel();
+
+        return $cfg;
     }
 
     /** @return array<string, mixed> */
     public function writer(): array
     {
-        return config('bossku_models.writer', []);
+        $cfg = config('bossku_models.writer', []);
+        $cfg['primary'] = $this->settings->writerModel();
+
+        return $cfg;
     }
 
     /** @return array<string, mixed> */
     public function directAnswer(): array
     {
-        return config('bossku_models.direct_answer', []);
+        $cfg = config('bossku_models.direct_answer', []);
+        $cfg['primary'] = $this->settings->directAnswerModel();
+
+        return $cfg;
     }
 }

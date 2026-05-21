@@ -3,11 +3,11 @@
   "version": "1.0.0",
   "description": "Use BosskuAI when a Codex workspace needs repo-local memory, routing, and evaluation habits.",
   "author": {
-    "name": "wankimmy",
-    "url": "https://github.com/wankimmy"
+    "name": "BosskuAI",
+    "url": "https://github.com/bossku-ai"
   },
-  "homepage": "https://github.com/wankimmy/Bossku-AI",
-  "repository": "https://github.com/wankimmy/Bossku-AI",
+  "homepage": "https://github.com/bossku-ai/Bossku-AI",
+  "repository": "https://github.com/bossku-ai/Bossku-AI",
   "license": "MIT",
   "keywords": [
     "codex",
@@ -20,16 +20,16 @@
     "displayName": "BosskuAI",
     "shortDescription": "Repo-local memory and routing habits for Codex workspaces.",
     "longDescription": "BosskuAI provides a compact Codex entrypoint for using workspace memory, skill routing, evaluation, and human-quality output checks without loading the full toolkit at once.",
-    "developerName": "wankimmy",
+    "developerName": "BosskuAI",
     "category": "Productivity",
     "capabilities": [
       "skills",
       "workspace-memory",
       "evaluation"
     ],
-    "websiteURL": "https://github.com/wankimmy/Bossku-AI",
-    "privacyPolicyURL": "https://github.com/wankimmy/Bossku-AI/blob/main/SECURITY.md",
-    "termsOfServiceURL": "https://github.com/wankimmy/Bossku-AI/blob/main/LICENSE",
+    "websiteURL": "https://github.com/bossku-ai/Bossku-AI",
+    "privacyPolicyURL": "https://github.com/bossku-ai/Bossku-AI/blob/main/SECURITY.md",
+    "termsOfServiceURL": "https://github.com/bossku-ai/Bossku-AI/blob/main/LICENSE",
     "defaultPrompt": [
       "Use BosskuAI to route this workspace task.",
       "Audit this repo with BosskuAI.",

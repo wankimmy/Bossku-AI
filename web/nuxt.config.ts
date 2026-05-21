@@ -1,6 +1,7 @@
 export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
-  devtools: { enabled: true },
+  // DevTools only when explicitly enabled (slow in Docker). Production uses npm run build.
+  devtools: { enabled: process.env.NUXT_DEVTOOLS === 'true' },
   app: {
     head: {
       title: 'BosskuAI',
@@ -21,13 +22,5 @@ export default defineNuxtConfig({
   tailwindcss: {
     cssPath: '~/assets/css/tailwind.css'
   },
-  vite: {
-    server: {
-      // Hot reload is expensive on Docker Desktop / Windows bind mounts.
-      hmr: false,
-      watch: {
-        ignored: ['**/*'],
-      },
-    },
-  },
 })
+

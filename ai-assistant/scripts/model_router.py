@@ -85,7 +85,7 @@ def route_detailed(task: str) -> dict:
         memory_mode = "none"
         estimated_token_level = "low"
 
-    if any(x in low for x in ("social media", "festivent", "vendor signup")):
+    if any(x in low for x in ("social media", "vendor signup")):
         task_type, skill = "marketing", "marketing"
         workflow = "writer_only"
         needs_repo = needs_file_edit = needs_executor = needs_auditor = False

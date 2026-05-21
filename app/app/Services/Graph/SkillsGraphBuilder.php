@@ -11,7 +11,8 @@ use App\Services\Skills\SkillQualityScorer;
 class SkillsGraphBuilder
 {
     public function __construct(
-        private readonly SkillQualityScorer $scorer
+        private readonly SkillQualityScorer $scorer,
+        private readonly KnowledgeGraphDedup $dedup,
     ) {}
 
     public function rebuild(): void
@@ -28,19 +29,23 @@ class SkillsGraphBuilder
 
         foreach ($skills as $skill) {
             $quality = $this->scorer->score($skill);
-            $node = GraphNode::create([
-                'type'        => 'skill',
-                'label'       => $skill->name,
-                'source_type' => 'skill',
-                'source_id'   => $skill->getKey(),
-                'confidence'  => $skill->confidence ?? null,
-                'properties'  => [
-                    'quality_score' => $quality,
-                    'usage_count'   => $skill->usage_count,
-                    'tags'          => $skill->tags ?? [],
-                    'is_active'     => $skill->is_active,
+            $node = GraphNode::updateOrCreate(
+                [
+                    'source_type' => 'skill',
+                    'source_id'   => $skill->getKey(),
                 ],
-            ]);
+                [
+                    'type'        => 'skill',
+                    'label'       => $skill->name,
+                    'confidence'  => $skill->confidence ?? null,
+                    'properties'  => [
+                        'quality_score' => $quality,
+                        'usage_count'   => $skill->usage_count,
+                        'tags'          => $skill->tags ?? [],
+                        'is_active'     => $skill->is_active,
+                    ],
+                ],
+            );
             $nodeMap[$skill->getKey()] = ['node' => $node, 'skill' => $skill];
         }
 
@@ -56,13 +61,17 @@ class SkillsGraphBuilder
 
                 $sharedTags = array_intersect($tagsA, $tagsB);
                 if (! empty($sharedTags)) {
-                    GraphEdge::create([
-                        'source_node_id' => $nodeMap[$skillA->getKey()]['node']->getKey(),
-                        'target_node_id' => $nodeMap[$skillB->getKey()]['node']->getKey(),
-                        'relation'       => 'shares_tags',
-                        'weight'         => count($sharedTags),
-                        'properties'     => ['shared_tags' => array_values($sharedTags)],
-                    ]);
+                    GraphEdge::firstOrCreate(
+                        [
+                            'source_node_id' => $nodeMap[$skillA->getKey()]['node']->getKey(),
+                            'target_node_id' => $nodeMap[$skillB->getKey()]['node']->getKey(),
+                            'relation'       => 'shares_tags',
+                        ],
+                        [
+                            'weight'     => count($sharedTags),
+                            'properties' => ['shared_tags' => array_values($sharedTags)],
+                        ],
+                    );
                 }
             }
         }
@@ -94,5 +103,7 @@ class SkillsGraphBuilder
                 ['weight' => $count]
             );
         }
+
+        $this->dedup->prune();
     }
 }

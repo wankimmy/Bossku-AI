@@ -1,12 +1,55 @@
 <script setup lang="ts">
+import { useLandingChat } from '~/composables/useLandingChat'
+
 definePageMeta({ layout: 'default' })
 
+const route = useRoute()
+const router = useRouter()
 const prompt = ref('')
-const { events, running, error, start, stop } = useRunStream()
+const chat = useLandingChat()
+const {
+  events,
+  running,
+  error,
+  awaitingClarification,
+  clarificationRequest,
+  start,
+  continueRun,
+  stop,
+} = useRunStream()
+const submittingClarification = ref(false)
 const toast = useToast()
-const mobileTab = ref<'chat' | 'plan' | 'changes' | 'audit' | 'memory' | 'agents'>('agents')
+type PanelTab = 'agents' | 'plan' | 'changes' | 'audit' | 'memory'
+type MobileTab = 'chat' | PanelTab
+
+const rightPanelTab = ref<PanelTab>('agents')
+const mobileTab = ref<MobileTab>('chat')
+
+const panelTabs: PanelTab[] = ['agents', 'plan', 'changes', 'audit', 'memory']
+const mobileTabs: MobileTab[] = ['chat', ...panelTabs]
+
+function panelTabLabel(tab: PanelTab) {
+  if (tab === 'agents') return '🤖 Agents'
+  if (tab === 'plan') return '📋 Plan'
+  if (tab === 'changes') return '📁 Changes'
+  if (tab === 'audit') return '🔍 Audit'
+  return '🧠 Memory'
+}
+
+function showRightPanel(tab: PanelTab) {
+  return rightPanelTab.value === tab
+}
+
+function showMobilePanel(tab: PanelTab) {
+  return mobileTab.value === tab
+}
+const lastRecordedRunId = ref<string | null>(null)
 
 const artifacts = computed(() => useRunArtifacts(events.value as Record<string, unknown>[]))
+const { configured: configuredRouting } = useConfiguredRouting()
+const displayRouting = computed(() =>
+  mergeRoutingSummary(artifacts.value.routingSummary, configuredRouting.value),
+)
 const status = computed(() => {
   const last = events.value.at(-1)
   return last ? String(last.status ?? last.type ?? 'running') : 'idle'
@@ -27,52 +70,227 @@ const runError = computed(() => {
   )
 })
 
+function recordAssistantReply(content: string) {
+  const text = content.trim()
+  if (!text) return
+  const runId = String(events.value.find(e => e.run_id)?.run_id ?? '')
+  if (runId && lastRecordedRunId.value === runId) return
+  lastRecordedRunId.value = runId || `local_${Date.now()}`
+  chat.addAssistantTurn(text)
+  chat.saveRunEvents(events.value)
+}
+
+watch(running, (isRunning) => {
+  if (isRunning) focusAgentsPanel()
+})
+
+watch(
+  () => [running.value, finalOutput.value, runError.value, awaitingClarification.value] as const,
+  ([isRunning, output, err, awaiting]) => {
+    if (isRunning) return
+    chat.saveRunEvents(events.value)
+    if (awaiting) return
+    if (output) {
+      recordAssistantReply(output)
+      toast.success('Task completed.')
+      return
+    }
+    if (err) recordAssistantReply(`Error: ${err}`)
+  },
+)
+
+function focusAgentsPanel() {
+  rightPanelTab.value = 'agents'
+  mobileTab.value = 'agents'
+}
+
 async function syncRun() {
+  const userText = prompt.value.trim()
+  if (!userText) return
+  focusAgentsPanel()
+  const prior = chat.conversationPayload()
+  chat.addUserTurn(userText)
+  syncConvQuery()
+  prompt.value = ''
   const base = useApiBase()
   try {
     const res = await $fetch<{ final_output?: string }>(`${base}/api/runs`, {
       method: 'POST',
-      body: { prompt: prompt.value },
+      body: { prompt: userText, conversation: prior },
     })
+    const out = res.final_output || 'Completed'
     events.value.push({
       type: 'run_completed',
       agent: 'final-reviewer',
       status: 'success',
-      output: res.final_output || 'Completed',
+      output: out,
     })
+    recordAssistantReply(out)
   }
   catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e)
     events.value.push({
       type: 'run_failed',
       agent: 'system',
       status: 'fail',
       summary: 'Run failed.',
-      message: e instanceof Error ? e.message : String(e),
+      message: msg,
     })
+    recordAssistantReply(`Error: ${msg}`)
+  }
+}
+
+async function submitClarification(
+  answers: Array<{ question_id: string; option_id?: string; free_text?: string }>,
+) {
+  const req = clarificationRequest.value
+  if (!req?.runId || submittingClarification.value) return
+  submittingClarification.value = true
+  focusAgentsPanel()
+  toast.info('Continuing run with your answers…')
+  try {
+    await continueRun(req.runId, answers)
+    chat.saveRunEvents(events.value)
+  }
+  finally {
+    submittingClarification.value = false
   }
 }
 
 function submit() {
-  if (!prompt.value.trim()) return
-  mobileTab.value = 'chat'
+  const userText = prompt.value.trim()
+  if (running.value || submittingClarification.value) return
+
+  if (awaitingClarification.value) {
+    return
+  }
+
+  if (!userText) return
+  focusAgentsPanel()
+  const prior = chat.conversationPayload()
+  chat.addUserTurn(userText)
+  syncConvQuery()
+  prompt.value = ''
+  lastRecordedRunId.value = null
   toast.info('Task started…')
-  start(prompt.value.trim())
+  start(userText, { conversation: prior })
 }
 
-watch(finalOutput, (val) => {
-  if (val) toast.success('Task completed.')
-})
+function assistantOutputFromEvents(evts: Record<string, unknown>[]): string {
+  const done = evts.findLast(e => e.type === 'run_completed')
+  if (!done) return ''
+  return String(done.output ?? done.final_output ?? '').trim()
+}
+
+/** If we restored SSE events but no AI bubble yet, add one so order is You → AI → agent activity. */
+function backfillAssistantFromEvents(evts: Record<string, unknown>[]) {
+  const text = assistantOutputFromEvents(evts)
+  if (!text) return
+  const turns = chat.turns.value
+  const last = turns.at(-1)
+  if (last?.role !== 'user') return
+  const already = turns.some(t => t.role === 'assistant' && t.content.trim() === text)
+  if (!already) chat.addAssistantTurn(text)
+}
+
+function applyConversationFromRoute() {
+  const raw = route.query.conv
+  const convId = typeof raw === 'string' ? raw : null
+  if (convId) {
+    if (!chat.selectConversation(convId)) {
+      toast.warning('Conversation not found.')
+      chat.clearActiveConversation()
+      events.value = []
+      router.replace({ path: '/', query: {} })
+      return
+    }
+    events.value = chat.getRunEvents(convId)
+    backfillAssistantFromEvents(events.value as Record<string, unknown>[])
+    if (events.value.length > 0) focusAgentsPanel()
+    lastRecordedRunId.value = null
+    return
+  }
+  chat.clearActiveConversation()
+  events.value = []
+  lastRecordedRunId.value = null
+}
+
+function syncConvQuery() {
+  const id = chat.activeId.value
+  if (id && route.query.conv !== id) {
+    router.replace({ path: '/', query: { conv: id } })
+  }
+}
+
+/** Blank front-page chat; prior threads stay under /conversations until you send a message. */
+function newSession() {
+  if (running.value) stop()
+  chat.clearActiveConversation()
+  events.value = []
+  lastRecordedRunId.value = null
+  prompt.value = ''
+  mobileTab.value = 'chat'
+  router.replace({ path: '/', query: {} })
+  toast.info('New session — previous messages hidden until you open them in Conversations.')
+}
+
+const hasActiveSession = computed(
+  () => Boolean(route.query.conv) || chat.turns.value.length > 0 || events.value.length > 0 || running.value,
+)
 
 watch(runError, (val) => {
-  if (val) toast.error(val.length > 80 ? val.slice(0, 80) + '…' : val)
+  if (val && !running.value) toast.error(val.length > 80 ? val.slice(0, 80) + '…' : val)
 })
 
-const navLinks = [
-  { to: '/runs', label: 'Runs' },
-  { to: '/skills', label: 'Skills' },
-  { to: '/memory', label: 'Memory' },
-  { to: '/settings', label: 'Settings' },
-]
+const hasChatContent = computed(() =>
+  chat.turns.value.length > 0
+  || events.value.length > 0
+  || running.value
+  || awaitingClarification.value,
+)
+
+/** Agent steps for the latest run — always below all user/AI bubbles. */
+const showAgentActivity = computed(
+  () => running.value || artifacts.value.agentMessages.length > 0,
+)
+
+const chatThreadRef = ref<HTMLElement | null>(null)
+
+function scrollChatToBottom() {
+  nextTick(() => {
+    const el = chatThreadRef.value
+    if (el) el.scrollTop = el.scrollHeight
+  })
+}
+
+watch(
+  () => [chat.turns.value.length, events.value.length, artifacts.value.agentMessages.length, running.value] as const,
+  () => scrollChatToBottom(),
+)
+
+watch(awaitingClarification, (paused) => {
+  if (paused) scrollChatToBottom()
+})
+
+watch(
+  () => route.query.conv,
+  () => {
+    if (!chat.hydrated.value || running.value) return
+    applyConversationFromRoute()
+  },
+)
+
+onMounted(() => {
+  chat.hydrateFromStorage()
+  applyConversationFromRoute()
+})
+
+watch(
+  () => chat.hydrated.value,
+  (ready) => {
+    if (ready && !running.value) applyConversationFromRoute()
+  },
+)
 </script>
 
 <template>
@@ -81,12 +299,12 @@ const navLinks = [
       :running="running"
       :status="status"
       :memory-used="artifacts.memoryUsed"
-      :routing="artifacts.routingSummary"
+      :routing="displayRouting"
     />
 
     <div class="flex gap-1 rounded-lg bg-zinc-900 p-1 md:hidden overflow-x-auto">
       <button
-        v-for="tab in ['chat', 'agents', 'plan', 'changes', 'audit', 'memory'] as const"
+        v-for="tab in mobileTabs"
         :key="tab"
         type="button"
         class="shrink-0 rounded-md px-3 py-2 text-xs font-medium capitalize"
@@ -97,41 +315,61 @@ const navLinks = [
       </button>
     </div>
 
-    <div class="grid gap-4 lg:grid-cols-[190px_minmax(0,1fr)_380px]">
-      <aside class="hidden space-y-3 lg:block">
-        <section class="rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
-          <h2 class="text-xs font-semibold uppercase text-zinc-500">
-            Workspace
-          </h2>
-          <nav class="mt-3 space-y-1 text-sm" aria-label="Workspace navigation">
-            <NuxtLink
-              v-for="link in navLinks"
-              :key="link.to"
-              :to="link.to"
-              class="block rounded-md px-2 py-1.5 text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
-            >
-              {{ link.label }}
-            </NuxtLink>
-          </nav>
-        </section>
-        <AgentHandoffFlow :nodes="artifacts.handoffNodes" />
-      </aside>
-
+    <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
       <main :class="mobileTab !== 'chat' ? 'hidden md:block' : ''" class="space-y-4">
-        <AgentHandoffFlow class="lg:hidden" :nodes="artifacts.handoffNodes" />
         <section class="rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
-          <label for="run-prompt" class="text-sm font-semibold">Task prompt</label>
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <label for="run-prompt" class="text-sm font-semibold">Message</label>
+            <div class="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                class="rounded-md border border-emerald-700/60 bg-emerald-950/30 px-2.5 py-1 text-xs font-medium text-emerald-300 hover:bg-emerald-900/40 disabled:opacity-50"
+                :disabled="running"
+                @click="newSession"
+              >
+                New session
+              </button>
+              <NuxtLink
+                to="/conversations"
+                class="text-xs text-zinc-500 hover:text-emerald-400"
+              >
+                Past conversations
+                <span
+                  v-if="chat.conversations.value.length > 0"
+                  class="ml-1 rounded-full bg-zinc-800 px-1.5 py-0.5 text-[10px] text-zinc-400"
+                >
+                  {{ chat.conversations.value.length }}
+                </span>
+              </NuxtLink>
+            </div>
+          </div>
+          <p v-if="hasActiveSession && chat.turns.value.length > 0" class="mt-1 text-xs text-zinc-500">
+            Your question → AI reply → agent steps (oldest at top).
+            <button type="button" class="ml-1 text-emerald-500 hover:underline" @click="newSession">
+              Start fresh
+            </button>
+          </p>
+          <p
+            v-if="awaitingClarification"
+            class="mt-2 rounded-md border border-amber-500/30 bg-amber-950/20 px-3 py-2 text-xs text-amber-200/90"
+          >
+            Answer using the choices in the chat below, then press Continue.
+          </p>
           <textarea
             id="run-prompt"
             v-model="prompt"
-            class="mt-2 block min-h-[110px] w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
-            placeholder="Describe the engineering task..."
+            class="mt-2 block min-h-[110px] w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 disabled:cursor-not-allowed disabled:opacity-60"
+            :disabled="awaitingClarification"
+            :placeholder="awaitingClarification
+              ? 'Use the clarification panel in the chat thread below…'
+              : 'Describe the engineering task or ask a follow-up...'"
+            @keydown.enter.exact.prevent="submit"
           />
           <div class="mt-3 flex flex-wrap items-center gap-2">
             <button
               type="button"
               class="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-50 dark:bg-emerald-600 dark:hover:bg-emerald-700"
-              :disabled="running || !prompt.trim()"
+              :disabled="running || submittingClarification || awaitingClarification || !prompt.trim()"
               @click="submit"
             >
               Run task
@@ -159,29 +397,57 @@ const navLinks = [
           </div>
         </section>
 
-        <!-- AI response panel -->
-        <section v-if="finalOutput" class="rounded-lg border border-emerald-800/50 bg-zinc-900 p-4 space-y-2">
-          <h2 class="text-xs font-semibold uppercase text-emerald-500 tracking-wider">AI Response</h2>
-          <pre class="whitespace-pre-wrap text-sm text-zinc-100 leading-relaxed font-mono">{{ finalOutput }}</pre>
-        </section>
-
-        <!-- Chat conversation -->
-        <section class="space-y-4" aria-live="polite">
+        <!-- Chat thread: Q/A oldest→newest, then agent activity for the current run -->
+        <section
+          ref="chatThreadRef"
+          class="max-h-[min(70vh,720px)] space-y-4 overflow-y-auto rounded-lg border border-zinc-800/60 bg-zinc-950/40 p-3"
+          aria-live="polite"
+        >
           <div
-            v-if="artifacts.agentMessages.length === 0 && !running"
+            v-if="!hasChatContent"
             class="flex flex-col items-center justify-center py-16 text-center"
           >
             <span class="text-4xl mb-3">🤖</span>
             <p class="text-sm text-zinc-400">Describe a task and hit <span class="font-semibold text-emerald-400">Run task</span>.</p>
-            <p class="text-xs text-zinc-600 mt-1">The orchestrator, executor, auditor, and reviewer will respond here.</p>
+            <p class="text-xs text-zinc-600 mt-1">
+              Past threads live under
+              <NuxtLink to="/conversations" class="text-emerald-500 hover:underline">Conversations</NuxtLink>.
+              Use <span class="font-medium text-zinc-400">New session</span> to clear the page.
+            </p>
           </div>
-          <AgentMessageCard
-            v-for="(message, idx) in artifacts.agentMessages"
-            :key="message.id"
-            :message="message"
-            :is-last="idx === artifacts.agentMessages.length - 1"
-            :is-running="running"
+
+          <ChatTurnBubble
+            v-for="turn in chat.displayTurns.value"
+            :key="turn.id"
+            :turn="turn"
           />
+
+          <ClarificationPanel
+            v-if="clarificationRequest && awaitingClarification"
+            :run-id="clarificationRequest.runId"
+            :stage="clarificationRequest.stage"
+            :summary="clarificationRequest.summary"
+            :assumptions="clarificationRequest.assumptions"
+            :questions="clarificationRequest.questions"
+            :submitting="submittingClarification || running"
+            @submit="submitClarification"
+          />
+
+          <div
+            v-if="showAgentActivity"
+            class="space-y-4 border-t border-zinc-800/80 pt-4"
+          >
+            <p class="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+              Agent activity (current run)
+            </p>
+            <AgentMessageCard
+              v-for="(message, idx) in artifacts.agentMessages"
+              :key="message.id"
+              :message="message"
+              :is-last="idx === artifacts.agentMessages.length - 1"
+              :is-running="running"
+            />
+          </div>
         </section>
 
         <FinalResultPanel v-if="artifacts.finalResult.raw" :result="artifacts.finalResult" />
@@ -191,26 +457,44 @@ const navLinks = [
         <!-- Desktop: tab bar for right panel -->
         <div class="hidden md:flex gap-1 rounded-lg bg-zinc-900 p-1">
           <button
-            v-for="tab in ['agents', 'plan', 'changes', 'audit', 'memory'] as const"
+            v-for="tab in panelTabs"
             :key="tab"
             type="button"
             class="flex-1 rounded-md px-2 py-1.5 text-xs font-medium capitalize transition-colors"
-            :class="mobileTab === tab ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-500 hover:text-zinc-300'"
-            @click="mobileTab = tab"
+            :class="rightPanelTab === tab ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-500 hover:text-zinc-300'"
+            @click="rightPanelTab = tab"
           >
-            {{ tab === 'agents' ? '🤖 Agents' : tab === 'plan' ? '📋 Plan' : tab === 'changes' ? '📁 Changes' : tab === 'audit' ? '🔍 Audit' : '🧠 Memory' }}
+            {{ panelTabLabel(tab) }}
           </button>
         </div>
 
-        <!-- Agents activity feed -->
-        <div :class="mobileTab !== 'agents' ? 'hidden' : ''" class="rounded-lg border border-zinc-800 bg-zinc-900 p-3">
-          <AgentActivityFeed :events="events as Record<string, unknown>[]" :running="running" />
+        <div
+          class="space-y-3"
+          :class="[
+            showRightPanel('agents') ? 'md:block' : 'md:hidden',
+            showMobilePanel('agents') ? 'max-md:block' : 'max-md:hidden',
+          ]"
+        >
+          <AgentHandoffFlow layout="vertical" :nodes="artifacts.handoffNodes" />
+          <div class="rounded-lg border border-zinc-800 bg-zinc-900 p-3">
+            <AgentActivityFeed :events="events as Record<string, unknown>[]" :running="running" />
+          </div>
         </div>
 
-        <div :class="mobileTab !== 'plan' ? 'hidden' : ''">
+        <div
+          :class="[
+            showRightPanel('plan') ? 'md:block' : 'md:hidden',
+            showMobilePanel('plan') ? 'max-md:block' : 'max-md:hidden',
+          ]"
+        >
           <PlanChecklist :items="artifacts.checklist" />
         </div>
-        <div :class="mobileTab !== 'changes' ? 'hidden' : ''">
+        <div
+          :class="[
+            showRightPanel('changes') ? 'md:block' : 'md:hidden',
+            showMobilePanel('changes') ? 'max-md:block' : 'max-md:hidden',
+          ]"
+        >
           <ChangeTrackerPanel
             :files-read="artifacts.filesRead"
             :files-changed="artifacts.filesChanged"
@@ -218,13 +502,23 @@ const navLinks = [
             :tests-run="artifacts.testsRun"
           />
         </div>
-        <div :class="mobileTab !== 'audit' ? 'hidden' : ''">
+        <div
+          :class="[
+            showRightPanel('audit') ? 'md:block' : 'md:hidden',
+            showMobilePanel('audit') ? 'max-md:block' : 'max-md:hidden',
+          ]"
+        >
           <AuditFindingsPanel
             :status="artifacts.finalResult.auditResult"
             :findings="artifacts.auditFindings"
           />
         </div>
-        <div :class="mobileTab !== 'memory' ? 'hidden' : ''">
+        <div
+          :class="[
+            showRightPanel('memory') ? 'md:block' : 'md:hidden',
+            showMobilePanel('memory') ? 'max-md:block' : 'max-md:hidden',
+          ]"
+        >
           <ContextDrawer title="Context used" :context-events="events as Record<string, unknown>[]" />
         </div>
       </aside>

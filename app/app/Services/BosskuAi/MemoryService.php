@@ -23,7 +23,7 @@ class MemoryService
 
     protected function memoryOllamaEnabled(): bool
     {
-        return filter_var(config('bossku.memory_ollama_enabled', true), FILTER_VALIDATE_BOOL);
+        return $this->settings->memoryOllamaEnabled();
     }
 
     /** @param array<string,mixed> $metadata */

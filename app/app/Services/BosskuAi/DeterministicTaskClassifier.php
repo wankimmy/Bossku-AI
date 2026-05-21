@@ -27,6 +27,23 @@ class DeterministicTaskClassifier
         $memoryMode = 'read_and_write';
         $tokenLevel = 'medium';
 
+        // Repository audit / review — must run executor + read files (never orchestrator_only)
+        if (RepoTaskDetector::requiresRepositoryAccess($prompt)) {
+            $taskType = 'security';
+            $skill = 'generic';
+            $workflow = 'orchestrator_executor_auditor';
+            $needsRepo = true;
+            $needsFileEdit = false;
+            $needsExecutor = true;
+            $needsAuditor = true;
+            $needsSecurity = false;
+            $needsFinal = false;
+            $needsTest = false;
+            $executorProfile = 'default';
+            $memoryMode = 'read_only';
+            $tokenLevel = 'medium';
+        }
+
         // Smoke / connectivity checks (no repo work)
         if (preg_match('/^(test|ping|hello|hi|hey)\s*[!?.]*$/i', trim($prompt))) {
             $taskType = 'question';
@@ -82,7 +99,7 @@ class DeterministicTaskClassifier
         }
 
         // Marketing / social
-        if (preg_match('/\b(social media|instagram|twitter|linkedin post|festivent|vendor signup)\b/i', $prompt)) {
+        if (preg_match('/\b(social media|instagram|twitter|linkedin post|vendor signup)\b/i', $prompt)) {
             $taskType = 'marketing';
             $skill = 'marketing';
             $workflow = 'writer_only';

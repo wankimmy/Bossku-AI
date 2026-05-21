@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { humanizeActivitySummary } from '../utils/humanizeOutput'
+
 defineProps<{
   events: Record<string, unknown>[]
   running?: boolean
@@ -43,10 +45,9 @@ function label(evt: Record<string, unknown>): string {
 }
 
 function summary(evt: Record<string, unknown>): string {
-  const meta = (evt.metadata && typeof evt.metadata === 'object') ? evt.metadata as Record<string, unknown> : {}
-  const text = evt.error ?? evt.summary ?? meta.summary ?? evt.output ?? meta.message ?? meta.error ?? ''
-  const str = String(text ?? '').trim()
-  return str.length > 180 ? str.slice(0, 180) + '…' : str
+  const agent = inferAgent(String(evt.type ?? ''))
+  const text = humanizeActivitySummary(agent, evt)
+  return text.length > 200 ? `${text.slice(0, 200)}…` : text
 }
 
 function statusDot(evt: Record<string, unknown>): string {

@@ -1,7 +1,16 @@
+import type { ClarificationAnswer, ClarificationQuestion, ClarificationRequest } from '~/types/clarification'
+
+export type { ClarificationAnswer, ClarificationQuestion, ClarificationRequest } from '~/types/clarification'
+
 export type SseEvent = Record<string, unknown> & {
   run_id?: string
   type?: string
   status?: string
+}
+
+export type ConversationTurn = {
+  role: 'user' | 'assistant'
+  content: string
 }
 
 /** SSE event types that mean the run ended normally (do not show generic "interrupted"). */
@@ -11,40 +20,146 @@ const TERMINAL_EVENT_TYPES = new Set([
   'planner_failed',
 ])
 
-/** Run via SSE GET /api/runs/stream — returns cleanup fn */
-export function useRunStream() {
-  const events = ref<SseEvent[]>([])
-  const running = ref(false)
-  const error = ref<string | null>(null)
-  let src: EventSource | null = null
+async function consumeSseStream(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  onEvent: (evt: SseEvent) => void,
+) {
+  const decoder = new TextDecoder()
+  let buffer = ''
 
-  function stop() {
-    src?.close()
-    src = null
-    running.value = false
-  }
-
-  function start(prompt: string) {
-    stop()
-    error.value = null
-    events.value = []
-    running.value = true
-    const base = useApiBase()
-    const url = `${base}/api/runs/stream?prompt=${encodeURIComponent(prompt)}`
-    src = new EventSource(url)
-    src.onmessage = (ev) => {
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buffer += decoder.decode(value, { stream: true })
+    const chunks = buffer.split('\n')
+    buffer = chunks.pop() ?? ''
+    for (const line of chunks) {
+      if (!line.startsWith('data: ')) continue
       try {
-        events.value.push(JSON.parse(ev.data) as SseEvent)
+        onEvent(JSON.parse(line.slice(6)) as SseEvent)
       }
       catch {
         //
       }
     }
-    src.onerror = () => {
+  }
+
+  if (buffer.startsWith('data: ')) {
+    try {
+      onEvent(JSON.parse(buffer.slice(6)) as SseEvent)
+    }
+    catch {
+      //
+    }
+  }
+}
+
+/** Run via POST /api/runs/stream (SSE) — supports conversation history and clarification continue. */
+export function useRunStream() {
+  const events = ref<SseEvent[]>([])
+  const running = ref(false)
+  const error = ref<string | null>(null)
+  const activeRunId = ref<string | null>(null)
+  let abort: AbortController | null = null
+
+  const awaitingClarification = computed(() => {
+    const last = events.value.at(-1)
+    return last?.type === 'clarification_requested'
+  })
+
+  const clarificationRequest = computed((): ClarificationRequest | null => {
+    const evt = events.value.findLast(e => e.type === 'clarification_requested')
+    if (!evt) return null
+    const rawQuestions = Array.isArray(evt.questions) ? evt.questions : []
+    const questions: ClarificationQuestion[] = rawQuestions
+      .filter((q): q is Record<string, unknown> => q !== null && typeof q === 'object')
+      .map((q, idx) => ({
+        id: String(q.id ?? `q${idx + 1}`),
+        prompt: String(q.prompt ?? ''),
+        why_it_matters: q.why_it_matters != null ? String(q.why_it_matters) : undefined,
+        allow_free_text: q.allow_free_text !== false,
+        options: (Array.isArray(q.options) ? q.options : [])
+          .filter((o): o is Record<string, unknown> => o !== null && typeof o === 'object')
+          .slice(0, 3)
+          .map((o, oIdx) => ({
+            id: String(o.id ?? `opt${oIdx + 1}`),
+            label: String(o.label ?? ''),
+            recommendation: Boolean(o.recommendation),
+          })),
+      }))
+      .filter(q => q.prompt !== '')
+
+    return {
+      runId: String(evt.run_id ?? activeRunId.value ?? ''),
+      stage: String(evt.stage ?? ''),
+      summary: String(evt.summary ?? evt.message ?? ''),
+      assumptions: Array.isArray(evt.assumptions) ? evt.assumptions.map(String) : [],
+      questions,
+    }
+  })
+
+  function trackEvent(evt: SseEvent) {
+    if (evt.run_id) activeRunId.value = String(evt.run_id)
+    events.value.push(evt)
+  }
+
+  function stop() {
+    abort?.abort()
+    abort = null
+    running.value = false
+  }
+
+  async function start(
+    prompt: string,
+    options?: { conversation?: ConversationTurn[]; appendEvents?: boolean },
+  ) {
+    stop()
+    error.value = null
+    if (!options?.appendEvents) {
+      events.value = []
+      activeRunId.value = null
+    }
+    running.value = true
+    const base = useApiBase()
+    abort = new AbortController()
+
+    try {
+      const res = await fetch(`${base}/api/runs/stream`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'text/event-stream',
+        },
+        body: JSON.stringify({
+          prompt,
+          conversation: options?.conversation ?? [],
+        }),
+        signal: abort.signal,
+      })
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => '')
+        throw new Error(text || `Stream request failed (${res.status})`)
+      }
+
+      const reader = res.body?.getReader()
+      if (!reader) {
+        throw new Error('No response body from run stream.')
+      }
+
+      await consumeSseStream(reader, trackEvent)
+    }
+    catch (e: unknown) {
+      if (e instanceof DOMException && e.name === 'AbortError') {
+        running.value = false
+        return
+      }
+
       const lastType = events.value.at(-1)?.type
       const reachedTerminal = lastType !== undefined && TERMINAL_EVENT_TYPES.has(String(lastType))
+      const pausedForClarification = lastType === 'clarification_requested'
 
-      if (!reachedTerminal) {
+      if (!reachedTerminal && !pausedForClarification) {
         if (events.value.length === 0) {
           error.value
             = 'Stream failed to start: the API closed before any events (often HTTP 500). '
@@ -53,14 +168,80 @@ export function useRunStream() {
         }
         else {
           error.value
-            = 'Connection to the run stream was interrupted mid-run. If Ollama or the API crashed, check `docker compose logs -f backend nginx`.'
+            = e instanceof Error
+              ? e.message
+              : 'Connection to the run stream was interrupted mid-run. If Ollama or the API crashed, check `docker compose logs -f backend nginx`.'
         }
       }
-      stop()
+    }
+    finally {
+      running.value = false
+      abort = null
+    }
+  }
+
+  async function continueRun(runId: string, answers: ClarificationAnswer[]) {
+    stop()
+    error.value = null
+    running.value = true
+    activeRunId.value = runId
+    const base = useApiBase()
+    abort = new AbortController()
+
+    try {
+      const res = await fetch(`${base}/api/runs/${runId}/continue/stream`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'text/event-stream',
+        },
+        body: JSON.stringify({ answers }),
+        signal: abort.signal,
+      })
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => '')
+        throw new Error(text || `Continue stream failed (${res.status})`)
+      }
+
+      const reader = res.body?.getReader()
+      if (!reader) {
+        throw new Error('No response body from continue stream.')
+      }
+
+      await consumeSseStream(reader, trackEvent)
+    }
+    catch (e: unknown) {
+      if (e instanceof DOMException && e.name === 'AbortError') {
+        running.value = false
+        return
+      }
+
+      const lastType = events.value.at(-1)?.type
+      const reachedTerminal = lastType !== undefined && TERMINAL_EVENT_TYPES.has(String(lastType))
+      const pausedForClarification = lastType === 'clarification_requested'
+
+      if (!reachedTerminal && !pausedForClarification) {
+        error.value = e instanceof Error ? e.message : 'Continue stream was interrupted.'
+      }
+    }
+    finally {
+      running.value = false
+      abort = null
     }
   }
 
   onUnmounted(stop)
 
-  return { events, running, error, start, stop }
+  return {
+    events,
+    running,
+    error,
+    activeRunId,
+    awaitingClarification,
+    clarificationRequest,
+    start,
+    continueRun,
+    stop,
+  }
 }

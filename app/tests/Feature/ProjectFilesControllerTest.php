@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\BosskuAi\Approval;
+use App\Models\BosskuAi\Project;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
 use PHPUnit\Framework\Attributes\Test;
@@ -22,6 +23,13 @@ class ProjectFilesControllerTest extends TestCase
         File::ensureDirectoryExists($this->repo.'/src');
         File::put($this->repo.'/src/hello.txt', "line one\nline two\n");
         config(['bossku.repo_root' => $this->repo]);
+
+        Project::query()->create([
+            'name' => 'Test project',
+            'host_path' => $this->repo,
+            'container_path' => $this->repo,
+            'is_active' => true,
+        ]);
     }
 
     protected function tearDown(): void

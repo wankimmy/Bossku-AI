@@ -89,10 +89,11 @@ SYS;
         }
 
         $route = $this->mergeRoutes($base, $llmRoute, $detRisk);
+        $route = RepoTaskDetector::enforceExecutorForRepo($route, $prompt);
 
         $modelsResolved = [
             'router' => $routerModelUsed,
-            'orchestrator' => $this->settings->orchestratorModelOverride() ?? (string) ($this->config->orchestrator()['primary'] ?? $this->settings->plannerModel()),
+            'orchestrator' => $this->settings->orchestratorModelForRouting(),
             'executor' => (string) ($this->config->executorProfile((string) $route['executor_profile'])['primary'] ?? 'glm-5.1'),
             'auditor' => (string) ($this->config->auditor()['primary'] ?? 'deepseek-v4-pro'),
             'security_auditor' => (string) ($this->config->securityAuditor()['primary'] ?? 'deepseek-v4-pro'),

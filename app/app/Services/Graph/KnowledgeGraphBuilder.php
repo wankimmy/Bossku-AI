@@ -7,9 +7,14 @@ use App\Models\BosskuAi\GraphNode;
 use App\Models\BosskuAi\Memory;
 use App\Models\BosskuAi\Run;
 use App\Models\BosskuAi\Skill;
+use Illuminate\Support\Str;
 
 class KnowledgeGraphBuilder
 {
+    public function __construct(
+        private readonly KnowledgeGraphDedup $dedup,
+    ) {}
+
     public function rebuild(): void
     {
         GraphEdge::query()->delete();
@@ -17,14 +22,14 @@ class KnowledgeGraphBuilder
 
         $skillNodes = [];
         foreach (Skill::all() as $skill) {
-            $node = GraphNode::create([
-                'type'        => 'skill',
-                'label'       => $skill->name,
+            $node = $this->upsertNode('skill', (string) $skill->getKey(), [
+                'type' => 'skill',
+                'label' => $skill->name,
                 'source_type' => 'skill',
-                'source_id'   => $skill->getKey(),
-                'confidence'  => $skill->confidence ?? null,
-                'properties'  => [
-                    'usage_count'   => $skill->usage_count,
+                'source_id' => $skill->getKey(),
+                'confidence' => $skill->confidence ?? null,
+                'properties' => [
+                    'usage_count' => $skill->usage_count,
                     'quality_score' => $skill->quality_score,
                 ],
             ]);
@@ -34,30 +39,30 @@ class KnowledgeGraphBuilder
         $runNodes = [];
         $recentRuns = Run::latest()->limit(50)->get();
         foreach ($recentRuns as $run) {
-            $node = GraphNode::create([
-                'type'        => 'run',
-                'label'       => 'Run ' . $run->getKey(),
+            $node = $this->upsertNode('run', (string) $run->getKey(), [
+                'type' => 'run',
+                'label' => 'Run '.$run->getKey(),
                 'source_type' => 'run',
-                'source_id'   => $run->getKey(),
-                'properties'  => [
-                    'status'      => $run->status,
+                'source_id' => $run->getKey(),
+                'properties' => [
+                    'status' => $run->status,
                     'audit_score' => $run->audit_score,
-                    'skill_name'  => $run->selected_skill_name,
+                    'skill_name' => $run->selected_skill_name,
                 ],
             ]);
             $runNodes[$run->getKey()] = $node;
         }
 
         foreach (Memory::all() as $memory) {
-            GraphNode::create([
-                'type'        => 'memory',
-                'label'       => $memory->human_summary ?? \Illuminate\Support\Str::limit((string) $memory->content, 80),
+            $this->upsertNode('memory', (string) $memory->getKey(), [
+                'type' => 'memory',
+                'label' => $memory->human_summary ?? Str::limit((string) $memory->content, 80),
                 'source_type' => 'memory',
-                'source_id'   => $memory->getKey(),
-                'confidence'  => $memory->confidence,
-                'properties'  => [
-                    'type'       => $memory->type,
-                    'is_active'  => $memory->is_active,
+                'source_id' => $memory->getKey(),
+                'confidence' => $memory->confidence,
+                'properties' => [
+                    'type' => $memory->type,
+                    'is_active' => $memory->is_active,
                     'usage_count' => $memory->usage_count,
                 ],
             ]);
@@ -71,83 +76,97 @@ class KnowledgeGraphBuilder
             if (! isset($skillNodes[$skillName], $runNodes[$run->getKey()])) {
                 continue;
             }
-            GraphEdge::create([
-                'source_node_id' => $runNodes[$run->getKey()]->getKey(),
-                'target_node_id' => $skillNodes[$skillName]->getKey(),
-                'relation'       => 'used_in',
-                'weight'         => 1.0,
-            ]);
+            $this->upsertEdge(
+                (string) $runNodes[$run->getKey()]->getKey(),
+                (string) $skillNodes[$skillName]->getKey(),
+                'used_in',
+                1.0,
+            );
         }
+
+        $this->dedup->prune();
     }
 
     public function buildForRun(Run $run): void
     {
-        $existing = GraphNode::where('source_type', 'run')
-            ->where('source_id', $run->getKey())
-            ->first();
-
-        if ($existing) {
-            $existing->update([
-                'properties' => [
-                    'status'      => $run->status,
-                    'audit_score' => $run->audit_score,
-                    'skill_name'  => $run->selected_skill_name,
-                ],
-            ]);
-            $runNode = $existing;
-        } else {
-            $runNode = GraphNode::create([
-                'type'        => 'run',
-                'label'       => 'Run ' . $run->getKey(),
-                'source_type' => 'run',
-                'source_id'   => $run->getKey(),
-                'properties'  => [
-                    'status'      => $run->status,
-                    'audit_score' => $run->audit_score,
-                    'skill_name'  => $run->selected_skill_name,
-                ],
-            ]);
-        }
+        $runNode = $this->upsertNode('run', (string) $run->getKey(), [
+            'type' => 'run',
+            'label' => 'Run '.$run->getKey(),
+            'source_type' => 'run',
+            'source_id' => $run->getKey(),
+            'properties' => [
+                'status' => $run->status,
+                'audit_score' => $run->audit_score,
+                'skill_name' => $run->selected_skill_name,
+            ],
+        ]);
 
         $skillName = $run->selected_skill_name;
         if (blank($skillName)) {
             return;
         }
 
-        $skillNode = GraphNode::where('source_type', 'skill')
-            ->whereJsonContains('properties->name', $skillName)
-            ->orWhere('label', $skillName)
-            ->where('source_type', 'skill')
-            ->first();
-
-        if (! $skillNode) {
-            $skill = Skill::where('name', $skillName)->first();
-            if ($skill) {
-                $skillNode = GraphNode::firstOrCreate(
-                    ['source_type' => 'skill', 'source_id' => $skill->getKey()],
-                    [
-                        'type'       => 'skill',
-                        'label'      => $skill->name,
-                        'properties' => ['usage_count' => $skill->usage_count],
-                    ]
-                );
-            }
+        $skill = Skill::where('name', $skillName)->first();
+        if (! $skill) {
+            return;
         }
 
-        if ($skillNode) {
-            $edgeExists = GraphEdge::where('source_node_id', $runNode->getKey())
-                ->where('target_node_id', $skillNode->getKey())
-                ->where('relation', 'used_in')
-                ->exists();
+        $skillNode = $this->upsertNode('skill', (string) $skill->getKey(), [
+            'type' => 'skill',
+            'label' => $skill->name,
+            'source_type' => 'skill',
+            'source_id' => $skill->getKey(),
+            'confidence' => $skill->confidence ?? null,
+            'properties' => [
+                'usage_count' => $skill->usage_count,
+                'quality_score' => $skill->quality_score,
+            ],
+        ]);
 
-            if (! $edgeExists) {
-                GraphEdge::create([
-                    'source_node_id' => $runNode->getKey(),
-                    'target_node_id' => $skillNode->getKey(),
-                    'relation'       => 'used_in',
-                    'weight'         => 1.0,
-                ]);
-            }
+        $this->upsertEdge(
+            (string) $runNode->getKey(),
+            (string) $skillNode->getKey(),
+            'used_in',
+            1.0,
+        );
+
+        $this->dedup->prune();
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    protected function upsertNode(string $type, string $sourceId, array $attributes): GraphNode
+    {
+        if ($sourceId !== '') {
+            return GraphNode::updateOrCreate(
+                [
+                    'source_type' => $type,
+                    'source_id' => $sourceId,
+                ],
+                $attributes,
+            );
         }
+
+        return GraphNode::create($attributes);
+    }
+
+    protected function upsertEdge(
+        string $sourceNodeId,
+        string $targetNodeId,
+        string $relation,
+        float $weight = 1.0,
+    ): GraphEdge {
+        return GraphEdge::firstOrCreate(
+            [
+                'source_node_id' => $sourceNodeId,
+                'target_node_id' => $targetNodeId,
+                'relation' => $relation,
+            ],
+            [
+                'weight' => $weight,
+                'is_conflict' => false,
+            ],
+        );
     }
 }

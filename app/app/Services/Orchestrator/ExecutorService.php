@@ -30,6 +30,8 @@ class ExecutorService
         array $plan,
         array $modelRoute,
         string $executorProfileKey,
+        string $workspaceContext = '',
+        array $preflightReads = [],
         ?array $auditFeedback = null
     ): array {
         $skillName = (string) ($step['skill'] ?? $skillRow['name'] ?? 'unknown');
@@ -67,6 +69,12 @@ Checklist:
 Audit feedback for revision:
 {$this->jsonEncode($auditFeedback ?? [])}
 
+Workspace (mandatory — use relative paths only):
+{$workspaceContext}
+
+Preflight file_read_safe results (real repository reads; cite these paths only):
+{$this->jsonEncode($preflightReads)}
+
 Task:
 {$task}
 
@@ -85,9 +93,14 @@ Output format (JSON only, no markdown):
   "tests_result": "passed|failed|not_run",
   "patch_summary": "",
   "known_issues": [],
+  "needs_user_input": false,
+  "blockers": [],
+  "suggested_options": [{"id": "narrow", "label": "Retry with a narrower scope"}],
   "needs_audit": true,
   "handoff_message": "Sending changes to Auditor"
 }
+
+If you cannot proceed without a user decision, set needs_user_input to true, list blockers, and provide 2-4 suggested_options the user can pick.
 Markdown;
 
         $messages = [
@@ -109,7 +122,7 @@ Markdown;
                 (int) ($profile['max_tokens'] ?? 12000)
             );
         } catch (\Throwable $e) {
-            return [
+            return $this->normalizeResult([
                 'step_id' => $step['id'] ?? null,
                 'status' => 'failed',
                 'files_read' => [],
@@ -122,7 +135,7 @@ Markdown;
                 'needs_audit' => true,
                 '_executor_model' => $primary,
                 'latency_ms' => (int) round((microtime(true) - $t0) * 1000),
-            ];
+            ], $preflightReads);
         }
 
         $latency = (int) round((microtime(true) - $t0) * 1000);
@@ -139,17 +152,23 @@ Markdown;
             'tests_result' => (string) ($parsed['tests_result'] ?? 'not_run'),
             'patch_summary' => (string) ($parsed['patch_summary'] ?? ''),
             'known_issues' => is_array($parsed['known_issues'] ?? null) ? $parsed['known_issues'] : [],
+            'needs_user_input' => (bool) ($parsed['needs_user_input'] ?? false),
+            'blockers' => is_array($parsed['blockers'] ?? null) ? $parsed['blockers'] : [],
+            'suggested_options' => is_array($parsed['suggested_options'] ?? null) ? $parsed['suggested_options'] : [],
             'needs_audit' => (bool) ($parsed['needs_audit'] ?? true),
             'handoff_message' => (string) ($parsed['handoff_message'] ?? 'Sending changes to Auditor.'),
             '_executor_model' => $out['model_used'],
             '_executor_model_resolved' => $out['model_resolved'] ?? '',
             '_executor_fallback' => $out['fallback_used'],
             'latency_ms' => $latency,
-        ]);
+        ], $preflightReads);
     }
 
-    /** @param array<string, mixed> $result */
-    protected function normalizeResult(array $result): array
+    /**
+     * @param  array<string, mixed>  $result
+     * @param  list<array<string, mixed>>  $preflightReads
+     */
+    protected function normalizeResult(array $result, array $preflightReads = []): array
     {
         $result['files_read'] = array_values(array_filter(array_map(function ($item) {
             if (! is_array($item)) {
@@ -203,6 +222,10 @@ Markdown;
                 'status' => (string) $result['tests_result'],
                 'summary' => 'Executor returned tests_result='.$result['tests_result'],
             ]];
+        }
+
+        if ($preflightReads !== [] && ExecutorEvidenceSupport::countFilesRead($result) === 0) {
+            return ExecutorEvidenceSupport::mergePreflightReads($result, $preflightReads);
         }
 
         return $result;

@@ -11,6 +11,7 @@ class LlmGateway
 {
     public function __construct(
         protected OllamaClient $ollama,
+        protected RuntimeSettings $settings,
         protected ?ModelRouter $router = null,
     ) {}
 
@@ -94,8 +95,7 @@ class LlmGateway
             }
         }
 
-        /** @var array<string, string> $aliases */
-        $aliases = config('bossku_models.aliases', []);
+        $aliases = $this->settings->modelAliases();
         foreach ($aliases as $target) {
             if ($m === strtolower(trim($target))) {
                 return;
@@ -109,8 +109,7 @@ class LlmGateway
     {
         $logical = strtolower(trim($model));
 
-        /** @var array<string, string> $aliases */
-        $aliases = config('bossku_models.aliases', []);
+        $aliases = $this->settings->modelAliases();
 
         foreach ($this->logicalAliasVariants($logical) as $candidate) {
             if (isset($aliases[$candidate])) {

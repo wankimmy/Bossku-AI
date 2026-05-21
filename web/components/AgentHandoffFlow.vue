@@ -1,7 +1,14 @@
 <script setup lang="ts">
 import type { HandoffNode } from '../types/bossku'
 
-defineProps<{ nodes: HandoffNode[] }>()
+withDefaults(
+  defineProps<{
+    nodes: HandoffNode[]
+    /** horizontal = scroll row (runs page); vertical = stacked pipeline (landing sidebar) */
+    layout?: 'horizontal' | 'vertical'
+  }>(),
+  { layout: 'horizontal' },
+)
 
 function statusClass(status: string) {
   if (status === 'running') return 'border-emerald-500 bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300'
@@ -17,11 +24,27 @@ function statusClass(status: string) {
     <h2 class="mb-3 text-sm font-semibold">
       Agent workflow
     </h2>
-    <ol class="flex gap-2 overflow-x-auto pb-1" aria-label="Agent handoff flow">
-      <li v-for="(node, idx) in nodes" :key="`${node.agent}-${idx}`" class="flex min-w-fit items-center gap-2">
+    <ol
+      class="pb-1"
+      :class="layout === 'vertical'
+        ? 'flex flex-col gap-1'
+        : 'flex gap-2 overflow-x-auto'"
+      aria-label="Agent handoff flow"
+    >
+      <li
+        v-for="(node, idx) in nodes"
+        :key="`${node.agent}-${idx}`"
+        :class="layout === 'vertical'
+          ? 'flex flex-col items-stretch gap-1'
+          : 'flex min-w-fit items-center gap-2'"
+      >
         <div
           class="rounded-md border px-2.5 py-1.5 text-xs"
-          :class="[statusClass(String(node.status)), node.status === 'running' ? 'animate-pulse' : '']"
+          :class="[
+            statusClass(String(node.status)),
+            node.status === 'running' ? 'animate-pulse' : '',
+            layout === 'vertical' ? 'w-full' : '',
+          ]"
         >
           <div class="font-medium">
             {{ node.label }}
@@ -30,7 +53,12 @@ function statusClass(status: string) {
             {{ node.status }}
           </div>
         </div>
-        <span v-if="idx < nodes.length - 1" class="text-zinc-400">→</span>
+        <span
+          v-if="idx < nodes.length - 1"
+          class="text-zinc-400"
+          :class="layout === 'vertical' ? 'text-center text-[10px] leading-none' : ''"
+          aria-hidden="true"
+        >{{ layout === 'vertical' ? '↓' : '→' }}</span>
       </li>
     </ol>
   </section>

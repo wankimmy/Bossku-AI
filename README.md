@@ -57,10 +57,15 @@ cp app/.env.example app/.env
 #    OLLAMA_BASE_URL=https://ollama.com        # or http://host.docker.internal:11434 for local
 #    OLLAMA_API_KEY=<your-ollama-cloud-key>    # from ollama.com/settings/keys
 
-# 3. Start the stack
+# 3. Optional: sibling repos under Project → Paths (required for repo audits)
+#    docker-compose mounts ../:/workspace — set BOSSKU_WORKSPACE_HOST_PREFIX in app/.env
+#    to that host folder (quoted if the path has spaces). Activate the project in the UI before auditing.
+#    Ollama role models are configured under Settings → Ollama & Models (not .env).
+
+# 4. Start the stack
 docker compose up -d --build
 
-# 4. Bootstrap
+# 5. Bootstrap
 docker compose exec backend composer install --no-interaction
 docker compose exec backend php artisan key:generate
 docker compose exec backend php artisan migrate --force
@@ -70,6 +75,27 @@ docker compose exec backend php artisan bosskuai:import-knowledge --fresh
 
 - **UI**: http://localhost:3000
 - **API**: http://localhost:8000
+
+#### Frontend (production build only)
+
+Docker serves a **production Nuxt build** (`npm run build` + Nitro server), not `nuxt dev`. This avoids slow Vite/HMR on Windows bind mounts.
+
+- **First start** (or no `.output/` yet): the frontend container runs `npm run build` once — may take a few minutes.
+- **After you change UI code**:
+
+```bash
+docker compose exec frontend npm run build
+docker compose restart frontend
+```
+
+Or build on the host, then restart:
+
+```bash
+cd web && npm install && npm run build
+docker compose restart frontend
+```
+
+Local hot-reload dev (optional, outside Docker): `cd web && npm run dev`
 
 ### Without Docker
 

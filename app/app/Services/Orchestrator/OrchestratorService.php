@@ -9,21 +9,28 @@ use App\Models\BosskuAi\RunStep;
 use App\Models\BosskuAi\Skill;
 use App\Services\BosskuAi\BosskuResponseIndicator;
 use App\Services\BosskuAi\ContextBudgetGuard;
+use App\Services\BosskuAi\RepoTaskDetector;
 use App\Services\BosskuAi\MemoryService;
 use App\Services\BosskuAi\ModelRoutingConfig;
 use App\Services\BosskuAi\PromptRouteClassifier;
 use App\Services\BosskuAi\RuntimeSettings;
 use App\Services\BosskuAi\SkillRouterService;
+use App\Services\Graph\KnowledgeGraphBuilder;
+use App\Services\Project\ProjectPathResolver;
+use App\Services\Project\ProjectService;
 use App\Services\Tools\ToolRegistry;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class OrchestratorService
 {
+    use OrchestratorClarificationTrait;
+
     public function __construct(
         protected MemoryService $memory,
         protected SkillRouterService $router,
         protected PlannerService $planner,
+        protected ClarificationService $clarification,
         protected ExecutorService $executor,
         protected AuditorService $auditor,
         protected SecurityAuditorService $securityAuditor,
@@ -35,22 +42,39 @@ class OrchestratorService
         protected PromptRouteClassifier $promptRouteClassifier,
         protected ContextBudgetGuard $budgetGuard,
         protected ModelRoutingConfig $modelConfig,
-        protected RunEventFactory $events
+        protected RunEventFactory $events,
+        protected ProjectPathResolver $paths,
+        protected ProjectService $projects,
+        protected KnowledgeGraphBuilder $knowledgeGraph,
     ) {}
 
     /**
      * @param  callable(array<string,mixed>): void|null  $emit
      * @return array<string,mixed>
      */
-    public function run(string $prompt, ?callable $emit = null): array
+    /**
+     * @param  list<array{role: string, content: string}>  $conversation
+     * @return array<string,mixed>
+     */
+    public function run(string $prompt, ?callable $emit = null, array $conversation = []): array
     {
         $tRun = microtime(true);
         $tokenAcc = 0;
+        $userPrompt = $prompt;
+        $prompt = $this->effectivePrompt($userPrompt, $conversation);
+        $agentPrompt = trim($prompt."\n\n".$this->projects->agentWorkspaceContext());
+
+        $runMeta = ['conversation_turns' => count($conversation)];
+        $activeProject = $this->paths->activeProject();
+        if ($activeProject !== null) {
+            $runMeta['active_project_id'] = $activeProject->id;
+            $runMeta['active_project_name'] = $activeProject->name;
+        }
 
         $run = Run::query()->create([
-            'prompt' => $prompt,
+            'prompt' => $userPrompt,
             'status' => 'running',
-            'metadata' => [],
+            'metadata' => $runMeta,
         ]);
 
         $this->emit($emit, $this->basePayload($run, 'run_started', [
@@ -60,7 +84,7 @@ class OrchestratorService
         ]));
 
         $t0 = microtime(true);
-        $classified = $this->promptRouteClassifier->classify($prompt);
+        $classified = $this->promptRouteClassifier->classify($agentPrompt);
         /** @var array<string, mixed> $modelRoute */
         $modelRoute = $classified['route'];
         $modelsResolved = $classified['models_resolved'];
@@ -69,7 +93,7 @@ class OrchestratorService
         $routerJson = json_encode($modelRoute) ?: '';
         $routerTok = $this->estimateTokens($routerJson);
 
-        $this->logStep($run, -2, 'model_router', $modelsResolved['router'] ?? null, $routerMeta['provider'] ?? null, null, 'success', $prompt, $routerJson, $routerJson, null, null, null, $routerMs, $routerTok, null, [
+        $this->logStep($run, -2, 'model_router', $modelsResolved['router'] ?? null, $routerMeta['provider'] ?? null, null, 'success', $agentPrompt, $routerJson, $routerJson, null, null, null, $routerMs, $routerTok, null, [
             'routing_decision' => $modelRoute,
             'models_resolved' => $modelsResolved,
             'router_meta' => $routerMeta,
@@ -100,7 +124,7 @@ class OrchestratorService
 
         if ($memoryMode !== 'none') {
             $t0 = microtime(true);
-            $memories = $this->memory->search($prompt, $this->settings->maxMemoryResults());
+            $memories = $this->memory->search($agentPrompt, $this->settings->maxMemoryResults());
             $memPayload = $memories->map(fn (Memory $m) => [
                 'id' => $m->id,
                 'summary' => $m->human_summary ?: Str::limit($m->content, 200),
@@ -138,6 +162,69 @@ class OrchestratorService
             ]));
         }
 
+        if ($this->shouldRequireClarification($run)) {
+            $clarification = $this->clarification->ask($userPrompt, $conversation, $modelRoute, 'pre_execution', []);
+            if ($clarification['questions'] !== [] && ! $clarification['ready_to_proceed']) {
+                return $this->pauseForClarification(
+                    $run,
+                    $clarification,
+                    'pre_execution',
+                    [
+                        'user_prompt' => $userPrompt,
+                        'effective_prompt' => $prompt,
+                        'agent_prompt' => $agentPrompt,
+                        'conversation' => $conversation,
+                        'model_route' => $modelRoute,
+                        'models_resolved' => $modelsResolved,
+                        'router_meta' => $routerMeta,
+                        'mem_payload' => $memPayload,
+                        'token_acc' => $tokenAcc,
+                        't_run' => $tRun,
+                    ],
+                    $emit,
+                );
+            }
+        }
+
+        return $this->runPipelineAfterMemory(
+            $run,
+            $userPrompt,
+            $prompt,
+            $agentPrompt,
+            $conversation,
+            $modelRoute,
+            $modelsResolved,
+            $routerMeta,
+            $memPayload,
+            $emit,
+            $tokenAcc,
+            $tRun,
+        );
+    }
+
+    /**
+     * @param  list<array{role: string, content: string}>  $conversation
+     * @param  array<string, mixed>  $modelRoute
+     * @param  array<string, string>  $modelsResolved
+     * @param  array<string, mixed>  $routerMeta
+     * @param  list<array<string, mixed>>  $memPayload
+     * @return array<string, mixed>
+     */
+    protected function runPipelineAfterMemory(
+        Run $run,
+        string $userPrompt,
+        string $prompt,
+        string $agentPrompt,
+        array $conversation,
+        array $modelRoute,
+        array $modelsResolved,
+        array $routerMeta,
+        array $memPayload,
+        ?callable $emit,
+        int $tokenAcc,
+        float $tRun,
+    ): array {
+        $activeProject = $this->paths->activeProject();
         $workflow = (string) ($modelRoute['workflow'] ?? 'orchestrator_executor_auditor');
 
         if ($workflow === 'direct_answer') {
@@ -171,7 +258,7 @@ class OrchestratorService
         }
 
         $t0 = microtime(true);
-        $routerCtx = $this->router->route($prompt, collect([]));
+        $routerCtx = $this->router->route($agentPrompt, collect([]));
         $routerMs2 = (int) round((microtime(true) - $t0) * 1000);
         $routerTokens2 = $this->estimateTokens(json_encode($routerCtx) ?: '');
 
@@ -196,6 +283,43 @@ class OrchestratorService
             ],
         ]));
 
+        $repoAvailable = true;
+        $repoError = '';
+        $repoRoot = '';
+        try {
+            $repoRoot = $this->paths->repoRoot();
+        } catch (\Throwable $e) {
+            $repoAvailable = false;
+            $repoError = $e->getMessage();
+        }
+
+        if (! $repoAvailable && (RepoTaskDetector::requiresRepositoryAccess($userPrompt) || $this->promptMentionsRepo($agentPrompt))) {
+            $failMsg = 'Active project is not mounted: '.$repoError.' Register and activate the project under Project → Paths first.';
+            $run->update([
+                'status' => 'failed',
+                'total_latency_ms' => (int) round((microtime(true) - $tRun) * 1000),
+                'total_token_estimate' => $tokenAcc,
+            ]);
+            $this->emit($emit, $this->basePayload($run, 'run_failed', [
+                'status' => 'fail',
+                'stage' => 'repo_unavailable',
+                'error' => $failMsg,
+                'summary' => $failMsg,
+            ]));
+
+            return [
+                'run_id' => $run->id,
+                'final_output' => '',
+                'steps' => [],
+                'memory_used' => $memPayload,
+                'skills_used' => [],
+                'rules_used' => [],
+                'playbooks_used' => [],
+                'audit' => ['error' => $failMsg],
+                'routing' => $modelRoute,
+            ];
+        }
+
         $this->emit($emit, $this->basePayload($run, 'planner_started', [
             'status' => 'running',
             'agent' => 'orchestrator',
@@ -203,7 +327,21 @@ class OrchestratorService
             'summary' => 'Orchestrator is planning the task.',
         ]));
         $t0 = microtime(true);
-        $plan = $this->planner->plan($prompt, $memPayload, $routerCtx, $modelRoute);
+        try {
+            $this->emit($emit, $this->basePayload($run, 'active_project', [
+                'status' => $repoAvailable ? 'success' : 'fail',
+                'summary' => 'Active project: '.($activeProject?->name ?? 'default /repo'),
+                'message' => $this->projects->agentWorkspaceContext(),
+                'repo_root' => $repoRoot,
+                'repo_mounted' => $repoAvailable,
+                'repo_error' => $repoAvailable ? null : $repoError,
+                'active_project' => $activeProject?->only(['id', 'name', 'host_path', 'container_path']),
+            ]));
+        } catch (\Throwable) {
+            //
+        }
+
+        $plan = $this->planner->plan($agentPrompt, $memPayload, $routerCtx, $modelRoute);
         $planMs = (int) round((microtime(true) - $t0) * 1000);
         $planTokens = $this->estimateTokens(json_encode($plan) ?: '');
 
@@ -257,7 +395,21 @@ class OrchestratorService
         $execProfileKey = (string) ($plan['executor_profile'] ?? $modelRoute['executor_profile'] ?? 'default');
         $plan = $this->budgetGuard->narrowPlan($plan, $execProfileKey);
 
-        if ($workflow === 'orchestrator_only' || ! ($modelRoute['needs_executor'] ?? true)) {
+        if (
+            RepoTaskDetector::requiresRepositoryAccess($userPrompt)
+            || ($modelRoute['needs_repo_context'] ?? false)
+        ) {
+            $workflow = 'orchestrator_executor_auditor';
+            $modelRoute['workflow'] = $workflow;
+            $modelRoute['needs_executor'] = true;
+            $modelRoute['needs_auditor'] = true;
+        }
+
+        $mustRunExecutor = ($modelRoute['needs_executor'] ?? true)
+            || ($modelRoute['needs_security_auditor'] ?? false)
+            || RepoTaskDetector::requiresRepositoryAccess($userPrompt);
+
+        if (($workflow === 'orchestrator_only' || ! ($modelRoute['needs_executor'] ?? true)) && ! $mustRunExecutor) {
             $body = (string) ($plan['summary'] ?? json_encode($plan));
             $indicator = BosskuResponseIndicator::line($modelRoute, array_merge($modelsResolved, ['executor' => 'skipped']));
 
@@ -274,18 +426,19 @@ class OrchestratorService
                 [],
                 null,
                 null,
-                null,
                 $emit,
                 $tokenAcc,
                 $tRun
             );
         }
 
+        $preflightReads = $this->preflightReadTargetFiles($run, $plan, $emit);
+
         $skillName = (string) ($routerCtx['primary_skill']['name'] ?? 'cofounder');
         $step = [
             'id' => 1,
             'title' => (string) ($plan['summary'] ?? 'Execute'),
-            'task' => $prompt,
+            'task' => $agentPrompt,
             'skill' => $skillName,
             'tool' => null,
         ];
@@ -321,8 +474,12 @@ class OrchestratorService
             null,
             $plan,
             $modelRoute,
-            $execProfileKey
+            $execProfileKey,
+            $this->projects->agentWorkspaceContext(),
+            $preflightReads,
         );
+        $execResult = ExecutorEvidenceSupport::mergePreflightReads($execResult, $preflightReads);
+        $execResult = $this->ensureExecutorEvidence($run, $plan, $execResult, $userPrompt, $emit);
         $modelsResolved['executor'] = (string) ($execResult['_executor_model'] ?? $modelsResolved['executor'] ?? '');
 
         $exTok = $this->estimateTokens(json_encode($execResult) ?: '');
@@ -342,17 +499,121 @@ class OrchestratorService
             $this->tools->invoke($run->id, null, $execResult['tool_request'], $emit);
         }
 
+        if ($this->shouldPauseForExecutorStuck($run, $execResult, null, 0)) {
+            return $this->pauseForExecutorStuck(
+                $run,
+                $this->buildExecutorPipelineSnapshot(
+                    $run,
+                    $userPrompt,
+                    $prompt,
+                    $agentPrompt,
+                    $conversation,
+                    $modelRoute,
+                    $modelsResolved,
+                    $routerCtx,
+                    $memPayload,
+                    $plan,
+                    $workflow,
+                    $preflightReads,
+                    $execProfileKey,
+                    $skillName,
+                    $step,
+                    $skillRow,
+                    $ruleLines,
+                    $pbExcerpt,
+                    $chkExcerpt,
+                    $tokenAcc,
+                    $tRun,
+                    null,
+                ),
+                $execResult,
+                $emit,
+            );
+        }
+
+        return $this->runPostExecutorPhase(
+            $run,
+            $userPrompt,
+            $prompt,
+            $agentPrompt,
+            $conversation,
+            $modelRoute,
+            $modelsResolved,
+            $memPayload,
+            $routerCtx,
+            $plan,
+            $workflow,
+            $execResult,
+            $step,
+            $skillRow,
+            $skillName,
+            $ruleLines,
+            $pbExcerpt,
+            $chkExcerpt,
+            $preflightReads,
+            $execProfileKey,
+            $emit,
+            $tokenAcc,
+            $tRun,
+            [$execResult],
+            3,
+        );
+    }
+
+    /**
+     * @param  list<array{role: string, content: string}>  $conversation
+     * @param  array<string, mixed>  $modelRoute
+     * @param  array<string, string>  $modelsResolved
+     * @param  list<array<string, mixed>>  $memPayload
+     * @param  array<string, mixed>  $routerCtx
+     * @param  array<string, mixed>  $plan
+     * @param  array<string, mixed>  $execResult
+     * @param  array<string, mixed>  $step
+     * @param  array<string, mixed>  $skillRow
+     * @param  list<string>  $ruleLines
+     * @param  list<array<string, mixed>>  $preflightReads
+     * @param  list<array<string, mixed>>  $executorOutputs
+     * @return array<string, mixed>
+     */
+    protected function runPostExecutorPhase(
+        Run $run,
+        string $userPrompt,
+        string $prompt,
+        string $agentPrompt,
+        array $conversation,
+        array $modelRoute,
+        array $modelsResolved,
+        array $memPayload,
+        array $routerCtx,
+        array $plan,
+        string $workflow,
+        array $execResult,
+        array $step,
+        array $skillRow,
+        string $skillName,
+        array $ruleLines,
+        string $pbExcerpt,
+        string $chkExcerpt,
+        array $preflightReads,
+        string $execProfileKey,
+        ?callable $emit,
+        int $tokenAcc,
+        float $tRun,
+        array $executorOutputs,
+        int $stepNum,
+    ): array {
         $lastAudit = [];
         $lastSecurity = null;
         $lastFinal = null;
-        $executorOutputs = [$execResult];
-        $stepNum = 3;
+        $revisionRoundsUsed = 0;
 
         $needsAuditor = ($modelRoute['needs_auditor'] ?? true)
             && $this->settings->auditEnabled()
             && (str_contains($workflow, 'auditor'));
 
         if ($needsAuditor && ($execResult['needs_audit'] ?? true)) {
+            $execResult = $this->ensureExecutorEvidence($run, $plan, $execResult, $userPrompt, $emit);
+
             $this->emit($emit, $this->basePayload($run, 'auditor_started', [
                 'status' => 'running',
                 'agent' => 'auditor',
@@ -364,7 +625,7 @@ class OrchestratorService
             ]));
             $tA = microtime(true);
             $lastAudit = $this->auditor->auditStep(
-                $prompt,
+                $agentPrompt,
                 $routerCtx,
                 $modelRoute,
                 $plan,
@@ -415,14 +676,18 @@ class OrchestratorService
                     $plan,
                     $modelRoute,
                     $execProfileKey,
+                    $this->projects->agentWorkspaceContext(),
+                    $preflightReads,
                     [
-                        'original_prompt' => $prompt,
+                        'original_prompt' => $agentPrompt,
                         'original_plan' => $plan,
                         'executor_result' => $execResult,
                         'audit_findings' => $lastAudit['findings'] ?? [],
                         'required_fixes' => $lastAudit['required_fixes'] ?? [],
                     ]
                 );
+                $revisionResult = ExecutorEvidenceSupport::mergePreflightReads($revisionResult, $preflightReads);
+                $revisionResult = $this->ensureExecutorEvidence($run, $plan, $revisionResult, $userPrompt, $emit);
                 $modelsResolved['executor'] = (string) ($revisionResult['_executor_model'] ?? $modelsResolved['executor'] ?? '');
                 $revTok = $this->estimateTokens(json_encode($revisionResult) ?: '');
                 $this->logStep($run, 4, 'executor_revision', $modelsResolved['executor'], 'ollama', $skillName, ($revisionResult['status'] ?? '') === 'failed' ? 'failed' : 'success', json_encode($revisionStep), json_encode(['audit' => $lastAudit, 'previous_executor' => $execResult]), json_encode($revisionResult), null, null, null, (int) ($revisionResult['latency_ms'] ?? 0), $revTok, null, $this->events->metadata(
@@ -438,13 +703,55 @@ class OrchestratorService
                 $this->emit($emit, $this->events->executorDone($run, $revisionResult, $modelsResolved['executor'], (int) ($revisionResult['latency_ms'] ?? 0), $revTok, 'executor_revision_done'));
                 $execResult = $revisionResult;
                 $executorOutputs[] = $revisionResult;
+                $revisionRoundsUsed = 1;
+
+                if ($this->shouldPauseForExecutorStuck($run, $execResult, $lastAudit, $revisionRoundsUsed)) {
+                    return $this->pauseForExecutorStuck(
+                        $run,
+                        $this->buildExecutorPipelineSnapshot(
+                            $run,
+                            $userPrompt,
+                            $prompt,
+                            $agentPrompt,
+                            $conversation,
+                            $modelRoute,
+                            $modelsResolved,
+                            $routerCtx,
+                            $memPayload,
+                            $plan,
+                            $workflow,
+                            $preflightReads,
+                            $execProfileKey,
+                            $skillName,
+                            $step,
+                            $skillRow,
+                            $ruleLines,
+                            $pbExcerpt,
+                            $chkExcerpt,
+                            $tokenAcc,
+                            $tRun,
+                            [
+                                'original_prompt' => $agentPrompt,
+                                'audit_findings' => $lastAudit['findings'] ?? [],
+                            ],
+                        ),
+                        $execResult,
+                        $emit,
+                    );
+                }
             }
         }
 
         if (($modelRoute['needs_security_auditor'] ?? false)) {
+            $execResult = $this->ensureExecutorEvidence($run, $plan, $execResult, $userPrompt, $emit);
+
             $this->emit($emit, $this->basePayload($run, 'security_auditor_started', ['status' => 'running']));
             $tS = microtime(true);
-            $lastSecurity = $this->securityAuditor->audit($prompt, $modelRoute, $plan, $execResult);
+            if (! ExecutorEvidenceSupport::hasReadEvidence($execResult, ExecutorEvidenceSupport::toolEvidenceForRun($run->id))) {
+                $lastSecurity = ExecutorEvidenceSupport::deterministicNoFilesRead();
+            } else {
+                $lastSecurity = $this->securityAuditor->audit($agentPrompt, $modelRoute, $plan, $execResult, $run->id);
+            }
             $sMs = (int) round((microtime(true) - $tS) * 1000);
             $sTok = $this->estimateTokens(json_encode($lastSecurity) ?: '');
             $this->logStep($run, $stepNum + 150, 'security_auditor', $modelsResolved['security_auditor'] ?? null, null, $skillName, 'success', null, null, json_encode($lastSecurity), null, null, null, $sMs, $sTok, null, null);
@@ -466,7 +773,7 @@ class OrchestratorService
                 'summary' => 'Final Reviewer is closing the run.',
             ]));
             $tF = microtime(true);
-            $lastFinal = $this->finalReviewer->review($prompt, $modelRoute, $lastAudit, $lastSecurity, $execResult);
+            $lastFinal = $this->finalReviewer->review($agentPrompt, $modelRoute, $lastAudit, $lastSecurity, $execResult);
             $fMs = (int) round((microtime(true) - $tF) * 1000);
             $fTok = $this->estimateTokens(json_encode($lastFinal) ?: '');
             $this->logStep($run, $stepNum + 200, 'final_reviewer', $modelsResolved['final_reviewer'] ?? null, 'ollama', $skillName, 'success', null, null, json_encode($lastFinal), null, null, null, $fMs, $fTok, null, $this->events->metadata(
@@ -481,7 +788,7 @@ class OrchestratorService
             $tokenAcc += $fTok;
             $this->emit($emit, $this->events->finalReviewerDone($run, $lastFinal, $modelsResolved['final_reviewer'] ?? null, $fMs, $fTok));
         }
-        $finalOutput = $this->composeUserOutput($lastAudit, $execResult, $lastFinal, $modelRoute, $modelsResolved, $memPayload);
+        $finalOutput = $this->composeUserOutput($lastAudit, $execResult, $lastFinal, $lastSecurity, $modelRoute, $modelsResolved, $memPayload);
 
         return $this->completeRun(
             $run,
@@ -566,11 +873,7 @@ class OrchestratorService
             ],
         ]);
 
-        $this->emit($emit, $this->basePayload($run, 'run_completed', [
-            'status' => 'success',
-            'total_latency_ms' => $totalMs,
-            'output' => $final,
-        ]));
+        $this->emit($emit, $this->events->runCompleted($run, $final, $totalMs, $tokenAcc + $tok, $modelRoute, $modelsResolved));
 
         Log::info('bosskuai.run.complete', [
             'run_id' => $run->id,
@@ -599,14 +902,24 @@ class OrchestratorService
      * @param array<string, string> $modelsResolved
      * @param array<int, array<string, mixed>> $memPayload
      */
-    protected function composeUserOutput(array $lastAudit, array $execResult, ?array $lastFinal, array $modelRoute, array $modelsResolved, array $memPayload): string
-    {
+    protected function composeUserOutput(
+        array $lastAudit,
+        array $execResult,
+        ?array $lastFinal,
+        ?array $lastSecurity,
+        array $modelRoute,
+        array $modelsResolved,
+        array $memPayload,
+    ): string {
         $status = (($execResult['status'] ?? '') === 'failed' || ($lastAudit['status'] ?? '') === 'failed') ? 'Partially Completed' : 'Completed';
         $files = array_values(array_filter(array_map(fn ($file) => is_array($file) ? (string) ($file['path'] ?? '') : (string) $file, $execResult['files_changed'] ?? [])));
         $commands = array_values(array_filter(array_map(fn ($command) => is_array($command) ? (string) ($command['command'] ?? '') : (string) $command, $execResult['commands_run'] ?? [])));
         $risks = $execResult['known_issues'] ?? [];
         if (($lastAudit['optional_improvements'] ?? []) !== []) {
             $risks = array_merge($risks, $lastAudit['optional_improvements']);
+        }
+        if (is_array($lastSecurity['security_issues'] ?? null) && $lastSecurity['security_issues'] !== []) {
+            $risks = array_merge($risks, $lastSecurity['security_issues']);
         }
 
         $auditStatus = (string) ($lastAudit['status'] ?? 'not_run');
@@ -641,13 +954,35 @@ class OrchestratorService
             $auditStatus,
             '',
             '## Remaining risks',
-            ...($risks !== [] ? array_map(fn ($risk) => '- '.(is_scalar($risk) ? (string) $risk : json_encode($risk)), $risks) : ['- Full verification status depends on the checks recorded above.']),
+            ...($risks !== [] ? array_map(fn ($risk) => '- '.$this->formatRiskLine($risk), $risks) : ['- Full verification status depends on the checks recorded above.']),
             '',
             '## Next recommended step',
             $nextStep,
         ];
 
         return implode("\n", $lines);
+    }
+
+    protected function formatRiskLine(mixed $risk): string
+    {
+        if (! is_array($risk)) {
+            return (string) $risk;
+        }
+
+        $issue = (string) ($risk['issue'] ?? $risk['title'] ?? 'Risk');
+        $severity = strtoupper((string) ($risk['severity'] ?? 'medium'));
+        $location = (string) ($risk['location'] ?? '');
+        $description = (string) ($risk['description'] ?? $risk['recommendation'] ?? '');
+
+        $line = "[{$severity}] {$issue}";
+        if ($location !== '') {
+            $line .= " ({$location})";
+        }
+        if ($description !== '' && $description !== $issue) {
+            $line .= ' — '.$description;
+        }
+
+        return $line;
     }
 
     /**
@@ -755,7 +1090,7 @@ class OrchestratorService
             'system'
         ));
 
-        $this->emit($emit, $this->events->runCompleted($run, $finalOutput, $totalMs, $tokenAcc));
+        $this->emit($emit, $this->events->runCompleted($run, $finalOutput, $totalMs, $tokenAcc, $modelRoute, $modelsResolved));
 
         $this->writeMemoryIfNeeded(
             (string) ($modelRoute['memory_mode'] ?? 'read_and_write'),
@@ -767,6 +1102,16 @@ class OrchestratorService
             $lastSecurity,
             $lastFinal
         );
+
+        try {
+            $run->refresh();
+            $this->knowledgeGraph->buildForRun($run);
+        } catch (\Throwable $e) {
+            Log::warning('bosskuai.knowledge_graph.build_failed', [
+                'run_id' => $run->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         Log::info('bosskuai.run.complete', [
             'run_id' => $run->id,
@@ -927,5 +1272,222 @@ class OrchestratorService
             return;
         }
         $emit($payload);
+    }
+
+    /**
+     * @param  list<array{role: string, content: string}>  $conversation
+     */
+    protected function effectivePrompt(string $userPrompt, array $conversation): string
+    {
+        $userPrompt = trim($userPrompt);
+        if ($conversation === []) {
+            return $userPrompt;
+        }
+
+        $lines = [];
+        $used = 0;
+        $maxChars = 12_000;
+
+        foreach (array_slice($conversation, -40) as $turn) {
+            $role = strtolower((string) ($turn['role'] ?? 'user'));
+            $content = trim((string) ($turn['content'] ?? ''));
+            if ($content === '') {
+                continue;
+            }
+            $line = ($role === 'assistant' ? 'Assistant' : 'User').': '.$content;
+            if ($used + strlen($line) > $maxChars) {
+                break;
+            }
+            $lines[] = $line;
+            $used += strlen($line);
+        }
+
+        if ($lines === []) {
+            return $userPrompt;
+        }
+
+        return "Previous conversation:\n".implode("\n\n", $lines)."\n\nCurrent request:\n".$userPrompt;
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    /**
+     * @param  array<string, mixed>  $execResult
+     * @return array<string, mixed>
+     */
+    protected function ensureExecutorEvidence(Run $run, array $plan, array $execResult, string $userPrompt, ?callable $emit): array
+    {
+        if (ExecutorEvidenceSupport::countFilesRead($execResult) > 0) {
+            return $execResult;
+        }
+
+        $preflight = $this->preflightReadTargetFiles($run, $plan, $emit);
+        $execResult = ExecutorEvidenceSupport::mergePreflightReads($execResult, $preflight);
+
+        if (ExecutorEvidenceSupport::countFilesRead($execResult) > 0) {
+            return $execResult;
+        }
+
+        $bootstrap = $this->bootstrapReadTargetFiles($run, $emit);
+        $execResult = ExecutorEvidenceSupport::mergePreflightReads($execResult, $bootstrap);
+
+        if (ExecutorEvidenceSupport::countFilesRead($execResult) > 0) {
+            return $execResult;
+        }
+
+        if (RepoTaskDetector::requiresRepositoryAccess($userPrompt)) {
+            $searchReads = $this->auditFileSearchReads($run, $emit);
+            $execResult = ExecutorEvidenceSupport::mergePreflightReads($execResult, $searchReads);
+        }
+
+        return $execResult;
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    protected function bootstrapReadTargetFiles(Run $run, ?callable $emit): array
+    {
+        $candidates = [
+            'composer.json',
+            'package.json',
+            'README.md',
+            'readme.md',
+            'go.mod',
+            'Cargo.toml',
+            'pom.xml',
+            'routes/web.php',
+            'routes/api.php',
+            '.env.example',
+            'src',
+            'app',
+        ];
+
+        $reads = [];
+        foreach ($candidates as $path) {
+            if (count($reads) >= 10) {
+                break;
+            }
+            $reads = array_merge($reads, $this->readTargetPath($run, $path, 'bootstrap probe', $emit));
+        }
+
+        if ($reads !== []) {
+            $this->emit($emit, $this->basePayload($run, 'bootstrap_reads_done', [
+                'status' => 'success',
+                'summary' => count($reads).' bootstrap path(s) probed.',
+                'artifacts' => ['bootstrap_reads' => $reads],
+            ]));
+        }
+
+        return $reads;
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    protected function auditFileSearchReads(Run $run, ?callable $emit): array
+    {
+        $inv = $this->tools->invoke($run->id, null, [
+            'tool' => 'file_search',
+            'payload' => ['q' => 'function', 'glob' => '*'],
+        ], $emit);
+
+        $reads = [];
+        if (($inv['status'] ?? '') !== 'ok') {
+            return $reads;
+        }
+
+        $result = is_array($inv['result'] ?? null) ? $inv['result'] : [];
+        $matches = is_array($result['matches'] ?? null) ? $result['matches'] : [];
+        foreach (array_slice($matches, 0, 15) as $match) {
+            if (! is_array($match)) {
+                continue;
+            }
+            $path = (string) ($match['path'] ?? '');
+            if ($path === '') {
+                continue;
+            }
+            $reads[] = [
+                'path' => $path,
+                'found' => true,
+                'reason' => 'repo audit file_search',
+                'tool_status' => 'ok',
+            ];
+        }
+
+        if ($reads !== []) {
+            $this->emit($emit, $this->basePayload($run, 'audit_file_search_done', [
+                'status' => 'success',
+                'summary' => count($reads).' file(s) matched audit file_search.',
+                'artifacts' => ['file_search_reads' => $reads],
+            ]));
+        }
+
+        return $reads;
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    protected function readTargetPath(Run $run, string $path, string $reason, ?callable $emit): array
+    {
+        $normalized = $this->paths->normalizeRelativePath($path);
+        if ($normalized === '') {
+            return [];
+        }
+
+        $inv = $this->tools->invoke($run->id, null, [
+            'tool' => 'file_read_safe',
+            'payload' => ['path' => $normalized],
+        ], $emit);
+
+        $result = is_array($inv['result'] ?? null) ? $inv['result'] : [];
+
+        return [[
+            'path' => $normalized,
+            'found' => (bool) ($result['found'] ?? false),
+            'preview' => isset($result['preview']) ? Str::limit((string) $result['preview'], 500) : null,
+            'reason' => $reason,
+            'tool_status' => $inv['status'] ?? 'error',
+        ]];
+    }
+
+    protected function preflightReadTargetFiles(Run $run, array $plan, ?callable $emit): array
+    {
+        $reads = [];
+        $targets = is_array($plan['target_file_list'] ?? null) ? $plan['target_file_list'] : [];
+
+        if ($targets === []) {
+            foreach (['composer.json', 'package.json', 'README.md', 'routes/web.php', 'routes/api.php', '.env.example'] as $bootstrap) {
+                $targets[] = ['path' => $bootstrap, 'reason' => 'bootstrap scan'];
+            }
+        }
+
+        foreach (array_slice($targets, 0, 10) as $target) {
+            if (! is_array($target)) {
+                continue;
+            }
+            $path = (string) ($target['path'] ?? '');
+            $reads = array_merge(
+                $reads,
+                $this->readTargetPath($run, $path, (string) ($target['reason'] ?? 'planner target'), $emit),
+            );
+        }
+
+        if ($reads !== []) {
+            $this->emit($emit, $this->basePayload($run, 'preflight_reads_done', [
+                'status' => 'success',
+                'summary' => count($reads).' file(s) read from the active project.',
+                'artifacts' => ['preflight_reads' => $reads],
+            ]));
+        }
+
+        return $reads;
+    }
+
+    protected function promptMentionsRepo(string $prompt): bool
+    {
+        return RepoTaskDetector::requiresRepositoryAccess($prompt);
     }
 }

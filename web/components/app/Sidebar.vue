@@ -4,6 +4,7 @@ const emit = defineEmits<{ toggle: [] }>()
 
 const links = [
   { to: '/', label: '🏠 Chat' },
+  { to: '/conversations', label: '💬 Conversations' },
   { to: '/dashboard', label: '📊 Dashboard' },
   { to: '/runs', label: '▶ Runs' },
   { to: '/project', label: '📁 Project' },
@@ -18,7 +19,7 @@ const links = [
   { to: '/usage', label: '💰 Usage' },
   { to: '/feedback', label: '💬 Feedback' },
   { to: '/soul', label: '✨ Soul' },
-  { to: '/settings/providers', label: '⚙ Settings' },
+  { to: '/settings/models', label: '⚙ Settings' },
 ]
 </script>
 

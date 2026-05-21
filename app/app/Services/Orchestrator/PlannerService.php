@@ -6,6 +6,7 @@ use App\Services\BosskuAi\LlmErrorFormatter;
 use App\Services\BosskuAi\ModelFallbackService;
 use App\Services\BosskuAi\ModelRoutingConfig;
 use App\Services\BosskuAi\RuntimeSettings;
+use App\Services\Project\ProjectService;
 use Illuminate\Support\Arr;
 
 class PlannerService
@@ -13,7 +14,8 @@ class PlannerService
     public function __construct(
         protected ModelFallbackService $fallback,
         protected ModelRoutingConfig $modelConfig,
-        protected RuntimeSettings $settings
+        protected RuntimeSettings $settings,
+        protected ProjectService $projects
     ) {}
 
     /**
@@ -27,8 +29,7 @@ class PlannerService
     public function plan(string $prompt, array $memoryContext, array $routerContext, array $modelRoute): array
     {
         $orch = $this->modelConfig->orchestrator();
-        $override = $this->settings->orchestratorModelOverride();
-        $primary = $override ?? (string) ($orch['primary'] ?? $this->settings->plannerModel());
+        $primary = (string) ($orch['primary'] ?? $this->settings->orchestratorModelForRouting());
         $fallbacks = is_array($orch['fallback'] ?? null) ? $orch['fallback'] : [];
         $models = array_values(array_unique(array_merge([$primary], $fallbacks)));
         $retry = (int) ($orch['retry_count'] ?? 1);
@@ -52,6 +53,7 @@ constraints (string[]),
 handoff_message (string).
 Do not invent file paths; if unknown, use empty target_file_list and set allow_broad_repo_scan true only when strictly necessary.
 SYS;
+        $system .= "\n\n".$this->projects->evidenceRuleForPrompt();
 
         $user = json_encode([
             'prompt' => $prompt,

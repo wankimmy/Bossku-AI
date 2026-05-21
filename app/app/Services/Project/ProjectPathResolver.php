@@ -2,6 +2,7 @@
 
 namespace App\Services\Project;
 
+use App\Models\BosskuAi\Project;
 use Illuminate\Support\Str;
 
 class ProjectPathResolver
@@ -10,14 +11,57 @@ class ProjectPathResolver
 
     public function repoRoot(): string
     {
-        $root = (string) config('bossku.repo_root');
+        $active = Project::query()->where('is_active', true)->first();
+        $root = $active?->container_path ?: (string) config('bossku.repo_root');
         $real = realpath($root);
 
         if ($real === false || ! is_dir($real)) {
-            throw new \RuntimeException('Project repo root is not available: '.$root);
+            $label = $active
+                ? "Active project \"{$active->name}\" is not mounted in the container: {$root}"
+                : 'Project repo root is not available: '.$root;
+
+            throw new \RuntimeException($label);
         }
 
         return $real;
+    }
+
+    public function activeProject(): ?Project
+    {
+        return Project::query()->where('is_active', true)->first();
+    }
+
+    /**
+     * Turn host/absolute paths from prompts into paths relative to the active repo root.
+     */
+    public function normalizeRelativePath(string $path): string
+    {
+        $path = trim(str_replace('\\', '/', $path));
+        if ($path === '') {
+            return '';
+        }
+
+        $active = $this->activeProject();
+        if ($active !== null) {
+            $host = rtrim(str_replace('\\', '/', $active->host_path), '/');
+            $lowerPath = strtolower($path);
+            $lowerHost = strtolower($host);
+            if ($lowerHost !== '' && ($lowerPath === $lowerHost || str_starts_with($lowerPath, $lowerHost.'/'))) {
+                $path = ltrim(substr($path, strlen($host)), '/');
+            }
+
+            $container = rtrim(str_replace('\\', '/', $active->container_path), '/');
+            $lowerContainer = strtolower($container);
+            if ($lowerContainer !== '' && ($lowerPath === $lowerContainer || str_starts_with($lowerPath, $lowerContainer.'/'))) {
+                $path = ltrim(substr($path, strlen($container)), '/');
+            }
+        }
+
+        if (preg_match('#^[a-z]:/#i', $path)) {
+            $path = ltrim((string) preg_replace('#^[a-z]:/#i', '', $path), '/');
+        }
+
+        return trim($path, '/');
     }
 
     /**
@@ -26,7 +70,7 @@ class ProjectPathResolver
     public function resolve(string $relativePath = ''): array
     {
         $root = $this->repoRoot();
-        $rel = trim(str_replace('\\', '/', $relativePath), '/');
+        $rel = $this->normalizeRelativePath($relativePath);
         $combined = $rel === '' ? $root : $root.DIRECTORY_SEPARATOR.str_replace('/', DIRECTORY_SEPARATOR, $rel);
         $real = realpath($combined);
 

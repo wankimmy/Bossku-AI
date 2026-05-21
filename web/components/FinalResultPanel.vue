@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { FinalResult } from '../types/bossku'
-
 defineProps<{ result: FinalResult }>()
 </script>
 
@@ -46,8 +45,8 @@ defineProps<{ result: FinalResult }>()
         <dt class="text-xs font-semibold uppercase text-zinc-500">
           Audit result
         </dt>
-        <dd class="mt-1">
-          {{ result.auditResult || 'not recorded' }}
+        <dd class="mt-1 capitalize">
+          {{ (result.auditResult || 'not recorded').replaceAll('_', ' ') }}
         </dd>
       </div>
       <div>
@@ -59,15 +58,11 @@ defineProps<{ result: FinalResult }>()
         </dd>
       </div>
     </dl>
-    <div v-if="result.remainingRisks.length" class="mt-3">
+    <div v-if="result.remainingRisks.length" class="mt-4">
       <h3 class="text-xs font-semibold uppercase text-zinc-500">
         Remaining risks
       </h3>
-      <ul class="mt-1 list-disc space-y-1 pl-5 text-sm">
-        <li v-for="risk in result.remainingRisks" :key="risk">
-          {{ risk }}
-        </li>
-      </ul>
+      <RiskItemList class="mt-2" :risks="result.remainingRisks" />
     </div>
   </section>
 </template>

@@ -94,24 +94,82 @@ class RunEventFactory
         ]);
     }
 
-    /** @return array<string, mixed> */
-    public function runCompleted(Run $run, string $output, int $totalMs, int $tokenEstimate): array
-    {
+    /**
+     * @param  array<string, mixed>  $modelRoute
+     * @param  array<string, string>  $modelsResolved
+     * @return array<string, mixed>
+     */
+    public function runCompleted(
+        Run $run,
+        string $output,
+        int $totalMs,
+        int $tokenEstimate,
+        array $modelRoute = [],
+        array $modelsResolved = [],
+    ): array {
         return $this->event($run, 'run_completed', [
             'agent' => 'final-reviewer',
             'from_agent' => 'final-reviewer',
             'to_agent' => 'system',
             'status' => 'success',
             'model_role' => 'reasoning',
+            'model' => $modelsResolved['final_reviewer'] ?? $modelsResolved['orchestrator'] ?? null,
             'summary' => 'Run completed.',
             'message' => 'Final result is ready.',
+            'routing' => $modelRoute,
+            'models' => $modelsResolved,
             'artifacts' => [
                 'final_output' => $output,
+                'routing_decision' => $modelRoute,
+                'models_resolved' => $modelsResolved,
             ],
             'total_latency_ms' => $totalMs,
             'latency_ms' => $totalMs,
             'token_estimate' => $tokenEstimate,
             'output' => $output,
+        ]);
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $questions
+     * @return array<string, mixed>
+     */
+    public function clarificationRequested(
+        Run $run,
+        array $questions,
+        string $stage,
+        string $summary,
+        array $assumptions = [],
+    ): array {
+        return $this->event($run, 'clarification_requested', [
+            'agent' => 'orchestrator',
+            'from_agent' => 'orchestrator',
+            'to_agent' => 'user',
+            'status' => 'awaiting_input',
+            'model_role' => 'reasoning',
+            'summary' => $summary,
+            'message' => $summary,
+            'stage' => $stage,
+            'questions' => $questions,
+            'assumptions' => $assumptions,
+            'artifacts' => [
+                'clarification' => [
+                    'stage' => $stage,
+                    'questions' => $questions,
+                    'assumptions' => $assumptions,
+                ],
+            ],
+        ]);
+    }
+
+    /** @return array<string, mixed> */
+    public function clarificationReceived(Run $run, int $answerCount): array
+    {
+        return $this->event($run, 'clarification_received', [
+            'agent' => 'orchestrator',
+            'status' => 'running',
+            'summary' => 'Continuing run with '.$answerCount.' clarification answer(s).',
+            'message' => 'Resuming pipeline after your input.',
         ]);
     }
 
@@ -195,6 +253,7 @@ class RunEventFactory
             str_contains($type, 'final') || str_contains($type, 'completed') => 'final-reviewer',
             str_contains($type, 'router') => 'router',
             str_contains($type, 'memory') => 'memory',
+            str_contains($type, 'clarification') => 'orchestrator',
             default => 'system',
         };
     }

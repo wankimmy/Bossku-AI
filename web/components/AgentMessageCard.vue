@@ -24,19 +24,22 @@ const statusColor: Record<string, string> = {
   pending:   'bg-zinc-800 text-zinc-400',
 }
 
-const mainText = computed(() => props.message.summary || props.message.message || (props.message.status === 'failed' ? 'Run step failed.' : ''))
-const detail = computed(() => {
-  if (props.message.summary && props.message.message && props.message.message !== props.message.summary)
-    return props.message.message
-  return ''
-})
+const mainText = computed(() =>
+  props.message.summary
+  || (props.message.status === 'failed' ? 'Run step failed.' : ''),
+)
+
+const showPlainDetail = computed(() =>
+  props.message.message
+  && !props.message.router
+  && !(props.message.risks?.length),
+)
 
 const detailOpen = ref(false)
 </script>
 
 <template>
   <div class="flex gap-3 group">
-    <!-- Avatar -->
     <div
       class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-sm"
       :class="[cfg.bg, cfg.border]"
@@ -44,9 +47,7 @@ const detailOpen = ref(false)
       {{ cfg.icon }}
     </div>
 
-    <!-- Bubble -->
     <div class="flex-1 min-w-0">
-      <!-- Header row -->
       <div class="flex flex-wrap items-center gap-2 mb-1.5">
         <span class="text-sm font-semibold" :class="cfg.color">{{ message.title }}</span>
         <span
@@ -66,23 +67,30 @@ const detailOpen = ref(false)
         </span>
       </div>
 
-      <!-- Message body -->
       <div
         class="rounded-xl rounded-tl-sm border px-4 py-3 text-sm leading-relaxed"
         :class="[cfg.bg, cfg.border, cfg.color]"
       >
-        <!-- Typing indicator -->
-        <div v-if="isLast && isRunning && !mainText" class="flex items-center gap-1.5 h-5">
+        <div v-if="isLast && isRunning && !mainText && !message.router" class="flex items-center gap-1.5 h-5">
           <span class="h-2 w-2 rounded-full bg-current animate-bounce [animation-delay:0ms]" />
           <span class="h-2 w-2 rounded-full bg-current animate-bounce [animation-delay:150ms]" />
           <span class="h-2 w-2 rounded-full bg-current animate-bounce [animation-delay:300ms]" />
         </div>
 
-        <p v-else-if="mainText" class="whitespace-pre-wrap">{{ mainText }}</p>
-        <p v-else class="text-zinc-500 italic text-xs">Processing…</p>
+        <p v-else-if="mainText && !message.router" class="whitespace-pre-wrap text-zinc-100">
+          {{ mainText }}
+        </p>
+        <p v-else-if="!message.router && !message.risks?.length" class="text-zinc-500 italic text-xs">
+          Processing…
+        </p>
 
-        <!-- Expandable detail -->
-        <template v-if="detail">
+        <RouterSummaryBlock v-if="message.router" :router="message.router" class="text-zinc-100" />
+
+        <div v-if="message.risks?.length" class="mt-3">
+          <RiskItemList :risks="message.risks" compact />
+        </div>
+
+        <template v-if="showPlainDetail">
           <button
             type="button"
             class="mt-2 flex items-center gap-1 text-xs opacity-60 hover:opacity-100 transition-opacity"
@@ -91,11 +99,12 @@ const detailOpen = ref(false)
             <span>{{ detailOpen ? '▾' : '▸' }}</span>
             <span>{{ detailOpen ? 'Hide details' : 'Show details' }}</span>
           </button>
-          <pre v-if="detailOpen" class="mt-2 whitespace-pre-wrap text-xs opacity-80 font-mono leading-relaxed border-t border-current/20 pt-2">{{ detail }}</pre>
+          <p v-if="detailOpen" class="mt-2 whitespace-pre-wrap text-xs opacity-80 leading-relaxed border-t border-current/20 pt-2 text-zinc-300">
+            {{ message.message }}
+          </p>
         </template>
       </div>
 
-      <!-- Handoff arrow -->
       <p v-if="message.to_agent" class="mt-1 text-xs text-zinc-600 pl-1">
         → handoff to <span class="text-zinc-400">{{ message.to_agent }}</span>
       </p>

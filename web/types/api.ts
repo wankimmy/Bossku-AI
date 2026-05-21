@@ -157,6 +157,51 @@ export interface KnowledgeGraphResponse {
   edges: GraphEdge[]
 }
 
+export interface WorkspaceGraphNode {
+  id: string
+  label: string
+  category: string
+  depth: 'DEEP' | 'OK' | 'THIN' | string
+  is_marquee?: boolean
+  is_core?: boolean
+  skill_lines?: number
+  playbook_lines?: number
+  total_lines?: number
+  triggers?: string[]
+  keywords?: string[]
+  trigger_count?: number
+  description?: string
+  playbook_refs?: string[]
+  has_conflict?: boolean
+  confidence?: number
+  source_type?: string
+  source_id?: string
+  type?: string
+  properties?: Record<string, unknown>
+}
+
+export interface WorkspaceGraphEdge {
+  source: string
+  target: string
+  kind: string
+  is_conflict?: boolean
+  weight?: number
+}
+
+export interface WorkspaceGraphResponse {
+  version?: string
+  repo_root?: string
+  active_repo_root?: string | null
+  toolkit_repo_root?: string
+  skills_source?: 'active' | 'toolkit'
+  error?: string
+  node_count?: number
+  edge_count?: number
+  categories?: Record<string, number>
+  nodes: WorkspaceGraphNode[]
+  edges: WorkspaceGraphEdge[]
+}
+
 export interface Approval {
   id: string
   run_id?: string
@@ -235,4 +280,22 @@ export interface BrainData {
   unprocessed_feedback?: number
   knowledge_nodes?: number
   conflicts?: number
+  memory_count?: number
+  memory_confidence?: {
+    avg?: number | null
+    min?: number | null
+    max?: number | null
+  }
+}
+
+export interface MemoryRecord {
+  id: string
+  type?: string
+  content?: string
+  human_summary?: string | null
+  confidence?: number
+  source?: string | null
+  tags?: string[] | null
+  is_active?: boolean
+  updated_at?: string
 }

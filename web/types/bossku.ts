@@ -65,6 +65,23 @@ export interface AuditFinding {
   status?: 'open' | 'fixed' | 'accepted_risk' | string
 }
 
+export interface RiskItem {
+  issue: string
+  severity: string
+  location?: string
+  description?: string
+  recommendation?: string
+}
+
+export interface RouterDisplay {
+  primarySkill: string
+  primaryReason?: string
+  secondarySkills: { name: string; reason?: string }[]
+  rulesCount: number
+  playbooksCount: number
+  checklistsCount: number
+}
+
 export interface AgentMessage {
   id: string
   agent: AgentName | string
@@ -79,6 +96,8 @@ export interface AgentMessage {
   latency_ms?: number
   token_estimate?: number
   artifacts?: Record<string, unknown>
+  risks?: RiskItem[]
+  router?: RouterDisplay
 }
 
 export interface HandoffNode {
@@ -93,7 +112,7 @@ export interface FinalResult {
   filesChanged: string[]
   checksRun: string[]
   auditResult?: string
-  remainingRisks: string[]
+  remainingRisks: RiskItem[]
   nextStep?: string
   raw?: string
 }

@@ -19,9 +19,17 @@ class RunActionController extends Controller
     public function resume(string $runId)
     {
         $run = Run::findOrFail($runId);
+
+        if ($run->status === 'awaiting_input') {
+            return response()->json([
+                'message' => 'Run is awaiting clarification. POST /api/runs/{id}/continue/stream with answers instead.',
+                'run' => $run,
+            ], 409);
+        }
+
         $run->update(['status' => 'running']);
 
-        return response()->json(['message' => 'Run resumed.', 'run' => $run]);
+        return response()->json(['message' => 'Run status set to running (pipeline not re-executed). Use continue/stream after clarification.', 'run' => $run]);
     }
 
     public function rerunStep(string $runId, string $stepId)

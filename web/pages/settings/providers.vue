@@ -4,7 +4,11 @@ import type { LlmProvider } from '~/types/api'
 definePageMeta({ layout: 'default' })
 
 const api = useApi()
-const { data, pending, refresh } = await useAsyncData<LlmProvider[]>('providers', () => api.get('/providers'))
+const { data, pending, error, refresh } = await useAsyncData<LlmProvider[]>(
+  'providers',
+  () => api.get('/providers'),
+  { server: false, lazy: true },
+)
 
 const providers = computed<LlmProvider[]>(() => {
   const d = data.value
@@ -70,9 +74,17 @@ async function toggleActive(provider: LlmProvider) {
 const showAddForm = ref(false)
 const newProvider = reactive({ name: '', type: 'openai', base_url: '', api_key: '' })
 
+function slugify(name: string): string {
+  return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'provider'
+}
+
 async function addProvider() {
   try {
-    await api.post('/providers', { ...newProvider })
+    await api.post('/providers', {
+      ...newProvider,
+      slug: slugify(newProvider.name),
+      is_active: true,
+    })
     toast.success(`Provider "${newProvider.name}" added.`)
     showAddForm.value = false
     Object.assign(newProvider, { name: '', type: 'openai', base_url: '', api_key: '' })
@@ -153,7 +165,12 @@ async function addProvider() {
       </form>
     </div>
 
-    <div v-if="pending" class="text-sm text-zinc-500">Loading...</div>
+    <p v-if="pending && providers.length === 0" class="text-sm text-zinc-500">
+      Loading providers…
+    </p>
+    <p v-else-if="error" class="text-sm text-rose-400">
+      Could not load providers. Check the API at port 8000.
+    </p>
 
     <div v-else class="rounded-lg bg-zinc-900 border border-zinc-800 overflow-hidden">
       <div class="overflow-x-auto">

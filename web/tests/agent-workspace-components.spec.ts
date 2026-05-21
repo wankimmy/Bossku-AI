@@ -5,6 +5,7 @@ import PlanChecklist from '../components/PlanChecklist.vue'
 import ChangeTrackerPanel from '../components/ChangeTrackerPanel.vue'
 import AuditFindingsPanel from '../components/AuditFindingsPanel.vue'
 import FinalResultPanel from '../components/FinalResultPanel.vue'
+import RiskItemList from '../components/RiskItemList.vue'
 import FileDiffViewer from '../components/FileDiffViewer.vue'
 import TestResultPanel from '../components/TestResultPanel.vue'
 import UiEmptyState from '../components/ui/EmptyState.vue'
@@ -76,9 +77,12 @@ describe('agent workspace components', () => {
           filesChanged: ['app/Foo.php'],
           checksRun: ['php artisan test'],
           auditResult: 'pass_with_notes',
-          remainingRisks: ['Full suite not run'],
+          remainingRisks: [{ issue: 'Full suite not run', severity: 'medium' }],
           nextStep: 'Run full suite',
         },
+      },
+      global: {
+        components: { RiskItemList },
       },
     })
 

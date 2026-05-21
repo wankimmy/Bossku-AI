@@ -75,7 +75,7 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
     return
   }
 
-  if (pathname === '/api/runs/stream' && method === 'GET') {
+  if (pathname === '/api/runs/stream' && (method === 'GET' || method === 'POST')) {
     const prompt = url.searchParams.get('prompt') ?? ''
     cors(res)
     res.writeHead(200, {
@@ -367,18 +367,72 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
     return
   }
 
+  const mockWorkspaceGraph = {
+    version: 'mock-1',
+    node_count: 2,
+    edge_count: 1,
+    nodes: [
+      {
+        id: 'cofounder',
+        label: 'cofounder',
+        category: 'operating',
+        depth: 'DEEP',
+        is_marquee: true,
+        triggers: ['cofounder mode'],
+        keywords: ['startup'],
+        trigger_count: 1,
+        description: 'Expert cofounder skill.',
+        skill_lines: 120,
+        playbook_lines: 200,
+        total_lines: 320,
+        playbook_refs: ['cofounder-playbook.md'],
+      },
+      {
+        id: 'bosskuai-laravel-development',
+        label: 'laravel-development',
+        category: 'engineering',
+        depth: 'OK',
+        is_marquee: true,
+        triggers: ['laravel'],
+        keywords: ['php'],
+        trigger_count: 1,
+        description: 'Laravel delivery.',
+        skill_lines: 80,
+        playbook_lines: 40,
+        total_lines: 120,
+        playbook_refs: [],
+      },
+    ],
+    edges: [{ source: 'cofounder', target: 'bosskuai-laravel-development', kind: 'cross_ref' }],
+  }
+
+  if (pathname === '/api/workspace/graph' && method === 'GET') {
+    json(res, mockWorkspaceGraph)
+    return
+  }
+
   if (pathname === '/api/knowledge-graph' && method === 'GET') {
-    json(res, { nodes: [], edges: [] })
+    json(res, {
+      ...mockWorkspaceGraph,
+      version: 'knowledge-db',
+      nodes: mockWorkspaceGraph.nodes.map(n => ({
+        ...n,
+        type: 'skill',
+        source_type: 'skill',
+        source_id: n.id,
+      })),
+      edges: [{ source: 'n1', target: 'n2', kind: 'used_in' }],
+    })
     return
   }
 
   if (pathname === '/api/knowledge-graph/rebuild' && method === 'POST') {
-    json(res, { nodes: 0, edges: 0 })
+    json(res, { message: 'Knowledge graph rebuilt.', node_count: 2, edge_count: 1 })
     return
   }
 
   if (pathname === '/api/skills-graph' && method === 'GET') {
-    json(res, { nodes: [], edges: [] })
+    json(res, mockWorkspaceGraph)
     return
   }
 

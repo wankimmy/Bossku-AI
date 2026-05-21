@@ -66,6 +66,89 @@ describe('useRunArtifacts', () => {
     expect(normalized.finalResult.status).toBe('Completed')
   })
 
+  it('extracts role models from model_router_done and agent steps', () => {
+    const normalized = useRunArtifacts([
+      {
+        type: 'model_router_done',
+        agent: 'router',
+        status: 'success',
+        models: {
+          router: 'kimi-k2.6:cloud',
+          orchestrator: 'kimi-k2.6:cloud',
+          executor: 'qwen3-coder-next:cloud',
+          auditor: 'deepseek-v4-pro:cloud',
+        },
+      },
+      {
+        type: 'planner_done',
+        agent: 'orchestrator',
+        model_role: 'reasoning',
+        model: 'kimi-k2.6:cloud',
+        status: 'success',
+      },
+      {
+        type: 'run_completed',
+        agent: 'final-reviewer',
+        status: 'success',
+        models: {
+          router: 'kimi-k2.6:cloud',
+          orchestrator: 'kimi-k2.6:cloud',
+          executor: 'qwen3-coder-next:cloud',
+          auditor: 'deepseek-v4-pro:cloud',
+        },
+        output: 'Done',
+      },
+    ])
+
+    expect(normalized.routingSummary.reasoningModel).toBe('kimi-k2.6:cloud')
+    expect(normalized.routingSummary.codingModel).toBe('qwen3-coder-next:cloud')
+    expect(normalized.routingSummary.reviewModel).toBe('deepseek-v4-pro:cloud')
+    expect(normalized.routingSummary.fastModel).toBe('kimi-k2.6:cloud')
+  })
+
+  it('parses JSON remaining risks from final output', () => {
+    const normalized = useRunArtifacts([
+      {
+        type: 'run_completed',
+        agent: 'final-reviewer',
+        status: 'success',
+        output: [
+          '[BOSSKUAI]',
+          '## Status',
+          'Completed',
+          '## Remaining risks',
+          '- {"issue":"Hardcoded URL","severity":"low","location":"config/services.php","description":"Use env var."}',
+        ].join('\n'),
+      },
+    ])
+
+    expect(normalized.finalResult.remainingRisks).toHaveLength(1)
+    expect(normalized.finalResult.remainingRisks[0].issue).toBe('Hardcoded URL')
+    expect(normalized.finalResult.remainingRisks[0].location).toBe('config/services.php')
+  })
+
+  it('humanizes router step output instead of raw JSON blob', () => {
+    const normalized = useRunArtifacts([
+      {
+        type: 'model_router_done',
+        agent: 'router',
+        status: 'success',
+        output: JSON.stringify({
+          primary_skill: { name: 'bosskuai-codebase-analysis', reason: 'Matched audit keywords.' },
+          secondary_skills: [],
+          rules: [],
+          playbooks: [],
+          checklists: [],
+        }),
+        latency_ms: 48,
+      },
+    ])
+
+    expect(normalized.agentMessages[0].summary).toContain('bosskuai-codebase-analysis')
+    expect(normalized.agentMessages[0].router?.primarySkill).toBe('bosskuai-codebase-analysis')
+    expect(String(normalized.agentMessages[0].message ?? '')).not.toContain('"_scores"')
+  })
+
   it('normalizes saved run steps with metadata artifacts', () => {
     const normalized = useRunArtifacts([
       {

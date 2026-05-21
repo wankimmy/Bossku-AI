@@ -4,12 +4,14 @@ namespace App\Services\Orchestrator;
 
 use App\Services\BosskuAi\ModelFallbackService;
 use App\Services\BosskuAi\ModelRoutingConfig;
+use App\Services\Project\ProjectService;
 
 class AuditorService
 {
     public function __construct(
         protected ModelFallbackService $fallback,
-        protected ModelRoutingConfig $modelConfig
+        protected ModelRoutingConfig $modelConfig,
+        protected ProjectService $projects
     ) {}
 
     /**
@@ -47,7 +49,9 @@ requires_security_audit (boolean),
 requires_final_reviewer (boolean),
 final_output (string, user-facing summary when status is pass or pass_with_notes).
 Use needs_revision only when executor should make another focused pass.
+Do not report specific file paths or vulnerabilities unless executor tool results include file_read_safe or file_search for those files.
 SYS;
+        $system .= "\n\n".$this->projects->evidenceRuleForPrompt();
 
         $payload = json_encode([
             'user_prompt' => $userPrompt,

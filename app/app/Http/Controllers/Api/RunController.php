@@ -25,36 +25,26 @@ class RunController extends Controller
         return Run::query()->with('steps')->findOrFail($id);
     }
 
-    public function store(Request $request, OrchestratorService $orchestrator)
+    public function clarification(string $id, OrchestratorService $orchestrator)
     {
-        $data = $request->validate([
-            'prompt' => 'required|string|max:50000',
-        ]);
-
-        try {
-            $result = $orchestrator->run($data['prompt']);
-        } catch (\Throwable $e) {
-            return response()->json([
-                'message' => $e->getMessage(),
-            ], 422);
-        }
-
-        return response()->json($result);
+        return response()->json($orchestrator->clarificationForRun($id));
     }
 
-    public function stream(Request $request, OrchestratorService $orchestrator): StreamedResponse
+    public function continueStream(Request $request, string $id, OrchestratorService $orchestrator): StreamedResponse
     {
-        $validated = validator([
-            'prompt' => $request->query('prompt'),
-        ], [
-            'prompt' => 'required|string|max:50000',
-        ])->validate();
+        $validated = $request->validate([
+            'answers' => 'required|array|min:1',
+            'answers.*.question_id' => 'required|string|max:64',
+            'answers.*.option_id' => 'nullable|string|max:64',
+            'answers.*.free_text' => 'nullable|string|max:20000',
+        ]);
 
-        $prompt = $validated['prompt'];
+        /** @var list<array{question_id: string, option_id?: string|null, free_text?: string|null}> $answers */
+        $answers = $validated['answers'];
 
-        return response()->stream(function () use ($orchestrator, $prompt) {
+        return response()->stream(function () use ($orchestrator, $id, $answers) {
             try {
-                $orchestrator->run($prompt, function (array $evt) {
+                $orchestrator->continueRun($id, $answers, function (array $evt) {
                     echo 'data: '.json_encode($evt, JSON_THROW_ON_ERROR)."\n\n";
                     if (ob_get_level() > 0) {
                         ob_flush();
@@ -77,6 +67,92 @@ class RunController extends Controller
             'Access-Control-Allow-Origin' => env('FRONTEND_URL', 'http://localhost:3000'),
             'Vary' => 'Origin',
         ]);
+    }
+
+    public function store(Request $request, OrchestratorService $orchestrator)
+    {
+        $data = $this->validateRunInput($request);
+
+        try {
+            $result = $orchestrator->run($data['prompt'], null, $data['conversation']);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+
+        return response()->json($result);
+    }
+
+    public function stream(Request $request, OrchestratorService $orchestrator): StreamedResponse
+    {
+        $validated = validator([
+            'prompt' => $request->query('prompt'),
+        ], [
+            'prompt' => 'required|string|max:50000',
+        ])->validate();
+
+        return $this->streamRun($orchestrator, $validated['prompt'], []);
+    }
+
+    public function streamPost(Request $request, OrchestratorService $orchestrator): StreamedResponse
+    {
+        $data = $this->validateRunInput($request);
+
+        return $this->streamRun($orchestrator, $data['prompt'], $data['conversation']);
+    }
+
+    /**
+     * @param  list<array{role: string, content: string}>  $conversation
+     */
+    private function streamRun(OrchestratorService $orchestrator, string $prompt, array $conversation): StreamedResponse
+    {
+        return response()->stream(function () use ($orchestrator, $prompt, $conversation) {
+            try {
+                $orchestrator->run($prompt, function (array $evt) {
+                    echo 'data: '.json_encode($evt, JSON_THROW_ON_ERROR)."\n\n";
+                    if (ob_get_level() > 0) {
+                        ob_flush();
+                    }
+                    flush();
+                }, $conversation);
+            } catch (\Throwable $e) {
+                echo 'data: '.json_encode([
+                    'type' => 'run_failed',
+                    'status' => 'fail',
+                    'error' => $e->getMessage(),
+                ], JSON_THROW_ON_ERROR)."\n\n";
+                flush();
+            }
+        }, 200, [
+            'Content-Type' => 'text/event-stream',
+            'Cache-Control' => 'no-cache',
+            'Connection' => 'keep-alive',
+            'X-Accel-Buffering' => 'no',
+            'Access-Control-Allow-Origin' => env('FRONTEND_URL', 'http://localhost:3000'),
+            'Vary' => 'Origin',
+        ]);
+    }
+
+    /**
+     * @return array{prompt: string, conversation: list<array{role: string, content: string}>}
+     */
+    private function validateRunInput(Request $request): array
+    {
+        $validated = $request->validate([
+            'prompt' => 'required|string|max:50000',
+            'conversation' => 'sometimes|array|max:50',
+            'conversation.*.role' => 'required_with:conversation|in:user,assistant',
+            'conversation.*.content' => 'required_with:conversation|string|max:20000',
+        ]);
+
+        /** @var list<array{role: string, content: string}> $conversation */
+        $conversation = $validated['conversation'] ?? [];
+
+        return [
+            'prompt' => $validated['prompt'],
+            'conversation' => $conversation,
+        ];
     }
 
     // -------------------------------------------------------------------------

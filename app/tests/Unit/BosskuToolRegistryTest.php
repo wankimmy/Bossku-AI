@@ -32,4 +32,21 @@ class BosskuToolRegistryTest extends TestCase
         ]);
         $this->assertSame('blocked', $out['status']);
     }
+
+    #[Test]
+    public function invoke_emits_single_array_event_for_stream(): void
+    {
+        $registry = app(ToolRegistry::class);
+        $events = [];
+        $registry->invoke(null, null, [
+            'tool' => 'log',
+            'payload' => ['message' => 'emit-test'],
+        ], function (array $evt) use (&$events) {
+            $events[] = $evt;
+        });
+
+        $this->assertCount(1, $events);
+        $this->assertSame('tool_call', $events[0]['type']);
+        $this->assertSame('log', $events[0]['tool']);
+    }
 }

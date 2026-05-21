@@ -8,9 +8,11 @@ import type {
   HandoffNode,
   NormalizedRunArtifacts,
   PlanChecklistItem,
+  RiskItem,
   RoutingSummary,
   TestRun,
 } from '../types/bossku'
+import { formatAgentStepOutput, parseRiskItems } from '../utils/humanizeOutput'
 
 type UnknownRecord = Record<string, unknown>
 
@@ -46,7 +48,7 @@ export function useRunArtifacts(items: UnknownRecord[] = []): NormalizedRunArtif
       memoryUsed = true
     }
 
-    applyRouting(event, artifacts, routingSummary)
+    applyRouting(event, artifacts, routingSummary, type)
     pushAll(checklist, asChecklist(artifacts.checklist))
     pushAll(filesRead, asFileReads(artifacts.files_read))
     pushAll(filesChanged, asFileChanges(artifacts.files_changed))
@@ -65,6 +67,14 @@ export function useRunArtifacts(items: UnknownRecord[] = []): NormalizedRunArtif
     }
 
     if (agent || type) {
+      const rawOutput = stringOrUndefined(
+        event.error ?? event.message ?? metadata.message ?? metadata.error ?? item.output,
+      )
+      const formatted = formatAgentStepOutput(agent, rawOutput, artifacts)
+      const existingSummary = stringOrUndefined(
+        event.summary ?? metadata.summary ?? summaryFromArtifacts(artifacts, type),
+      )
+
       messages.push({
         id: String(item.id ?? event.id ?? `${type || agent}-${idx}`),
         agent,
@@ -72,18 +82,32 @@ export function useRunArtifacts(items: UnknownRecord[] = []): NormalizedRunArtif
         status,
         model_role: stringOrUndefined(event.model_role ?? metadata.model_role),
         model: stringOrUndefined(event.model ?? item.model ?? metadata.model),
-        summary: stringOrUndefined(
-          event.summary ?? metadata.summary ?? event.error ?? summaryFromArtifacts(artifacts, type),
-        ),
-        message: stringOrUndefined(event.error ?? event.message ?? metadata.message ?? metadata.error ?? item.output),
+        summary: existingSummary ?? formatted.summary,
+        message: formatted.detail,
+        risks: formatted.risks,
+        router: formatted.router,
         from_agent: stringOrUndefined(event.from_agent ?? metadata.from_agent),
         to_agent: stringOrUndefined(event.to_agent ?? metadata.to_agent),
         latency_ms: numberOrUndefined(event.latency_ms ?? item.latency_ms),
         token_estimate: numberOrUndefined(event.token_estimate ?? item.token_estimate),
         artifacts,
       })
+
+      if (formatted.risks?.length) {
+        pushAll(auditFindings, formatted.risks.map((risk, riskIdx) => ({
+          id: `security-${idx}-${riskIdx}`,
+          severity: risk.severity,
+          category: 'security',
+          title: risk.issue,
+          description: risk.description ?? risk.location,
+          suggested_fix: risk.recommendation,
+          status: 'open',
+        })))
+      }
     }
   }
+
+  inferRoutingFromMessages(messages, routingSummary)
 
   return {
     agentMessages: messages,
@@ -113,20 +137,63 @@ function mergeArtifacts(event: UnknownRecord, metadata: UnknownRecord): UnknownR
   return { ...(parsedOutput ?? {}), ...fromMetadata, ...fromEvent }
 }
 
-function applyRouting(event: UnknownRecord, artifacts: UnknownRecord, routing: RoutingSummary) {
-  const models = asRecord(event.models ?? event.models_resolved ?? artifacts.models_resolved)
-  const route = asRecord(event.routing ?? event.routing_decision ?? artifacts.routing_decision)
-  if (models) {
-    routing.fastModel = stringOrUndefined(models.router ?? models.fast ?? models.direct_answer) ?? routing.fastModel
-    routing.reasoningModel = stringOrUndefined(models.orchestrator ?? models.reasoning ?? models.final_reviewer) ?? routing.reasoningModel
-    routing.codingModel = stringOrUndefined(models.executor ?? models.coding) ?? routing.codingModel
-    routing.reviewModel = stringOrUndefined(models.auditor ?? models.security_auditor ?? models.final_reviewer ?? models.review) ?? routing.reviewModel
-  }
+function applyRouting(
+  event: UnknownRecord,
+  artifacts: UnknownRecord,
+  routing: RoutingSummary,
+  type: string,
+) {
+  const models = asRecord(
+    event.models
+    ?? event.models_resolved
+    ?? artifacts.models_resolved
+    ?? artifacts.models,
+  )
+  const route = asRecord(
+    event.routing
+    ?? event.routing_decision
+    ?? artifacts.routing_decision
+    ?? (type === 'routing_decision' ? event : undefined),
+  )
+  applyModelsRecord(models, routing)
   if (route) {
     routing.workflow = stringOrUndefined(route.workflow) ?? routing.workflow
     routing.skill = stringOrUndefined(route.skill) ?? routing.skill
     routing.riskLevel = stringOrUndefined(route.risk_level) ?? routing.riskLevel
   }
+}
+
+function applyModelsRecord(models: UnknownRecord | undefined, routing: RoutingSummary) {
+  if (!models) return
+  routing.fastModel = stringOrUndefined(
+    models.router ?? models.fast ?? models.direct_answer ?? models.writer,
+  ) ?? routing.fastModel
+  routing.reasoningModel = stringOrUndefined(
+    models.orchestrator ?? models.reasoning ?? models.final_reviewer,
+  ) ?? routing.reasoningModel
+  routing.codingModel = stringOrUndefined(models.executor ?? models.coding) ?? routing.codingModel
+  routing.reviewModel = stringOrUndefined(
+    models.auditor ?? models.security_auditor ?? models.review,
+  ) ?? routing.reviewModel
+}
+
+function inferRoutingFromMessages(messages: AgentMessage[], routing: RoutingSummary) {
+  for (const msg of messages) {
+    if (!msg.model) continue
+    const role = msg.model_role ?? modelRoleForAgent(msg.agent)
+    if (role === 'reasoning') routing.reasoningModel ??= msg.model
+    else if (role === 'coding') routing.codingModel ??= msg.model
+    else if (role === 'review') routing.reviewModel ??= msg.model
+    else if (role === 'fast') routing.fastModel ??= msg.model
+  }
+}
+
+function modelRoleForAgent(agent: string): string {
+  if (agent === 'orchestrator' || agent === 'final-reviewer') return 'reasoning'
+  if (agent === 'executor') return 'coding'
+  if (agent === 'auditor' || agent === 'security-auditor') return 'review'
+  if (agent === 'router' || agent === 'memory') return 'fast'
+  return 'system'
 }
 
 function buildHandoff(messages: AgentMessage[]): HandoffNode[] {
@@ -147,7 +214,7 @@ function parseFinalResult(raw: string, files: FileChange[], commands: CommandRun
     filesChanged: sectionLines(raw, 'Files changed').map(stripBullet),
     checksRun: sectionLines(raw, 'Checks run').map(stripBullet),
     auditResult: readMarkdownSection(raw, 'Audit result') || (findings.length ? 'needs review' : undefined),
-    remainingRisks: sectionLines(raw, 'Remaining risks').map(stripBullet),
+    remainingRisks: parseRemainingRisks(raw, findings),
     nextStep: readMarkdownSection(raw, 'Next recommended step'),
     raw,
   }
@@ -178,6 +245,23 @@ function sectionLines(raw: string, heading: string): string[] {
 
 function stripBullet(value: string) {
   return value.replace(/^[-*]\s+/, '').trim()
+}
+
+function parseRemainingRisks(raw: string, findings: AuditFinding[]): RiskItem[] {
+  const lines = sectionLines(raw, 'Remaining risks').map(stripBullet)
+  const parsed = parseRiskItems(lines)
+  if (parsed.length > 0) return parsed
+
+  if (findings.length > 0) {
+    return findings.map(finding => ({
+      issue: finding.title,
+      severity: String(finding.severity),
+      description: finding.description,
+      recommendation: finding.suggested_fix,
+    }))
+  }
+
+  return []
 }
 
 function inferAgent(type: string) {

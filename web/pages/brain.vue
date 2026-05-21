@@ -1,22 +1,37 @@
 <script setup lang="ts">
-import type { BrainData, LearningEvent, SkillCandidate, KnowledgeGraphResponse } from '~/types/api'
+import type { BrainData, LearningEvent, SkillCandidate } from '~/types/api'
+import { normalizeBrainData } from '~/composables/useBrainStats'
 
 definePageMeta({ layout: 'default' })
 
 const base = useApiBase()
 
-type Tab = 'overview' | 'learning' | 'candidates' | 'feedback' | 'conflicts'
+type Tab = 'overview' | 'memory' | 'learning' | 'candidates' | 'feedback' | 'conflicts'
 const activeTab = ref<Tab>('overview')
 
-// ── Overview ───────────────────────────────────────────────────────────────
-const { data: brainData } = useFetch<BrainData>(`${base}/api/brain`, { server: false })
+const { data: rawBrain } = await useFetch<Record<string, unknown>>(`${base}/api/brain`, { server: false })
+const brainData = computed(() => normalizeBrainData(rawBrain.value as Parameters<typeof normalizeBrainData>[0]))
 
-// ── Learning inbox ────────────────────────────────────────────────────────
-const { data: learningData, refresh: refreshLearning } = useFetch<{ data: LearningEvent[] }>(
+const { data: learningData, refresh: refreshLearning } = await useFetch<{ data: LearningEvent[] }>(
   `${base}/api/learning?status=pending`,
   { server: false, immediate: false },
 )
 const learningEvents = computed(() => learningData.value?.data ?? [])
+
+const { data: candidatesData, refresh: refreshCandidates } = await useFetch<{ data: SkillCandidate[] }>(
+  `${base}/api/skill-candidates?status=pending`,
+  { server: false, immediate: false },
+)
+const candidates = computed(() => candidatesData.value?.data ?? [])
+
+const { data: graphData, pending: graphPending, refresh: refreshGraph } = await useFetch(
+  `${base}/api/knowledge-graph`,
+  { server: false, immediate: false },
+)
+const graphFetched = ref(false)
+
+const conflictNodes = computed(() => (graphData.value?.nodes ?? []).filter((n: { has_conflict?: boolean }) => n.has_conflict))
+const conflictEdges = computed(() => (graphData.value?.edges ?? []).filter((e: { is_conflict?: boolean }) => e.is_conflict))
 
 function removeEvent(id: string) {
   if (learningData.value?.data) {
@@ -24,30 +39,12 @@ function removeEvent(id: string) {
   }
 }
 
-// ── Skill candidates ──────────────────────────────────────────────────────
-const { data: candidatesData, refresh: refreshCandidates } = useFetch<{ data: SkillCandidate[] }>(
-  `${base}/api/skill-candidates?status=pending`,
-  { server: false, immediate: false },
-)
-const candidates = computed(() => candidatesData.value?.data ?? [])
-
 function removeCandidate(id: string) {
   if (candidatesData.value?.data) {
     candidatesData.value.data = candidatesData.value.data.filter(c => c.id !== id)
   }
 }
 
-// ── Conflicts ─────────────────────────────────────────────────────────────
-const { data: graphData, pending: graphPending, refresh: refreshGraph } = useFetch<KnowledgeGraphResponse>(
-  `${base}/api/knowledge-graph`,
-  { server: false, immediate: false },
-)
-const graphFetched = ref(false)
-
-const conflictNodes = computed(() => (graphData.value?.nodes ?? []).filter(n => n.has_conflict === true))
-const conflictEdges = computed(() => (graphData.value?.edges ?? []).filter(e => e.is_conflict === true))
-
-// ── Tab switching ─────────────────────────────────────────────────────────
 async function switchTab(tab: Tab) {
   activeTab.value = tab
   if (tab === 'learning' && !learningData.value) await refreshLearning()
@@ -58,44 +55,59 @@ async function switchTab(tab: Tab) {
   }
 }
 
-const tabs: { key: Tab; label: string }[] = [
-  { key: 'overview', label: 'Overview' },
-  { key: 'learning', label: 'Learning Inbox' },
-  { key: 'candidates', label: 'Skill Candidates' },
-  { key: 'feedback', label: 'Feedback' },
-  { key: 'conflicts', label: 'Conflicts' },
+const tabs: { key: Tab; label: string; icon: string }[] = [
+  { key: 'overview', label: 'Overview', icon: '📊' },
+  { key: 'memory', label: 'Memory network', icon: '🧠' },
+  { key: 'learning', label: 'Learning inbox', icon: '📥' },
+  { key: 'candidates', label: 'Skill candidates', icon: '✨' },
+  { key: 'feedback', label: 'Feedback', icon: '💬' },
+  { key: 'conflicts', label: 'Conflicts', icon: '⚠' },
 ]
 </script>
 
 <template>
   <div class="space-y-6">
-    <div>
-      <h1 class="text-xl font-semibold">Brain</h1>
-      <p class="text-sm text-zinc-400">Learning pipeline, skill candidates, and knowledge conflicts.</p>
-    </div>
+    <BrainHero :stats="brainData" />
 
-    <!-- Tab bar -->
-    <nav class="flex gap-1 rounded-xl border border-zinc-800 bg-zinc-900/50 p-1">
+    <nav class="flex flex-wrap gap-1 rounded-xl border border-zinc-800 bg-zinc-900/50 p-1">
       <button
         v-for="tab in tabs"
         :key="tab.key"
         type="button"
-        :class="activeTab === tab.key
-          ? 'bg-zinc-800 text-white'
-          : 'text-zinc-400 hover:text-zinc-200'"
         class="rounded-lg px-4 py-2 text-sm font-medium transition"
+        :class="activeTab === tab.key
+          ? tab.key === 'memory'
+            ? 'bg-violet-900/60 text-violet-100'
+            : 'bg-zinc-800 text-white'
+          : 'text-zinc-400 hover:text-zinc-200'"
         @click="switchTab(tab.key)"
       >
-        {{ tab.label }}
+        <span class="mr-1.5">{{ tab.icon }}</span>{{ tab.label }}
       </button>
     </nav>
 
-    <!-- Overview -->
-    <div v-if="activeTab === 'overview'">
-      <BrainBrainOverview :brain-data="(brainData as BrainData | null) ?? null" />
+    <div v-if="activeTab === 'overview'" class="space-y-6">
+      <BrainOverview :brain-data="brainData" />
+      <div class="flex flex-wrap gap-3">
+        <NuxtLink
+          to="/knowledge-graph"
+          class="rounded-lg border border-indigo-800/50 bg-indigo-950/30 px-4 py-3 text-sm text-indigo-200 hover:bg-indigo-900/40"
+        >
+          Open full knowledge graph →
+        </NuxtLink>
+        <NuxtLink
+          to="/skills-graph"
+          class="rounded-lg border border-emerald-800/50 bg-emerald-950/30 px-4 py-3 text-sm text-emerald-200 hover:bg-emerald-900/40"
+        >
+          Open skills graph →
+        </NuxtLink>
+      </div>
     </div>
 
-    <!-- Learning Inbox -->
+    <div v-else-if="activeTab === 'memory'">
+      <BrainMemoryGraph />
+    </div>
+
     <div v-else-if="activeTab === 'learning'">
       <BrainLearningInbox
         :events="learningEvents"
@@ -104,7 +116,6 @@ const tabs: { key: Tab; label: string }[] = [
       />
     </div>
 
-    <!-- Skill Candidates -->
     <div v-else-if="activeTab === 'candidates'">
       <BrainSkillCandidateList
         :candidates="candidates"
@@ -113,31 +124,25 @@ const tabs: { key: Tab; label: string }[] = [
       />
     </div>
 
-    <!-- Feedback -->
     <div v-else-if="activeTab === 'feedback'">
       <NuxtLink to="/feedback" class="text-sm text-emerald-400 hover:underline">
-        → View full feedback in Feedback page
+        → View full feedback on the Feedback page
       </NuxtLink>
     </div>
 
-    <!-- Conflicts -->
     <div v-else-if="activeTab === 'conflicts'" class="space-y-6">
       <UiSkeleton v-if="graphPending" class="h-40 w-full" />
-
       <template v-else>
-        <!-- Conflict nodes -->
         <section class="space-y-3">
           <h2 class="text-sm font-semibold text-zinc-300">
             Conflicting nodes
             <span class="ml-1.5 rounded-full bg-red-900/50 px-2 py-0.5 text-xs text-red-400">{{ conflictNodes.length }}</span>
           </h2>
-
           <UiEmptyState
             v-if="conflictNodes.length === 0"
             title="No conflicting nodes."
             hint="All knowledge nodes are consistent."
           />
-
           <ul v-else class="divide-y divide-zinc-800 rounded-xl border border-zinc-800">
             <li
               v-for="node in conflictNodes"
@@ -147,52 +152,10 @@ const tabs: { key: Tab; label: string }[] = [
               <div class="space-y-0.5">
                 <div class="flex items-center gap-2">
                   <span class="font-medium text-white">{{ node.label }}</span>
-                  <span
-                    class="rounded border px-2 py-0.5 text-xs capitalize"
-                    :class="{
-                      'border-emerald-700 text-emerald-400': node.type === 'skill',
-                      'border-blue-700 text-blue-400': node.type === 'run',
-                      'border-purple-700 text-purple-400': node.type === 'memory',
-                      'border-zinc-700 text-zinc-400': !['skill','run','memory'].includes(node.type ?? ''),
-                    }"
-                  >{{ node.type ?? 'unknown' }}</span>
                   <span class="rounded-full bg-red-900/50 px-2 py-0.5 text-xs text-red-400">conflict</span>
                 </div>
-                <p v-if="node.properties?.reason" class="text-xs text-zinc-400">
-                  {{ node.properties.reason }}
-                </p>
-                <p v-else-if="node.metadata?.reason" class="text-xs text-zinc-400">
-                  {{ node.metadata.reason }}
-                </p>
               </div>
               <MemoryConfidencePill v-if="node.confidence !== undefined" :confidence="node.confidence" />
-            </li>
-          </ul>
-        </section>
-
-        <!-- Conflict edges -->
-        <section class="space-y-3">
-          <h2 class="text-sm font-semibold text-zinc-300">
-            Conflicting relationships
-            <span class="ml-1.5 rounded-full bg-red-900/50 px-2 py-0.5 text-xs text-red-400">{{ conflictEdges.length }}</span>
-          </h2>
-
-          <UiEmptyState
-            v-if="conflictEdges.length === 0"
-            title="No conflicting relationships."
-            hint="All knowledge edges are consistent."
-          />
-
-          <ul v-else class="divide-y divide-zinc-800 rounded-xl border border-zinc-800">
-            <li
-              v-for="edge in conflictEdges"
-              :key="edge.id"
-              class="flex flex-wrap items-center gap-2 px-4 py-3 text-sm"
-            >
-              <span class="font-mono text-xs text-zinc-400">{{ edge.source_id }}</span>
-              <span class="text-zinc-500">→</span>
-              <span class="font-mono text-xs text-zinc-400">{{ edge.target_id }}</span>
-              <span v-if="edge.relation" class="rounded border border-red-800 px-2 py-0.5 text-xs text-red-400">{{ edge.relation }}</span>
             </li>
           </ul>
         </section>

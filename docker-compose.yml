@@ -23,6 +23,7 @@ services:
     volumes:
       - ./app:/var/www/html
       - ./:/repo
+      - ../:/workspace
     depends_on:
       postgres:
         condition: service_healthy
@@ -54,11 +55,28 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NUXT_PUBLIC_API_BASE=http://localhost:8000
+      NUXT_PUBLIC_API_BASE: http://localhost:8000
+      HOST: 0.0.0.0
+      PORT: "3000"
+      NODE_ENV: production
     depends_on:
       - nginx
     networks: [bossku]
-    command: sh -c "npm install && npx nuxi dev --host 0.0.0.0 --port 3000"
+    # Production Nuxt (npm run build + node .output/server). Rebuild after UI edits — see README.
+    command:
+      - sh
+      - -ec
+      - |
+        if [ ! -f node_modules/@nuxtjs/tailwindcss/package.json ]; then
+          echo "[bossku-web] Installing dependencies (dev deps required for nuxt build)..."
+          NPM_CONFIG_PRODUCTION=false npm ci 2>/dev/null || NPM_CONFIG_PRODUCTION=false npm install
+        fi
+        if [ ! -f .output/server/index.mjs ]; then
+          echo "[bossku-web] Running npm run build (first start may take a few minutes)..."
+          NPM_CONFIG_PRODUCTION=false npm run build
+        fi
+        echo "[bossku-web] Serving production build on http://0.0.0.0:$${PORT:-3000}"
+        exec node .output/server/index.mjs
 
   postgres:
     image: pgvector/pgvector:pg16

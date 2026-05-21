@@ -4,14 +4,16 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Services\BosskuAi\LlmErrorFormatter;
+use App\Services\BosskuAi\RuntimeSettings;
 use App\Services\Llm\OllamaClient;
 use Illuminate\Http\JsonResponse;
 
 class OllamaHealthController extends Controller
 {
-    public function __invoke(OllamaClient $ollama): JsonResponse
+    public function __invoke(OllamaClient $ollama, RuntimeSettings $settings): JsonResponse
     {
-        $model = (string) config('bossku_models.aliases.kimi-k2.6', 'kimi-k2.6:cloud');
+        $aliases = $settings->modelAliases();
+        $model = $aliases['kimi-k2.6'] ?? 'kimi-k2.6:cloud';
 
         try {
             $out = $ollama->chatWithUsage($model, [
@@ -21,7 +23,7 @@ class OllamaHealthController extends Controller
             return response()->json([
                 'status' => 'ok',
                 'model' => $model,
-                'base_url' => config('bossku.ollama_base_url'),
+                'base_url' => $settings->ollamaBaseUrl(),
                 'preview' => mb_substr(trim($out['text']), 0, 120),
             ]);
         } catch (\Throwable $e) {
@@ -30,7 +32,7 @@ class OllamaHealthController extends Controller
             return response()->json([
                 'status' => 'error',
                 'model' => $model,
-                'base_url' => config('bossku.ollama_base_url'),
+                'base_url' => $settings->ollamaBaseUrl(),
                 'message' => $message,
                 'hint' => str_contains($message, 'subscription')
                     ? 'Upgrade at https://ollama.com/upgrade and ensure OLLAMA_API_KEY is from that account.'

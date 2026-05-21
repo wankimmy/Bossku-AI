@@ -2,7 +2,7 @@
 
 **Date:** 2026-04-06
 **Status:** Accepted
-**Deciders:** Safwan (cofounder), Claude (AI cofounder)
+**Deciders:** Project maintainers, Claude (AI cofounder)
 
 ---
 

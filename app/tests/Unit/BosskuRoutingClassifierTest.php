@@ -2,6 +2,7 @@
 
 namespace Tests\Unit;
 
+use App\Models\BosskuAi\Setting;
 use App\Services\BosskuAi\ModelRoutingConfig;
 use App\Services\BosskuAi\PromptRouteClassifier;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -15,6 +16,7 @@ class BosskuRoutingClassifierTest extends TestCase
         parent::setUp();
 
         // Tests are deterministic: don't depend on container .env BOSSKU_* or live LLM router responses.
+        Setting::setValue('routing_llm_enabled', '0');
         config([
             'bossku_models.router.enabled' => false,
             'bossku_models.executor.default.primary' => 'glm-5.1',
@@ -29,6 +31,16 @@ class BosskuRoutingClassifierTest extends TestCase
         $out = $c->classify($prompt);
 
         return $out['route'];
+    }
+
+    #[Test]
+    public function repo_audit_prompt_requires_executor_and_auditor(): void
+    {
+        $r = $this->classify('help me audit splitlah repo, is there any features u think need to add ? audit full');
+        $this->assertStringContainsString('orchestrator_executor', (string) $r['workflow']);
+        $this->assertTrue($r['needs_executor']);
+        $this->assertTrue($r['needs_auditor']);
+        $this->assertTrue($r['needs_repo_context']);
     }
 
     #[Test]
@@ -129,7 +141,7 @@ class BosskuRoutingClassifierTest extends TestCase
     #[Test]
     public function marketing_post_writer_only(): void
     {
-        $r = $this->classify('Write social media post for Festivent vendor signup');
+        $r = $this->classify('Write social media post for Acme vendor signup');
         $this->assertSame('marketing', $r['task_type']);
         $this->assertSame('writer_only', $r['workflow']);
         $this->assertFalse($r['needs_executor']);

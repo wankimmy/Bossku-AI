@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\ModelRoutingController;
 use App\Http\Controllers\Api\OllamaHealthController;
 use App\Http\Controllers\Api\PlaybookController;
 use App\Http\Controllers\Api\ProjectFilesController;
+use App\Http\Controllers\Api\ProjectRegistryController;
 use App\Http\Controllers\Api\PluginController;
 use App\Http\Controllers\Api\ProviderController;
 use App\Http\Controllers\Api\RunActionController;
@@ -24,6 +25,7 @@ use App\Http\Controllers\Api\SettingsApiController;
 use App\Http\Controllers\Api\SkillCandidateController;
 use App\Http\Controllers\Api\SkillController;
 use App\Http\Controllers\Api\SkillsGraphController;
+use App\Http\Controllers\Api\WorkspaceGraphController;
 use App\Http\Controllers\Api\SoulController;
 use App\Http\Controllers\Api\UsageController;
 use Illuminate\Support\Facades\Route;
@@ -33,9 +35,12 @@ Route::get('/health/ollama', OllamaHealthController::class);
 
 // ── Runs ─────────────────────────────────────────────────────────────────────
 Route::get('/runs/stream', [RunController::class, 'stream']);
+Route::post('/runs/stream', [RunController::class, 'streamPost']);
 Route::post('/runs', [RunController::class, 'store']);
 Route::get('/runs', [RunController::class, 'index']);
 Route::get('/runs/{id}', [RunController::class, 'show']);
+Route::get('/runs/{id}/clarification', [RunController::class, 'clarification']);
+Route::post('/runs/{id}/continue/stream', [RunController::class, 'continueStream']);
 
 // Run sub-resources
 Route::get('/runs/{id}/timeline', [RunController::class, 'timeline']);
@@ -114,6 +119,10 @@ Route::post('/learning/{id}/reject', [LearningController::class, 'reject']);
 
 // ── Brain ─────────────────────────────────────────────────────────────────────
 Route::get('/brain', [BrainController::class, 'index']);
+Route::get('/brain/memory-graph', [BrainController::class, 'memoryGraph']);
+
+// ── Workspace graph (skill-index + SKILL.md for D3 UI) ────────────────────────
+Route::get('/workspace/graph', [WorkspaceGraphController::class, 'index']);
 
 // ── Knowledge graph ───────────────────────────────────────────────────────────
 Route::get('/knowledge-graph', [KnowledgeGraphController::class, 'index']);
@@ -153,6 +162,10 @@ Route::patch('/model-routes/{id}', [ModelRoutingController::class, 'update']);
 Route::delete('/model-routes/{id}', [ModelRoutingController::class, 'destroy']);
 
 // ── Project (repo browser) ───────────────────────────────────────────────────
+Route::get('/project/list', [ProjectRegistryController::class, 'list']);
+Route::post('/project/register', [ProjectRegistryController::class, 'register']);
+Route::post('/project/{id}/activate', [ProjectRegistryController::class, 'activate']);
+Route::delete('/project/{id}', [ProjectRegistryController::class, 'destroy']);
 Route::get('/project', [ProjectFilesController::class, 'root']);
 Route::get('/project/tree', [ProjectFilesController::class, 'tree']);
 Route::get('/project/file', [ProjectFilesController::class, 'file']);
