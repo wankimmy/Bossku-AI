@@ -176,40 +176,47 @@ class BosskuAiSpecSeeder extends Seeder
             Plugin::firstOrCreate(['slug' => $pd['slug']], $pd);
         }
 
-        // ── Knowledge graph (skills only — runs/feedback come from real usage) ─
+        // ── Knowledge graph (idempotent — import/restart may already have nodes) ─
         $skillNodes = [];
         foreach ($skills as $skill) {
-            $skillNodes[$skill->name] = GraphNode::create([
-                'type' => 'skill',
-                'label' => $skill->name,
-                'source_id' => $skill->id,
-                'source_type' => 'skill',
-                'confidence' => $skill->confidence ?? 1.0,
-                'has_conflict' => false,
-                'properties' => [
-                    'quality_score' => $skill->quality_score,
-                    'usage_count' => $skill->usage_count,
+            $skillNodes[$skill->name] = GraphNode::updateOrCreate(
+                [
+                    'source_type' => 'skill',
+                    'source_id' => $skill->id,
                 ],
-            ]);
+                [
+                    'type' => 'skill',
+                    'label' => $skill->name,
+                    'confidence' => $skill->confidence ?? 1.0,
+                    'has_conflict' => false,
+                    'properties' => [
+                        'quality_score' => $skill->quality_score,
+                        'usage_count' => $skill->usage_count,
+                    ],
+                ]
+            );
         }
 
-        $conflictNode = GraphNode::create([
-            'type' => 'skill',
-            'label' => 'debug-php (weak)',
-            'source_id' => $skills[4]->id,
-            'source_type' => 'skill',
-            'confidence' => 0.55,
+        $skillNodes['debug-php']->update([
             'has_conflict' => true,
-            'properties' => ['quality_score' => 55.0, 'reason' => 'low_quality_score'],
+            'confidence' => 0.55,
+            'properties' => [
+                'quality_score' => 55.0,
+                'reason' => 'low_quality_score',
+            ],
         ]);
 
-        GraphEdge::create([
-            'source_node_id' => $skillNodes['debug-php']->id,
-            'target_node_id' => $conflictNode->id,
-            'relation' => 'conflicts_with',
-            'weight' => 0.8,
-            'is_conflict' => true,
-        ]);
+        GraphEdge::firstOrCreate(
+            [
+                'source_node_id' => $skillNodes['debug-php']->id,
+                'target_node_id' => $skillNodes['code-review']->id,
+                'relation' => 'conflicts_with',
+            ],
+            [
+                'weight' => 0.8,
+                'is_conflict' => true,
+            ]
+        );
 
         $this->command?->info('BosskuAI spec seeder: soul, providers, 5 skills, 3 candidates, 7 plugins, skill graph nodes (no demo runs, feedback, or model routes).');
     }

@@ -1,6 +1,6 @@
 export function useApi() {
   const config = useRuntimeConfig()
-  const base = (config.public.apiBase as string) || 'http://localhost:8000'
+  const base = (config.public.apiBase as string) || 'http://localhost:28480'
 
   return {
     get: (path: string, params?: Record<string, unknown>) =>

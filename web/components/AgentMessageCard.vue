@@ -1,21 +1,10 @@
 <script setup lang="ts">
 import type { AgentMessage } from '../types/bossku'
+import { themeForAgent } from '../utils/agentTheme'
 
 const props = defineProps<{ message: AgentMessage; isLast?: boolean; isRunning?: boolean }>()
 
-const agentConfig: Record<string, { color: string; bg: string; border: string; icon: string }> = {
-  orchestrator:    { color: 'text-blue-300',    bg: 'bg-blue-950/60',    border: 'border-blue-800/50',    icon: '🧠' },
-  planner:         { color: 'text-blue-300',    bg: 'bg-blue-950/60',    border: 'border-blue-800/50',    icon: '📋' },
-  executor:        { color: 'text-emerald-300', bg: 'bg-emerald-950/60', border: 'border-emerald-800/50', icon: '⚡' },
-  auditor:         { color: 'text-amber-300',   bg: 'bg-amber-950/60',   border: 'border-amber-800/50',   icon: '🔍' },
-  'security-auditor': { color: 'text-rose-300', bg: 'bg-rose-950/60',   border: 'border-rose-800/50',    icon: '🛡' },
-  'final-reviewer':{ color: 'text-purple-300',  bg: 'bg-purple-950/60',  border: 'border-purple-800/50',  icon: '✅' },
-  router:          { color: 'text-cyan-300',    bg: 'bg-cyan-950/60',    border: 'border-cyan-800/50',    icon: '🔀' },
-  memory:          { color: 'text-zinc-300',    bg: 'bg-zinc-800/60',    border: 'border-zinc-700/50',    icon: '💾' },
-  system:          { color: 'text-zinc-400',    bg: 'bg-zinc-800/40',    border: 'border-zinc-700/40',    icon: '⚙' },
-}
-
-const cfg = computed(() => agentConfig[props.message.agent] ?? agentConfig.system)
+const cfg = computed(() => themeForAgent(props.message.agent))
 
 const statusColor: Record<string, string> = {
   completed: 'bg-emerald-900 text-emerald-300',

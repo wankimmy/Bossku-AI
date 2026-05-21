@@ -46,9 +46,9 @@ case "$1" in php-fpm*|php*)
   echo "[bossku] Importing BosskuAI knowledge (skills, rules, playbooks, checklists)..."
   php artisan bosskuai:import-knowledge --no-interaction || echo "[bossku] Knowledge import skipped or partial (non-fatal)"
 
-  # Seed spec demo data (skip if already seeded — seeder uses firstOrCreate)
+  # Seed spec demo data (idempotent — errors logged to storage/logs/laravel.log)
   echo "[bossku] Seeding spec data..."
-  php artisan db:seed --class=BosskuAiSpecSeeder --force --no-interaction || echo "[bossku] Seeder skipped (non-fatal)"
+  php artisan db:seed --class=BosskuAiSpecSeeder --force --no-interaction
 
   # Bootstrap soul.md into soul_versions table
   echo "[bossku] Bootstrapping soul..."

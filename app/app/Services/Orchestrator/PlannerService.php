@@ -6,6 +6,7 @@ use App\Services\BosskuAi\LlmErrorFormatter;
 use App\Services\BosskuAi\ModelFallbackService;
 use App\Services\BosskuAi\ModelRoutingConfig;
 use App\Services\BosskuAi\RuntimeSettings;
+use App\Services\Project\ProjectFileDiscovery;
 use App\Services\Project\ProjectService;
 use Illuminate\Support\Arr;
 
@@ -15,7 +16,8 @@ class PlannerService
         protected ModelFallbackService $fallback,
         protected ModelRoutingConfig $modelConfig,
         protected RuntimeSettings $settings,
-        protected ProjectService $projects
+        protected ProjectService $projects,
+        protected ProjectFileDiscovery $discovery,
     ) {}
 
     /**
@@ -52,14 +54,23 @@ risk_notes (string[]),
 constraints (string[]),
 handoff_message (string).
 Do not invent file paths; if unknown, use empty target_file_list and set allow_broad_repo_scan true only when strictly necessary.
+Use relative paths from the repository root only (e.g. app/Http/Controllers/FooController.php, config/database.php).
 SYS;
         $system .= "\n\n".$this->projects->evidenceRuleForPrompt();
+
+        $repoIndex = '';
+        try {
+            $repoIndex = $this->discovery->repoIndexForPlanner();
+        } catch (\Throwable $e) {
+            $repoIndex = 'Repo index unavailable: '.$e->getMessage();
+        }
 
         $user = json_encode([
             'prompt' => $prompt,
             'memory' => $memoryContext,
             'skill_router' => Arr::except($routerContext, ['_scores']),
             'routing' => $modelRoute,
+            'repo_index' => $repoIndex,
         ], JSON_THROW_ON_ERROR);
 
         $messages = [

@@ -3,6 +3,7 @@
 namespace App\Services\Governance;
 
 use App\Models\BosskuAi\Approval;
+use App\Services\Project\FileWriteApplier;
 use Illuminate\Support\Carbon;
 
 class ApprovalGateService
@@ -11,7 +12,23 @@ class ApprovalGateService
         'external_http', 'env_mod', 'deployment', 'secret_rotation', 'file_write',
     ];
 
-    public function __construct(private readonly RiskClassifier $classifier) {}
+    public function __construct(
+        private readonly RiskClassifier $classifier,
+        private readonly FileWriteApplier $fileWrites,
+    ) {}
+
+    public function autoApplyFileWritesEnabled(): bool
+    {
+        return (bool) config('bossku.auto_apply_file_writes', true);
+    }
+
+    public function autoApproveAndApply(string $approvalId): Approval
+    {
+        $approval = $this->decide($approvalId, 'auto_approved', 'orchestrator', 'Auto-approved (BOSSKU_AUTO_APPLY_FILE_WRITES)');
+        $this->fileWrites->applyApproval($approval->fresh() ?? $approval);
+
+        return $approval->fresh() ?? $approval;
+    }
 
     public function requiresApproval(
         string $operationType,

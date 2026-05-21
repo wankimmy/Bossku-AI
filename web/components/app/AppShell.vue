@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import type { Command } from './CommandBar.vue'
 
+const route = useRoute()
+const { collapsed: sidebarCollapsed } = useSidebarCollapsed()
 const sidebarOpen = ref(false)
+const isGraphLayout = computed(() => String(route.meta.layout ?? '') === 'graph' || /-graph$/.test(route.path))
 const inspectorOpen = ref(false)
 const inspectorTitle = ref('Inspector')
 const logsOpen = ref(false)
@@ -55,8 +58,18 @@ onUnmounted(() => {
     <AppTopBar @menu-toggle="sidebarOpen = !sidebarOpen" />
 
     <!-- Main content area -->
-    <div class="lg:pl-[220px] pt-12 pb-10 min-h-screen">
-      <main class="p-6">
+    <div
+      class="pt-12 min-h-screen transition-[padding] duration-200 ease-out"
+      :class="[
+        sidebarCollapsed ? 'lg:pl-0' : 'lg:pl-[220px]',
+        isGraphLayout ? 'pb-0' : 'pb-10',
+      ]"
+    >
+      <main
+        :class="isGraphLayout
+          ? 'flex h-[calc(100vh-3rem)] min-h-0 flex-col overflow-hidden p-0'
+          : 'p-6'"
+      >
         <slot />
       </main>
     </div>

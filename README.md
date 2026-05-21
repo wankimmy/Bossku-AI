@@ -73,8 +73,10 @@ docker compose exec backend php artisan db:seed
 docker compose exec backend php artisan bosskuai:import-knowledge --fresh
 ```
 
-- **UI**: http://localhost:3000
-- **API**: http://localhost:8000
+- **UI**: http://localhost:28470
+- **API**: http://localhost:28480
+
+Host ports are set in `docker-compose.yml` (defaults `28470` / `28480` / `28432` / `28379`) so they do not clash with other apps on `3000`, `8000`, `5432`, or `6379`. Override via repo-root `.env`: `BOSSKU_PORT_WEB`, `BOSSKU_PORT_API`, etc.
 
 #### Frontend (production build only)
 
@@ -200,7 +202,7 @@ This header is how you know the skill system, model routing, and memory layer ar
 ## Troubleshooting
 
 - **Bootstrap 500**: rebuild backend — `docker compose build backend && docker compose up -d backend`
-- **Stream run shows no events**: check `docker compose logs -f backend` for permissions issues; validate with `curl -i http://localhost:8000/api/runs`
+- **Stream run shows no events**: check `docker compose logs -f backend` for permissions issues; validate with `curl -i http://localhost:28480/api/runs`
 - **No skills loaded**: `docker compose exec backend php artisan bosskuai:import-knowledge --fresh`
 - **Ollama unreachable**: verify `OLLAMA_BASE_URL` and `OLLAMA_API_KEY` in `app/.env`
 - **Planner JSON failed**: validate `OLLAMA_API_KEY`, `OLLAMA_BASE_URL`, and role model env vars

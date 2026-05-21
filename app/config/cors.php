@@ -6,7 +6,7 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => explode(',', env('CORS_ORIGINS', 'http://localhost:3000')),
+    'allowed_origins' => explode(',', env('CORS_ORIGINS', 'http://localhost:28470')),
 
     'allowed_origins_patterns' => [],
 

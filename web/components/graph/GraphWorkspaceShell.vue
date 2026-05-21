@@ -13,13 +13,16 @@ const props = withDefaults(defineProps<{
   pending?: boolean
   showRebuild?: boolean
   rebuildLabel?: string
+  bootstrapLoading?: boolean
 }>(), {
   showRebuild: false,
   rebuildLabel: 'Rebuild graph',
+  bootstrapLoading: false,
 })
 
 const emit = defineEmits<{
   rebuild: []
+  bootstrapSkills: []
 }>()
 
 const graphRef = ref<{ fitView: () => void } | null>(null)
@@ -67,13 +70,27 @@ const skillsToolkitNotice = computed(() => {
 
 const isEmpty = computed(() => !props.pending && (props.data?.error || (props.data?.nodes?.length ?? 0) === 0))
 
+const skillsIndexError = computed(() => {
+  const err = props.data?.error ?? ''
+  return props.variant === 'skills'
+    && (err === 'skill-index.json missing' || err === 'skill-index.json invalid')
+})
+
+const canBootstrapSkills = computed(
+  () => skillsIndexError.value && Boolean(props.data?.active_repo_root),
+)
+
+const needsActiveProject = computed(
+  () => skillsIndexError.value && !props.data?.active_repo_root,
+)
+
 function onSelect(node: WorkspaceGraphNode | null) {
   selectedNode.value = node
 }
 </script>
 
 <template>
-  <div class="flex h-[calc(100vh-3.5rem)] min-h-[600px] flex-col gap-0 -mx-4 md:-mx-6 lg:-mx-8">
+  <div class="flex h-full min-h-0 w-full flex-col">
     <header class="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-zinc-800 bg-zinc-950 px-4 py-3">
       <div>
         <h1 class="text-lg font-semibold text-zinc-100">
@@ -116,14 +133,44 @@ function onSelect(node: WorkspaceGraphNode | null) {
         ? 'Register Bossku-AI at /project (host path to this repo) and activate it, or ensure BOSSKU_REPO_PATH (/repo in Docker) contains skill-index.json.'
         : 'Run agent tasks or click Rebuild graph to populate nodes from skills, memories, and runs.'"
     >
-      <button
-        v-if="showRebuild"
-        type="button"
-        class="mt-3 rounded-lg bg-indigo-700 px-4 py-2 text-sm text-white"
-        @click="emit('rebuild')"
-      >
-        {{ rebuildLabel }}
-      </button>
+      <div class="mt-4 flex flex-col items-center gap-2 sm:flex-row sm:flex-wrap sm:justify-center">
+        <button
+          v-if="canBootstrapSkills"
+          type="button"
+          class="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-600 disabled:opacity-50"
+          :disabled="props.bootstrapLoading"
+          @click="emit('bootstrapSkills')"
+        >
+          {{ props.bootstrapLoading ? 'Installing skills…' : 'Install BosskuAI skills in active project' }}
+        </button>
+        <NuxtLink
+          v-if="needsActiveProject"
+          to="/project"
+          class="rounded-lg border border-zinc-600 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-800"
+        >
+          Open Project paths
+        </NuxtLink>
+        <NuxtLink
+          v-else-if="canBootstrapSkills"
+          to="/project"
+          class="rounded-lg border border-zinc-600 px-4 py-2 text-sm text-zinc-400 hover:bg-zinc-800"
+        >
+          Project settings
+        </NuxtLink>
+        <button
+          v-if="showRebuild"
+          type="button"
+          class="rounded-lg bg-indigo-700 px-4 py-2 text-sm text-white hover:bg-indigo-600"
+          @click="emit('rebuild')"
+        >
+          {{ rebuildLabel }}
+        </button>
+      </div>
+      <p v-if="canBootstrapSkills && data?.toolkit_repo_root" class="mt-3 max-w-md text-center text-xs text-zinc-500">
+        Copies <code class="text-zinc-400">skill-index.json</code> and
+        <code class="text-zinc-400">ai-assistant/skills</code> from the Bossku-AI toolkit
+        into <code class="text-emerald-500/90">{{ data.active_repo_root }}</code>.
+      </p>
     </UiEmptyState>
 
     <div v-else class="flex min-h-0 flex-1">

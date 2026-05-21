@@ -60,6 +60,21 @@ describe('useRunArtifacts', () => {
     expect(normalized.checklist[0].title).toBe('Inspect files')
     expect(normalized.filesRead[0].path).toContain('UserController')
     expect(normalized.filesChanged[0].summary).toBe('Added policy check')
+
+    const withAfter = useRunArtifacts([
+      {
+        type: 'executor_step_done',
+        agent: 'executor',
+        artifacts: {
+          files_changed: [{
+            path: 'src/New.vue',
+            change_type: 'created',
+            after: 'const x = 1',
+          }],
+        },
+      },
+    ])
+    expect(withAfter.filesChanged[0].after).toBe('const x = 1')
     expect(normalized.commandsRun[0].command).toContain('php artisan test')
     expect(normalized.testsRun[0].name).toBe('UserControllerTest')
     expect(normalized.auditFindings[0].title).toBe('Add auth test')

@@ -12,6 +12,8 @@ const props = defineProps<{
   assumptions?: string[]
   questions: ClarificationQuestion[]
   submitting?: boolean
+  /** When true, render only question UI (for use inside ClarificationModal). */
+  embedded?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -47,11 +49,12 @@ function submit() {
 </script>
 
 <template>
-  <section
-    class="rounded-xl border border-amber-500/40 bg-amber-950/30 p-4 space-y-4"
+  <component
+    :is="embedded ? 'div' : 'section'"
+    :class="embedded ? 'space-y-4' : 'rounded-xl border border-amber-500/40 bg-amber-950/30 p-4 space-y-4'"
     data-testid="clarification-panel"
   >
-    <div>
+    <div v-if="!embedded">
       <p class="text-xs font-semibold uppercase tracking-wider text-amber-400/90">
         Orchestrator needs your input
         <span v-if="stage" class="normal-case text-zinc-500">· {{ stage.replaceAll('_', ' ') }}</span>
@@ -65,6 +68,12 @@ function submit() {
         </li>
       </ul>
     </div>
+
+    <ul v-else-if="assumptions?.length" class="list-disc pl-5 text-xs text-zinc-400 space-y-0.5">
+      <li v-for="(item, idx) in assumptions" :key="idx">
+        {{ item }}
+      </li>
+    </ul>
 
     <article
       v-for="(question, qIdx) in questions"
@@ -124,5 +133,5 @@ function submit() {
     >
       {{ submitting ? 'Continuing run…' : 'Continue' }}
     </button>
-  </section>
+  </component>
 </template>

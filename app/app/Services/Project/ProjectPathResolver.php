@@ -7,7 +7,6 @@ use Illuminate\Support\Str;
 
 class ProjectPathResolver
 {
-    private const SKIP_DIRS = ['.git', 'node_modules', 'vendor', '.nuxt', '.output', 'dist', 'build'];
 
     public function repoRoot(): string
     {
@@ -97,7 +96,9 @@ class ProjectPathResolver
 
     public function shouldSkipDir(string $name): bool
     {
-        return in_array($name, self::SKIP_DIRS, true);
+        $dirs = config('bossku.skip_dirs', []);
+
+        return is_array($dirs) && in_array($name, $dirs, true);
     }
 
     public function unifiedDiff(string $path, string $before, string $after): string

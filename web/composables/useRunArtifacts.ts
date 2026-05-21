@@ -66,6 +66,10 @@ export function useRunArtifacts(items: UnknownRecord[] = []): NormalizedRunArtif
       finalRaw = String(event.output ?? item.output ?? finalRaw)
     }
 
+    if (type === 'clarification_requested') {
+      continue
+    }
+
     if (agent || type) {
       const rawOutput = stringOrUndefined(
         event.error ?? event.message ?? metadata.message ?? metadata.error ?? item.output,
@@ -325,12 +329,15 @@ function asFileChanges(value: unknown): FileChange[] {
   return asArray(value).map((item) => {
     if (typeof item === 'string') return { path: item, change_type: 'modified' }
     const record = asRecord(item) ?? {}
+    const afterRaw = record.after ?? record.new_contents ?? record.contents
     return {
       path: String(record.path ?? ''),
       change_type: String(record.change_type ?? 'modified'),
       summary: stringOrUndefined(record.summary ?? record.description),
       why: stringOrUndefined(record.why),
       diff: stringOrUndefined(record.diff),
+      after: typeof afterRaw === 'string' ? afterRaw : undefined,
+      before: typeof record.before === 'string' ? record.before : undefined,
     }
   }).filter(item => item.path)
 }

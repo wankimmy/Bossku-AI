@@ -53,7 +53,28 @@ class ExecutorEvidenceSupport
         $reads = is_array($execResult['files_read'] ?? null) ? $execResult['files_read'] : [];
 
         return count(array_filter($reads, static function ($item) {
-            return is_array($item) && (string) ($item['path'] ?? '') !== '';
+            if (! is_array($item)) {
+                return false;
+            }
+            if ((string) ($item['path'] ?? '') === '') {
+                return false;
+            }
+
+            return ($item['found'] ?? true) === true;
+        }));
+    }
+
+    /**
+     * @param  array<string, mixed>  $execResult
+     */
+    public static function countFilesReadFailed(array $execResult): int
+    {
+        $reads = is_array($execResult['files_read'] ?? null) ? $execResult['files_read'] : [];
+
+        return count(array_filter($reads, static function ($item) {
+            return is_array($item)
+                && (string) ($item['path'] ?? '') !== ''
+                && ($item['found'] ?? true) !== true;
         }));
     }
 
@@ -68,7 +89,7 @@ class ExecutorEvidenceSupport
 
         $rows = ToolCall::query()
             ->where('run_id', $runId)
-            ->whereIn('tool', ['file_read_safe', 'file_search'])
+            ->whereIn('tool', ['file_read_safe', 'file_search', 'file_glob'])
             ->where('status', 'ok')
             ->orderBy('created_at')
             ->limit(50)
@@ -78,7 +99,7 @@ class ExecutorEvidenceSupport
         foreach ($rows as $row) {
             $payload = is_array($row->payload) ? $row->payload : [];
             $result = is_array($row->result) ? $row->result : [];
-            if ($row->tool === 'file_search') {
+            if ($row->tool === 'file_search' || $row->tool === 'file_glob') {
                 $matches = is_array($result['matches'] ?? null) ? $result['matches'] : [];
                 foreach (array_slice($matches, 0, 20) as $match) {
                     if (! is_array($match)) {
@@ -86,7 +107,7 @@ class ExecutorEvidenceSupport
                     }
                     $path = (string) ($match['path'] ?? '');
                     if ($path !== '') {
-                        $out[] = ['tool' => 'file_search', 'path' => $path, 'found' => true];
+                        $out[] = ['tool' => $row->tool, 'path' => $path, 'found' => true];
                     }
                 }
 

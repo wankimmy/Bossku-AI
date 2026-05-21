@@ -1,32 +1,11 @@
 <script setup lang="ts">
+import { themeForAgent } from '../utils/agentTheme'
 import { humanizeActivitySummary } from '../utils/humanizeOutput'
 
 defineProps<{
   events: Record<string, unknown>[]
   running?: boolean
 }>()
-
-const agentIcon: Record<string, string> = {
-  orchestrator: '🧠', planner: '📋', executor: '⚡',
-  auditor: '🔍', 'security-auditor': '🛡', 'final-reviewer': '✅',
-  router: '🔀', memory: '💾', system: '⚙',
-}
-
-const agentColor: Record<string, string> = {
-  orchestrator: 'text-blue-400',     planner: 'text-blue-400',
-  executor: 'text-emerald-400',      auditor: 'text-amber-400',
-  'security-auditor': 'text-rose-400', 'final-reviewer': 'text-purple-400',
-  router: 'text-cyan-400',           memory: 'text-zinc-400',
-  system: 'text-zinc-500',
-}
-
-const dotColor: Record<string, string> = {
-  orchestrator: 'bg-blue-500',    planner: 'bg-blue-500',
-  executor: 'bg-emerald-500',     auditor: 'bg-amber-500',
-  'security-auditor': 'bg-rose-500', 'final-reviewer': 'bg-purple-500',
-  router: 'bg-cyan-500',          memory: 'bg-zinc-500',
-  system: 'bg-zinc-600',
-}
 
 function inferAgent(type: string): string {
   if (type.includes('planner') || type.includes('orchestrat')) return 'orchestrator'
@@ -54,6 +33,7 @@ function statusDot(evt: Record<string, unknown>): string {
   const s = String(evt.status ?? '')
   if (s === 'ok' || s === 'success' || s === 'completed') return 'bg-emerald-500'
   if (s === 'fail' || s === 'failed' || s === 'error') return 'bg-rose-500'
+  if (s === 'warning') return 'bg-amber-400'
   if (s === 'running') return 'bg-blue-500 animate-pulse'
   return 'bg-zinc-600'
 }
@@ -72,7 +52,7 @@ function statusDot(evt: Record<string, unknown>): string {
       <div class="absolute left-[15px] top-3 bottom-3 w-px bg-zinc-800" />
 
       <div
-        v-for="(evt, idx) in events"
+        v-for="(evt, idx) in events.filter(e => e.type !== 'clarification_requested')"
         :key="idx"
         class="relative flex gap-3 pb-4"
       >
@@ -87,8 +67,8 @@ function statusDot(evt: Record<string, unknown>): string {
         <!-- Content -->
         <div class="flex-1 min-w-0 pt-0.5">
           <div class="flex flex-wrap items-center gap-1.5 mb-0.5">
-            <span class="text-xs" :class="agentColor[inferAgent(String(evt.type ?? ''))] ?? 'text-zinc-400'">
-              {{ agentIcon[inferAgent(String(evt.type ?? ''))] ?? '⚙' }}
+            <span class="text-xs" :class="themeForAgent(inferAgent(String(evt.type ?? ''))).text">
+              {{ themeForAgent(inferAgent(String(evt.type ?? ''))).icon }}
               <span class="font-medium ml-0.5">{{ inferAgent(String(evt.type ?? '')) }}</span>
             </span>
             <span class="text-xs text-zinc-600">·</span>

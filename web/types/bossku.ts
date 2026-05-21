@@ -39,6 +39,8 @@ export interface FileChange {
   summary?: string
   why?: string
   diff?: string
+  after?: string
+  before?: string
 }
 
 export interface CommandRun {

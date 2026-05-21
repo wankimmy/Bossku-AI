@@ -53,7 +53,7 @@ This estimate is shown to the user as: "Estimated cost: $0.042 — $0.089". Runs
 
 ## The /usage Page
 
-The `/usage` page at `http://localhost:3000/usage` provides:
+The `/usage` page at `http://localhost:28470/usage` provides:
 
 - **Period selector** — view usage for today, this week, this month, or a custom date range
 - **Total cost** — sum of all `estimated_cost_usd` for the period

@@ -64,7 +64,7 @@ class RunController extends Controller
             'Cache-Control' => 'no-cache',
             'Connection' => 'keep-alive',
             'X-Accel-Buffering' => 'no',
-            'Access-Control-Allow-Origin' => env('FRONTEND_URL', 'http://localhost:3000'),
+            'Access-Control-Allow-Origin' => env('FRONTEND_URL', 'http://localhost:28470'),
             'Vary' => 'Origin',
         ]);
     }
@@ -129,7 +129,7 @@ class RunController extends Controller
             'Cache-Control' => 'no-cache',
             'Connection' => 'keep-alive',
             'X-Accel-Buffering' => 'no',
-            'Access-Control-Allow-Origin' => env('FRONTEND_URL', 'http://localhost:3000'),
+            'Access-Control-Allow-Origin' => env('FRONTEND_URL', 'http://localhost:28470'),
             'Vary' => 'Origin',
         ]);
     }

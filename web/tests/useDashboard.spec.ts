@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 
 vi.mock('#app', () => ({
-  useRuntimeConfig: () => ({ public: { apiBase: 'http://localhost:8000' } }),
+  useRuntimeConfig: () => ({ public: { apiBase: 'http://localhost:28480' } }),
   useAsyncData: vi.fn(async (key: string, fn: () => Promise<any>) => {
     const data = await fn()
     return { data: { value: data }, pending: { value: false }, error: { value: null }, refresh: vi.fn() }

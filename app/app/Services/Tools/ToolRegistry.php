@@ -6,6 +6,7 @@ use App\Models\BosskuAi\Run;
 use App\Models\BosskuAi\ToolCall;
 use App\Services\Governance\ApprovalGateService;
 use App\Services\Governance\RiskClassifier;
+use App\Services\Project\ProjectFileDiscovery;
 use App\Services\Project\ProjectPathResolver;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -20,11 +21,13 @@ class ToolRegistry
         'db_query',
         'file_read_safe',
         'file_search',
+        'file_glob',
         'file_write_proposed',
     ];
 
     public function __construct(
         protected ProjectPathResolver $paths,
+        protected ProjectFileDiscovery $discovery,
         protected ApprovalGateService $approvals,
         protected RiskClassifier $riskClassifier,
     ) {}
@@ -56,10 +59,22 @@ class ToolRegistry
                 'db_query' => $this->dbQuerySafe($payload),
                 'file_read_safe' => $this->fileReadSafe($payload),
                 'file_search' => $this->fileSearch($payload),
+                'file_glob' => $this->fileGlob($payload),
                 'file_write_proposed' => $this->fileWriteProposed($runId, $payload),
                 default => ['error' => 'Unknown tool'],
             };
+
             $status = 'ok';
+
+            if (
+                $tool === 'file_write_proposed'
+                && is_array($result)
+                && ! empty($result['approval_id'])
+                && $this->approvals->autoApplyFileWritesEnabled()
+            ) {
+                $this->approvals->autoApproveAndApply((string) $result['approval_id']);
+                $result['status'] = 'auto_applied';
+            }
         } catch (\Throwable $e) {
             $result = ['error' => $e->getMessage()];
             $status = 'error';
@@ -149,13 +164,14 @@ class ToolRegistry
             ->in($root)
             ->name($glob)
             ->ignoreUnreadableDirs()
-            ->exclude(['.git', 'node_modules', 'vendor', '.nuxt', '.output', 'dist', 'build']);
+            ->exclude($this->discovery->skipDirs());
 
         $matches = [];
         $pattern = '/'.preg_quote($query, '/').'/i';
+        $limit = $this->discovery->maxSearchMatches();
 
         foreach ($finder as $file) {
-            if (count($matches) >= 50) {
+            if (count($matches) >= $limit) {
                 break;
             }
 
@@ -182,6 +198,20 @@ class ToolRegistry
                 'path' => str_replace(DIRECTORY_SEPARATOR, '/', $relative),
             ];
         }
+
+        return ['matches' => $matches, 'count' => count($matches)];
+    }
+
+    /** @param array<string,mixed> $payload */
+    protected function fileGlob(array $payload): array
+    {
+        $pattern = (string) ($payload['pattern'] ?? $payload['glob'] ?? '');
+        if ($pattern === '') {
+            throw new \InvalidArgumentException('pattern is required.');
+        }
+
+        $paths = $this->discovery->globPaths($pattern);
+        $matches = array_map(static fn (string $path) => ['path' => $path], $paths);
 
         return ['matches' => $matches, 'count' => count($matches)];
     }

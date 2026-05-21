@@ -113,7 +113,8 @@ async function activateProject(id: string) {
       toast.error(res.error)
     }
     else {
-      toast.success(`Active project: ${res.project.name}`)
+      const indexed = res.manifest_total != null ? ` (${res.manifest_total} files indexed)` : ''
+      toast.success(`Active project: ${res.project.name}${indexed}`)
     }
   }
   catch (e: unknown) {
@@ -479,7 +480,13 @@ onMounted(() => {
           <p class="text-xs text-zinc-500">
             Risk: {{ item.risk_level }} · {{ item.status }}
           </p>
-          <FileDiffViewer :diff="item.evidence?.diff" />
+          <FileDiffViewer
+            :path="item.evidence?.path"
+            :change-type="item.evidence?.change_type"
+            :diff="item.evidence?.diff"
+            :after="item.evidence?.after"
+            :before="item.evidence?.before"
+          />
           <div class="flex flex-wrap gap-2">
             <button
               type="button"

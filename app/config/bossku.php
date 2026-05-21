@@ -13,4 +13,25 @@ return [
      * Overridable via Settings → Ollama & Models. PHPUnit forces this off in phpunit.xml.
      */
     'memory_ollama_enabled' => true,
+    /**
+     * When true, orchestrator executor files_changed and file_write_proposed tool calls
+     * are approved and written to the active project without manual Project UI steps.
+     */
+    'auto_apply_file_writes' => env('BOSSKU_AUTO_APPLY_FILE_WRITES', true),
+
+    /** Directories skipped during recursive repo walk (search, glob, manifest). */
+    'skip_dirs' => [
+        '.git',
+        'node_modules',
+        'vendor',
+        '.nuxt',
+        '.output',
+        'dist',
+        'build',
+        'storage',
+        'bootstrap/cache',
+    ],
+    'max_search_matches' => (int) env('BOSSKU_MAX_SEARCH_MATCHES', 100),
+    'max_glob_matches' => (int) env('BOSSKU_MAX_GLOB_MATCHES', 100),
+    'max_manifest_paths' => (int) env('BOSSKU_MAX_MANIFEST_PATHS', 5000),
 ];

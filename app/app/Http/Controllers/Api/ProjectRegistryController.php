@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\BosskuAi\Project;
+use App\Services\Project\ProjectFileDiscovery;
 use App\Services\Project\ProjectPathResolver;
 use App\Services\Project\ProjectService;
+use App\Services\Project\ProjectSkillsBootstrapService;
 use Illuminate\Http\Request;
 
 class ProjectRegistryController extends Controller
@@ -13,6 +15,8 @@ class ProjectRegistryController extends Controller
     public function __construct(
         protected ProjectService $projects,
         protected ProjectPathResolver $paths,
+        protected ProjectSkillsBootstrapService $skillsBootstrap,
+        protected ProjectFileDiscovery $discovery,
     ) {}
 
     public function list()
@@ -68,12 +72,37 @@ class ProjectRegistryController extends Controller
             $error = $e->getMessage();
         }
 
+        $manifestTotal = null;
+        if ($available) {
+            try {
+                $manifestTotal = $this->discovery->manifest('', 1, 1)['total'];
+            } catch (\Throwable) {
+                //
+            }
+        }
+
         return response()->json([
             'project' => $project,
             'repo_root' => $root,
             'available' => $available,
             'error' => $error,
+            'manifest_total' => $manifestTotal,
         ]);
+    }
+
+    public function bootstrapSkills()
+    {
+        try {
+            $result = $this->skillsBootstrap->bootstrapIntoActiveProject();
+        }
+        catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+        catch (\RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 500);
+        }
+
+        return response()->json($result);
     }
 
     public function destroy(string $id)

@@ -164,9 +164,11 @@ Route::delete('/model-routes/{id}', [ModelRoutingController::class, 'destroy']);
 // ── Project (repo browser) ───────────────────────────────────────────────────
 Route::get('/project/list', [ProjectRegistryController::class, 'list']);
 Route::post('/project/register', [ProjectRegistryController::class, 'register']);
+Route::post('/project/skills/bootstrap', [ProjectRegistryController::class, 'bootstrapSkills']);
 Route::post('/project/{id}/activate', [ProjectRegistryController::class, 'activate']);
 Route::delete('/project/{id}', [ProjectRegistryController::class, 'destroy']);
 Route::get('/project', [ProjectFilesController::class, 'root']);
+Route::get('/project/manifest', [ProjectFilesController::class, 'manifest']);
 Route::get('/project/tree', [ProjectFilesController::class, 'tree']);
 Route::get('/project/file', [ProjectFilesController::class, 'file']);
 Route::get('/project/search', [ProjectFilesController::class, 'search']);

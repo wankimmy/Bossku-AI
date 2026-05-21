@@ -67,12 +67,21 @@ export function useProjects() {
       repo_root: string | null
       available: boolean
       error: string | null
+      manifest_total: number | null
     }>(`/project/${id}/activate`)
   }
 
   async function remove(id: string) {
     await api.delete(`/project/${id}`)
     await refresh()
+  }
+
+  async function bootstrapSkills() {
+    return api.post<{
+      message: string
+      project_name: string
+      copied: string[]
+    }>('/project/skills/bootstrap')
   }
 
   return {
@@ -86,5 +95,6 @@ export function useProjects() {
     register,
     activate,
     remove,
+    bootstrapSkills,
   }
 }

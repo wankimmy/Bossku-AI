@@ -1,4 +1,5 @@
-import type { ClarificationAnswer, ClarificationQuestion, ClarificationRequest } from '~/types/clarification'
+import type { ClarificationAnswer, ClarificationRequest } from '~/types/clarification'
+import { buildClarificationRequest, isAwaitingClarification } from '~/utils/clarificationStream'
 
 export type { ClarificationAnswer, ClarificationQuestion, ClarificationRequest } from '~/types/clarification'
 
@@ -62,41 +63,11 @@ export function useRunStream() {
   const activeRunId = ref<string | null>(null)
   let abort: AbortController | null = null
 
-  const awaitingClarification = computed(() => {
-    const last = events.value.at(-1)
-    return last?.type === 'clarification_requested'
-  })
+  const awaitingClarification = computed(() => isAwaitingClarification(events.value))
 
-  const clarificationRequest = computed((): ClarificationRequest | null => {
-    const evt = events.value.findLast(e => e.type === 'clarification_requested')
-    if (!evt) return null
-    const rawQuestions = Array.isArray(evt.questions) ? evt.questions : []
-    const questions: ClarificationQuestion[] = rawQuestions
-      .filter((q): q is Record<string, unknown> => q !== null && typeof q === 'object')
-      .map((q, idx) => ({
-        id: String(q.id ?? `q${idx + 1}`),
-        prompt: String(q.prompt ?? ''),
-        why_it_matters: q.why_it_matters != null ? String(q.why_it_matters) : undefined,
-        allow_free_text: q.allow_free_text !== false,
-        options: (Array.isArray(q.options) ? q.options : [])
-          .filter((o): o is Record<string, unknown> => o !== null && typeof o === 'object')
-          .slice(0, 3)
-          .map((o, oIdx) => ({
-            id: String(o.id ?? `opt${oIdx + 1}`),
-            label: String(o.label ?? ''),
-            recommendation: Boolean(o.recommendation),
-          })),
-      }))
-      .filter(q => q.prompt !== '')
-
-    return {
-      runId: String(evt.run_id ?? activeRunId.value ?? ''),
-      stage: String(evt.stage ?? ''),
-      summary: String(evt.summary ?? evt.message ?? ''),
-      assumptions: Array.isArray(evt.assumptions) ? evt.assumptions.map(String) : [],
-      questions,
-    }
-  })
+  const clarificationRequest = computed((): ClarificationRequest | null =>
+    buildClarificationRequest(events.value, activeRunId.value),
+  )
 
   function trackEvent(evt: SseEvent) {
     if (evt.run_id) activeRunId.value = String(evt.run_id)
@@ -157,7 +128,7 @@ export function useRunStream() {
 
       const lastType = events.value.at(-1)?.type
       const reachedTerminal = lastType !== undefined && TERMINAL_EVENT_TYPES.has(String(lastType))
-      const pausedForClarification = lastType === 'clarification_requested'
+      const pausedForClarification = isAwaitingClarification(events.value)
 
       if (!reachedTerminal && !pausedForClarification) {
         if (events.value.length === 0) {
@@ -219,7 +190,7 @@ export function useRunStream() {
 
       const lastType = events.value.at(-1)?.type
       const reachedTerminal = lastType !== undefined && TERMINAL_EVENT_TYPES.has(String(lastType))
-      const pausedForClarification = lastType === 'clarification_requested'
+      const pausedForClarification = isAwaitingClarification(events.value)
 
       if (!reachedTerminal && !pausedForClarification) {
         error.value = e instanceof Error ? e.message : 'Continue stream was interrupted.'

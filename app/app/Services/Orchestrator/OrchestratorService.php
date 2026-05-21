@@ -16,6 +16,7 @@ use App\Services\BosskuAi\PromptRouteClassifier;
 use App\Services\BosskuAi\RuntimeSettings;
 use App\Services\BosskuAi\SkillRouterService;
 use App\Services\Graph\KnowledgeGraphBuilder;
+use App\Services\Project\ProjectFileDiscovery;
 use App\Services\Project\ProjectPathResolver;
 use App\Services\Project\ProjectService;
 use App\Services\Tools\ToolRegistry;
@@ -44,8 +45,10 @@ class OrchestratorService
         protected ModelRoutingConfig $modelConfig,
         protected RunEventFactory $events,
         protected ProjectPathResolver $paths,
+        protected ProjectFileDiscovery $discovery,
         protected ProjectService $projects,
         protected KnowledgeGraphBuilder $knowledgeGraph,
+        protected ExecutorFileChangeApplier $executorFileApplier,
     ) {}
 
     /**
@@ -481,6 +484,7 @@ class OrchestratorService
         $execResult = ExecutorEvidenceSupport::mergePreflightReads($execResult, $preflightReads);
         $execResult = $this->ensureExecutorEvidence($run, $plan, $execResult, $userPrompt, $emit);
         $modelsResolved['executor'] = (string) ($execResult['_executor_model'] ?? $modelsResolved['executor'] ?? '');
+        $execResult = $this->applyExecutorFileChanges($run, $execResult, $emit);
 
         $exTok = $this->estimateTokens(json_encode($execResult) ?: '');
         $this->logStep($run, 3, 'executor', $modelsResolved['executor'], 'ollama', $skillName, ($execResult['status'] ?? '') === 'failed' ? 'failed' : 'success', json_encode($step), json_encode($execResult), json_encode($execResult), null, null, null, (int) ($execResult['latency_ms'] ?? 0), $exTok, null, $this->events->metadata(
@@ -689,6 +693,7 @@ class OrchestratorService
                 $revisionResult = ExecutorEvidenceSupport::mergePreflightReads($revisionResult, $preflightReads);
                 $revisionResult = $this->ensureExecutorEvidence($run, $plan, $revisionResult, $userPrompt, $emit);
                 $modelsResolved['executor'] = (string) ($revisionResult['_executor_model'] ?? $modelsResolved['executor'] ?? '');
+                $revisionResult = $this->applyExecutorFileChanges($run, $revisionResult, $emit);
                 $revTok = $this->estimateTokens(json_encode($revisionResult) ?: '');
                 $this->logStep($run, 4, 'executor_revision', $modelsResolved['executor'], 'ollama', $skillName, ($revisionResult['status'] ?? '') === 'failed' ? 'failed' : 'success', json_encode($revisionStep), json_encode(['audit' => $lastAudit, 'previous_executor' => $execResult]), json_encode($revisionResult), null, null, null, (int) ($revisionResult['latency_ms'] ?? 0), $revTok, null, $this->events->metadata(
                     'executor',
@@ -961,6 +966,46 @@ class OrchestratorService
         ];
 
         return implode("\n", $lines);
+    }
+
+    /**
+     * @param  array<string, mixed>  $execResult
+     * @return array<string, mixed>
+     */
+    protected function applyExecutorFileChanges(Run $run, array $execResult, ?callable $emit): array
+    {
+        $result = $this->executorFileApplier->applyFromExecutorResult($run->id, $execResult);
+        $execResult = $result['execResult'];
+        $report = $result;
+        unset($report['execResult']);
+        $execResult['_files_applied'] = $report;
+
+        if ($report['applied'] !== [] && $emit !== null) {
+            $emit($this->basePayload($run, 'files_applied', [
+                'agent' => 'executor',
+                'status' => 'success',
+                'summary' => 'Auto-applied '.count($report['applied']).' file(s) to the active project.',
+                'artifacts' => ['files_applied' => $report['applied'], 'files_apply_skipped' => $report['skipped']],
+            ]));
+        }
+
+        if ($report['skipped'] !== [] && $emit !== null) {
+            $emit($this->basePayload($run, 'files_apply_skipped', [
+                'agent' => 'executor',
+                'status' => 'warning',
+                'summary' => count($report['skipped']).' file(s) were NOT written — missing `after` content in executor output.',
+                'artifacts' => ['files_apply_skipped' => $report['skipped']],
+            ]));
+        }
+
+        if ($report['errors'] !== []) {
+            Log::warning('Some executor files were not auto-applied', [
+                'run_id' => $run->id,
+                'errors' => $report['errors'],
+            ]);
+        }
+
+        return $execResult;
     }
 
     protected function formatRiskLine(mixed $risk): string
@@ -1310,21 +1355,11 @@ class OrchestratorService
     }
 
     /**
-     * @return list<array<string, mixed>>
-     */
-    /**
      * @param  array<string, mixed>  $execResult
      * @return array<string, mixed>
      */
     protected function ensureExecutorEvidence(Run $run, array $plan, array $execResult, string $userPrompt, ?callable $emit): array
     {
-        if (ExecutorEvidenceSupport::countFilesRead($execResult) > 0) {
-            return $execResult;
-        }
-
-        $preflight = $this->preflightReadTargetFiles($run, $plan, $emit);
-        $execResult = ExecutorEvidenceSupport::mergePreflightReads($execResult, $preflight);
-
         if (ExecutorEvidenceSupport::countFilesRead($execResult) > 0) {
             return $execResult;
         }
@@ -1336,8 +1371,15 @@ class OrchestratorService
             return $execResult;
         }
 
-        if (RepoTaskDetector::requiresRepositoryAccess($userPrompt)) {
-            $searchReads = $this->auditFileSearchReads($run, $emit);
+        $discoveryReads = $this->runPathDiscovery($run, $plan, $userPrompt, $emit);
+        $execResult = ExecutorEvidenceSupport::mergePreflightReads($execResult, $discoveryReads);
+
+        if (ExecutorEvidenceSupport::countFilesRead($execResult) > 0) {
+            return $execResult;
+        }
+
+        if (RepoTaskDetector::requiresRepositoryAccess($userPrompt) || ($plan['allow_broad_repo_scan'] ?? false)) {
+            $searchReads = $this->auditFileSearchReads($run, $userPrompt, $emit);
             $execResult = ExecutorEvidenceSupport::mergePreflightReads($execResult, $searchReads);
         }
 
@@ -1360,8 +1402,6 @@ class OrchestratorService
             'routes/web.php',
             'routes/api.php',
             '.env.example',
-            'src',
-            'app',
         ];
 
         $reads = [];
@@ -1386,41 +1426,101 @@ class OrchestratorService
     /**
      * @return list<array<string, mixed>>
      */
-    protected function auditFileSearchReads(Run $run, ?callable $emit): array
+    protected function auditFileSearchReads(Run $run, string $userPrompt, ?callable $emit): array
     {
-        $inv = $this->tools->invoke($run->id, null, [
-            'tool' => 'file_search',
-            'payload' => ['q' => 'function', 'glob' => '*'],
-        ], $emit);
-
         $reads = [];
-        if (($inv['status'] ?? '') !== 'ok') {
-            return $reads;
+        $terms = $this->discovery->extractSymbolsFromText($userPrompt);
+        if ($terms === []) {
+            $terms = ['class', 'function'];
         }
 
-        $result = is_array($inv['result'] ?? null) ? $inv['result'] : [];
-        $matches = is_array($result['matches'] ?? null) ? $result['matches'] : [];
-        foreach (array_slice($matches, 0, 15) as $match) {
-            if (! is_array($match)) {
+        foreach (array_slice($terms, 0, 8) as $term) {
+            $inv = $this->tools->invoke($run->id, null, [
+                'tool' => 'file_search',
+                'payload' => ['q' => $term, 'glob' => '*.php'],
+            ], $emit);
+
+            if (($inv['status'] ?? '') !== 'ok') {
                 continue;
             }
-            $path = (string) ($match['path'] ?? '');
-            if ($path === '') {
-                continue;
+
+            $result = is_array($inv['result'] ?? null) ? $inv['result'] : [];
+            $matches = is_array($result['matches'] ?? null) ? $result['matches'] : [];
+            foreach (array_slice($matches, 0, 10) as $match) {
+                if (! is_array($match)) {
+                    continue;
+                }
+                $path = (string) ($match['path'] ?? '');
+                if ($path === '') {
+                    continue;
+                }
+                $reads = array_merge($reads, $this->readTargetPath($run, $path, 'audit file_search: '.$term, $emit));
             }
-            $reads[] = [
-                'path' => $path,
-                'found' => true,
-                'reason' => 'repo audit file_search',
-                'tool_status' => 'ok',
-            ];
         }
 
         if ($reads !== []) {
             $this->emit($emit, $this->basePayload($run, 'audit_file_search_done', [
                 'status' => 'success',
-                'summary' => count($reads).' file(s) matched audit file_search.',
+                'summary' => count(array_filter($reads, static fn ($r) => is_array($r) && ($r['found'] ?? false))) .' file(s) read from audit file_search.',
                 'artifacts' => ['file_search_reads' => $reads],
+            ]));
+        }
+
+        return $reads;
+    }
+
+    /**
+     * @param  array<string, mixed>  $plan
+     * @return list<array<string, mixed>>
+     */
+    protected function runPathDiscovery(Run $run, array $plan, string $userPrompt, ?callable $emit): array
+    {
+        $resolved = [];
+        $text = $userPrompt.' '.json_encode($plan);
+        foreach ($this->discovery->extractSymbolsFromText($text) as $symbol) {
+            $path = $this->discovery->resolvePathHint($symbol);
+            if ($path !== null) {
+                $resolved[$path] = 'symbol: '.$symbol;
+            }
+        }
+
+        if ($plan['allow_broad_repo_scan'] ?? false) {
+            foreach ($this->discovery->globPaths('app/Http/Controllers/*.php', 15) as $path) {
+                $resolved[$path] = 'broad repo scan';
+            }
+        }
+
+        $reads = [];
+        foreach (array_slice($resolved, 0, 15, true) as $path => $reason) {
+            $reads = array_merge($reads, $this->readTargetPath($run, $path, (string) $reason, $emit));
+        }
+
+        foreach (array_slice($this->discovery->extractSymbolsFromText($text), 0, 5) as $symbol) {
+            $inv = $this->tools->invoke($run->id, null, [
+                'tool' => 'file_glob',
+                'payload' => ['pattern' => '**/*'.$symbol.'*'],
+            ], $emit);
+            if (($inv['status'] ?? '') !== 'ok') {
+                continue;
+            }
+            $result = is_array($inv['result'] ?? null) ? $inv['result'] : [];
+            $matches = is_array($result['matches'] ?? null) ? $result['matches'] : [];
+            foreach (array_slice($matches, 0, 5) as $match) {
+                $path = is_array($match) ? (string) ($match['path'] ?? '') : '';
+                if ($path !== '') {
+                    $reads = array_merge($reads, $this->readTargetPath($run, $path, 'file_glob: '.$symbol, $emit));
+                }
+            }
+        }
+
+        if ($reads !== [] || $resolved !== []) {
+            $this->emit($emit, $this->basePayload($run, 'path_discovery', [
+                'status' => 'success',
+                'summary' => count($resolved).' path(s) resolved; '.ExecutorEvidenceSupport::countFilesRead(['files_read' => $reads]).' file(s) read.',
+                'artifacts' => [
+                    'resolved_paths' => array_keys($resolved),
+                    'discovery_reads' => $reads,
+                ],
             ]));
         }
 
@@ -1468,17 +1568,33 @@ class OrchestratorService
             if (! is_array($target)) {
                 continue;
             }
-            $path = (string) ($target['path'] ?? '');
-            $reads = array_merge(
-                $reads,
-                $this->readTargetPath($run, $path, (string) ($target['reason'] ?? 'planner target'), $emit),
-            );
+            $hint = (string) ($target['path'] ?? '');
+            $reason = (string) ($target['reason'] ?? 'planner target');
+            $resolved = $this->discovery->resolvePathHint($hint);
+            $path = $resolved ?? $hint;
+            $reads = array_merge($reads, $this->readTargetPath($run, $path, $reason, $emit));
         }
+
+        $routesRead = false;
+        foreach ($reads as $item) {
+            if (is_array($item) && ($item['path'] ?? '') === 'routes/web.php' && ($item['found'] ?? false)) {
+                $routesRead = true;
+                break;
+            }
+        }
+
+        if ($routesRead) {
+            foreach (array_slice($this->discovery->controllersFromRoutesFile(), 0, 12) as $controllerPath) {
+                $reads = array_merge($reads, $this->readTargetPath($run, $controllerPath, 'routes/web.php controller', $emit));
+            }
+        }
+
+        $foundCount = count(array_filter($reads, static fn ($r) => is_array($r) && ($r['found'] ?? false)));
 
         if ($reads !== []) {
             $this->emit($emit, $this->basePayload($run, 'preflight_reads_done', [
                 'status' => 'success',
-                'summary' => count($reads).' file(s) read from the active project.',
+                'summary' => $foundCount.' file(s) read from the active project ('.count($reads).' probed).',
                 'artifacts' => ['preflight_reads' => $reads],
             ]));
         }

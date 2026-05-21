@@ -87,7 +87,7 @@ Output format (JSON only, no markdown):
 {
   "status": "success|partial|failed",
   "files_read": [{"path": "relative/path", "reason": "why this file was inspected"}],
-  "files_changed": [{"path": "relative/path", "change_type": "created|modified|deleted|renamed", "summary": "what changed", "why": "why it changed", "diff": "unified diff when available"}],
+  "files_changed": [{"path": "relative/path", "change_type": "created|modified|deleted|renamed", "summary": "what changed", "why": "why it changed", "after": "full new file contents for created/modified (required for disk write)", "diff": "unified diff optional if after omitted"}],
   "commands_run": [{"command": "command", "status": "passed|failed|skipped", "exit_code": 0, "duration_ms": 0, "output_summary": "short summary"}],
   "tests_run": [{"name": "test or suite name", "status": "passed|failed|skipped", "summary": "short summary"}],
   "tests_result": "passed|failed|not_run",
@@ -194,6 +194,7 @@ Markdown;
                 'change_type' => (string) ($item['change_type'] ?? 'modified'),
                 'summary' => (string) ($item['summary'] ?? $item['description'] ?? ''),
                 'why' => (string) ($item['why'] ?? ''),
+                'after' => isset($item['after']) ? (string) $item['after'] : (isset($item['new_contents']) ? (string) $item['new_contents'] : (isset($item['contents']) ? (string) $item['contents'] : null)),
                 'diff' => $item['diff'] ?? null,
             ];
         }, is_array($result['files_changed'] ?? null) ? $result['files_changed'] : []), fn ($item) => $item !== null && $item['path'] !== ''));

@@ -7,6 +7,8 @@ use App\Models\BosskuAi\Approval;
 use App\Models\BosskuAi\Run;
 use App\Services\Governance\ApprovalGateService;
 use App\Services\Governance\RiskClassifier;
+use App\Services\Project\FileWriteApplier;
+use App\Services\Project\ProjectFileDiscovery;
 use App\Services\Project\ProjectPathResolver;
 use App\Services\Project\ProjectService;
 use Illuminate\Http\Request;
@@ -19,13 +21,13 @@ class ProjectFilesController extends Controller
 
     private const MAX_TREE_ENTRIES = 500;
 
-    private const MAX_SEARCH_MATCHES = 100;
-
     public function __construct(
         protected ProjectPathResolver $paths,
+        protected ProjectFileDiscovery $discovery,
         protected ProjectService $projects,
         protected ApprovalGateService $approvals,
         protected RiskClassifier $riskClassifier,
+        protected FileWriteApplier $fileWrites,
     ) {}
 
     public function root()
@@ -141,6 +143,31 @@ class ProjectFilesController extends Controller
         ]);
     }
 
+    public function manifest(Request $request)
+    {
+        $validated = $request->validate([
+            'path' => 'nullable|string|max:2000',
+            'page' => 'nullable|integer|min:1',
+            'per_page' => 'nullable|integer|min:1|max:500',
+            'ext' => 'nullable|string|max:20',
+        ]);
+
+        try {
+            $result = $this->discovery->manifest(
+                (string) ($validated['path'] ?? ''),
+                (int) ($validated['page'] ?? 1),
+                (int) ($validated['per_page'] ?? 200),
+                isset($validated['ext']) ? (string) $validated['ext'] : null,
+            );
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        } catch (\Throwable $e) {
+            return response()->json(['message' => $e->getMessage(), 'available' => false], 422);
+        }
+
+        return response()->json($result);
+    }
+
     public function search(Request $request)
     {
         $validated = $request->validate([
@@ -157,13 +184,14 @@ class ProjectFilesController extends Controller
             ->in($root)
             ->name($glob)
             ->ignoreUnreadableDirs()
-            ->exclude(self::excludedFinderDirs());
+            ->exclude($this->discovery->skipDirs());
 
         $matches = [];
         $pattern = '/'.preg_quote($query, '/').'/i';
+        $limit = $this->discovery->maxSearchMatches();
 
         foreach ($finder as $file) {
-            if (count($matches) >= self::MAX_SEARCH_MATCHES) {
+            if (count($matches) >= $limit) {
                 break;
             }
 
@@ -300,37 +328,24 @@ class ProjectFilesController extends Controller
             return response()->json(['message' => 'Not a file write approval.'], 422);
         }
 
-        if ($approval->status !== 'approved') {
+        if (! in_array($approval->status, ['approved', 'auto_approved'], true)) {
             return response()->json(['message' => 'Approval must be approved before applying.'], 422);
         }
 
-        /** @var array<string, mixed> $evidence */
-        $evidence = $approval->evidence ?? [];
-        $path = (string) ($evidence['path'] ?? '');
-        $after = (string) ($evidence['after'] ?? '');
-
-        if ($path === '') {
-            return response()->json(['message' => 'Missing file path in approval evidence.'], 422);
+        try {
+            $written = $this->fileWrites->applyApproval($approval);
         }
-
-        $resolved = $this->paths->resolve($path);
-        $dir = dirname($resolved['absolute']);
-        if (! is_dir($dir)) {
-            File::ensureDirectoryExists($dir);
+        catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
         }
-
-        if (file_put_contents($resolved['absolute'], $after) === false) {
-            return response()->json(['message' => 'Failed to write file.'], 500);
+        catch (\RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 500);
         }
-
-        $approval->update([
-            'metadata' => array_merge($approval->metadata ?? [], ['applied_at' => now()->toIso8601String()]),
-        ]);
 
         return response()->json([
             'message' => 'File written.',
-            'path' => $resolved['relative'],
-            'approval' => $approval,
+            'path' => $written['relative'],
+            'approval' => $approval->fresh(),
         ]);
     }
 
@@ -359,11 +374,4 @@ class ProjectFilesController extends Controller
         ]);
     }
 
-    /**
-     * @return list<string>
-     */
-    private static function excludedFinderDirs(): array
-    {
-        return ['.git', 'node_modules', 'vendor', '.nuxt', '.output', 'dist', 'build', 'storage', 'bootstrap/cache'];
-    }
 }

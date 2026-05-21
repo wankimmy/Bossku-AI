@@ -1,18 +1,55 @@
 <script setup lang="ts">
 const emit = defineEmits<{ menuToggle: [] }>()
 const { status: activeRunStatus } = useActiveRun()
+const { collapsed: sidebarCollapsed, toggle: toggleSidebar } = useSidebarCollapsed()
 </script>
 
 <template>
-  <header class="fixed top-0 left-0 right-0 z-20 h-12 bg-zinc-900 border-b border-zinc-800 flex items-center px-4 gap-4 lg:pl-[236px]">
-    <!-- Left: brand + mobile menu -->
-    <div class="flex items-center gap-3">
+  <header
+    class="fixed top-0 left-0 right-0 z-20 h-12 bg-zinc-900 border-b border-zinc-800 flex items-center px-4 gap-3 transition-[padding] duration-200 ease-out"
+    :class="sidebarCollapsed ? 'lg:pl-4' : 'lg:pl-[236px]'"
+  >
+    <!-- Left: sidebar toggles + brand -->
+    <div class="flex items-center gap-2">
       <button
         type="button"
-        class="lg:hidden text-zinc-400 hover:text-zinc-100 text-sm"
+        class="lg:hidden rounded-md border border-zinc-700 p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+        aria-label="Open menu"
         @click="emit('menuToggle')"
       >
-        ☰
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        class="hidden lg:flex rounded-md border border-zinc-700 p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+        :title="sidebarCollapsed ? 'Show sidebar' : 'Hide sidebar'"
+        :aria-label="sidebarCollapsed ? 'Show sidebar' : 'Hide sidebar'"
+        @click="toggleSidebar"
+      >
+        <svg
+          v-if="sidebarCollapsed"
+          class="h-4 w-4"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          aria-hidden="true"
+        >
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+        </svg>
+        <svg
+          v-else
+          class="h-4 w-4"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          aria-hidden="true"
+        >
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+        </svg>
       </button>
       <NuxtLink to="/dashboard" class="text-sm font-bold text-emerald-400 tracking-tight lg:hidden">
         BosskuAI

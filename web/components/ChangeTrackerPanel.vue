@@ -34,7 +34,14 @@ defineProps<{
           Files changed
         </h3>
         <div v-if="filesChanged.length" class="mt-2 space-y-3">
-          <article v-for="file in filesChanged" :key="`${file.change_type}:${file.path}`" class="rounded-md border border-zinc-200 p-2 dark:border-zinc-800">
+          <article
+            v-for="file in filesChanged"
+            :key="`${file.change_type}:${file.path}`"
+            class="rounded-md border p-2 dark:border-zinc-800"
+            :class="file.change_type === 'created'
+              ? 'border-emerald-700/40 bg-emerald-950/10'
+              : 'border-zinc-200'"
+          >
             <div class="flex flex-wrap items-center gap-2">
               <span class="rounded border border-zinc-300 px-1.5 py-0.5 text-[11px] dark:border-zinc-700">{{ file.change_type }}</span>
               <span class="font-mono text-xs">{{ file.path }}</span>
@@ -45,7 +52,14 @@ defineProps<{
             <p v-if="file.why" class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
               {{ file.why }}
             </p>
-            <FileDiffViewer class="mt-2" :diff="file.diff" />
+            <FileDiffViewer
+              class="mt-2"
+              :path="file.path"
+              :change-type="file.change_type"
+              :diff="file.diff"
+              :after="file.after"
+              :before="file.before"
+            />
           </article>
         </div>
         <p v-else class="mt-2 text-sm text-zinc-500">

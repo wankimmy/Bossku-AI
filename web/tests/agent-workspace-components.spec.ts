@@ -59,6 +59,35 @@ describe('agent workspace components', () => {
     expect(wrapper.text()).toContain('php artisan test')
   })
 
+  it('renders colored diff lines for modifications', () => {
+    const wrapper = mount(FileDiffViewer, {
+      props: {
+        path: 'app/Foo.php',
+        changeType: 'modified',
+        diff: '--- app/Foo.php\n+++ app/Foo.php\n-old line\n+new line',
+      },
+    })
+
+    expect(wrapper.find('.text-emerald-300').exists()).toBe(true)
+    expect(wrapper.find('.text-rose-300').exists()).toBe(true)
+    expect(wrapper.text()).toContain('new line')
+    expect(wrapper.text()).toContain('old line')
+  })
+
+  it('renders new file with green lines from after content', () => {
+    const wrapper = mount(FileDiffViewer, {
+      props: {
+        path: 'src/Pricing.vue',
+        changeType: 'created',
+        after: 'export default {}\n',
+      },
+    })
+
+    expect(wrapper.text()).toContain('New file')
+    expect(wrapper.find('.text-emerald-300').exists()).toBe(true)
+    expect(wrapper.text()).toContain('export default {}')
+  })
+
   it('renders audit findings and final result summary', () => {
     const audit = mount(AuditFindingsPanel, {
       props: {

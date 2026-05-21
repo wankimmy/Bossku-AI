@@ -2,6 +2,8 @@
 defineProps<{ open?: boolean }>()
 const emit = defineEmits<{ toggle: [] }>()
 
+const { collapsed, toggle: toggleCollapsed } = useSidebarCollapsed()
+
 const links = [
   { to: '/', label: '🏠 Chat' },
   { to: '/conversations', label: '💬 Conversations' },
@@ -25,9 +27,23 @@ const links = [
 
 <template>
   <!-- Desktop sidebar -->
-  <aside class="hidden lg:flex flex-col w-[220px] min-h-screen bg-zinc-950 border-r border-zinc-800 fixed left-0 top-0 z-30">
-    <div class="flex items-center justify-between px-4 h-12 border-b border-zinc-800 shrink-0">
-      <span class="text-sm font-bold text-emerald-400 tracking-tight">BosskuAI</span>
+  <aside
+    class="hidden lg:flex flex-col w-[220px] min-h-screen bg-zinc-950 border-r border-zinc-800 fixed left-0 top-0 z-30 transition-transform duration-200 ease-out"
+    :class="collapsed ? '-translate-x-full' : 'translate-x-0'"
+  >
+    <div class="flex items-center justify-between gap-2 px-3 h-12 border-b border-zinc-800 shrink-0">
+      <span class="text-sm font-bold text-emerald-400 tracking-tight truncate">BosskuAI</span>
+      <button
+        type="button"
+        class="shrink-0 rounded-md border border-zinc-700 p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+        title="Hide sidebar"
+        aria-label="Hide sidebar"
+        @click="toggleCollapsed"
+      >
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+        </svg>
+      </button>
     </div>
     <nav class="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
       <NuxtLink

@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { useLandingChat } from '~/composables/useLandingChat'
+import { parseClarificationApiResponse } from '~/utils/clarificationFromApi'
+import type { ClarificationRequest } from '~/types/clarification'
 
 definePageMeta({ layout: 'default' })
 
@@ -13,11 +15,15 @@ const {
   error,
   awaitingClarification,
   clarificationRequest,
+  activeRunId,
   start,
   continueRun,
   stop,
 } = useRunStream()
 const submittingClarification = ref(false)
+const apiClarificationRequest = ref<ClarificationRequest | null>(null)
+const apiClarificationLoading = ref(false)
+const apiClarificationFetchedFor = ref<string | null>(null)
 const toast = useToast()
 type PanelTab = 'agents' | 'plan' | 'changes' | 'audit' | 'memory'
 type MobileTab = 'chat' | PanelTab
@@ -140,10 +146,59 @@ async function syncRun() {
   }
 }
 
+const effectiveClarificationRequest = computed((): ClarificationRequest | null =>
+  clarificationRequest.value ?? apiClarificationRequest.value,
+)
+
+const showClarificationModal = computed(
+  () => effectiveClarificationRequest.value !== null,
+)
+
+const resolvedRunId = computed(() =>
+  activeRunId.value
+  ?? String(events.value.find(e => e.run_id)?.run_id ?? ''),
+)
+
+watchEffect(async () => {
+  const runId = resolvedRunId.value
+  const awaiting = awaitingClarification.value || status.value === 'awaiting_input'
+
+  if (!awaiting || !runId) {
+    apiClarificationRequest.value = null
+    apiClarificationFetchedFor.value = null
+    return
+  }
+
+  if (clarificationRequest.value !== null) {
+    apiClarificationRequest.value = null
+    apiClarificationFetchedFor.value = null
+    return
+  }
+
+  if (apiClarificationFetchedFor.value === runId || apiClarificationLoading.value) {
+    return
+  }
+
+  apiClarificationFetchedFor.value = runId
+  apiClarificationLoading.value = true
+  try {
+    const base = useApiBase()
+    const data = await $fetch<Record<string, unknown>>(`${base}/api/runs/${runId}/clarification`)
+    if (resolvedRunId.value !== runId) return
+    apiClarificationRequest.value = parseClarificationApiResponse(data, runId)
+  }
+  catch {
+    apiClarificationRequest.value = null
+  }
+  finally {
+    apiClarificationLoading.value = false
+  }
+})
+
 async function submitClarification(
   answers: Array<{ question_id: string; option_id?: string; free_text?: string }>,
 ) {
-  const req = clarificationRequest.value
+  const req = effectiveClarificationRequest.value
   if (!req?.runId || submittingClarification.value) return
   submittingClarification.value = true
   focusAgentsPanel()
@@ -161,7 +216,7 @@ function submit() {
   const userText = prompt.value.trim()
   if (running.value || submittingClarification.value) return
 
-  if (awaitingClarification.value) {
+  if (showClarificationModal.value) {
     return
   }
 
@@ -268,8 +323,9 @@ watch(
   () => scrollChatToBottom(),
 )
 
-watch(awaitingClarification, (paused) => {
-  if (paused) scrollChatToBottom()
+watch(showClarificationModal, (open) => {
+  if (!open) return
+  mobileTab.value = 'chat'
 })
 
 watch(
@@ -350,18 +406,18 @@ watch(
             </button>
           </p>
           <p
-            v-if="awaitingClarification"
+            v-if="showClarificationModal"
             class="mt-2 rounded-md border border-amber-500/30 bg-amber-950/20 px-3 py-2 text-xs text-amber-200/90"
           >
-            Answer using the choices in the chat below, then press Continue.
+            Answer in the popup (3 choices + text field), then press Continue.
           </p>
           <textarea
             id="run-prompt"
             v-model="prompt"
             class="mt-2 block min-h-[110px] w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 disabled:cursor-not-allowed disabled:opacity-60"
-            :disabled="awaitingClarification"
-            :placeholder="awaitingClarification
-              ? 'Use the clarification panel in the chat thread below…'
+            :disabled="showClarificationModal"
+            :placeholder="showClarificationModal
+              ? 'Answer in the clarification popup to continue…'
               : 'Describe the engineering task or ask a follow-up...'"
             @keydown.enter.exact.prevent="submit"
           />
@@ -369,7 +425,7 @@ watch(
             <button
               type="button"
               class="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-50 dark:bg-emerald-600 dark:hover:bg-emerald-700"
-              :disabled="running || submittingClarification || awaitingClarification || !prompt.trim()"
+              :disabled="running || submittingClarification || showClarificationModal || !prompt.trim()"
               @click="submit"
             >
               Run task
@@ -420,17 +476,6 @@ watch(
             v-for="turn in chat.displayTurns.value"
             :key="turn.id"
             :turn="turn"
-          />
-
-          <ClarificationPanel
-            v-if="clarificationRequest && awaitingClarification"
-            :run-id="clarificationRequest.runId"
-            :stage="clarificationRequest.stage"
-            :summary="clarificationRequest.summary"
-            :assumptions="clarificationRequest.assumptions"
-            :questions="clarificationRequest.questions"
-            :submitting="submittingClarification || running"
-            @submit="submitClarification"
           />
 
           <div
@@ -524,7 +569,18 @@ watch(
       </aside>
     </div>
 
-    <div class="fixed inset-x-0 bottom-0 z-30 border-t border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-950 md:hidden">
+    <ClarificationModal
+      v-if="effectiveClarificationRequest"
+      :open="showClarificationModal"
+      :request="effectiveClarificationRequest"
+      :submitting="submittingClarification || running"
+      @submit="submitClarification"
+    />
+
+    <div
+      v-if="!showClarificationModal"
+      class="fixed inset-x-0 bottom-0 z-30 border-t border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-950 md:hidden"
+    >
       <button
         type="button"
         class="w-full rounded-lg bg-emerald-700 px-3 py-2 text-sm font-medium text-white disabled:opacity-40"
