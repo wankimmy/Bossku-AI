@@ -2,12 +2,16 @@
 
 namespace App\Services\BosskuAi;
 
+use App\Models\BosskuAi\ModelRoute;
+use App\Services\Llm\DTO\LlmRequest;
+use App\Services\Llm\ModelRouter;
 use App\Services\Llm\OllamaClient;
 
 class LlmGateway
 {
     public function __construct(
         protected OllamaClient $ollama,
+        protected ?ModelRouter $router = null,
     ) {}
 
     /**
@@ -19,8 +23,24 @@ class LlmGateway
         array $messages,
         ?float $temperature = 0.2,
         ?int $maxTokensAnthropic = null,
-        ?string $forceProvider = null
+        ?string $forceProvider = null,
+        string $role = 'coder',
+        ?string $runId = null,
+        ?string $runStepId = null,
     ): array {
+        if ($this->router !== null && $this->shouldDelegate($role, $forceProvider)) {
+            $request = LlmRequest::make($model, $messages, [
+                'role'           => $role,
+                'temperature'    => $temperature,
+                'max_tokens'     => $maxTokensAnthropic,
+                'force_provider' => $forceProvider,
+                'run_id'         => $runId,
+                'run_step_id'    => $runStepId,
+            ]);
+
+            return $this->router->complete($request)->toArray();
+        }
+
         $logicalModel = trim($model);
         $resolved = $this->resolveAlias($logicalModel);
         $this->assertOllamaModel($resolved);
@@ -35,6 +55,15 @@ class LlmGateway
             'model_logical' => $logicalModel,
             'model_resolved' => $resolved,
         ];
+    }
+
+    protected function shouldDelegate(string $role, ?string $forceProvider): bool
+    {
+        if ($forceProvider !== null) {
+            return true;
+        }
+
+        return ModelRoute::where('role', $role)->where('is_active', true)->exists();
     }
 
     public function resolveProvider(string $model): string

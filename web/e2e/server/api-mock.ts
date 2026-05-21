@@ -251,6 +251,203 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
     return
   }
 
+  // ── New spec endpoints ────────────────────────────────────────────────────
+
+  if (pathname === '/api/dashboard' && method === 'GET') {
+    json(res, {
+      stats: { total_runs: 5, runs_today: 2, active_runs: 0, skills_count: 5, memory_count: 4 },
+      recent_runs: [],
+      agent_statuses: [],
+    })
+    return
+  }
+
+  if (pathname === '/api/agents' && method === 'GET') {
+    json(res, { data: [
+      { role: 'planner', run_count: 5, avg_latency_ms: 1200, last_used_at: null },
+      { role: 'coder', run_count: 5, avg_latency_ms: 3400, last_used_at: null },
+      { role: 'auditor', run_count: 5, avg_latency_ms: 900, last_used_at: null },
+    ]})
+    return
+  }
+
+  if (pathname.startsWith('/api/agents/') && method === 'GET') {
+    json(res, { role: pathname.split('/').pop(), run_count: 0, avg_latency_ms: 0 })
+    return
+  }
+
+  if (pathname === '/api/logs' && method === 'GET') {
+    json(res, { data: [], meta: { total: 0, current_page: 1 } })
+    return
+  }
+
+  if (pathname === '/api/usage' && method === 'GET') {
+    json(res, { data: [], meta: { total: 0, current_page: 1 } })
+    return
+  }
+
+  if (pathname === '/api/usage/summary' && method === 'GET') {
+    json(res, { total_input_tokens: 0, total_output_tokens: 0, total_cost_usd: 0, by_provider: [] })
+    return
+  }
+
+  if (pathname === '/api/brain' && method === 'GET') {
+    json(res, {
+      learning_events: { pending: 1, accepted: 2, rejected: 0, applied: 0 },
+      skill_candidates: { draft: 1, pending_review: 1, approved: 3, rejected: 0 },
+      feedback_unprocessed: 2,
+      memory_confidence: { avg: 0.78, min: 0.3, max: 1.0 },
+      conflict_count: 1,
+    })
+    return
+  }
+
+  if (pathname === '/api/learning' && method === 'GET') {
+    json(res, { data: [] })
+    return
+  }
+
+  if (pathname.startsWith('/api/learning/') && method === 'POST') {
+    json(res, { ok: true })
+    return
+  }
+
+  if (pathname === '/api/feedback' && method === 'GET') {
+    json(res, { data: [] })
+    return
+  }
+
+  if (pathname === '/api/feedback' && method === 'POST') {
+    json(res, { id: 'fb_mock', signal: 'thumbs_up' }, 201)
+    return
+  }
+
+  if (pathname.startsWith('/api/feedback/') && method === 'GET') {
+    json(res, { thumbs_up: 1, thumbs_down: 0, avg_rating: null, count: 1 })
+    return
+  }
+
+  if (pathname === '/api/skill-candidates' && method === 'GET') {
+    json(res, { data: [] })
+    return
+  }
+
+  if (pathname.startsWith('/api/skill-candidates/') && (method === 'POST' || method === 'PATCH')) {
+    json(res, { ok: true })
+    return
+  }
+
+  if (pathname === '/api/plugins' && method === 'GET') {
+    json(res, { data: [] })
+    return
+  }
+
+  if (pathname.startsWith('/api/plugins/') && method === 'POST') {
+    json(res, { ok: true })
+    return
+  }
+
+  if (pathname === '/api/soul' && method === 'GET') {
+    json(res, { id: 'soul_1', version: 'v1.0.0', content: '# BosskuAI Soul v1.0.0\n\n## Identity\nBosskuAI is a self-learning developer AI orchestrator.', active: true })
+    return
+  }
+
+  if (pathname === '/api/soul/history' && method === 'GET') {
+    json(res, [{ id: 'soul_1', version: 'v1.0.0', active: true, change_summary: 'Initial', created_at: new Date().toISOString() }])
+    return
+  }
+
+  if (pathname === '/api/soul/suggestions' && method === 'GET') {
+    json(res, [])
+    return
+  }
+
+  if (pathname === '/api/soul' && method === 'PUT') {
+    json(res, { id: 'soul_2', version: 'v1.0.1', active: true })
+    return
+  }
+
+  if (pathname === '/api/knowledge-graph' && method === 'GET') {
+    json(res, { nodes: [], edges: [] })
+    return
+  }
+
+  if (pathname === '/api/knowledge-graph/rebuild' && method === 'POST') {
+    json(res, { nodes: 0, edges: 0 })
+    return
+  }
+
+  if (pathname === '/api/skills-graph' && method === 'GET') {
+    json(res, { nodes: [], edges: [] })
+    return
+  }
+
+  if (pathname === '/api/skills-graph/rebuild' && method === 'POST') {
+    json(res, { nodes: 0, edges: 0 })
+    return
+  }
+
+  if (pathname === '/api/providers' && method === 'GET') {
+    json(res, { data: [
+      { id: 'p_1', name: 'Ollama (Local)', slug: 'ollama-local', type: 'ollama', health_status: 'healthy', is_active: true },
+    ]})
+    return
+  }
+
+  if (pathname.startsWith('/api/providers') && (method === 'POST' || method === 'PATCH' || method === 'DELETE')) {
+    json(res, { ok: true })
+    return
+  }
+
+  if (pathname.startsWith('/api/providers/') && method === 'POST') {
+    json(res, { ok: true })
+    return
+  }
+
+  if (pathname === '/api/model-routes' && method === 'GET') {
+    json(res, { data: [
+      { id: 'mr_1', role: 'planner', primary_model: 'qwen2.5-coder:7b', is_active: true },
+      { id: 'mr_2', role: 'coder', primary_model: 'qwen2.5-coder:7b', is_active: true },
+    ]})
+    return
+  }
+
+  if (pathname.startsWith('/api/model-routes') && (method === 'POST' || method === 'PATCH' || method === 'DELETE')) {
+    json(res, { ok: true })
+    return
+  }
+
+  if (pathname === '/api/approvals' && method === 'GET') {
+    json(res, { data: [] })
+    return
+  }
+
+  if (pathname.startsWith('/api/approvals/') && method === 'POST') {
+    json(res, { ok: true })
+    return
+  }
+
+  if (pathname.startsWith('/api/runs/') && pathname.endsWith('/pause') && method === 'POST') {
+    json(res, { ok: true, status: 'paused' })
+    return
+  }
+
+  if (pathname.startsWith('/api/runs/') && pathname.endsWith('/resume') && method === 'POST') {
+    json(res, { ok: true, status: 'running' })
+    return
+  }
+
+  if (pathname.startsWith('/api/runs/') && method === 'GET') {
+    // Sub-resources for run detail
+    if (pathname.endsWith('/timeline')) { json(res, { data: [] }); return }
+    if (pathname.endsWith('/messages')) { json(res, { data: [] }); return }
+    if (pathname.endsWith('/tool-calls')) { json(res, { data: [] }); return }
+    if (pathname.endsWith('/file-changes')) { json(res, { data: [] }); return }
+    if (pathname.endsWith('/audit')) { json(res, { data: [] }); return }
+    if (pathname.endsWith('/usage')) { json(res, { data: [], total_cost: 0 }); return }
+    if (pathname.endsWith('/feedback')) { json(res, { data: [] }); return }
+  }
+
   json(res, { message: 'mock: not found', path: pathname }, 404)
 }
 

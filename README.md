@@ -1,45 +1,163 @@
-# BosskuAI
+# BosskuAI — Self-Learning Developer AI Orchestrator
 
-**BosskuAI is a lightweight agentic AI orchestration layer for software builders.**
+![PHP 8.2](https://img.shields.io/badge/PHP-8.2-blue?logo=php)
+![Laravel 11](https://img.shields.io/badge/Laravel-11-red?logo=laravel)
+![Nuxt 3](https://img.shields.io/badge/Nuxt-3-green?logo=nuxt.js)
+![pgvector](https://img.shields.io/badge/pgvector-enabled-blueviolet?logo=postgresql)
+![Docker](https://img.shields.io/badge/Docker-compose-2496ED?logo=docker)
 
-It helps AI coding assistants behave more like a small engineering team:
-
-- **Orchestrator** — understand the task, detect the right skill, decide if memory helps, draft a compact plan  
-- **Executor** — implement with narrow diffs  
-- **Auditor** — correctness, security, performance, maintainability  
-- **Final reviewer** — confirm completion and remaining risks  
-- **Memory** — durable project facts (markdown + retrieval + optional vector DB)
-
-It plugs into **Cursor**, **Claude Code**, **Codex**, **OpenCode**, and ships an optional **Docker MVP** (Laravel + Nuxt) for an observable workflow.
-
-BosskuAI is **not** here to replace LangChain or CrewAI — see [`docs/comparison.md`](docs/comparison.md).
+BosskuAI is a self-learning developer AI orchestrator that combines a multi-provider LLM abstraction layer, a skill-based execution engine, a self-improving brain, and interactive knowledge/skills graphs into a single IDE-feel developer tool.
 
 ---
 
-## What is BosskuAI?
+## Features
 
-Read [`docs/what-is-bossku-ai.md`](docs/what-is-bossku-ai.md).
+All 24 spec §16 capabilities are implemented:
 
-## Why use BosskuAI?
-
-- You switch between editors / agents / models and want **one consistent contract**.  
-- You want **auditable discipline** without adopting a heavyweight agent framework.  
-- You want **repo-local memory** you control, not SaaS-only state.
-
-## How it works
-
-1. **`AGENTS.md`** is the canonical cross-tool agreement (memory, routing mentality, verification).  
-2. **`agents/*.md`** define orchestrator / executor / auditor / final reviewer behavior and the **`[BOSSKUAI]` header**.  
-3. **`skill-index.json` + `ai-assistant/skills/`** carry deep playbooks.  
-4. **Optional Docker MVP** enforces routing in `app/config/bossku_models.php` + streams runs in the Nuxt UI.
-
-Depth: [`docs/architecture.md`](docs/architecture.md) · honesty about “multi-agent” per IDE: [`docs/multi-agent-architecture.md`](docs/multi-agent-architecture.md).
+| # | Feature |
+|---|---|
+| 1 | **Multi-provider LLM abstraction** — Anthropic, OpenAI, Ollama, openai_compatible, custom adapters |
+| 2 | **Model routing** — per-role provider/model assignment with forceProvider → DB route → Ollama fallback |
+| 3 | **Governance & risk classification** — RiskClassifier with low/medium/high/critical levels, RiskRuleEngine |
+| 4 | **Approval gates** — hard stops for terminal commands, external HTTP, env_mod, deployment, secret rotation, high-cost steps |
+| 5 | **Skill candidates** — auto-generated SKILL.md drafts from patterns, approval workflow, risky category gating |
+| 6 | **Learning engine** — LearningEngine extracts patterns post-run, ≥3 occurrence threshold triggers candidate generation |
+| 7 | **Soul system** — soul.md guides AI behavior on every run, versioned, suggestions never auto-applied |
+| 8 | **Knowledge graph** — Cytoscape.js graph of skills, runs, memories, agents, files with typed edges |
+| 9 | **Skills graph** — focused skill relationship view with co-occurrence edges and SkillQualityBadge overlays |
+| 10 | **Brain page** — 7-tab observability dashboard (Overview, Memory Streams, Learning Inbox, Skill Candidates, Feedback Learnings, Brain Health, Conflicts) |
+| 11 | **Feedback system** — FeedbackLearningService converts thumbs/text feedback into learning events |
+| 12 | **Memory confidence scoring** — staleness decay, conflict detection, confirmation boosting |
+| 13 | **Cytoscape graphs** — interactive force-directed graphs with filters, export, and dark IDE styling |
+| 14 | **Dark IDE UI** — Nuxt 3 frontend with dark theme, live SSE streaming run timeline |
+| 15 | **`[BOSSKUAI]` marker** — mandatory response header identifying skill, agent, model role, memory usage |
+| 16 | **pgvector semantic memory** — PostgreSQL pgvector for cosine similarity memory retrieval |
+| 17 | **OrchestratorService pipeline** — Orchestrator → Planner → Executor → Auditor → FinalReviewer with SSE streaming |
+| 18 | **Step persistence** — all steps written before execution, resumable, queryable before a run starts |
+| 19 | **Usage & cost tracking** — UsageEvent ledger, per-call token accounting, ModelRegistry pricing, /usage page |
+| 20 | **Budget controls** — per-route budget limits with auto-deactivation and fallback |
+| 21 | **Skill quality scoring** — automated quality score updates after each run, weak skill detection |
+| 22 | **Conflict detection** — MemoryConflictDetector with conflict edges in graph and resolution workflow |
+| 23 | **Multi-agent deep-mode** — /audit (parallel fan-out), /decide (propose-critique), /implement (write-review) on Claude Code |
+| 24 | **Repo-local portability** — skills, soul, agents, and rules travel with your repo; Docker stack is optional |
 
 ---
 
-## Mandatory response indicator
+## Quick Start
 
-Every Bossku-compliant answer starts with:
+### Docker Compose (recommended)
+
+```bash
+# 1. Clone and copy env
+git clone https://github.com/wankimmy/Bossku-AI bosskuAI
+cd bosskuAI
+cp app/.env.example app/.env
+
+# 2. Set your LLM provider credentials in app/.env
+#    OLLAMA_BASE_URL=https://ollama.com        # or http://host.docker.internal:11434 for local
+#    OLLAMA_API_KEY=<your-ollama-cloud-key>    # from ollama.com/settings/keys
+
+# 3. Start the stack
+docker compose up -d --build
+
+# 4. Bootstrap
+docker compose exec backend composer install --no-interaction
+docker compose exec backend php artisan key:generate
+docker compose exec backend php artisan migrate --force
+docker compose exec backend php artisan db:seed
+docker compose exec backend php artisan bosskuai:import-knowledge --fresh
+```
+
+- **UI**: http://localhost:3000
+- **API**: http://localhost:8000
+
+### Without Docker
+
+```bash
+./scripts/install.sh /your/project --profile core
+```
+
+Windows:
+
+```powershell
+.\scripts\install.ps1 C:\your\project -Profile core
+```
+
+See [`docs/installation.md`](docs/installation.md) for full setup including pgvector, Redis queue, and Nuxt.
+
+---
+
+## Architecture
+
+BosskuAI follows a five-stage pipeline for every run:
+
+```
+User Prompt
+  └─► OrchestratorService  (intent, skill match, memory query, model routing)
+        └─► PlannerService  (execution plan with risk levels, step persistence)
+              └─► ExecutorService  (step-by-step execution, approval gates, SSE streaming)
+                    └─► AuditorService  (quality, security, performance, maintainability)
+                          └─► FinalReviewerService  (completion check, risk summary, next step)
+```
+
+After each run, the self-learning loop runs:
+
+```
+Run completes
+  └─► LearningEngine  (pattern extraction)
+        └─► FeedbackLearningService  (user feedback → learning events)
+              └─► SkillCandidateGenerator  (draft SKILL.md when pattern >= 3 occurrences)
+                    └─► Human approval on /brain
+                          └─► SkillIndexService  (activates skill for future runs)
+```
+
+See [`docs/architecture.md`](docs/architecture.md) for the full architecture reference.
+
+---
+
+## Documentation
+
+### Core Concepts
+- [`docs/what-is-bossku-ai.md`](docs/what-is-bossku-ai.md) — What BosskuAI is and is not
+- [`docs/quickstart.md`](docs/quickstart.md) — Get running in 5 minutes
+- [`docs/installation.md`](docs/installation.md) — Full installation guide
+- [`docs/architecture.md`](docs/architecture.md) — System architecture overview
+
+### Pipeline & Execution
+- [`docs/orchestration.md`](docs/orchestration.md) — OrchestratorService → FinalReviewerService pipeline
+- [`docs/skills.md`](docs/skills.md) — Skill system: SKILL.md format, matching, quality scoring
+- [`docs/approval-gates.md`](docs/approval-gates.md) — Which operations require human approval and how
+- [`docs/governance.md`](docs/governance.md) — RiskClassifier, risk levels, governance rule editor
+
+### Self-Learning Brain
+- [`docs/self-learning.md`](docs/self-learning.md) — LearningEngine, feedback loop, pattern detection
+- [`docs/auto-skill-generation.md`](docs/auto-skill-generation.md) — Auto skill candidate pipeline
+- [`docs/brain.md`](docs/brain.md) — The /brain page: 7 tabs explained
+- [`docs/soul.md`](docs/soul.md) — Soul system: soul.md, versioning, suggestions
+
+### Memory & Knowledge
+- [`docs/memory.md`](docs/memory.md) — pgvector memory, confidence scoring, conflict detection
+- [`docs/knowledge-graph.md`](docs/knowledge-graph.md) — Knowledge graph: nodes, edges, Cytoscape view
+- [`docs/skills-graph.md`](docs/skills-graph.md) — Skills graph: quality overlays, co-occurrence edges
+
+### Providers & Cost
+- [`docs/providers.md`](docs/providers.md) — Supported LLM providers, API key storage, health checks
+- [`docs/model-routing.md`](docs/model-routing.md) — ModelRouter resolve order, route configuration
+- [`docs/usage-and-cost.md`](docs/usage-and-cost.md) — UsageEvent ledger, cost tracking, /usage page
+
+### Reference
+- [`docs/multi-agent-architecture.md`](docs/multi-agent-architecture.md) — /audit, /decide, /implement deep-mode flows
+- [`docs/examples.md`](docs/examples.md) — Example prompts and expected outputs
+- [`docs/faq.md`](docs/faq.md) — Frequently asked questions
+- [`docs/comparison.md`](docs/comparison.md) — BosskuAI vs LangChain, CrewAI, and others
+- [`docs/benchmarks.md`](docs/benchmarks.md) — Performance and quality benchmarks
+- [`docs/adversarial-routing.md`](docs/adversarial-routing.md) — Adversarial routing stress tests
+
+---
+
+## Mandatory Response Indicator
+
+Every BosskuAI-compliant response starts with:
 
 ```text
 [BOSSKUAI]
@@ -49,169 +167,18 @@ Model Role: <planner|coder|reviewer|researcher>
 Memory Used: <yes|no>
 ```
 
-Details: [`AGENTS.md`](AGENTS.md) · keyword → skill mapping: [`agents/skill-detector.md`](agents/skill-detector.md).
+This header is how you know the skill system, model routing, and memory layer are all active on a response.
 
 ---
 
-## Features
+## Troubleshooting
 
-| Area | Highlights |
-|---|---|
-| Routing | Kimi-class orchestrator/writer/direct-answer, GLM executor, DeepSeek auditor/reviewer (`app/config/bossku_models.php`, Ollama Cloud) |
-| Skills | Laravel, Nuxt, Docker, DB, security, UX, SEO/GEO, testing, product strategy — see [`skills/`](skills/) |
-| Memory | Policy + schema in [`memory/`](memory/) · CLI `auto_memory.py` |
-| Tokens | [`playbooks/token-saving.md`](playbooks/token-saving.md) |
-| Auditing | [`agents/auditor.md`](agents/auditor.md) |
-| UI specs | [`ui/`](ui/) (dashboards for memory, activity, routing transparency) |
+- **Bootstrap 500**: rebuild backend — `docker compose build backend && docker compose up -d backend`
+- **Stream run shows no events**: check `docker compose logs -f backend` for permissions issues; validate with `curl -i http://localhost:8000/api/runs`
+- **No skills loaded**: `docker compose exec backend php artisan bosskuai:import-knowledge --fresh`
+- **Ollama unreachable**: verify `OLLAMA_BASE_URL` and `OLLAMA_API_KEY` in `app/.env`
+- **Planner JSON failed**: validate `OLLAMA_API_KEY`, `OLLAMA_BASE_URL`, and role model env vars
 
 ---
 
-## Observable stack (Docker MVP)
-
-Local Laravel (`app/`) + Nuxt (`web/`) + `docker-compose.yml`. Imports SKILL.md/playbooks into **Postgres + pgvector**, streams execution stages, persists run steps.
-
-**Quick compose:**
-
-```bash
-docker compose up -d --build
-docker compose exec backend composer install --no-interaction
-docker compose exec backend php artisan key:generate
-docker compose exec backend php artisan migrate --force
-docker compose exec backend php artisan bosskuai:import-knowledge --fresh
-```
-
-Ensure **`app/.env`** exists (`cp app/.env.example app/.env`) so the backend receives **`OLLAMA_BASE_URL`** (e.g. `https://ollama.com`), **`OLLAMA_API_KEY`** from [ollama.com/settings/keys](https://ollama.com/settings/keys), and optional **`OLLAMA_EMBEDDING_MODEL`** for pgvector-backed memory embeddings via Ollama **`/api/embed`**.
-
-Docker Compose **`backend`** binds **`OLLAMA_*`** exclusively for LLMs at runtime. There is no separate non-Ollama provider configuration in Laravel.
-
-- UI: **http://localhost:3000** · API/SSE base: **http://localhost:8000**
-
-**Role defaults (logical → `:cloud` tags in `bossku_models.php`):**
-
-- Orchestrator / router / writer / direct-answer: **`kimi-k2.6`**
-- Executor (default/frontend/backend/devops): **`glm-5.1`**
-- High-risk executor + auditor + security auditor + final reviewer: **`deepseek-v4-pro`**
-
-Models whose names match **`BOSSKU_OLLAMA_MODEL_PATTERNS`** are routed through **Ollama** at **`POST {OLLAMA_BASE_URL}/api/chat`**. **`OLLAMA_API_KEY`** is required for Cloud and is sent as a Bearer token from [`OllamaClient`](app/app/Services/Llm/OllamaClient.php).
-
-Docker Compose’s **`backend`** service uses **`env_file: ./app/.env`** (create **`app/.env`** from **`app/.env.example`** before `docker compose up`).
-
-Docker sets `BOSSKU_REPO_PATH=/repo` so the importer reads markdown from this repo.
-
-**Troubleshooting**
-
-- **Bootstrap 500 / Stream run shows no events:** If logs show `The /var/www/html/bootstrap/cache directory must be present and writable`, the **backend image** runs an entrypoint that `chmod`s `bootstrap/cache` and `storage` on start — rebuild: `docker compose build backend && docker compose up -d backend`. Then verify: `curl -i http://localhost:8000/api/runs`. Clear caches: `docker compose exec backend php artisan optimize:clear` and `docker compose restart backend`.
-- **Ollama / executor unreachable:** Verify **`OLLAMA_BASE_URL`** and **`OLLAMA_API_KEY`** for Cloud ([keys](https://ollama.com/settings/keys)); for local host Ollama use **`OLLAMA_BASE_URL=http://host.docker.internal:11434`** and align **`OLLAMA_EXECUTOR_MODEL`** with a pulled model tag.  
-- **No skills:** `docker compose exec backend php artisan bosskuai:import-knowledge --fresh`  
-- **Planner JSON failed:** validate **`OLLAMA_API_KEY`**, **`OLLAMA_BASE_URL`**, and role model envs (`BOSSKU_ORCHESTRATOR_MODEL`, `PLANNER_MODEL`, etc.)
-
-UI smoke tests (Nuxt vs a mock API — no Laravel): from **`web/`** run **`npm run e2e:install`** then **`npm run e2e`**. Details: [`web/e2e/README.md`](web/e2e/README.md).
-
----
-
-## Install (without Docker)
-
-Follow [`docs/installation.md`](docs/installation.md). Short version:
-
-```bash
-git clone https://github.com/wankimmy/Bossku-AI bosskuAI
-./bosskuAI/scripts/install.sh /your/project --profile core
-```
-
-Windows:
-
-```powershell
-.\bosskuAI\scripts\install.ps1 C:\your\project -Profile core
-```
-
-Optional dashboard:
-
-```bash
-python3 scripts/dashboard.py
-# http://127.0.0.1:8765 — Actions tab → Sync skills
-```
-
----
-
-## Cursor setup
-
-[`integrations/cursor/install.md`](integrations/cursor/install.md) · Rules template [`integrations/cursor/rules.md`](integrations/cursor/rules.md) · upstream rule `.cursor/rules/bosskuai.mdc`.
-
----
-
-## Claude Code setup
-
-[`integrations/claude-code/install.md`](integrations/claude-code/install.md) · template [`integrations/claude-code/CLAUDE.md`](integrations/claude-code/CLAUDE.md) · root `CLAUDE.md` stays the working copy after install.
-
----
-
-## Codex setup
-
-[`integrations/codex/install.md`](integrations/codex/install.md) · template [`integrations/codex/AGENTS.md`](integrations/codex/AGENTS.md) · slim Codex SKILL `packages/bossku-ai/skills/bossku-ai/SKILL.md`.
-
----
-
-## OpenCode setup
-
-[`integrations/opencode/install.md`](integrations/opencode/install.md) · rules template [`integrations/opencode/rules.md`](integrations/opencode/rules.md).
-
----
-
-## Memory setup
-
-Start with [`memory/memory-policy.md`](memory/memory-policy.md) (what never to store) then [`memory/schema.md`](memory/schema.md).  
-Operational commands inside [`AGENTS.md`](AGENTS.md) (`auto_memory.py`, optional `scripts/bosskuai memory …`).
-
----
-
-## Model routing
-
-Human-readable roles: [`agents/model-router.md`](agents/model-router.md)  
-Config truth: [`app/config/bossku_models.php`](app/config/bossku_models.php)  
-Workspace YAML hints: [`ai-assistant/config/model-router.yaml`](ai-assistant/config/model-router.yaml)
-
----
-
-## Example prompts
-
-[`docs/examples.md`](docs/examples.md)
-
-Smoke test inside any connected editor:
-
-```text
-bossku what should i build for my SaaS MVP next?
-```
-
----
-
-## Documentation map
-
-[`docs/README.md`](docs/README.md) — installation, quickstart, FAQ, comparison, architecture.
-
----
-
-## FAQ
-
-[`docs/faq.md`](docs/faq.md)
-
----
-
-## Roadmap (honest)
-
-- Tighter UI for memory dashboards per [`ui/memory-viewer-spec.md`](ui/memory-viewer-spec.md)  
-- Richer routing transparency in-run per [`ui/model-routing-spec.md`](ui/model-routing-spec.md)  
-- Continue shrinking duplicate narratives between README and deep docs  
-
----
-
-## What BosskuAI is NOT
-
-- Not a SaaS platform  
-- Not magic autonomy  
-- Not guaranteed cheaper responses every time  
-
----
-
-## Version
-
-**v1.9.5** — see [`CHANGELOG.md`](CHANGELOG.md).
+BosskuAI is a production-ready, self-learning developer AI orchestrator with a full multi-provider LLM abstraction, observable step-by-step execution, and a live knowledge graph — designed to get better with every run.

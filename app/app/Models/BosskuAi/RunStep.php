@@ -17,7 +17,7 @@ class RunStep extends Model
         'run_id', 'step_number', 'type', 'model', 'provider', 'skill_name',
         'status', 'input', 'output', 'rules_used', 'playbooks_used',
         'checklists_used', 'memory_used', 'latency_ms', 'token_estimate',
-        'error', 'metadata',
+        'error', 'metadata', 'safe_reasoning_summary', 'cost',
     ];
 
     protected function casts(): array
@@ -28,6 +28,7 @@ class RunStep extends Model
             'checklists_used' => 'array',
             'memory_used' => 'array',
             'metadata' => 'array',
+            'cost' => 'decimal:8',
         ];
     }
 
@@ -39,5 +40,15 @@ class RunStep extends Model
     public function toolCalls(): HasMany
     {
         return $this->hasMany(ToolCall::class, 'run_step_id');
+    }
+
+    public function agentMessages(): HasMany
+    {
+        return $this->hasMany(AgentMessage::class, 'run_step_id');
+    }
+
+    public function fileChanges(): HasMany
+    {
+        return $this->hasMany(FileChange::class, 'run_step_id');
     }
 }

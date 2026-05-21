@@ -4,6 +4,7 @@ namespace App\Models\BosskuAi;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Run extends Model
@@ -15,12 +16,14 @@ class Run extends Model
     protected $fillable = [
         'prompt', 'final_output', 'status', 'total_latency_ms',
         'total_token_estimate', 'metadata',
+        'audit_score', 'risk_level', 'soul_version_id', 'estimated_cost', 'selected_skill_name',
     ];
 
     protected function casts(): array
     {
         return [
             'metadata' => 'array',
+            'estimated_cost' => 'decimal:8',
         ];
     }
 
@@ -37,5 +40,30 @@ class Run extends Model
     public function memoryLinks(): HasMany
     {
         return $this->hasMany(MemoryRunLink::class, 'run_id');
+    }
+
+    public function agentMessages(): HasMany
+    {
+        return $this->hasMany(AgentMessage::class, 'run_id');
+    }
+
+    public function fileChanges(): HasMany
+    {
+        return $this->hasMany(FileChange::class, 'run_id');
+    }
+
+    public function usageEvents(): HasMany
+    {
+        return $this->hasMany(UsageEvent::class, 'run_id');
+    }
+
+    public function approvals(): HasMany
+    {
+        return $this->hasMany(Approval::class, 'run_id');
+    }
+
+    public function soulVersion(): BelongsTo
+    {
+        return $this->belongsTo(SoulVersion::class, 'soul_version_id');
     }
 }

@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\BosskuAi\FeedbackItem;
 use App\Models\BosskuAi\Run;
 use App\Services\Orchestrator\OrchestratorService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class RunController extends Controller
@@ -75,5 +77,84 @@ class RunController extends Controller
             'Access-Control-Allow-Origin' => env('FRONTEND_URL', 'http://localhost:3000'),
             'Vary' => 'Origin',
         ]);
+    }
+
+    // -------------------------------------------------------------------------
+    // Sub-resource methods
+    // -------------------------------------------------------------------------
+
+    public function timeline(string $id)
+    {
+        $run = Run::findOrFail($id);
+
+        $steps = $run->steps()
+            ->orderBy('step_number')
+            ->get(['id', 'step_number', 'type', 'status', 'latency_ms', 'token_estimate', 'cost', 'created_at', 'updated_at']);
+
+        return response()->json($steps);
+    }
+
+    public function messages(string $id)
+    {
+        $run = Run::findOrFail($id);
+
+        return response()->json($run->agentMessages()->orderBy('created_at')->get());
+    }
+
+    public function toolCalls(string $id)
+    {
+        $run = Run::findOrFail($id);
+
+        return response()->json($run->toolCalls()->orderBy('created_at')->get());
+    }
+
+    public function fileChanges(string $id)
+    {
+        $run = Run::findOrFail($id);
+
+        return response()->json($run->fileChanges()->orderBy('created_at')->get());
+    }
+
+    public function auditData(string $id)
+    {
+        $run = Run::findOrFail($id);
+
+        $steps = $run->steps()
+            ->whereIn('type', ['auditor', 'final'])
+            ->orderBy('step_number')
+            ->get();
+
+        return response()->json($steps);
+    }
+
+    public function usageData(string $id)
+    {
+        $run = Run::findOrFail($id);
+
+        $events = $run->usageEvents()->orderBy('created_at')->get();
+
+        $totals = [
+            'total_input_tokens'  => (int) $events->sum('input_tokens'),
+            'total_output_tokens' => (int) $events->sum('output_tokens'),
+            'total_cost_usd'      => round((float) $events->sum('cost_usd'), 8),
+        ];
+
+        return response()->json([
+            'events' => $events,
+            'totals' => $totals,
+        ]);
+    }
+
+    public function feedbackData(string $id)
+    {
+        Run::findOrFail($id);
+
+        $feedback = FeedbackItem::query()
+            ->where('target_type', 'run')
+            ->where('target_id', $id)
+            ->orderByDesc('created_at')
+            ->get();
+
+        return response()->json($feedback);
     }
 }

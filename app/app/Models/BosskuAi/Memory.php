@@ -15,6 +15,7 @@ class Memory extends Model
     protected $fillable = [
         'type', 'content', 'human_summary', 'metadata', 'tags',
         'confidence', 'source', 'is_active', 'last_used_at', 'usage_count',
+        'conflicting_memory_ids_json',
     ];
 
     protected function casts(): array
@@ -24,7 +25,8 @@ class Memory extends Model
             'tags' => 'array',
             'is_active' => 'boolean',
             'last_used_at' => 'datetime',
-            'confidence' => 'float',
+            'confidence'                  => 'float',
+            'conflicting_memory_ids_json' => 'array',
         ];
     }
 
