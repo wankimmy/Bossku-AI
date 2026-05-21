@@ -413,6 +413,7 @@ watch(
           </p>
           <textarea
             id="run-prompt"
+            data-tour="chat-prompt"
             v-model="prompt"
             class="mt-2 block min-h-[110px] w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 disabled:cursor-not-allowed disabled:opacity-60"
             :disabled="showClarificationModal"

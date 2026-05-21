@@ -1,28 +1,12 @@
 <script setup lang="ts">
+import { SIDEBAR_LINKS } from '~/utils/sidebarLinks'
+
 defineProps<{ open?: boolean }>()
 const emit = defineEmits<{ toggle: [] }>()
 
 const { collapsed, toggle: toggleCollapsed } = useSidebarCollapsed()
 
-const links = [
-  { to: '/', label: '🏠 Chat' },
-  { to: '/conversations', label: '💬 Conversations' },
-  { to: '/dashboard', label: '📊 Dashboard' },
-  { to: '/runs', label: '▶ Runs' },
-  { to: '/project', label: '📁 Project' },
-  { to: '/agents', label: '🤖 Agents' },
-  { to: '/skills', label: '⚡ Skills' },
-  { to: '/memory', label: '🧠 Memory' },
-  { to: '/brain', label: '🔬 Brain' },
-  { to: '/knowledge-graph', label: '🕸 Knowledge Graph' },
-  { to: '/skills-graph', label: '📈 Skills Graph' },
-  { to: '/plugins', label: '🔌 Plugins' },
-  { to: '/logs', label: '📋 Logs' },
-  { to: '/usage', label: '💰 Usage' },
-  { to: '/feedback', label: '💬 Feedback' },
-  { to: '/soul', label: '✨ Soul' },
-  { to: '/settings/models', label: '⚙ Settings' },
-]
+const links = SIDEBAR_LINKS
 </script>
 
 <template>
@@ -50,6 +34,7 @@ const links = [
         v-for="link in links"
         :key="link.to"
         :to="link.to"
+        :data-tour="link.tourId"
         class="flex items-center px-3 py-2 rounded-md text-sm text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors"
         active-class="bg-zinc-800 text-zinc-100 font-medium"
       >
@@ -75,6 +60,7 @@ const links = [
             v-for="link in links"
             :key="link.to"
             :to="link.to"
+            :data-tour="link.tourId"
             class="flex items-center px-3 py-2 rounded-md text-sm text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors"
             active-class="bg-zinc-800 text-zinc-100 font-medium"
             @click="emit('toggle')"

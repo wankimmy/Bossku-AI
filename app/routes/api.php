@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Api\AgentController;
+use App\Http\Controllers\Api\AgentPersonaController;
+use App\Http\Controllers\Api\DataExplorerController;
 use App\Http\Controllers\Api\ApprovalController;
 use App\Http\Controllers\Api\BrainController;
 use App\Http\Controllers\Api\ChecklistController;
@@ -21,6 +23,8 @@ use App\Http\Controllers\Api\ProviderController;
 use App\Http\Controllers\Api\RunActionController;
 use App\Http\Controllers\Api\RunController;
 use App\Http\Controllers\Api\RuleController;
+use App\Http\Controllers\Api\CodexOAuthController;
+use App\Http\Controllers\Api\InferenceCatalogController;
 use App\Http\Controllers\Api\SettingsApiController;
 use App\Http\Controllers\Api\SkillCandidateController;
 use App\Http\Controllers\Api\SkillController;
@@ -88,6 +92,12 @@ Route::delete('/memory/{id}', [MemoryApiController::class, 'destroy']);
 // ── Settings ──────────────────────────────────────────────────────────────────
 Route::get('/settings', [SettingsApiController::class, 'show']);
 Route::put('/settings', [SettingsApiController::class, 'update']);
+Route::get('/settings/inference-catalog', [InferenceCatalogController::class, 'index']);
+
+Route::get('/oauth/codex/status', [CodexOAuthController::class, 'status']);
+Route::get('/oauth/codex/authorize', [CodexOAuthController::class, 'authorize']);
+Route::get('/oauth/codex/callback', [CodexOAuthController::class, 'callback']);
+Route::delete('/oauth/codex', [CodexOAuthController::class, 'disconnect']);
 
 // ── Knowledge import ──────────────────────────────────────────────────────────
 Route::post('/knowledge/import', KnowledgeImportApiController::class);
@@ -98,6 +108,17 @@ Route::get('/dashboard', [DashboardController::class, 'index']);
 // ── Agents ────────────────────────────────────────────────────────────────────
 Route::get('/agents', [AgentController::class, 'index']);
 Route::get('/agents/{role}', [AgentController::class, 'show']);
+
+// ── Agent personas ────────────────────────────────────────────────────────────
+Route::get('/agent-personas', [AgentPersonaController::class, 'index']);
+Route::get('/agent-personas/{role}', [AgentPersonaController::class, 'show']);
+Route::put('/agent-personas/{role}', [AgentPersonaController::class, 'update']);
+Route::post('/agent-personas/{role}/reset', [AgentPersonaController::class, 'reset']);
+
+// ── Data explorer (read-only) ─────────────────────────────────────────────────
+Route::get('/data/tables', [DataExplorerController::class, 'tables']);
+Route::get('/data/tables/{table}', [DataExplorerController::class, 'index']);
+Route::get('/data/tables/{table}/{id}', [DataExplorerController::class, 'show']);
 
 // ── Plugins ───────────────────────────────────────────────────────────────────
 Route::get('/plugins', [PluginController::class, 'index']);

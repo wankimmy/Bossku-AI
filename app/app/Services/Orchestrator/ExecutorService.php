@@ -2,6 +2,7 @@
 
 namespace App\Services\Orchestrator;
 
+use App\Services\BosskuAi\AgentPersonaService;
 use App\Services\BosskuAi\ModelFallbackService;
 use App\Services\BosskuAi\ModelRoutingConfig;
 
@@ -9,7 +10,8 @@ class ExecutorService
 {
     public function __construct(
         protected ModelFallbackService $fallback,
-        protected ModelRoutingConfig $modelConfig
+        protected ModelRoutingConfig $modelConfig,
+        protected AgentPersonaService $personas
     ) {}
 
     /**
@@ -82,30 +84,30 @@ Allowed tool:
 {$allowedTool}
 
 You may only read/edit files listed in target_file_list unless allow_broad_repo_scan is true.
-
-Output format (JSON only, no markdown):
-{
-  "status": "success|partial|failed",
-  "files_read": [{"path": "relative/path", "reason": "why this file was inspected"}],
-  "files_changed": [{"path": "relative/path", "change_type": "created|modified|deleted|renamed", "summary": "what changed", "why": "why it changed", "after": "full new file contents for created/modified (required for disk write)", "diff": "unified diff optional if after omitted"}],
-  "commands_run": [{"command": "command", "status": "passed|failed|skipped", "exit_code": 0, "duration_ms": 0, "output_summary": "short summary"}],
-  "tests_run": [{"name": "test or suite name", "status": "passed|failed|skipped", "summary": "short summary"}],
-  "tests_result": "passed|failed|not_run",
-  "patch_summary": "",
-  "known_issues": [],
-  "needs_user_input": false,
-  "blockers": [],
-  "suggested_options": [{"id": "narrow", "label": "Retry with a narrower scope"}],
-  "needs_audit": true,
-  "handoff_message": "Sending changes to Auditor"
-}
-
-If you cannot proceed without a user decision, set needs_user_input to true, list blockers, and provide 2-4 suggested_options the user can pick.
 Markdown;
 
+        $system = <<<'SYS'
+You are the BosskuAI executor. Follow the skill and rules. Output JSON only (no markdown fences).
+
+Required JSON keys:
+status ("success"|"partial"|"failed"),
+files_read (array of {path, reason}),
+files_changed (array of {path, change_type, summary, why, after?, diff?}),
+commands_run, tests_run, tests_result, patch_summary, known_issues,
+needs_user_input, blockers, suggested_options, needs_audit, handoff_message.
+
+If you cannot proceed without a user decision, set needs_user_input to true, list blockers, and provide 2-4 suggested_options.
+SYS;
+
+        $fromRole = $auditFeedback !== null ? 'auditor' : 'orchestrator';
+        $handoffMessage = $auditFeedback !== null
+            ? 'Revision required from auditor feedback.'
+            : (string) ($plan['handoff_message'] ?? 'Sending execution task to Executor.');
+        $userContent = $this->personas->wrapHandoffUserContent('executor', $fromRole, $handoffMessage, $payload);
+
         $messages = [
-            ['role' => 'system', 'content' => 'You are the BosskuAI executor. Follow the skill and rules. Output JSON only.'],
-            ['role' => 'user', 'content' => $payload],
+            ['role' => 'system', 'content' => $system],
+            ['role' => 'user', 'content' => $userContent],
         ];
 
         $t0 = microtime(true);

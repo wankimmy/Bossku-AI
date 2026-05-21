@@ -26,14 +26,11 @@ class AnthropicProvider implements LlmProviderInterface
     {
         $start = hrtime(true);
 
+        $payload = $this->buildPayload($request);
+
         $res = $this->http()->post(
             rtrim($this->baseUrl, '/').'/v1/messages',
-            [
-                'model'      => $request->model,
-                'messages'   => $request->messages,
-                'max_tokens' => $request->maxTokens ?? 4096,
-                ...($request->temperature !== null ? ['temperature' => $request->temperature] : []),
-            ],
+            $payload,
         );
 
         $res->throw();
@@ -116,6 +113,41 @@ class AnthropicProvider implements LlmProviderInterface
             provider: 'anthropic',
             model: $request->model,
         );
+    }
+
+    /** @return array<string, mixed> */
+    protected function buildPayload(LlmRequest $request): array
+    {
+        $system = null;
+        $messages = [];
+
+        foreach ($request->messages as $msg) {
+            $role = (string) ($msg['role'] ?? 'user');
+            $content = (string) ($msg['content'] ?? '');
+
+            if ($role === 'system') {
+                $system = $system === null ? $content : $system."\n\n".$content;
+
+                continue;
+            }
+
+            if ($role === 'assistant' || $role === 'user') {
+                $messages[] = ['role' => $role, 'content' => $content];
+            }
+        }
+
+        $payload = [
+            'model' => $request->model,
+            'messages' => $messages,
+            'max_tokens' => $request->maxTokens ?? 4096,
+            ...($request->temperature !== null ? ['temperature' => $request->temperature] : []),
+        ];
+
+        if ($system !== null && $system !== '') {
+            $payload['system'] = $system;
+        }
+
+        return $payload;
     }
 
     protected function http(): \Illuminate\Http\Client\PendingRequest

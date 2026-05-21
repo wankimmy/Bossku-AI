@@ -2,6 +2,7 @@
 
 namespace Tests\Unit;
 
+use App\Services\BosskuAi\AgentPersonaService;
 use App\Services\BosskuAi\LlmGateway;
 use App\Services\BosskuAi\ModelFallbackService;
 use PHPUnit\Framework\Attributes\Test;
@@ -38,7 +39,7 @@ class ModelFallbackServiceTest extends TestCase
             });
 
         /** @var LlmGateway $gateway */
-        $svc = new ModelFallbackService($gateway);
+        $svc = new ModelFallbackService($gateway, new AgentPersonaService());
         $out = $svc->chatWithFallbacks(
             ['first-fail', 'second-ok'],
             $messages,

@@ -2,18 +2,49 @@
 definePageMeta({ layout: 'default' })
 
 const base = useApiBase()
+const route = useRoute()
 const { data, refresh, pending, error } = await useFetch<Record<string, string>>(`${base}/api/settings`, {
   server: false,
   lazy: true,
 })
 
+const { optgroups, refresh: refreshCatalog, catalog: inferenceCatalog } = useInferenceCatalog()
+
+type CodexStatus = {
+  connected: boolean
+  configured: boolean
+  expires_at: string | null
+  account_hint: string | null
+  last_refresh: string | null
+}
+
+const codexStatus = ref<CodexStatus | null>(null)
+const codexStatusLoading = ref(true)
+
+async function loadCodexStatus() {
+  codexStatusLoading.value = true
+  try {
+    codexStatus.value = await $fetch<CodexStatus>(`${base}/api/oauth/codex/status`)
+  }
+  catch {
+    codexStatus.value = { connected: false, configured: false, expires_at: null, account_hint: null, last_refresh: null }
+  }
+  finally {
+    codexStatusLoading.value = false
+  }
+}
+
+await loadCodexStatus()
+
 const form = reactive<Record<string, string>>({})
 const aliasForm = reactive<Record<string, string>>({})
 const ollamaApiKeyInput = ref('')
 const ollamaApiKeyMasked = ref<string | null>(null)
+const anthropicApiKeyInput = ref('')
+const anthropicApiKeyMasked = ref<string | null>(null)
+const anthropicConfigured = ref(false)
 const loaded = ref(false)
 
-/** Keys accepted by PUT /api/settings (excludes read-only response fields). */
 const SETTINGS_SAVE_KEYS = [
   'planner_model',
   'reasoning_model',
@@ -41,13 +72,6 @@ const SETTINGS_SAVE_KEYS = [
   'routing_llm_enabled',
 ] as const
 
-const ollamaCloudModels = [
-  { label: 'Kimi K2.6 (Cloud)', value: 'kimi-k2.6:cloud', logical: 'kimi-k2.6' },
-  { label: 'GLM 5.1 (Cloud)', value: 'glm-5.1:cloud', logical: 'glm-5.1' },
-  { label: 'DeepSeek V4 Pro (Cloud)', value: 'deepseek-v4-pro:cloud', logical: 'deepseek-v4-pro' },
-  { label: 'Qwen3 Coder Next (Cloud)', value: 'qwen3-coder-next:cloud', logical: 'qwen3-coder-next' },
-]
-
 const ollamaEmbedModels = [
   { label: 'nomic-embed-text', value: 'nomic-embed-text' },
   { label: 'nomic-embed-text v1.5', value: 'nomic-embed-text:v1.5' },
@@ -60,9 +84,10 @@ const primaryAliasKeys = ['kimi-k2.6', 'glm-5.1', 'deepseek-v4-pro', 'qwen3-code
 function normalizeCloudModel(value: string | undefined): string {
   if (!value) return ''
   const trimmed = value.trim()
-  if (ollamaCloudModels.some(m => m.value === trimmed)) return trimmed
+  const ollamaIds = (inferenceCatalog.value?.ollama ?? []).map(m => m.id)
+  if (ollamaIds.includes(trimmed)) return trimmed
   const tagged = trimmed.includes(':') ? trimmed : `${trimmed}:cloud`
-  if (ollamaCloudModels.some(m => m.value === tagged)) return tagged
+  if (ollamaIds.includes(tagged)) return tagged
   return trimmed
 }
 
@@ -100,7 +125,9 @@ function applyCloudDefaults() {
     'executor_high_risk_model',
   ] as const
   for (const key of fields) {
-    if (form[key]) form[key] = normalizeCloudModel(form[key])
+    if (form[key] && !form[key].startsWith('claude-') && !form[key].startsWith('gpt-') && !form[key].startsWith('o')) {
+      form[key] = normalizeCloudModel(form[key])
+    }
   }
 }
 
@@ -125,8 +152,11 @@ watch(data, (settings) => {
   parseAliases(settings.model_aliases)
   ollamaApiKeyMasked.value = settings.ollama_api_key_masked ?? null
   ollamaApiKeyInput.value = ''
+  anthropicApiKeyMasked.value = settings.anthropic_api_key_masked ?? null
+  anthropicApiKeyInput.value = ''
+  anthropicConfigured.value = settings.anthropic_configured === '1'
   for (const key of primaryAliasKeys) {
-    if (!aliasForm[key] && ollamaCloudModels.some(m => m.logical === key)) {
+    if (!aliasForm[key]) {
       aliasForm[key] = `${key}:cloud`
     }
   }
@@ -159,18 +189,23 @@ async function save() {
     const v = form[key]
     if (v !== undefined && v !== '') body[key] = v
   }
-  const keyTrimmed = ollamaApiKeyInput.value.trim()
-  if (keyTrimmed) body.ollama_api_key = keyTrimmed
+  const ollamaTrimmed = ollamaApiKeyInput.value.trim()
+  if (ollamaTrimmed) body.ollama_api_key = ollamaTrimmed
+  const anthropicTrimmed = anthropicApiKeyInput.value.trim()
+  if (anthropicTrimmed) body.anthropic_api_key = anthropicTrimmed
 
   await $fetch(`${base}/api/settings`, {
     method: 'PUT',
     body,
   })
   ollamaApiKeyInput.value = ''
+  anthropicApiKeyInput.value = ''
   await refresh()
+  await refreshCatalog()
 }
 
-const showKey = ref(false)
+const showOllamaKey = ref(false)
+const showAnthropicKey = ref(false)
 const toast = useToast()
 
 async function saveAndNotify() {
@@ -182,14 +217,46 @@ async function saveAndNotify() {
     toast.error(settingsErrorMessage(err))
   }
 }
+
+function connectCodex() {
+  if (codexStatus.value && !codexStatus.value.configured) {
+    toast.error('Codex OAuth is not configured. Set CODEX_OAUTH_CLIENT_ID in the server environment.')
+    return
+  }
+  window.location.href = `${base}/api/oauth/codex/authorize`
+}
+
+async function disconnectCodex() {
+  try {
+    await $fetch(`${base}/api/oauth/codex`, { method: 'DELETE' })
+    await loadCodexStatus()
+    await refreshCatalog()
+    toast.success('Codex disconnected.')
+  }
+  catch (err: unknown) {
+    toast.error(settingsErrorMessage(err))
+  }
+}
+
+onMounted(() => {
+  const codex = route.query.codex
+  if (codex === 'connected') {
+    toast.success('Codex connected with ChatGPT.')
+    loadCodexStatus()
+    refreshCatalog()
+  }
+  else if (codex === 'error') {
+    const message = typeof route.query.message === 'string' ? route.query.message : 'Codex connection failed.'
+    toast.error(message)
+  }
+})
 </script>
 
 <template>
   <div class="mx-auto max-w-2xl space-y-4">
     <p class="text-sm text-zinc-500">
-      Agent models are stored in the database and edited here. Workspace paths stay in
-      <code class="text-zinc-400">app/.env</code>; Ollama API key is optional below (or via
-      <code class="text-zinc-400">OLLAMA_API_KEY</code> in env for local Ollama).
+      Agent models are stored in the database. The gateway picks the provider from each model id
+      (Ollama Cloud, Claude, or Codex) plus the credentials configured below.
     </p>
 
     <p v-if="pending && !loaded" class="text-sm text-zinc-500">
@@ -202,18 +269,121 @@ async function saveAndNotify() {
     <form v-else class="space-y-4" @submit.prevent="saveAndNotify">
       <div class="rounded-lg border border-zinc-800 bg-zinc-900 p-4 space-y-4">
         <h2 class="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+          Anthropic
+        </h2>
+        <p class="text-xs text-zinc-600">
+          Required for Claude models in the dropdowns.
+          <a
+            href="https://console.anthropic.com/settings/keys"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-emerald-600 hover:text-emerald-500"
+          >Get an API key</a>.
+        </p>
+        <label class="block text-sm text-zinc-300">
+          Anthropic API key
+          <div class="mt-1.5 flex gap-2">
+            <input
+              v-model="anthropicApiKeyInput"
+              :type="showAnthropicKey ? 'text' : 'password'"
+              autocomplete="off"
+              class="min-w-0 flex-1 rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 font-mono text-sm text-zinc-100"
+              :placeholder="anthropicApiKeyMasked ? `Saved (${anthropicApiKeyMasked}) — leave blank to keep` : 'sk-ant-…'"
+            >
+            <button
+              type="button"
+              class="shrink-0 rounded-md border border-zinc-700 px-3 py-2 text-xs text-zinc-400 hover:text-zinc-200"
+              @click="showAnthropicKey = !showAnthropicKey"
+            >
+              {{ showAnthropicKey ? 'Hide' : 'Show' }}
+            </button>
+          </div>
+        </label>
+      </div>
+
+      <div class="rounded-lg border border-zinc-800 bg-zinc-900 p-4 space-y-4">
+        <h2 class="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+          Codex (ChatGPT)
+        </h2>
+        <p v-if="codexStatusLoading" class="text-xs text-zinc-600">
+          Checking connection…
+        </p>
+        <template v-else>
+          <p v-if="!codexStatus?.configured" class="text-xs text-amber-500/90">
+            OAuth is not configured on the server. Set <code class="text-zinc-400">CODEX_OAUTH_CLIENT_ID</code> (and matching redirect URI) in <code class="text-zinc-400">app/.env</code>.
+          </p>
+          <p v-else-if="codexStatus?.connected" class="text-sm text-emerald-400">
+            Connected
+            <span v-if="codexStatus.account_hint" class="text-zinc-500">({{ codexStatus.account_hint }})</span>
+            <span v-if="codexStatus.expires_at" class="block text-xs text-zinc-600">
+              Token expires {{ codexStatus.expires_at }}
+            </span>
+          </p>
+          <p v-else class="text-sm text-zinc-400">
+            Not connected — sign in with ChatGPT to use Codex models.
+          </p>
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-if="!codexStatus?.connected"
+              type="button"
+              class="rounded-md bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-white"
+              :disabled="!codexStatus?.configured"
+              @click="connectCodex"
+            >
+              Connect with ChatGPT
+            </button>
+            <button
+              v-else
+              type="button"
+              class="rounded-md border border-zinc-700 px-4 py-2 text-sm text-zinc-300 hover:border-zinc-600"
+              @click="disconnectCodex"
+            >
+              Disconnect
+            </button>
+          </div>
+        </template>
+      </div>
+
+      <div class="rounded-lg border border-zinc-800 bg-zinc-900 p-4 space-y-4">
+        <h2 class="text-xs font-semibold uppercase tracking-wider text-zinc-500">
           Fast (router &amp; direct answer)
         </h2>
         <label class="block text-sm text-zinc-300">
           Router model
           <select v-model="form.router_model" class="mt-1.5 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100">
-            <option v-for="m in ollamaCloudModels" :key="'r-'+m.value" :value="m.value">{{ m.label }}</option>
+            <optgroup
+              v-for="group in optgroups"
+              :key="'r-'+group.label"
+              :label="group.label"
+              :disabled="group.disabled"
+            >
+              <option
+                v-for="m in group.options"
+                :key="'r-'+m.id"
+                :value="m.id"
+                :disabled="group.disabled"
+              >
+                {{ m.label }}
+              </option>
+            </optgroup>
           </select>
+          <span v-if="optgroups.find(g => g.provider === 'anthropic')?.disabled" class="mt-1 block text-xs text-zinc-600">
+            {{ optgroups.find(g => g.provider === 'anthropic')?.hint }}
+          </span>
         </label>
         <label class="block text-sm text-zinc-300">
           Direct answer model
           <select v-model="form.direct_answer_model" class="mt-1.5 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100">
-            <option v-for="m in ollamaCloudModels" :key="'d-'+m.value" :value="m.value">{{ m.label }}</option>
+            <optgroup
+              v-for="group in optgroups"
+              :key="'d-'+group.label"
+              :label="group.label"
+              :disabled="group.disabled"
+            >
+              <option v-for="m in group.options" :key="'d-'+m.id" :value="m.id" :disabled="group.disabled">
+                {{ m.label }}
+              </option>
+            </optgroup>
           </select>
         </label>
       </div>
@@ -225,25 +395,33 @@ async function saveAndNotify() {
         <label class="block text-sm text-zinc-300">
           Reasoning model (planner)
           <select v-model="form.reasoning_model" class="mt-1.5 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100">
-            <option v-for="m in ollamaCloudModels" :key="'p-'+m.value" :value="m.value">{{ m.label }}</option>
+            <optgroup v-for="group in optgroups" :key="'p-'+group.label" :label="group.label" :disabled="group.disabled">
+              <option v-for="m in group.options" :key="'p-'+m.id" :value="m.id" :disabled="group.disabled">{{ m.label }}</option>
+            </optgroup>
           </select>
         </label>
         <label class="block text-sm text-zinc-300">
           Orchestrator override
           <select v-model="form.orchestrator_model" class="mt-1.5 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100">
-            <option v-for="m in ollamaCloudModels" :key="'o-'+m.value" :value="m.value">{{ m.label }}</option>
+            <optgroup v-for="group in optgroups" :key="'o-'+group.label" :label="group.label" :disabled="group.disabled">
+              <option v-for="m in group.options" :key="'o-'+m.id" :value="m.id" :disabled="group.disabled">{{ m.label }}</option>
+            </optgroup>
           </select>
         </label>
         <label class="block text-sm text-zinc-300">
           Writer model
           <select v-model="form.writer_model" class="mt-1.5 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100">
-            <option v-for="m in ollamaCloudModels" :key="'w-'+m.value" :value="m.value">{{ m.label }}</option>
+            <optgroup v-for="group in optgroups" :key="'w-'+group.label" :label="group.label" :disabled="group.disabled">
+              <option v-for="m in group.options" :key="'w-'+m.id" :value="m.id" :disabled="group.disabled">{{ m.label }}</option>
+            </optgroup>
           </select>
         </label>
         <label class="block text-sm text-zinc-300">
           Final reviewer model
           <select v-model="form.final_reviewer_model" class="mt-1.5 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100">
-            <option v-for="m in ollamaCloudModels" :key="'f-'+m.value" :value="m.value">{{ m.label }}</option>
+            <optgroup v-for="group in optgroups" :key="'f-'+group.label" :label="group.label" :disabled="group.disabled">
+              <option v-for="m in group.options" :key="'f-'+m.id" :value="m.id" :disabled="group.disabled">{{ m.label }}</option>
+            </optgroup>
           </select>
         </label>
       </div>
@@ -255,37 +433,49 @@ async function saveAndNotify() {
         <label class="block text-sm text-zinc-300">
           Default coding model
           <select v-model="form.coding_model" class="mt-1.5 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100">
-            <option v-for="m in ollamaCloudModels" :key="'c-'+m.value" :value="m.value">{{ m.label }}</option>
+            <optgroup v-for="group in optgroups" :key="'c-'+group.label" :label="group.label" :disabled="group.disabled">
+              <option v-for="m in group.options" :key="'c-'+m.id" :value="m.id" :disabled="group.disabled">{{ m.label }}</option>
+            </optgroup>
           </select>
         </label>
         <label class="block text-sm text-zinc-300">
           Executor — default profile
           <select v-model="form.executor_default_model" class="mt-1.5 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100">
-            <option v-for="m in ollamaCloudModels" :key="'ed-'+m.value" :value="m.value">{{ m.label }}</option>
+            <optgroup v-for="group in optgroups" :key="'ed-'+group.label" :label="group.label" :disabled="group.disabled">
+              <option v-for="m in group.options" :key="'ed-'+m.id" :value="m.id" :disabled="group.disabled">{{ m.label }}</option>
+            </optgroup>
           </select>
         </label>
         <label class="block text-sm text-zinc-300">
           Executor — frontend UI
           <select v-model="form.executor_frontend_model" class="mt-1.5 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100">
-            <option v-for="m in ollamaCloudModels" :key="'ef-'+m.value" :value="m.value">{{ m.label }}</option>
+            <optgroup v-for="group in optgroups" :key="'ef-'+group.label" :label="group.label" :disabled="group.disabled">
+              <option v-for="m in group.options" :key="'ef-'+m.id" :value="m.id" :disabled="group.disabled">{{ m.label }}</option>
+            </optgroup>
           </select>
         </label>
         <label class="block text-sm text-zinc-300">
           Executor — backend
           <select v-model="form.executor_backend_model" class="mt-1.5 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100">
-            <option v-for="m in ollamaCloudModels" :key="'eb-'+m.value" :value="m.value">{{ m.label }}</option>
+            <optgroup v-for="group in optgroups" :key="'eb-'+group.label" :label="group.label" :disabled="group.disabled">
+              <option v-for="m in group.options" :key="'eb-'+m.id" :value="m.id" :disabled="group.disabled">{{ m.label }}</option>
+            </optgroup>
           </select>
         </label>
         <label class="block text-sm text-zinc-300">
           Executor — DevOps
           <select v-model="form.executor_devops_model" class="mt-1.5 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100">
-            <option v-for="m in ollamaCloudModels" :key="'edo-'+m.value" :value="m.value">{{ m.label }}</option>
+            <optgroup v-for="group in optgroups" :key="'edo-'+group.label" :label="group.label" :disabled="group.disabled">
+              <option v-for="m in group.options" :key="'edo-'+m.id" :value="m.id" :disabled="group.disabled">{{ m.label }}</option>
+            </optgroup>
           </select>
         </label>
         <label class="block text-sm text-zinc-300">
           Executor — high risk
           <select v-model="form.executor_high_risk_model" class="mt-1.5 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100">
-            <option v-for="m in ollamaCloudModels" :key="'eh-'+m.value" :value="m.value">{{ m.label }}</option>
+            <optgroup v-for="group in optgroups" :key="'eh-'+group.label" :label="group.label" :disabled="group.disabled">
+              <option v-for="m in group.options" :key="'eh-'+m.id" :value="m.id" :disabled="group.disabled">{{ m.label }}</option>
+            </optgroup>
           </select>
         </label>
       </div>
@@ -297,19 +487,25 @@ async function saveAndNotify() {
         <label class="block text-sm text-zinc-300">
           Review model (shared default)
           <select v-model="form.review_model" class="mt-1.5 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100">
-            <option v-for="m in ollamaCloudModels" :key="'rv-'+m.value" :value="m.value">{{ m.label }}</option>
+            <optgroup v-for="group in optgroups" :key="'rv-'+group.label" :label="group.label" :disabled="group.disabled">
+              <option v-for="m in group.options" :key="'rv-'+m.id" :value="m.id" :disabled="group.disabled">{{ m.label }}</option>
+            </optgroup>
           </select>
         </label>
         <label class="block text-sm text-zinc-300">
           Auditor model
           <select v-model="form.auditor_model" class="mt-1.5 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100">
-            <option v-for="m in ollamaCloudModels" :key="'a-'+m.value" :value="m.value">{{ m.label }}</option>
+            <optgroup v-for="group in optgroups" :key="'a-'+group.label" :label="group.label" :disabled="group.disabled">
+              <option v-for="m in group.options" :key="'a-'+m.id" :value="m.id" :disabled="group.disabled">{{ m.label }}</option>
+            </optgroup>
           </select>
         </label>
         <label class="block text-sm text-zinc-300">
           Security auditor model
           <select v-model="form.security_auditor_model" class="mt-1.5 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100">
-            <option v-for="m in ollamaCloudModels" :key="'sa-'+m.value" :value="m.value">{{ m.label }}</option>
+            <optgroup v-for="group in optgroups" :key="'sa-'+group.label" :label="group.label" :disabled="group.disabled">
+              <option v-for="m in group.options" :key="'sa-'+m.id" :value="m.id" :disabled="group.disabled">{{ m.label }}</option>
+            </optgroup>
           </select>
         </label>
       </div>
@@ -354,7 +550,7 @@ async function saveAndNotify() {
           <div class="mt-1.5 flex gap-2">
             <input
               v-model="ollamaApiKeyInput"
-              :type="showKey ? 'text' : 'password'"
+              :type="showOllamaKey ? 'text' : 'password'"
               autocomplete="off"
               class="min-w-0 flex-1 rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 font-mono text-sm text-zinc-100"
               :placeholder="ollamaApiKeyMasked ? `Saved (${ollamaApiKeyMasked}) — leave blank to keep` : 'Leave blank for local Ollama without auth'"
@@ -362,16 +558,18 @@ async function saveAndNotify() {
             <button
               type="button"
               class="shrink-0 rounded-md border border-zinc-700 px-3 py-2 text-xs text-zinc-400 hover:text-zinc-200"
-              @click="showKey = !showKey"
+              @click="showOllamaKey = !showOllamaKey"
             >
-              {{ showKey ? 'Hide' : 'Show' }}
+              {{ showOllamaKey ? 'Hide' : 'Show' }}
             </button>
           </div>
         </label>
         <label class="block text-sm text-zinc-300">
           Embedding model
           <select v-model="form.embedding_model" class="mt-1.5 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100">
-            <option v-for="m in ollamaEmbedModels" :key="m.value" :value="m.value">{{ m.label }}</option>
+            <option v-for="m in ollamaEmbedModels" :key="m.value" :value="m.value">
+              {{ m.label }}
+            </option>
           </select>
         </label>
         <label class="block text-sm text-zinc-300">
@@ -385,8 +583,7 @@ async function saveAndNotify() {
           >
         </label>
         <p class="text-xs text-zinc-600">
-          Required only for Ollama Cloud (<code class="text-zinc-400">https://ollama.com</code>).
-          Local Ollama at <code class="text-zinc-400">http://host.docker.internal:11434</code> can leave this empty.
+          Ollama key is required for Ollama Cloud. Claude models need an Anthropic key; Codex models need ChatGPT connection above.
         </p>
       </div>
 

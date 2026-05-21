@@ -4,6 +4,7 @@ import type { Command } from './CommandBar.vue'
 const route = useRoute()
 const { collapsed: sidebarCollapsed } = useSidebarCollapsed()
 const sidebarOpen = ref(false)
+const onboarding = useOnboarding()
 const isGraphLayout = computed(() => String(route.meta.layout ?? '') === 'graph' || /-graph$/.test(route.path))
 const inspectorOpen = ref(false)
 const inspectorTitle = ref('Inspector')
@@ -39,6 +40,10 @@ function onKeydown(e: KeyboardEvent) {
 onMounted(() => {
   if (import.meta.client) {
     document.addEventListener('keydown', onKeydown)
+    onboarding.registerOpenSidebar(() => {
+      sidebarOpen.value = true
+    })
+    onboarding.maybeAutoStart(300)
   }
 })
 
@@ -95,5 +100,8 @@ onUnmounted(() => {
 
     <!-- Toast notifications -->
     <AppToastContainer />
+
+    <!-- First-time onboarding spotlight -->
+    <OnboardingSpotlight />
   </div>
 </template>

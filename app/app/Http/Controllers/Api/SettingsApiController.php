@@ -71,6 +71,7 @@ class SettingsApiController extends Controller
         $rules['model_aliases'] = 'sometimes|array';
         $rules['model_aliases.*'] = 'sometimes|string|max:255';
         $rules['ollama_api_key'] = 'sometimes|nullable|string|max:512';
+        $rules['anthropic_api_key'] = 'sometimes|nullable|string|max:512';
 
         $data = $request->validate($rules);
 
@@ -82,6 +83,14 @@ class SettingsApiController extends Controller
             unset($data['ollama_api_key']);
             if ($this->shouldPersistApiKey($apiKey)) {
                 $settings->setOllamaApiKey(trim((string) $apiKey));
+            }
+        }
+
+        if (array_key_exists('anthropic_api_key', $data)) {
+            $apiKey = $data['anthropic_api_key'];
+            unset($data['anthropic_api_key']);
+            if ($this->shouldPersistApiKey($apiKey)) {
+                $settings->setAnthropicApiKey(trim((string) $apiKey));
             }
         }
 
@@ -115,7 +124,7 @@ class SettingsApiController extends Controller
             self::STRING_KEYS,
             self::BOOL_KEYS,
             self::INT_KEYS,
-            ['model_aliases', 'ollama_api_key'],
+            ['model_aliases', 'ollama_api_key', 'anthropic_api_key'],
         );
 
         $payload = $request->only($allowed);

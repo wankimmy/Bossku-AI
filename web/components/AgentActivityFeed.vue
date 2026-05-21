@@ -13,6 +13,7 @@ function inferAgent(type: string): string {
   if (type.includes('security')) return 'security-auditor'
   if (type.includes('auditor')) return 'auditor'
   if (type.includes('final')) return 'final-reviewer'
+  if (type.includes('personas')) return 'router'
   if (type.includes('router') || type.includes('routing')) return 'router'
   if (type.includes('memory')) return 'memory'
   return 'system'

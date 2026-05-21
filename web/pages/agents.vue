@@ -15,7 +15,15 @@ const agents = computed<Agent[]>(() => {
 
 <template>
   <div class="space-y-6">
-    <h1 class="text-xl font-bold text-zinc-100">Agents</h1>
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <h1 class="text-xl font-bold text-zinc-100">Agents</h1>
+      <NuxtLink
+        to="/personas"
+        class="text-sm text-emerald-400 hover:text-emerald-300 underline"
+      >
+        Edit personas →
+      </NuxtLink>
+    </div>
 
     <div v-if="pending" class="text-sm text-zinc-500">Loading...</div>
 

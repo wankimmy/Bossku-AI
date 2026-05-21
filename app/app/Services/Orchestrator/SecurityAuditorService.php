@@ -2,6 +2,7 @@
 
 namespace App\Services\Orchestrator;
 
+use App\Services\BosskuAi\AgentPersonaService;
 use App\Services\BosskuAi\ModelFallbackService;
 use App\Services\BosskuAi\ModelRoutingConfig;
 use App\Services\Project\ProjectService;
@@ -11,7 +12,8 @@ class SecurityAuditorService
     public function __construct(
         protected ModelRoutingConfig $config,
         protected ModelFallbackService $fallback,
-        protected ProjectService $projects
+        protected ProjectService $projects,
+        protected AgentPersonaService $personas
     ) {}
 
     /**
@@ -58,9 +60,12 @@ SYS;
             'tool_evidence' => $toolEvidence,
         ], JSON_THROW_ON_ERROR);
 
+        $handoffMessage = (string) ($executorResult['handoff_message'] ?? 'Security audit handoff from auditor pipeline.');
+        $userContent = $this->personas->wrapHandoffUserContent('security_auditor', 'auditor', $handoffMessage, $payload);
+
         $messages = [
             ['role' => 'system', 'content' => $system],
-            ['role' => 'user', 'content' => $payload],
+            ['role' => 'user', 'content' => $userContent],
         ];
 
         $out = $this->fallback->chatWithFallbacks(

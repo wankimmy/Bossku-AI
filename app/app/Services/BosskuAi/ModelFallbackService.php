@@ -7,7 +7,8 @@ use Illuminate\Support\Facades\Log;
 class ModelFallbackService
 {
     public function __construct(
-        protected LlmGateway $gateway
+        protected LlmGateway $gateway,
+        protected AgentPersonaService $personas
     ) {}
 
     /**
@@ -27,6 +28,10 @@ class ModelFallbackService
     ): array {
         $lastError = null;
         $models = array_values(array_filter($models));
+
+        if ($this->personas->shouldApplyPersona($role)) {
+            $messages = $this->personas->applyToMessages($role, $messages);
+        }
 
         foreach ($models as $idx => $model) {
             for ($attempt = 0; $attempt <= $retryCount; $attempt++) {

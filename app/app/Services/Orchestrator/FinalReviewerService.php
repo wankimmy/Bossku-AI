@@ -2,6 +2,7 @@
 
 namespace App\Services\Orchestrator;
 
+use App\Services\BosskuAi\AgentPersonaService;
 use App\Services\BosskuAi\ModelFallbackService;
 use App\Services\BosskuAi\ModelRoutingConfig;
 
@@ -9,7 +10,8 @@ class FinalReviewerService
 {
     public function __construct(
         protected ModelRoutingConfig $config,
-        protected ModelFallbackService $fallback
+        protected ModelFallbackService $fallback,
+        protected AgentPersonaService $personas
     ) {}
 
     /**
@@ -48,9 +50,13 @@ SYS;
             'files_changed' => $executorResult['files_changed'] ?? [],
         ], JSON_THROW_ON_ERROR);
 
+        $fromRole = $securityAudit !== null ? 'security_auditor' : 'auditor';
+        $handoffMessage = (string) ($auditor['summary'] ?? 'Final review handoff.');
+        $userContent = $this->personas->wrapHandoffUserContent('final_reviewer', $fromRole, $handoffMessage, $payload);
+
         $messages = [
             ['role' => 'system', 'content' => $system],
-            ['role' => 'user', 'content' => $payload],
+            ['role' => 'user', 'content' => $userContent],
         ];
 
         $out = $this->fallback->chatWithFallbacks(

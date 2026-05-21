@@ -184,6 +184,52 @@ class RuntimeSettings
         Setting::setValue('ollama_api_key_encrypted', Crypt::encryptString($key));
     }
 
+    public function anthropicApiKey(): ?string
+    {
+        $encrypted = Setting::getValue('anthropic_api_key_encrypted');
+        if ($encrypted !== null && $encrypted !== '') {
+            try {
+                return Crypt::decryptString($encrypted);
+            } catch (\Throwable) {
+                //
+            }
+        }
+
+        $env = env('ANTHROPIC_API_KEY');
+
+        return is_string($env) && $env !== '' ? $env : null;
+    }
+
+    public function anthropicApiKeyMasked(): ?string
+    {
+        $key = $this->anthropicApiKey();
+        if ($key === null || $key === '') {
+            return null;
+        }
+
+        if (strlen($key) <= 8) {
+            return '••••••••';
+        }
+
+        return substr($key, 0, 4).'…'.substr($key, -4);
+    }
+
+    public function anthropicConfigured(): bool
+    {
+        return $this->anthropicApiKey() !== null && $this->anthropicApiKey() !== '';
+    }
+
+    public function setAnthropicApiKey(?string $key): void
+    {
+        if ($key === null || $key === '') {
+            Setting::setValue('anthropic_api_key_encrypted', null);
+
+            return;
+        }
+
+        Setting::setValue('anthropic_api_key_encrypted', Crypt::encryptString($key));
+    }
+
     public function ollamaExecutorModel(): string
     {
         return $this->codingModel();
@@ -302,6 +348,8 @@ class RuntimeSettings
             'router_model' => $this->routerModel(),
             'ollama_base_url' => $this->ollamaBaseUrl(),
             'ollama_api_key_masked' => $this->ollamaApiKeyMasked(),
+            'anthropic_api_key_masked' => $this->anthropicApiKeyMasked(),
+            'anthropic_configured' => $this->anthropicConfigured() ? '1' : '0',
             'max_memory_results' => (string) $this->maxMemoryResults(),
             'max_revision_rounds' => (string) $this->maxRevisionRounds(),
             'audit_enabled' => $this->auditEnabled() ? '1' : '0',

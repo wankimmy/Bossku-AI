@@ -6,6 +6,7 @@ use App\Models\BosskuAi\ModelRoute;
 use App\Services\Llm\DTO\LlmRequest;
 use App\Services\Llm\ModelRouter;
 use App\Services\Llm\OllamaClient;
+use App\Services\OAuth\CodexOAuthService;
 
 class LlmGateway
 {
@@ -13,6 +14,7 @@ class LlmGateway
         protected OllamaClient $ollama,
         protected RuntimeSettings $settings,
         protected ?ModelRouter $router = null,
+        protected ?CodexOAuthService $codexOAuth = null,
     ) {}
 
     /**
@@ -29,12 +31,15 @@ class LlmGateway
         ?string $runId = null,
         ?string $runStepId = null,
     ): array {
-        if ($this->router !== null && $this->shouldDelegate($role, $forceProvider)) {
+        $inferredProvider = $this->resolveProviderForModel($model);
+        $effectiveProvider = $forceProvider ?? ($inferredProvider !== 'ollama' ? $inferredProvider : null);
+
+        if ($this->router !== null && ($effectiveProvider !== null || $this->shouldDelegate($role, $forceProvider))) {
             $request = LlmRequest::make($model, $messages, [
                 'role'           => $role,
                 'temperature'    => $temperature,
                 'max_tokens'     => $maxTokensAnthropic,
-                'force_provider' => $forceProvider,
+                'force_provider' => $effectiveProvider,
                 'run_id'         => $runId,
                 'run_step_id'    => $runStepId,
             ]);
@@ -69,10 +74,51 @@ class LlmGateway
 
     public function resolveProvider(string $model): string
     {
-        $resolved = $this->resolveAlias(trim($model));
+        return $this->resolveProviderForModel($model);
+    }
+
+    public function resolveProviderForModel(string $model): string
+    {
+        $resolved = strtolower(trim($this->resolveAlias($model)));
+
+        if (str_starts_with($resolved, 'claude-')) {
+            if (! $this->settings->anthropicConfigured()) {
+                throw new \RuntimeException(
+                    'Anthropic API key is required for Claude models. Add it in Settings → Models.'
+                );
+            }
+
+            return 'anthropic';
+        }
+
+        if ($this->isCodexModelId($resolved)) {
+            if ($this->codexOAuth === null || ! $this->codexOAuth->isConnected()) {
+                throw new \RuntimeException(
+                    'Codex is not connected. Connect with ChatGPT in Settings → Models.'
+                );
+            }
+
+            return 'codex';
+        }
+
         $this->assertOllamaModel($resolved);
 
         return 'ollama';
+    }
+
+    protected function isCodexModelId(string $modelId): bool
+    {
+        if (preg_match('/^(gpt-|o\d|o4-)/', $modelId)) {
+            return true;
+        }
+
+        foreach (config('bossku_oauth.codex_models', []) as $entry) {
+            if (strtolower((string) ($entry['id'] ?? '')) === $modelId) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /** @throws \RuntimeException */

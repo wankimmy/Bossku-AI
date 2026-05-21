@@ -79,4 +79,31 @@ class SettingsApiTest extends TestCase
 
         $this->assertSame('keep-me', Crypt::decryptString((string) Setting::getValue('ollama_api_key_encrypted')));
     }
+
+    #[Test]
+    public function settings_update_stores_anthropic_api_key_encrypted(): void
+    {
+        $this->putJson('/api/settings', [
+            'anthropic_api_key' => 'sk-ant-test-key-abcdef',
+        ])->assertOk();
+
+        $encrypted = Setting::getValue('anthropic_api_key_encrypted');
+        $this->assertNotNull($encrypted);
+        $this->assertSame('sk-ant-test-key-abcdef', Crypt::decryptString((string) $encrypted));
+
+        $settings = app(RuntimeSettings::class);
+        $this->assertTrue($settings->anthropicConfigured());
+        $this->assertNotNull($settings->anthropicApiKeyMasked());
+    }
+
+    #[Test]
+    public function settings_get_exposes_anthropic_masked_and_configured(): void
+    {
+        Setting::setValue('anthropic_api_key_encrypted', Crypt::encryptString('sk-ant-visible-key'));
+
+        $this->getJson('/api/settings')
+            ->assertOk()
+            ->assertJsonPath('anthropic_configured', '1')
+            ->assertJsonStructure(['anthropic_api_key_masked']);
+    }
 }

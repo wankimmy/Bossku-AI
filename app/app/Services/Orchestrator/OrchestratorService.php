@@ -7,6 +7,7 @@ use App\Models\BosskuAi\MemoryRunLink;
 use App\Models\BosskuAi\Run;
 use App\Models\BosskuAi\RunStep;
 use App\Models\BosskuAi\Skill;
+use App\Services\BosskuAi\AgentPersonaService;
 use App\Services\BosskuAi\BosskuResponseIndicator;
 use App\Services\BosskuAi\ContextBudgetGuard;
 use App\Services\BosskuAi\RepoTaskDetector;
@@ -49,6 +50,7 @@ class OrchestratorService
         protected ProjectService $projects,
         protected KnowledgeGraphBuilder $knowledgeGraph,
         protected ExecutorFileChangeApplier $executorFileApplier,
+        protected AgentPersonaService $agentPersonas,
     ) {}
 
     /**
@@ -96,12 +98,24 @@ class OrchestratorService
         $routerJson = json_encode($modelRoute) ?: '';
         $routerTok = $this->estimateTokens($routerJson);
 
+        $personasApplied = $this->agentPersonas->snapshotForRun();
+        $runMeta['personas_applied'] = $personasApplied;
+        $run->update(['metadata' => $runMeta]);
+
         $this->logStep($run, -2, 'model_router', $modelsResolved['router'] ?? null, $routerMeta['provider'] ?? null, null, 'success', $agentPrompt, $routerJson, $routerJson, null, null, null, $routerMs, $routerTok, null, [
             'routing_decision' => $modelRoute,
             'models_resolved' => $modelsResolved,
             'router_meta' => $routerMeta,
+            'personas_applied' => $personasApplied,
         ]);
         $tokenAcc += $routerTok;
+
+        $this->emit($emit, $this->basePayload($run, 'personas_active', [
+            'status' => 'success',
+            'summary' => 'Agent personas loaded for this run.',
+            'message' => 'Custom personas apply to each pipeline step.',
+            'personas_applied' => $personasApplied,
+        ]));
 
         $this->emit($emit, $this->basePayload($run, 'model_router_done', [
             'status' => 'success',
