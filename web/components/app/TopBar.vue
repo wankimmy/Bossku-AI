@@ -1,21 +1,6 @@
 <script setup lang="ts">
 const emit = defineEmits<{ menuToggle: [] }>()
-
-const dark = useState('dark-mode', () => false)
 const { status: activeRunStatus } = useActiveRun()
-
-function toggleDark() {
-  dark.value = !dark.value
-  if (import.meta.client) {
-    document.documentElement.classList.toggle('dark', dark.value)
-  }
-}
-
-onMounted(() => {
-  if (import.meta.client) {
-    dark.value = document.documentElement.classList.contains('dark')
-  }
-})
 </script>
 
 <template>
@@ -42,17 +27,6 @@ onMounted(() => {
       >
         {{ activeRunStatus ? `Run active: ${activeRunStatus}` : 'No active run' }}
       </span>
-    </div>
-
-    <!-- Right: theme toggle -->
-    <div class="flex items-center gap-2">
-      <button
-        type="button"
-        class="flex items-center gap-1.5 text-xs px-2 py-1 rounded-md border border-zinc-700 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors"
-        @click="toggleDark"
-      >
-        {{ dark ? '☀ light' : '🌙 dark' }}
-      </button>
     </div>
   </header>
 </template>

@@ -13,7 +13,10 @@ use App\Services\BosskuAi\PromptRouteClassifier;
 use App\Services\BosskuAi\RiskRuleEngine;
 use App\Services\BosskuAi\RuntimeSettings;
 use App\Services\BosskuAi\SkillRouterService;
+use App\Services\Llm\ModelRouter;
 use App\Services\Llm\OllamaClient;
+use App\Services\Llm\Providers\OllamaProvider;
+use App\Services\Llm\UsageTracker;
 use App\Services\Orchestrator\AuditorService;
 use App\Services\Orchestrator\DirectAnswerService;
 use App\Services\Orchestrator\ExecutorService;
@@ -39,7 +42,19 @@ class AppServiceProvider extends ServiceProvider
             return new OllamaClient($s->ollamaBaseUrl(), $apiKey);
         });
 
-        $this->app->singleton(LlmGateway::class);
+        $this->app->singleton(ModelRouter::class, function ($app) {
+            $router = new ModelRouter($app->make(UsageTracker::class));
+            $router->registerProvider(new OllamaProvider($app->make(OllamaClient::class)));
+
+            return $router;
+        });
+
+        $this->app->singleton(LlmGateway::class, function ($app) {
+            return new LlmGateway(
+                $app->make(OllamaClient::class),
+                $app->make(ModelRouter::class),
+            );
+        });
         $this->app->singleton(ModelRoutingConfig::class);
         $this->app->singleton(RiskRuleEngine::class);
         $this->app->singleton(DeterministicTaskClassifier::class);

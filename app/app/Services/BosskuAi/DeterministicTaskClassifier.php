@@ -27,6 +27,23 @@ class DeterministicTaskClassifier
         $memoryMode = 'read_and_write';
         $tokenLevel = 'medium';
 
+        // Smoke / connectivity checks (no repo work)
+        if (preg_match('/^(test|ping|hello|hi|hey)\s*[!?.]*$/i', trim($prompt))) {
+            $taskType = 'question';
+            $skill = 'generic';
+            $workflow = 'direct_answer';
+            $needsRepo = false;
+            $needsFileEdit = false;
+            $needsExecutor = false;
+            $needsAuditor = false;
+            $needsSecurity = false;
+            $needsFinal = false;
+            $needsTest = false;
+            $executorProfile = 'none';
+            $memoryMode = 'none';
+            $tokenLevel = 'low';
+        }
+
         // Snippet / example only (no repo edit implied), before broad "question" detection
         if (
             (str_contains($lower, 'example') || str_contains($lower, 'snippet'))

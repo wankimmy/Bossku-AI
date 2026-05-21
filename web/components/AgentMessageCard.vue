@@ -1,34 +1,104 @@
 <script setup lang="ts">
 import type { AgentMessage } from '../types/bossku'
 
-defineProps<{ message: AgentMessage }>()
+const props = defineProps<{ message: AgentMessage; isLast?: boolean; isRunning?: boolean }>()
+
+const agentConfig: Record<string, { color: string; bg: string; border: string; icon: string }> = {
+  orchestrator:    { color: 'text-blue-300',    bg: 'bg-blue-950/60',    border: 'border-blue-800/50',    icon: '🧠' },
+  planner:         { color: 'text-blue-300',    bg: 'bg-blue-950/60',    border: 'border-blue-800/50',    icon: '📋' },
+  executor:        { color: 'text-emerald-300', bg: 'bg-emerald-950/60', border: 'border-emerald-800/50', icon: '⚡' },
+  auditor:         { color: 'text-amber-300',   bg: 'bg-amber-950/60',   border: 'border-amber-800/50',   icon: '🔍' },
+  'security-auditor': { color: 'text-rose-300', bg: 'bg-rose-950/60',   border: 'border-rose-800/50',    icon: '🛡' },
+  'final-reviewer':{ color: 'text-purple-300',  bg: 'bg-purple-950/60',  border: 'border-purple-800/50',  icon: '✅' },
+  router:          { color: 'text-cyan-300',    bg: 'bg-cyan-950/60',    border: 'border-cyan-800/50',    icon: '🔀' },
+  memory:          { color: 'text-zinc-300',    bg: 'bg-zinc-800/60',    border: 'border-zinc-700/50',    icon: '💾' },
+  system:          { color: 'text-zinc-400',    bg: 'bg-zinc-800/40',    border: 'border-zinc-700/40',    icon: '⚙' },
+}
+
+const cfg = computed(() => agentConfig[props.message.agent] ?? agentConfig.system)
+
+const statusColor: Record<string, string> = {
+  completed: 'bg-emerald-900 text-emerald-300',
+  failed:    'bg-rose-900 text-rose-300',
+  running:   'bg-blue-900 text-blue-300',
+  pending:   'bg-zinc-800 text-zinc-400',
+}
+
+const mainText = computed(() => props.message.summary || props.message.message || (props.message.status === 'failed' ? 'Run step failed.' : ''))
+const detail = computed(() => {
+  if (props.message.summary && props.message.message && props.message.message !== props.message.summary)
+    return props.message.message
+  return ''
+})
+
+const detailOpen = ref(false)
 </script>
 
 <template>
-  <article class="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-    <div class="flex flex-wrap items-start justify-between gap-3">
-      <div>
-        <h2 class="text-sm font-semibold">
-          {{ message.title }}
-        </h2>
-        <div class="mt-1 flex flex-wrap gap-2 text-xs text-zinc-500">
-          <span>Role: {{ message.agent }}</span>
-          <span v-if="message.model_role">Model role: {{ message.model_role }}</span>
-          <span v-if="message.model" class="font-mono">{{ message.model }}</span>
-        </div>
+  <div class="flex gap-3 group">
+    <!-- Avatar -->
+    <div
+      class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-sm"
+      :class="[cfg.bg, cfg.border]"
+    >
+      {{ cfg.icon }}
+    </div>
+
+    <!-- Bubble -->
+    <div class="flex-1 min-w-0">
+      <!-- Header row -->
+      <div class="flex flex-wrap items-center gap-2 mb-1.5">
+        <span class="text-sm font-semibold" :class="cfg.color">{{ message.title }}</span>
+        <span
+          class="rounded-full px-2 py-0.5 text-xs font-medium"
+          :class="statusColor[message.status] ?? statusColor.pending"
+        >
+          {{ message.status }}
+        </span>
+        <span v-if="message.model" class="rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-xs text-zinc-400">
+          {{ message.model }}
+        </span>
+        <span v-if="message.latency_ms !== undefined" class="text-xs text-zinc-600">
+          {{ message.latency_ms }}ms
+        </span>
+        <span v-if="message.token_estimate !== undefined" class="text-xs text-zinc-600">
+          ~{{ message.token_estimate }} tok
+        </span>
       </div>
-      <span class="rounded border border-zinc-300 px-2 py-0.5 font-mono text-xs dark:border-zinc-700">{{ message.status }}</span>
+
+      <!-- Message body -->
+      <div
+        class="rounded-xl rounded-tl-sm border px-4 py-3 text-sm leading-relaxed"
+        :class="[cfg.bg, cfg.border, cfg.color]"
+      >
+        <!-- Typing indicator -->
+        <div v-if="isLast && isRunning && !mainText" class="flex items-center gap-1.5 h-5">
+          <span class="h-2 w-2 rounded-full bg-current animate-bounce [animation-delay:0ms]" />
+          <span class="h-2 w-2 rounded-full bg-current animate-bounce [animation-delay:150ms]" />
+          <span class="h-2 w-2 rounded-full bg-current animate-bounce [animation-delay:300ms]" />
+        </div>
+
+        <p v-else-if="mainText" class="whitespace-pre-wrap">{{ mainText }}</p>
+        <p v-else class="text-zinc-500 italic text-xs">Processing…</p>
+
+        <!-- Expandable detail -->
+        <template v-if="detail">
+          <button
+            type="button"
+            class="mt-2 flex items-center gap-1 text-xs opacity-60 hover:opacity-100 transition-opacity"
+            @click="detailOpen = !detailOpen"
+          >
+            <span>{{ detailOpen ? '▾' : '▸' }}</span>
+            <span>{{ detailOpen ? 'Hide details' : 'Show details' }}</span>
+          </button>
+          <pre v-if="detailOpen" class="mt-2 whitespace-pre-wrap text-xs opacity-80 font-mono leading-relaxed border-t border-current/20 pt-2">{{ detail }}</pre>
+        </template>
+      </div>
+
+      <!-- Handoff arrow -->
+      <p v-if="message.to_agent" class="mt-1 text-xs text-zinc-600 pl-1">
+        → handoff to <span class="text-zinc-400">{{ message.to_agent }}</span>
+      </p>
     </div>
-    <p v-if="message.summary" class="mt-3 text-sm leading-relaxed">
-      {{ message.summary }}
-    </p>
-    <p v-if="message.message && message.message !== message.summary" class="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-      {{ message.message }}
-    </p>
-    <div v-if="message.to_agent || message.latency_ms || message.token_estimate" class="mt-3 flex flex-wrap gap-2 text-xs text-zinc-500">
-      <span v-if="message.to_agent">Handoff: {{ message.to_agent }}</span>
-      <span v-if="message.latency_ms !== undefined">{{ message.latency_ms }}ms</span>
-      <span v-if="message.token_estimate !== undefined">{{ message.token_estimate }} tokens est.</span>
-    </div>
-  </article>
+  </div>
 </template>

@@ -21,17 +21,17 @@ watch(soulData, (v) => {
 }, { immediate: true })
 
 const saving = ref(false)
-const saveError = ref<string | null>(null)
+const toast = useToast()
 
 async function handleSave(content: string, changeSummary: string) {
   saving.value = true
-  saveError.value = null
   try {
-    await api.post('/soul', { content, change_summary: changeSummary })
+    await api.put('/soul', { content, change_summary: changeSummary })
     await Promise.all([refresh(), refreshVersions()])
+    toast.success('Soul updated successfully.')
   }
-  catch (e: unknown) {
-    saveError.value = (e as Error)?.message ?? 'Save failed'
+  catch {
+    toast.error('Failed to save soul.')
   }
   finally {
     saving.value = false
@@ -42,10 +42,12 @@ async function acceptSuggestion(suggestion: string) {
   const currentContent = soulData.value?.content ?? ''
   await handleSave(currentContent + '\n\n' + suggestion, 'AI suggestion applied')
   suggestions.value = suggestions.value.filter(s => s !== suggestion)
+  toast.info('Suggestion applied to soul.')
 }
 
 function dismissSuggestion(suggestion: string) {
   suggestions.value = suggestions.value.filter(s => s !== suggestion)
+  toast.info('Suggestion dismissed.')
 }
 
 const versions = computed(() => versionsData.value?.data ?? [])

@@ -4,6 +4,7 @@ export default defineNuxtConfig({
   app: {
     head: {
       title: 'BosskuAI',
+      htmlAttrs: { class: 'dark' },
       meta: [
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
         { name: 'description', content: 'Skill-aware observable AI orchestrator' },
@@ -19,5 +20,14 @@ export default defineNuxtConfig({
   },
   tailwindcss: {
     cssPath: '~/assets/css/tailwind.css'
-  }
+  },
+  vite: {
+    server: {
+      // Hot reload is expensive on Docker Desktop / Windows bind mounts.
+      hmr: false,
+      watch: {
+        ignored: ['**/*'],
+      },
+    },
+  },
 })

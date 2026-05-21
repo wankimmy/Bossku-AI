@@ -32,6 +32,15 @@ class BosskuRoutingClassifierTest extends TestCase
     }
 
     #[Test]
+    public function smoke_test_prompt_uses_direct_answer(): void
+    {
+        $r = $this->classify('test');
+        $this->assertSame('direct_answer', $r['workflow']);
+        $this->assertFalse($r['needs_executor']);
+        $this->assertFalse($r['needs_auditor']);
+    }
+
+    #[Test]
     public function laravel_question_is_direct_answer_low_risk(): void
     {
         $r = $this->classify('Explain Laravel policy vs gate');

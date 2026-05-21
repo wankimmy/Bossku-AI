@@ -13,12 +13,17 @@ const plugins = computed<Plugin[]>(() => {
 })
 
 const pingingId = ref<string | null>(null)
+const toast = useToast()
 
 async function ping(id: string) {
   pingingId.value = id
   try {
     await api.post(`/plugins/${id}/heartbeat`)
+    toast.success('Heartbeat sent.')
     await refresh()
+  }
+  catch {
+    toast.error('Failed to ping plugin.')
   }
   finally {
     pingingId.value = null
@@ -26,8 +31,14 @@ async function ping(id: string) {
 }
 
 async function togglePlugin(plugin: Plugin) {
-  await api.patch(`/plugins/${plugin.id}`, { is_active: !plugin.is_active })
-  await refresh()
+  try {
+    await api.patch(`/plugins/${plugin.id}`, { is_active: !plugin.is_active })
+    toast.success(`Plugin ${plugin.is_active ? 'disabled' : 'enabled'}.`)
+    await refresh()
+  }
+  catch {
+    toast.error('Failed to update plugin.')
+  }
 }
 </script>
 

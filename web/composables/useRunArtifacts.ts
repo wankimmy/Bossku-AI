@@ -72,8 +72,10 @@ export function useRunArtifacts(items: UnknownRecord[] = []): NormalizedRunArtif
         status,
         model_role: stringOrUndefined(event.model_role ?? metadata.model_role),
         model: stringOrUndefined(event.model ?? item.model ?? metadata.model),
-        summary: stringOrUndefined(event.summary ?? metadata.summary ?? summaryFromArtifacts(artifacts, type)),
-        message: stringOrUndefined(event.message ?? metadata.message ?? item.output),
+        summary: stringOrUndefined(
+          event.summary ?? metadata.summary ?? event.error ?? summaryFromArtifacts(artifacts, type),
+        ),
+        message: stringOrUndefined(event.error ?? event.message ?? metadata.message ?? metadata.error ?? item.output),
         from_agent: stringOrUndefined(event.from_agent ?? metadata.from_agent),
         to_agent: stringOrUndefined(event.to_agent ?? metadata.to_agent),
         latency_ms: numberOrUndefined(event.latency_ms ?? item.latency_ms),

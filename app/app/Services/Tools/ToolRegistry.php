@@ -2,15 +2,32 @@
 
 namespace App\Services\Tools;
 
+use App\Models\BosskuAi\Run;
 use App\Models\BosskuAi\ToolCall;
+use App\Services\Governance\ApprovalGateService;
+use App\Services\Governance\RiskClassifier;
+use App\Services\Project\ProjectPathResolver;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Symfony\Component\Finder\Finder;
 
 class ToolRegistry
 {
     /** @var list<string> */
-    protected array $allow = ['log', 'db_query', 'file_read_safe'];
+    protected array $allow = [
+        'log',
+        'db_query',
+        'file_read_safe',
+        'file_search',
+        'file_write_proposed',
+    ];
+
+    public function __construct(
+        protected ProjectPathResolver $paths,
+        protected ApprovalGateService $approvals,
+        protected RiskClassifier $riskClassifier,
+    ) {}
 
     /** @param callable(string, array): void|null $emit optional event hook */
     public function invoke(?string $runId, ?string $stepId, mixed $toolRequest, ?callable $emit = null): array
@@ -38,6 +55,8 @@ class ToolRegistry
                 'log' => $this->log($payload),
                 'db_query' => $this->dbQuerySafe($payload),
                 'file_read_safe' => $this->fileReadSafe($payload),
+                'file_search' => $this->fileSearch($payload),
+                'file_write_proposed' => $this->fileWriteProposed($runId, $payload),
                 default => ['error' => 'Unknown tool'],
             };
             $status = 'ok';
@@ -101,26 +120,113 @@ class ToolRegistry
     protected function fileReadSafe(array $payload): array
     {
         $path = (string) ($payload['path'] ?? '');
-        $baseRepo = config('bossku.repo_root');
-        $bases = [$baseRepo, base_path()];
-        foreach ($bases as $base) {
-            if ($base !== '' && is_dir($base)) {
-                $baseReal = realpath($base);
-                $combined = ($baseReal ? $baseReal : $base).DIRECTORY_SEPARATOR.ltrim(str_replace('/', DIRECTORY_SEPARATOR, $path), DIRECTORY_SEPARATOR);
-                $combinedReal = realpath($combined);
-                if ($combinedReal !== false && $baseReal !== false && Str::startsWith($combinedReal, $baseReal)) {
-                    if (! is_file($combinedReal)) {
-                        return ['found' => false];
-                    }
-
-                    return [
-                        'found' => true,
-                        'preview' => Str::limit((string) file_get_contents($combinedReal), 8000),
-                    ];
-                }
-            }
+        $resolved = $this->paths->resolve($path);
+        if (! is_file($resolved['absolute'])) {
+            return ['found' => false, 'path' => $resolved['relative']];
         }
 
-        throw new \InvalidArgumentException('Path denied or not readable.');
+        return [
+            'found' => true,
+            'path' => $resolved['relative'],
+            'preview' => Str::limit((string) file_get_contents($resolved['absolute']), 8000),
+        ];
+    }
+
+    /** @param array<string,mixed> $payload */
+    protected function fileSearch(array $payload): array
+    {
+        $query = (string) ($payload['q'] ?? $payload['query'] ?? '');
+        if ($query === '') {
+            throw new \InvalidArgumentException('Search query is required.');
+        }
+
+        $root = $this->paths->repoRoot();
+        $glob = (string) ($payload['glob'] ?? '*');
+        $finder = Finder::create()
+            ->files()
+            ->in($root)
+            ->name($glob)
+            ->ignoreUnreadableDirs()
+            ->exclude(['.git', 'node_modules', 'vendor', '.nuxt', '.output', 'dist', 'build']);
+
+        $matches = [];
+        $pattern = '/'.preg_quote($query, '/').'/i';
+
+        foreach ($finder as $file) {
+            if (count($matches) >= 50) {
+                break;
+            }
+
+            $absolute = $file->getRealPath();
+            if ($absolute === false) {
+                continue;
+            }
+
+            if ($file->getSize() > 1_048_576) {
+                continue;
+            }
+
+            $contents = @file_get_contents($absolute);
+            if ($contents === false || ! mb_check_encoding($contents, 'UTF-8')) {
+                continue;
+            }
+
+            if (! preg_match($pattern, $contents)) {
+                continue;
+            }
+
+            $relative = ltrim(str_replace($root, '', $absolute), DIRECTORY_SEPARATOR);
+            $matches[] = [
+                'path' => str_replace(DIRECTORY_SEPARATOR, '/', $relative),
+            ];
+        }
+
+        return ['matches' => $matches, 'count' => count($matches)];
+    }
+
+    /** @param array<string,mixed> $payload */
+    protected function fileWriteProposed(?string $runId, array $payload): array
+    {
+        $path = (string) ($payload['path'] ?? '');
+        $after = (string) ($payload['new_contents'] ?? $payload['contents'] ?? '');
+        if ($path === '') {
+            throw new \InvalidArgumentException('path is required.');
+        }
+
+        $resolved = $this->paths->resolve($path);
+        $before = is_file($resolved['absolute']) ? (string) file_get_contents($resolved['absolute']) : '';
+        $diff = $this->paths->unifiedDiff($resolved['relative'], $before, $after);
+
+        if ($runId === null) {
+            $run = Run::query()->create([
+                'prompt' => 'Agent file change: '.$resolved['relative'],
+                'status' => 'running',
+                'metadata' => ['source' => 'agent_tool'],
+            ]);
+            $runId = $run->id;
+        }
+
+        $risk = $this->riskClassifier->classify($resolved['relative'].' '.$after);
+
+        $approval = $this->approvals->createApproval(
+            $runId,
+            null,
+            'file_write',
+            'Write file: '.$resolved['relative'],
+            $risk,
+            [
+                'path' => $resolved['relative'],
+                'before' => $before,
+                'after' => $after,
+                'diff' => $diff,
+            ],
+        );
+
+        return [
+            'approval_id' => $approval->id,
+            'path' => $resolved['relative'],
+            'status' => 'pending',
+            'diff' => $diff,
+        ];
     }
 }

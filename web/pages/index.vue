@@ -3,12 +3,28 @@ definePageMeta({ layout: 'default' })
 
 const prompt = ref('')
 const { events, running, error, start, stop } = useRunStream()
-const mobileTab = ref<'chat' | 'plan' | 'changes' | 'audit' | 'memory'>('chat')
+const toast = useToast()
+const mobileTab = ref<'chat' | 'plan' | 'changes' | 'audit' | 'memory' | 'agents'>('agents')
 
 const artifacts = computed(() => useRunArtifacts(events.value as Record<string, unknown>[]))
 const status = computed(() => {
   const last = events.value.at(-1)
   return last ? String(last.status ?? last.type ?? 'running') : 'idle'
+})
+
+// Final AI response and error surfacing
+const finalOutput = computed(() => {
+  const done = events.value.findLast((e: Record<string, unknown>) => e.type === 'run_completed')
+  return done ? String(done.output ?? done.final_output ?? '') : ''
+})
+const runError = computed(() => {
+  if (error.value) return String(error.value)
+  const failed = events.value.findLast((e: Record<string, unknown>) => e.type === 'run_failed')
+  if (!failed) return ''
+  const plannerFailed = events.value.findLast((e: Record<string, unknown>) => e.type === 'planner_failed')
+  return String(
+    failed.error ?? failed.message ?? plannerFailed?.error ?? plannerFailed?.message ?? failed.summary ?? 'Run failed.',
+  )
 })
 
 async function syncRun() {
@@ -39,8 +55,17 @@ async function syncRun() {
 function submit() {
   if (!prompt.value.trim()) return
   mobileTab.value = 'chat'
+  toast.info('Task started…')
   start(prompt.value.trim())
 }
+
+watch(finalOutput, (val) => {
+  if (val) toast.success('Task completed.')
+})
+
+watch(runError, (val) => {
+  if (val) toast.error(val.length > 80 ? val.slice(0, 80) + '…' : val)
+})
 
 const navLinks = [
   { to: '/runs', label: 'Runs' },
@@ -59,13 +84,13 @@ const navLinks = [
       :routing="artifacts.routingSummary"
     />
 
-    <div class="flex gap-1 rounded-lg bg-zinc-100 p-1 dark:bg-zinc-900 md:hidden">
+    <div class="flex gap-1 rounded-lg bg-zinc-900 p-1 md:hidden overflow-x-auto">
       <button
-        v-for="tab in ['chat', 'plan', 'changes', 'audit', 'memory'] as const"
+        v-for="tab in ['chat', 'agents', 'plan', 'changes', 'audit', 'memory'] as const"
         :key="tab"
         type="button"
-        class="flex-1 rounded-md px-2 py-2 text-xs font-medium capitalize"
-        :class="mobileTab === tab ? 'bg-white text-zinc-900 shadow dark:bg-zinc-800 dark:text-zinc-100' : 'text-zinc-600 dark:text-zinc-400'"
+        class="shrink-0 rounded-md px-3 py-2 text-xs font-medium capitalize"
+        :class="mobileTab === tab ? 'bg-zinc-800 text-zinc-100 shadow' : 'text-zinc-500'"
         @click="mobileTab = tab"
       >
         {{ tab }}
@@ -128,42 +153,64 @@ const navLinks = [
               Stop stream
             </button>
           </div>
-          <p v-if="error" class="mt-3 text-sm text-rose-700 dark:text-rose-400">
-            {{ error }}
-          </p>
+          <!-- Error display -->
+          <div v-if="runError" class="mt-3 rounded-md border border-rose-800 bg-rose-950/50 px-4 py-3 text-sm text-rose-300">
+            <span class="font-semibold text-rose-400">Error — </span>{{ runError }}
+          </div>
         </section>
 
-        <section class="space-y-3" aria-live="polite">
-          <h2 class="text-sm font-semibold">
-            Agent conversation
-          </h2>
+        <!-- AI response panel -->
+        <section v-if="finalOutput" class="rounded-lg border border-emerald-800/50 bg-zinc-900 p-4 space-y-2">
+          <h2 class="text-xs font-semibold uppercase text-emerald-500 tracking-wider">AI Response</h2>
+          <pre class="whitespace-pre-wrap text-sm text-zinc-100 leading-relaxed font-mono">{{ finalOutput }}</pre>
+        </section>
+
+        <!-- Chat conversation -->
+        <section class="space-y-4" aria-live="polite">
+          <div
+            v-if="artifacts.agentMessages.length === 0 && !running"
+            class="flex flex-col items-center justify-center py-16 text-center"
+          >
+            <span class="text-4xl mb-3">🤖</span>
+            <p class="text-sm text-zinc-400">Describe a task and hit <span class="font-semibold text-emerald-400">Run task</span>.</p>
+            <p class="text-xs text-zinc-600 mt-1">The orchestrator, executor, auditor, and reviewer will respond here.</p>
+          </div>
           <AgentMessageCard
-            v-for="message in artifacts.agentMessages"
+            v-for="(message, idx) in artifacts.agentMessages"
             :key="message.id"
             :message="message"
-          />
-          <UiEmptyState
-            v-if="artifacts.agentMessages.length === 0"
-            title="No agent messages yet."
-            hint="Run a task to see orchestrator, executor, auditor, and final reviewer updates."
+            :is-last="idx === artifacts.agentMessages.length - 1"
+            :is-running="running"
           />
         </section>
 
         <FinalResultPanel v-if="artifacts.finalResult.raw" :result="artifacts.finalResult" />
-
-        <details class="rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
-          <summary class="cursor-pointer text-sm font-semibold">
-            Raw JSON
-          </summary>
-          <ExecutionTimeline class="mt-3" :events="events as Record<string, unknown>[]" />
-        </details>
       </main>
 
       <aside class="space-y-4">
-        <div :class="mobileTab !== 'plan' ? 'hidden md:block' : ''">
+        <!-- Desktop: tab bar for right panel -->
+        <div class="hidden md:flex gap-1 rounded-lg bg-zinc-900 p-1">
+          <button
+            v-for="tab in ['agents', 'plan', 'changes', 'audit', 'memory'] as const"
+            :key="tab"
+            type="button"
+            class="flex-1 rounded-md px-2 py-1.5 text-xs font-medium capitalize transition-colors"
+            :class="mobileTab === tab ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-500 hover:text-zinc-300'"
+            @click="mobileTab = tab"
+          >
+            {{ tab === 'agents' ? '🤖 Agents' : tab === 'plan' ? '📋 Plan' : tab === 'changes' ? '📁 Changes' : tab === 'audit' ? '🔍 Audit' : '🧠 Memory' }}
+          </button>
+        </div>
+
+        <!-- Agents activity feed -->
+        <div :class="mobileTab !== 'agents' ? 'hidden' : ''" class="rounded-lg border border-zinc-800 bg-zinc-900 p-3">
+          <AgentActivityFeed :events="events as Record<string, unknown>[]" :running="running" />
+        </div>
+
+        <div :class="mobileTab !== 'plan' ? 'hidden' : ''">
           <PlanChecklist :items="artifacts.checklist" />
         </div>
-        <div :class="mobileTab !== 'changes' ? 'hidden md:block' : ''">
+        <div :class="mobileTab !== 'changes' ? 'hidden' : ''">
           <ChangeTrackerPanel
             :files-read="artifacts.filesRead"
             :files-changed="artifacts.filesChanged"
@@ -171,13 +218,13 @@ const navLinks = [
             :tests-run="artifacts.testsRun"
           />
         </div>
-        <div :class="mobileTab !== 'audit' ? 'hidden md:block' : ''">
+        <div :class="mobileTab !== 'audit' ? 'hidden' : ''">
           <AuditFindingsPanel
             :status="artifacts.finalResult.auditResult"
             :findings="artifacts.auditFindings"
           />
         </div>
-        <div :class="mobileTab !== 'memory' ? 'hidden md:block' : ''">
+        <div :class="mobileTab !== 'memory' ? 'hidden' : ''">
           <ContextDrawer title="Context used" :context-events="events as Record<string, unknown>[]" />
         </div>
       </aside>

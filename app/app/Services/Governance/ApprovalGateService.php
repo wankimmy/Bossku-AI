@@ -8,7 +8,7 @@ use Illuminate\Support\Carbon;
 class ApprovalGateService
 {
     private const ALWAYS_GATE = [
-        'external_http', 'env_mod', 'deployment', 'secret_rotation',
+        'external_http', 'env_mod', 'deployment', 'secret_rotation', 'file_write',
     ];
 
     public function __construct(private readonly RiskClassifier $classifier) {}

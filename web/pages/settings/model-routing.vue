@@ -14,17 +14,30 @@ const routes = computed<ModelRoute[]>(() => {
 
 const showAddForm = ref(false)
 const newRoute = reactive({ role: '', primary_model: '', fallback_model: '' })
+const toast = useToast()
 
 async function addRoute() {
-  await api.post('/model-routes', { ...newRoute })
-  showAddForm.value = false
-  Object.assign(newRoute, { role: '', primary_model: '', fallback_model: '' })
-  await refresh()
+  try {
+    await api.post('/model-routes', { ...newRoute })
+    toast.success(`Route for "${newRoute.role}" added.`)
+    showAddForm.value = false
+    Object.assign(newRoute, { role: '', primary_model: '', fallback_model: '' })
+    await refresh()
+  }
+  catch {
+    toast.error('Failed to add route.')
+  }
 }
 
 async function deleteRoute(id: string) {
-  await api.del(`/model-routes/${id}`)
-  await refresh()
+  try {
+    await api.del(`/model-routes/${id}`)
+    toast.success('Route deleted.')
+    await refresh()
+  }
+  catch {
+    toast.error('Failed to delete route.')
+  }
 }
 </script>
 

@@ -21,6 +21,7 @@ const healthCls = (h: string) => {
   }
 }
 
+const toast = useToast()
 const testingId = ref<string | null>(null)
 const syncingId = ref<string | null>(null)
 
@@ -28,6 +29,10 @@ async function testProvider(id: string) {
   testingId.value = id
   try {
     await api.post(`/providers/${id}/test`)
+    toast.success('Connection test passed.')
+  }
+  catch {
+    toast.error('Connection test failed.')
   }
   finally {
     testingId.value = null
@@ -39,6 +44,10 @@ async function syncModels(id: string) {
   syncingId.value = id
   try {
     await api.post(`/providers/${id}/sync-models`)
+    toast.success('Models synced successfully.')
+  }
+  catch {
+    toast.error('Failed to sync models.')
   }
   finally {
     syncingId.value = null
@@ -47,8 +56,14 @@ async function syncModels(id: string) {
 }
 
 async function toggleActive(provider: LlmProvider) {
-  await api.patch(`/providers/${provider.id}`, { is_active: !provider.is_active })
-  await refresh()
+  try {
+    await api.patch(`/providers/${provider.id}`, { is_active: !provider.is_active })
+    toast.success(`Provider ${provider.is_active ? 'disabled' : 'enabled'}.`)
+    await refresh()
+  }
+  catch {
+    toast.error('Failed to update provider.')
+  }
 }
 
 // Add new provider form
@@ -56,10 +71,16 @@ const showAddForm = ref(false)
 const newProvider = reactive({ name: '', type: 'openai', base_url: '', api_key: '' })
 
 async function addProvider() {
-  await api.post('/providers', { ...newProvider })
-  showAddForm.value = false
-  Object.assign(newProvider, { name: '', type: 'openai', base_url: '', api_key: '' })
-  await refresh()
+  try {
+    await api.post('/providers', { ...newProvider })
+    toast.success(`Provider "${newProvider.name}" added.`)
+    showAddForm.value = false
+    Object.assign(newProvider, { name: '', type: 'openai', base_url: '', api_key: '' })
+    await refresh()
+  }
+  catch {
+    toast.error('Failed to add provider.')
+  }
 }
 </script>
 

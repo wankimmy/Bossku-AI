@@ -2,12 +2,13 @@
 
 /**
  * Central BosskuAI model routing configuration.
- * All chat models resolve to Ollama Cloud tags via bossku_models.aliases.
+ * Allowed Ollama Cloud models only (via bossku_models.aliases):
+ * kimi-k2.6:cloud, glm-5.1:cloud, deepseek-v4-pro:cloud, qwen3-coder-next:cloud
  */
 return [
     'router' => [
         'primary' => env('OLLAMA_FAST_MODEL', env('BOSSKU_ROUTER_MODEL', 'kimi-k2.6')),
-        'fallback' => ['glm-5.1', 'deepseek-v4-pro'],
+        'fallback' => ['glm-5.1', 'deepseek-v4-pro', 'qwen3-coder-next'],
         'enabled' => filter_var(env('BOSSKU_ROUTER_LLM_ENABLED', true), FILTER_VALIDATE_BOOL),
         'max_context_files' => 0,
         'max_tokens' => 2000,
@@ -25,7 +26,7 @@ return [
 
     'orchestrator' => [
         'primary' => env('OLLAMA_REASONING_MODEL', env('BOSSKU_ORCHESTRATOR_MODEL', 'kimi-k2.6')),
-        'fallback' => ['glm-5.1', 'deepseek-v4-pro'],
+        'fallback' => ['glm-5.1', 'deepseek-v4-pro', 'qwen3-coder-next'],
         'enabled' => true,
         'max_context_files' => 20,
         'max_tokens' => 8000,
@@ -43,8 +44,8 @@ return [
 
     'executor' => [
         'default' => [
-            'primary' => env('OLLAMA_CODING_MODEL', env('BOSSKU_EXECUTOR_DEFAULT_MODEL', 'glm-5.1')),
-            'fallback' => ['kimi-k2.6', 'deepseek-v4-pro'],
+            'primary' => env('OLLAMA_CODING_MODEL', env('BOSSKU_EXECUTOR_DEFAULT_MODEL', 'qwen3-coder-next')),
+            'fallback' => ['glm-5.1', 'kimi-k2.6', 'deepseek-v4-pro'],
             'max_context_files' => 15,
             'max_tokens' => 12000,
             'temperature' => 0.2,
@@ -52,8 +53,8 @@ return [
             'retry_count' => 1,
         ],
         'frontend_ui' => [
-            'primary' => env('OLLAMA_CODING_MODEL', env('BOSSKU_EXECUTOR_FRONTEND_MODEL', 'glm-5.1')),
-            'fallback' => ['kimi-k2.6', 'deepseek-v4-pro'],
+            'primary' => env('OLLAMA_CODING_MODEL', env('BOSSKU_EXECUTOR_FRONTEND_MODEL', 'qwen3-coder-next')),
+            'fallback' => ['glm-5.1', 'kimi-k2.6', 'deepseek-v4-pro'],
             'max_context_files' => 20,
             'max_tokens' => 14000,
             'temperature' => 0.25,
@@ -61,8 +62,8 @@ return [
             'retry_count' => 1,
         ],
         'backend' => [
-            'primary' => env('OLLAMA_CODING_MODEL', env('BOSSKU_EXECUTOR_BACKEND_MODEL', 'glm-5.1')),
-            'fallback' => ['kimi-k2.6', 'deepseek-v4-pro'],
+            'primary' => env('OLLAMA_CODING_MODEL', env('BOSSKU_EXECUTOR_BACKEND_MODEL', 'qwen3-coder-next')),
+            'fallback' => ['glm-5.1', 'kimi-k2.6', 'deepseek-v4-pro'],
             'max_context_files' => 15,
             'max_tokens' => 12000,
             'temperature' => 0.2,
@@ -71,7 +72,7 @@ return [
         ],
         'devops' => [
             'primary' => env('OLLAMA_CODING_MODEL', env('BOSSKU_EXECUTOR_DEVOPS_MODEL', 'glm-5.1')),
-            'fallback' => ['kimi-k2.6', 'deepseek-v4-pro'],
+            'fallback' => ['qwen3-coder-next', 'kimi-k2.6', 'deepseek-v4-pro'],
             'max_context_files' => 20,
             'max_tokens' => 14000,
             'temperature' => 0.1,
@@ -80,7 +81,7 @@ return [
         ],
         'high_risk' => [
             'primary' => env('OLLAMA_CODING_MODEL', env('BOSSKU_EXECUTOR_HIGH_RISK_MODEL', 'deepseek-v4-pro')),
-            'fallback' => ['glm-5.1', 'kimi-k2.6'],
+            'fallback' => ['qwen3-coder-next', 'glm-5.1', 'kimi-k2.6'],
             'max_context_files' => 25,
             'max_tokens' => 16000,
             'temperature' => 0.1,
@@ -100,7 +101,7 @@ return [
 
     'auditor' => [
         'primary' => env('OLLAMA_REVIEW_MODEL', env('BOSSKU_AUDITOR_MODEL', 'deepseek-v4-pro')),
-        'fallback' => ['glm-5.1', 'kimi-k2.6'],
+        'fallback' => ['glm-5.1', 'kimi-k2.6', 'qwen3-coder-next'],
         'enabled' => true,
         'max_context_files' => 10,
         'max_tokens' => 10000,
@@ -115,7 +116,7 @@ return [
 
     'security_auditor' => [
         'primary' => env('OLLAMA_REVIEW_MODEL', env('BOSSKU_SECURITY_AUDITOR_MODEL', 'deepseek-v4-pro')),
-        'fallback' => ['glm-5.1', 'kimi-k2.6'],
+        'fallback' => ['glm-5.1', 'kimi-k2.6', 'qwen3-coder-next'],
         'enabled' => true,
         'max_context_files' => 15,
         'max_tokens' => 12000,
@@ -132,7 +133,7 @@ return [
     'final_reviewer' => [
         'enabled' => 'conditional',
         'primary' => env('OLLAMA_REASONING_MODEL', env('BOSSKU_FINAL_REVIEWER_MODEL', 'deepseek-v4-pro')),
-        'fallback' => ['glm-5.1', 'kimi-k2.6'],
+        'fallback' => ['glm-5.1', 'kimi-k2.6', 'qwen3-coder-next'],
         'max_context_files' => 8,
         'max_tokens' => 8000,
         'temperature' => 0.1,
@@ -148,7 +149,7 @@ return [
 
     'writer' => [
         'primary' => env('OLLAMA_REASONING_MODEL', env('BOSSKU_WRITER_MODEL', 'kimi-k2.6')),
-        'fallback' => ['glm-5.1', 'deepseek-v4-pro'],
+        'fallback' => ['glm-5.1', 'deepseek-v4-pro', 'qwen3-coder-next'],
         'max_tokens' => 6000,
         'temperature' => 0.3,
         'timeout_seconds' => 120,
@@ -157,7 +158,7 @@ return [
 
     'direct_answer' => [
         'primary' => env('OLLAMA_FAST_MODEL', env('BOSSKU_DIRECT_ANSWER_MODEL', 'kimi-k2.6')),
-        'fallback' => ['glm-5.1', 'deepseek-v4-pro'],
+        'fallback' => ['glm-5.1', 'deepseek-v4-pro', 'qwen3-coder-next'],
         'max_tokens' => 4000,
         'temperature' => 0.2,
         'timeout_seconds' => 90,
@@ -180,10 +181,19 @@ return [
         'kimi-k2.6' => env('BOSSKU_ALIAS_KIMI_K2_6', 'kimi-k2.6:cloud'),
         'deepseek-v4-pro' => env('BOSSKU_ALIAS_DEEPSEEK_V4_PRO', 'deepseek-v4-pro:cloud'),
         'deepseek-v4-flash' => env('BOSSKU_ALIAS_DEEPSEEK_V4_FLASH', 'glm-5.1:cloud'),
-        'qwen-3-coder' => env('BOSSKU_ALIAS_QWEN_3_CODER', 'glm-5.1:cloud'),
+        'qwen-3-coder' => env('BOSSKU_ALIAS_QWEN_3_CODER', 'qwen3-coder-next:cloud'),
+        'qwen3-coder-next' => env('BOSSKU_ALIAS_QWEN3_CODER_NEXT', 'qwen3-coder-next:cloud'),
 
         'glm-5.1' => env('BOSSKU_ALIAS_GLM_5_1', 'glm-5.1:cloud'),
         'gemini-3-pro' => env('BOSSKU_ALIAS_GEMINI_3_PRO', 'kimi-k2.6:cloud'),
+    ],
+
+    /** @var list<string> Allowed Ollama Cloud model tags (documentation + validation reference). */
+    'allowed_cloud_models' => [
+        'kimi-k2.6:cloud',
+        'glm-5.1:cloud',
+        'deepseek-v4-pro:cloud',
+        'qwen3-coder-next:cloud',
     ],
 
     /**

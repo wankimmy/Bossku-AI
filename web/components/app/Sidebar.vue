@@ -3,8 +3,10 @@ defineProps<{ open?: boolean }>()
 const emit = defineEmits<{ toggle: [] }>()
 
 const links = [
+  { to: '/', label: '🏠 Chat' },
   { to: '/dashboard', label: '📊 Dashboard' },
   { to: '/runs', label: '▶ Runs' },
+  { to: '/project', label: '📁 Project' },
   { to: '/agents', label: '🤖 Agents' },
   { to: '/skills', label: '⚡ Skills' },
   { to: '/memory', label: '🧠 Memory' },

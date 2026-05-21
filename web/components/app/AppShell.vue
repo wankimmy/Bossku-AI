@@ -12,6 +12,7 @@ const router = useRouter()
 const commands: Command[] = [
   { id: 'dashboard', label: '📊 Go to Dashboard', action: () => router.push('/dashboard') },
   { id: 'runs', label: '▶ Go to Runs', action: () => router.push('/runs') },
+  { id: 'project', label: '📁 Go to Project', action: () => router.push('/project') },
   { id: 'agents', label: '🤖 Go to Agents', action: () => router.push('/agents') },
   { id: 'skills', label: '⚡ Go to Skills', action: () => router.push('/skills') },
   { id: 'memory', label: '🧠 Go to Memory', action: () => router.push('/memory') },
@@ -78,5 +79,8 @@ onUnmounted(() => {
       :commands="commands"
       @close="commandBarOpen = false"
     />
+
+    <!-- Toast notifications -->
+    <AppToastContainer />
   </div>
 </template>

@@ -2,6 +2,7 @@
 
 namespace App\Services\Orchestrator;
 
+use App\Services\BosskuAi\LlmErrorFormatter;
 use App\Services\BosskuAi\ModelFallbackService;
 use App\Services\BosskuAi\ModelRoutingConfig;
 use App\Services\BosskuAi\RuntimeSettings;
@@ -72,7 +73,7 @@ SYS;
               $retry,
               'orchestrator',
               function (mixed $j): bool {
-                  return is_array($j) && isset($j['summary'], $j['target_file_list']);
+                  return is_array($j) && (isset($j['summary']) || isset($j['task_summary']));
               },
               (int) ($orch['max_tokens'] ?? 8192)
           );
@@ -85,9 +86,11 @@ SYS;
 
           return $decoded;
       } catch (\Throwable $e) {
+          $message = LlmErrorFormatter::humanize($e->getMessage());
+
           return [
               'error' => true,
-              'message' => $e->getMessage(),
+              'message' => $message,
           ];
       }
     }

@@ -124,6 +124,18 @@ SYS;
             $route = array_merge($base, $llm);
         }
 
+        // Heuristic short paths (smoke test, simple Q&A) must not be overridden by LLM router.
+        $shortWorkflow = (string) ($base['workflow'] ?? '');
+        if (in_array($shortWorkflow, ['direct_answer', 'writer_only', 'orchestrator_only'], true)) {
+            $route['workflow'] = $shortWorkflow;
+            $route['needs_executor'] = (bool) ($base['needs_executor'] ?? false);
+            $route['needs_auditor'] = (bool) ($base['needs_auditor'] ?? false);
+            $route['needs_security_auditor'] = (bool) ($base['needs_security_auditor'] ?? false);
+            $route['needs_final_reviewer'] = (bool) ($base['needs_final_reviewer'] ?? false);
+            $route['needs_file_edit'] = (bool) ($base['needs_file_edit'] ?? false);
+            $route['memory_mode'] = (string) ($base['memory_mode'] ?? 'read_only');
+        }
+
         $llmRisk = (string) ($route['risk_level'] ?? 'low');
         $merged = $this->riskEngine->mergeRisk($llmRisk, $detRisk['risk']);
         $route['risk_level'] = $merged['risk'];

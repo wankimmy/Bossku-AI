@@ -22,7 +22,7 @@ services:
       QUEUE_CONNECTION: redis
     volumes:
       - ./app:/var/www/html
-      - ./:/repo:ro
+      - ./:/repo
     depends_on:
       postgres:
         condition: service_healthy

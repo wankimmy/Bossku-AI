@@ -12,7 +12,9 @@ use App\Http\Controllers\Api\LearningController;
 use App\Http\Controllers\Api\LogsController;
 use App\Http\Controllers\Api\MemoryApiController;
 use App\Http\Controllers\Api\ModelRoutingController;
+use App\Http\Controllers\Api\OllamaHealthController;
 use App\Http\Controllers\Api\PlaybookController;
+use App\Http\Controllers\Api\ProjectFilesController;
 use App\Http\Controllers\Api\PluginController;
 use App\Http\Controllers\Api\ProviderController;
 use App\Http\Controllers\Api\RunActionController;
@@ -25,6 +27,9 @@ use App\Http\Controllers\Api\SkillsGraphController;
 use App\Http\Controllers\Api\SoulController;
 use App\Http\Controllers\Api\UsageController;
 use Illuminate\Support\Facades\Route;
+
+// ── Ollama Cloud health ───────────────────────────────────────────────────────
+Route::get('/health/ollama', OllamaHealthController::class);
 
 // ── Runs ─────────────────────────────────────────────────────────────────────
 Route::get('/runs/stream', [RunController::class, 'stream']);
@@ -146,6 +151,17 @@ Route::get('/model-routes', [ModelRoutingController::class, 'index']);
 Route::post('/model-routes', [ModelRoutingController::class, 'store']);
 Route::patch('/model-routes/{id}', [ModelRoutingController::class, 'update']);
 Route::delete('/model-routes/{id}', [ModelRoutingController::class, 'destroy']);
+
+// ── Project (repo browser) ───────────────────────────────────────────────────
+Route::get('/project', [ProjectFilesController::class, 'root']);
+Route::get('/project/tree', [ProjectFilesController::class, 'tree']);
+Route::get('/project/file', [ProjectFilesController::class, 'file']);
+Route::get('/project/search', [ProjectFilesController::class, 'search']);
+Route::get('/project/changes', [ProjectFilesController::class, 'listChanges']);
+Route::post('/project/changes', [ProjectFilesController::class, 'proposeChange']);
+Route::post('/project/changes/{id}/approve', [ProjectFilesController::class, 'approveChange']);
+Route::post('/project/changes/{id}/apply', [ProjectFilesController::class, 'applyChange']);
+Route::post('/project/changes/{id}/reject', [ProjectFilesController::class, 'rejectChange']);
 
 // ── Approvals ────────────────────────────────────────────────────────────────
 Route::get('/approvals', [ApprovalController::class, 'index']);
