@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { useApi } from '~/composables/useApi'
 import type { Approval } from '~/types/api'
 import SideBySideDiffViewer from './SideBySideDiffViewer.vue'
 
@@ -15,6 +16,7 @@ const emit = defineEmits<{
   reject: [note: string]
 }>()
 
+const api = useApi()
 const note = ref('')
 const loading = ref(false)
 
@@ -71,7 +73,6 @@ async function doReject() {
   if (!props.approval || loading.value) return
   loading.value = true
   try {
-    const api = useApi()
     await api.post(`/approvals/${props.approval.id}/reject`, { note: note.value || undefined })
     emit('reject', note.value)
     note.value = ''

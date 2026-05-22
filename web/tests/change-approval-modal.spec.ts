@@ -1,7 +1,13 @@
 import { mount } from '@vue/test-utils'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import ChangeApprovalModal from '../components/ChangeApprovalModal.vue'
 import SideBySideDiffViewer from '../components/SideBySideDiffViewer.vue'
+
+const post = vi.fn().mockResolvedValue({})
+
+vi.mock('../composables/useApi', () => ({
+  useApi: () => ({ post }),
+}))
 
 describe('ChangeApprovalModal', () => {
   const approval = {
@@ -30,11 +36,6 @@ describe('ChangeApprovalModal', () => {
         stubs: {
           Teleport: true,
         },
-        mocks: {
-          useApi: () => ({
-            post: async () => ({}),
-          }),
-        },
       },
     })
 
@@ -43,6 +44,26 @@ describe('ChangeApprovalModal', () => {
     expect(wrapper.text()).toContain('Review before continuing')
     expect(wrapper.text()).toContain('Previous')
     expect(wrapper.text()).toContain('Updated')
+  })
+
+  it('calls approve API when Approve & apply is clicked', async () => {
+    post.mockClear()
+    const wrapper = mount(ChangeApprovalModal, {
+      props: {
+        open: true,
+        approval,
+        pendingCount: 1,
+      },
+      global: {
+        stubs: { Teleport: true },
+      },
+    })
+
+    const approveBtn = wrapper.findAll('button').find(b => b.text().includes('Approve'))
+    await approveBtn!.trigger('click')
+    expect(post).toHaveBeenCalledWith('/approvals/ap-1/approve', {
+      note: undefined,
+    })
   })
 
   it('highlights remove and add cells in split viewer', () => {
