@@ -154,6 +154,13 @@ SYS;
     {
         $risk = trim((string) ($route['risk_level'] ?? 'low'));
 
+        if (($route['audit_mode'] ?? '') === 'full' && $risk !== 'high') {
+            $route['needs_auditor'] = true;
+            $route['needs_security_auditor'] = true;
+            $route['needs_test_run'] = true;
+            $route['workflow'] = 'orchestrator_executor_auditor_security';
+        }
+
         if ($risk === 'high') {
             $ep = (string) ($route['executor_profile'] ?? 'default');
             $route['executor_profile'] = $ep === 'devops' ? 'devops' : 'high_risk';

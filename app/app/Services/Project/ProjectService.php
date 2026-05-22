@@ -175,16 +175,34 @@ class ProjectService
         }
 
         if ($active === null) {
-            return 'Active repository root: '.$root.' (default Bossku-AI /repo mount). '
+            $base = 'Active repository root: '.$root.' (default Bossku-AI /repo mount). '
                 .'To audit another codebase, add it under Project → Paths and click Activate before starting a run. '
                 .'All file_read_safe and file_search paths must be relative to this root (e.g. app/Models/User.php). '
                 .'Never pass Windows paths like C:\\Users\\... in tool payloads.';
+
+            return $base.$this->bosskuToolkitContextSuffix($root);
         }
+
+        $hints = app(ProjectRuntimeHints::class)->forPrompt($root);
+        $suffix = $hints !== '' ? ' '.$hints : '';
 
         return 'Active project: "'.$active->name.'". '
             .'Repository root (container): '.$root.'. '
             .'Host path maps here: '.$active->host_path.'. '
             .'All file_read_safe and file_search paths must be relative to the repository root only (e.g. src/index.php). '
-            .'Do not use Windows host paths or /repo unless that is the active root.';
+            .'Do not use Windows host paths or /repo unless that is the active root. '
+            .'Project commands (git, docker compose, php artisan, tests) run in this root only — never hardcode another repo\'s folder or compose service name.'
+            .$suffix
+            .$this->bosskuToolkitContextSuffix($root);
+    }
+
+    protected function bosskuToolkitContextSuffix(string $repoRoot): string
+    {
+        if (! app(BosskuToolkitDetector::class)->isBosskuToolkitRepository($repoRoot)) {
+            return '';
+        }
+
+        return ' '.BosskuToolkitPersonas::sharedPreamble()
+            .' Agent personas for this run include Bossku self-improvement overlays (see Agent Personas in Settings).';
     }
 }

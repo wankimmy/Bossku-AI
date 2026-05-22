@@ -5,6 +5,7 @@ namespace App\Services\Orchestrator;
 use App\Services\BosskuAi\AgentPersonaService;
 use App\Services\BosskuAi\ModelFallbackService;
 use App\Services\BosskuAi\ModelRoutingConfig;
+use App\Support\StringCoercion;
 
 class ExecutorService
 {
@@ -74,8 +75,12 @@ Audit feedback for revision:
 Workspace (mandatory — use relative paths only):
 {$workspaceContext}
 
-Preflight file_read_safe results (real repository reads; cite these paths only):
-{$this->jsonEncode($preflightReads)}
+Preflight file_read_safe results:
+{$this->jsonEncode(
+    ExecutorEvidenceSupport::wantsPreviewReadsInExecutorPrompt($modelRoute, $plan)
+        ? ExecutorEvidenceSupport::readsWithPreviewForExecutorPrompt($preflightReads)
+        : ExecutorEvidenceSupport::slimReadsForExecutorPrompt($preflightReads),
+)}
 
 Task:
 {$task}
@@ -96,13 +101,20 @@ files_changed (array of {path, change_type, summary, why, after?, diff?}),
 commands_run, tests_run, tests_result, patch_summary, known_issues,
 needs_user_input, blockers, suggested_options, needs_audit, handoff_message.
 
-If you cannot proceed without a user decision, set needs_user_input to true, list blockers, and provide 2-4 suggested_options.
+If you cannot proceed without a user decision (hard blocker or high-risk/destructive choice), set needs_user_input to true, list blockers, and provide 2-4 suggested_options.
+handoff_message MUST cite proof: "Files read: ...", "Files changed: path (summary)", "Commands: ..." — use paths from evidence only.
+Do not set needs_user_input for routine partial work; only blockers, permission errors, ambiguous targets, or destructive actions needing consent.
+
+Git undo: put exact allowlisted lines in commands_run (e.g. "git restore path/to/file.php"), one command per entry.
+Project commands (user must approve each; run only in the active project root from workspace context): git status/diff/restore/checkout; docker compose / docker compose exec <service>; php artisan …; php vendor/bin/phpunit; composer test. Use the compose service name from runtime hints for this repo — not a name from another project. Put exact command strings in commands_run — do not invent test results; use tests_run only after commands actually run.
+Each file change and each command is shown to the user for approve/reject with an optional comment before it runs — list proposals in files_changed and commands_run; do not claim files are restored or deleted in patch_summary until the user could approve them.
+Use past tense in patch_summary only for work the user has already approved.
 SYS;
 
         $fromRole = $auditFeedback !== null ? 'auditor' : 'orchestrator';
         $handoffMessage = $auditFeedback !== null
             ? 'Revision required from auditor feedback.'
-            : (string) ($plan['handoff_message'] ?? 'Sending execution task to Executor.');
+            : StringCoercion::toString($plan['handoff_message'] ?? null, 'Sending execution task to Executor.');
         $userContent = $this->personas->wrapHandoffUserContent('executor', $fromRole, $handoffMessage, $payload);
 
         $messages = [
@@ -118,9 +130,7 @@ SYS;
                 (float) ($profile['temperature'] ?? 0.2),
                 $retry,
                 'executor',
-                function (mixed $j): bool {
-                    return is_array($j) && isset($j['status'], $j['patch_summary']);
-                },
+                fn (mixed $j): bool => is_array($j) && ExecutorResponseParser::validateForFallback($j),
                 (int) ($profile['max_tokens'] ?? 12000)
             );
         } catch (\Throwable $e) {
@@ -142,23 +152,24 @@ SYS;
 
         $latency = (int) round((microtime(true) - $t0) * 1000);
         /** @var array<string, mixed> $parsed */
-        $parsed = is_array($out['parsed']) ? $out['parsed'] : [];
+        $parsed = is_array($out['parsed']) ? ExecutorResponseParser::normalize($out['parsed']) : [];
 
         return $this->normalizeResult([
             'step_id' => $step['id'] ?? null,
-            'status' => (string) ($parsed['status'] ?? 'success'),
+            'status' => StringCoercion::toString($parsed['status'] ?? null, 'success'),
             'files_read' => is_array($parsed['files_read'] ?? null) ? $parsed['files_read'] : [],
             'files_changed' => is_array($parsed['files_changed'] ?? null) ? $parsed['files_changed'] : [],
             'commands_run' => is_array($parsed['commands_run'] ?? null) ? $parsed['commands_run'] : [],
             'tests_run' => is_array($parsed['tests_run'] ?? null) ? $parsed['tests_run'] : [],
-            'tests_result' => (string) ($parsed['tests_result'] ?? 'not_run'),
-            'patch_summary' => (string) ($parsed['patch_summary'] ?? ''),
+            'tests_result' => StringCoercion::toString($parsed['tests_result'] ?? null, 'not_run'),
+            'patch_summary' => StringCoercion::toString($parsed['patch_summary'] ?? null, ''),
             'known_issues' => is_array($parsed['known_issues'] ?? null) ? $parsed['known_issues'] : [],
             'needs_user_input' => (bool) ($parsed['needs_user_input'] ?? false),
+            'questions' => is_array($parsed['questions'] ?? null) ? $parsed['questions'] : [],
             'blockers' => is_array($parsed['blockers'] ?? null) ? $parsed['blockers'] : [],
             'suggested_options' => is_array($parsed['suggested_options'] ?? null) ? $parsed['suggested_options'] : [],
             'needs_audit' => (bool) ($parsed['needs_audit'] ?? true),
-            'handoff_message' => (string) ($parsed['handoff_message'] ?? 'Sending changes to Auditor.'),
+            'handoff_message' => StringCoercion::toString($parsed['handoff_message'] ?? null, 'Sending changes to Auditor.'),
             '_executor_model' => $out['model_used'],
             '_executor_model_resolved' => $out['model_resolved'] ?? '',
             '_executor_fallback' => $out['fallback_used'],
@@ -178,8 +189,8 @@ SYS;
             }
 
             return [
-                'path' => (string) ($item['path'] ?? ''),
-                'reason' => (string) ($item['reason'] ?? ''),
+                'path' => StringCoercion::toString($item['path'] ?? null),
+                'reason' => StringCoercion::toString($item['reason'] ?? null),
             ];
         }, is_array($result['files_read'] ?? null) ? $result['files_read'] : []), fn ($item) => $item !== null && $item['path'] !== ''));
 
@@ -191,13 +202,18 @@ SYS;
                 return null;
             }
 
+            $after = StringCoercion::toString(
+                $item['after'] ?? $item['new_contents'] ?? $item['contents'] ?? null,
+                '',
+            );
+
             return [
-                'path' => (string) ($item['path'] ?? ''),
-                'change_type' => (string) ($item['change_type'] ?? 'modified'),
-                'summary' => (string) ($item['summary'] ?? $item['description'] ?? ''),
-                'why' => (string) ($item['why'] ?? ''),
-                'after' => isset($item['after']) ? (string) $item['after'] : (isset($item['new_contents']) ? (string) $item['new_contents'] : (isset($item['contents']) ? (string) $item['contents'] : null)),
-                'diff' => $item['diff'] ?? null,
+                'path' => StringCoercion::toString($item['path'] ?? null),
+                'change_type' => StringCoercion::toString($item['change_type'] ?? null, 'modified'),
+                'summary' => StringCoercion::toString($item['summary'] ?? $item['description'] ?? null),
+                'why' => StringCoercion::toString($item['why'] ?? null),
+                'after' => $after !== '' ? $after : null,
+                'diff' => is_string($item['diff'] ?? null) ? $item['diff'] : null,
             ];
         }, is_array($result['files_changed'] ?? null) ? $result['files_changed'] : []), fn ($item) => $item !== null && $item['path'] !== ''));
 
@@ -210,11 +226,11 @@ SYS;
             }
 
             return [
-                'command' => (string) ($item['command'] ?? ''),
-                'status' => (string) ($item['status'] ?? 'completed'),
+                'command' => StringCoercion::toString($item['command'] ?? null),
+                'status' => StringCoercion::toString($item['status'] ?? null, 'completed'),
                 'exit_code' => $item['exit_code'] ?? null,
                 'duration_ms' => $item['duration_ms'] ?? null,
-                'output_summary' => (string) ($item['output_summary'] ?? ''),
+                'output_summary' => StringCoercion::toString($item['output_summary'] ?? null),
             ];
         }, is_array($result['commands_run'] ?? null) ? $result['commands_run'] : []), fn ($item) => $item !== null && $item['command'] !== ''));
 
@@ -222,8 +238,8 @@ SYS;
         if ($result['tests_run'] === [] && ($result['tests_result'] ?? 'not_run') !== 'not_run') {
             $result['tests_run'] = [[
                 'name' => 'Executor reported tests',
-                'status' => (string) $result['tests_result'],
-                'summary' => 'Executor returned tests_result='.$result['tests_result'],
+                'status' => StringCoercion::toString($result['tests_result'] ?? null, 'not_run'),
+                'summary' => 'Executor returned tests_result='.StringCoercion::toString($result['tests_result'] ?? null, 'not_run'),
             ]];
         }
 

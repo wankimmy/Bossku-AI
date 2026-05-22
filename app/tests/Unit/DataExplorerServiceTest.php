@@ -42,9 +42,10 @@ class DataExplorerServiceTest extends TestCase
         ]);
 
         $svc = app(DataExplorerService::class);
-        $page = $svc->listRows('bossku_ai_settings', 1, 25, null, null, 'desc');
-        $row = $page['rows'][0] ?? [];
+        $page = $svc->listRows('bossku_ai_settings', 1, 25, 'key', 'ollama_api_key_encrypted', 'asc');
+        $row = collect($page['rows'])->firstWhere('key', 'ollama_api_key_encrypted');
 
+        $this->assertNotNull($row);
         $this->assertSame('••••••••', $row['value'] ?? null);
     }
 }

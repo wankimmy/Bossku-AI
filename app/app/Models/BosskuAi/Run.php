@@ -2,14 +2,16 @@
 
 namespace App\Models\BosskuAi;
 
+use Database\Factories\BosskuAiRunFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Run extends Model
 {
-    use HasUuids;
+    use HasFactory, HasUuids;
 
     protected $table = 'bossku_ai_runs';
 
@@ -65,5 +67,10 @@ class Run extends Model
     public function soulVersion(): BelongsTo
     {
         return $this->belongsTo(SoulVersion::class, 'soul_version_id');
+    }
+
+    protected static function newFactory(): BosskuAiRunFactory
+    {
+        return BosskuAiRunFactory::new();
     }
 }

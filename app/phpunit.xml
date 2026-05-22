@@ -32,6 +32,8 @@
         <!-- BosskuAI overrides: compose may inject conflicting env (DB_* and BOSSKU_*). Force test defaults. -->
         <env name="BOSSKU_ROUTER_LLM_ENABLED" value="false" force="true"/>
         <env name="BOSSKU_MEMORY_OLLAMA_ENABLED" value="false" force="true"/>
+        <env name="BOSSKU_REQUIRE_USER_APPROVAL" value="false" force="true"/>
+        <env name="BOSSKU_API_AUTH_ENABLED" value="false" force="true"/>
         <env name="BOSSKU_ROUTER_MODEL" value="kimi-k2.6" force="true"/>
         <env name="BOSSKU_ORCHESTRATOR_MODEL" value="kimi-k2.6" force="true"/>
         <env name="BOSSKU_EXECUTOR_DEFAULT_MODEL" value="glm-5.1" force="true"/>

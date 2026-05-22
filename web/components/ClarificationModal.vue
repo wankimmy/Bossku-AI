@@ -52,11 +52,49 @@ onUnmounted(() => {
               <p v-if="request.stage" class="mt-0.5 text-xs text-zinc-500 capitalize">
                 {{ request.stage.replaceAll('_', ' ') }}
               </p>
+              <p v-if="request.from_agent" class="mt-1 text-xs text-amber-400/90">
+                From {{ request.from_agent }}
+                <span v-if="request.origin && request.origin !== request.stage">
+                  · {{ request.origin.replaceAll('_', ' ') }}
+                </span>
+              </p>
               <p v-if="request.summary" class="mt-2 text-sm text-zinc-300 leading-relaxed">
                 {{ request.summary }}
               </p>
             </div>
           </div>
+        </div>
+
+        <div
+          v-if="request.proof && (request.proof.proof_files?.length || request.proof.blockers?.length || request.proof.findings?.length)"
+          class="shrink-0 border-b border-zinc-700 px-5 py-3"
+        >
+          <details class="group">
+            <summary class="cursor-pointer text-xs font-medium text-zinc-400 hover:text-zinc-200">
+              Why I'm asking (proof)
+            </summary>
+            <div class="mt-2 space-y-2 text-xs text-zinc-400">
+              <div v-if="request.proof.proof_files?.length">
+                <span class="text-zinc-500">Files:</span>
+                <span
+                  v-for="path in request.proof.proof_files.slice(0, 8)"
+                  :key="path"
+                  class="ml-1 inline-block rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-zinc-300"
+                >{{ path }}</span>
+              </div>
+              <ul v-if="request.proof.blockers?.length" class="list-disc pl-4 space-y-0.5">
+                <li v-for="(b, i) in request.proof.blockers" :key="i">{{ b }}</li>
+              </ul>
+              <ul v-if="request.proof.findings?.length" class="list-disc pl-4 space-y-0.5">
+                <li
+                  v-for="(f, i) in (request.proof.findings as Record<string, unknown>[]).slice(0, 5)"
+                  :key="i"
+                >
+                  {{ f.title || f.description }}
+                </li>
+              </ul>
+            </div>
+          </details>
         </div>
 
         <div class="min-h-0 flex-1 overflow-y-auto px-5 py-4">

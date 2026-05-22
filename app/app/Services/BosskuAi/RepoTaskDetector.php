@@ -50,6 +50,49 @@ class RepoTaskDetector
     }
 
     /**
+     * Full repo audit: functionality, design, performance, tests, then dedicated security pass.
+     * Default for repository audit prompts unless the user asks for security-only review.
+     */
+    public static function isFullRepositoryAudit(string $prompt): bool
+    {
+        if (! self::requiresRepositoryAccess($prompt)) {
+            return false;
+        }
+
+        return ! self::isSecurityOnlyAudit($prompt);
+    }
+
+    /**
+     * Narrow security review without full product/code-quality dimensions.
+     */
+    public static function isSecurityOnlyAudit(string $prompt): bool
+    {
+        $lower = mb_strtolower(trim($prompt));
+        $securityFocused = preg_match(
+            '/\b(security|owasp|penetration|pentest|vulnerability|vulnerabilities|xss|csrf|injection)\b/u',
+            $lower,
+        ) === 1;
+
+        if (! $securityFocused) {
+            return false;
+        }
+
+        $fullMarkers = [
+            'audit full', 'full audit', 'entire repo', 'whole codebase', 'all features',
+            'functionality', 'performance', 'best practice', 'design', 'production ready',
+            'public use', 'comprehensive', 'complete audit', 'audit all', 'full review',
+            'code quality', 'maintainability',
+        ];
+        foreach ($fullMarkers as $marker) {
+            if (str_contains($lower, $marker)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
      * @param  array<string, mixed>  $route
      * @return array<string, mixed>
      */
@@ -70,6 +113,15 @@ class RepoTaskDetector
             }
             if ($workflow === 'orchestrator_executor') {
                 $route['workflow'] = 'orchestrator_executor_auditor';
+            }
+
+            $route['audit_mode'] = self::isFullRepositoryAudit($prompt) ? 'full' : 'repo';
+            if ($route['audit_mode'] === 'full') {
+                $route['needs_security_auditor'] = true;
+                $wf = (string) ($route['workflow'] ?? 'orchestrator_executor_auditor');
+                if ($wf === 'orchestrator_executor_auditor') {
+                    $route['workflow'] = 'orchestrator_executor_auditor_security';
+                }
             }
         }
 

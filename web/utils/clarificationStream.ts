@@ -158,11 +158,35 @@ export function buildClarificationRequest(
     }
   }
 
+  const artifacts = evt.artifacts
+  let proof: ClarificationRequest['proof'] | undefined
+  let fromAgent: string | undefined
+  let origin: string | undefined
+  if (artifacts !== null && typeof artifacts === 'object') {
+    const clar = (artifacts as Record<string, unknown>).clarification
+    if (clar !== null && typeof clar === 'object') {
+      const c = clar as Record<string, unknown>
+      if (c.proof !== null && typeof c.proof === 'object') {
+        proof = c.proof as ClarificationRequest['proof']
+      }
+      fromAgent = c.from_agent != null ? String(c.from_agent) : undefined
+      origin = c.origin != null ? String(c.origin) : undefined
+    }
+    if (! proof && (artifacts as Record<string, unknown>).proof != null) {
+      proof = (artifacts as Record<string, unknown>).proof as ClarificationRequest['proof']
+    }
+  }
+  fromAgent = fromAgent ?? (evt.from_agent != null ? String(evt.from_agent) : undefined)
+  origin = origin ?? (evt.origin != null ? String(evt.origin) : undefined)
+
   return {
     runId: String(evt.run_id ?? activeRunId ?? ''),
     stage: String(evt.stage ?? ''),
     summary: String(evt.summary ?? evt.message ?? ''),
     assumptions,
     questions,
+    from_agent: fromAgent,
+    origin,
+    proof,
   }
 }

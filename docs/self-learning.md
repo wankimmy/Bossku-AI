@@ -4,9 +4,19 @@ BosskuAI is designed to get measurably better with each run. The self-learning s
 
 ## How Learning Happens
 
+### Per-prompt: UserSelfLearningService
+
+After **every** completed run (including direct answers), `UserSelfLearningService`:
+
+1. Extracts user intent from the prompt and conversation
+2. Stores a `user_learning` memory row (linked to the run) for retrieval on the next prompt
+3. Runs `LearningEngine` to create learning events for the Brain inbox
+
+Memory **retrieval** also runs at the start of every run when memory storage is enabled (Settings), not only on `read_and_write` routes.
+
 ### Automated: LearningEngine
 
-After every successful run, `LearningEngine` runs as a background job. It inspects the run's steps, the selected skill, the audit findings, and the final review, then extracts **patterns** — recurring combinations of intent, skill, and approach that worked well.
+After every successful run, `LearningEngine` inspects the run's steps, the selected skill, the audit findings, and the final review, then extracts **patterns** — recurring combinations of intent, skill, and approach that worked well.
 
 A pattern record contains:
 

@@ -7,7 +7,10 @@ use Illuminate\Support\Facades\File;
 
 class FileWriteApplier
 {
-    public function __construct(private readonly ProjectPathResolver $paths) {}
+    public function __construct(
+        private readonly ProjectPathResolver $paths,
+        private readonly WorkspaceWriteGuard $writeGuard,
+    ) {}
 
     /**
      * @return array{path: string, relative: string}
@@ -24,10 +27,7 @@ class FileWriteApplier
             return ['path' => $resolved['absolute'], 'relative' => $resolved['relative']];
         }
 
-        $dir = dirname($resolved['absolute']);
-        if (! is_dir($dir)) {
-            File::ensureDirectoryExists($dir);
-        }
+        $this->writeGuard->ensureWritable($resolved['absolute'], $this->paths->repoRoot());
 
         if (file_put_contents($resolved['absolute'], $after) === false) {
             throw new \RuntimeException('Failed to write file: '.$resolved['relative']);

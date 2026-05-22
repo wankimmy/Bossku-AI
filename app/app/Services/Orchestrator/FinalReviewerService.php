@@ -2,6 +2,7 @@
 
 namespace App\Services\Orchestrator;
 
+use App\Support\StringCoercion;
 use App\Services\BosskuAi\AgentPersonaService;
 use App\Services\BosskuAi\ModelFallbackService;
 use App\Services\BosskuAi\ModelRoutingConfig;
@@ -51,7 +52,7 @@ SYS;
         ], JSON_THROW_ON_ERROR);
 
         $fromRole = $securityAudit !== null ? 'security_auditor' : 'auditor';
-        $handoffMessage = (string) ($auditor['summary'] ?? 'Final review handoff.');
+        $handoffMessage = StringCoercion::toString($auditor['summary'] ?? null, 'Final review handoff.');
         $userContent = $this->personas->wrapHandoffUserContent('final_reviewer', $fromRole, $handoffMessage, $payload);
 
         $messages = [

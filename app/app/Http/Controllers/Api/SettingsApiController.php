@@ -102,6 +102,9 @@ class SettingsApiController extends Controller
         }
 
         foreach ($data as $k => $v) {
+            if (is_array($v) || is_object($v)) {
+                continue;
+            }
             if (in_array($k, self::BOOL_KEYS, true)) {
                 $v = filter_var($v, FILTER_VALIDATE_BOOL) ? '1' : '0';
             }

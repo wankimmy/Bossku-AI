@@ -8,6 +8,7 @@ use App\Models\BosskuAi\Run;
 use App\Models\BosskuAi\RunStep;
 use App\Models\BosskuAi\Skill;
 use App\Services\BosskuAi\AgentPersonaService;
+use App\Support\StringCoercion;
 use App\Services\BosskuAi\BosskuResponseIndicator;
 use App\Services\BosskuAi\ContextBudgetGuard;
 use App\Services\BosskuAi\RepoTaskDetector;
@@ -17,6 +18,9 @@ use App\Services\BosskuAi\PromptRouteClassifier;
 use App\Services\BosskuAi\RuntimeSettings;
 use App\Services\BosskuAi\SkillRouterService;
 use App\Services\Graph\KnowledgeGraphBuilder;
+use App\Services\Governance\ExecutorApprovalService;
+use App\Services\Learning\UserSelfLearningService;
+use App\Services\Project\ProjectCommandRunner;
 use App\Services\Project\ProjectFileDiscovery;
 use App\Services\Project\ProjectPathResolver;
 use App\Services\Project\ProjectService;
@@ -26,6 +30,7 @@ use Illuminate\Support\Str;
 
 class OrchestratorService
 {
+    use OrchestratorApprovalTrait;
     use OrchestratorClarificationTrait;
 
     public function __construct(
@@ -50,7 +55,10 @@ class OrchestratorService
         protected ProjectService $projects,
         protected KnowledgeGraphBuilder $knowledgeGraph,
         protected ExecutorFileChangeApplier $executorFileApplier,
+        protected ProjectCommandRunner $projectCommands,
+        protected ExecutorApprovalService $executorApprovals,
         protected AgentPersonaService $agentPersonas,
+        protected UserSelfLearningService $userSelfLearning,
     ) {}
 
     /**
@@ -69,7 +77,10 @@ class OrchestratorService
         $prompt = $this->effectivePrompt($userPrompt, $conversation);
         $agentPrompt = trim($prompt."\n\n".$this->projects->agentWorkspaceContext());
 
-        $runMeta = ['conversation_turns' => count($conversation)];
+        $runMeta = [
+            'conversation_turns' => count($conversation),
+            'conversation' => $conversation,
+        ];
         $activeProject = $this->paths->activeProject();
         if ($activeProject !== null) {
             $runMeta['active_project_id'] = $activeProject->id;
@@ -139,7 +150,7 @@ class OrchestratorService
         $memMs = 0;
         $memTokens = 0;
 
-        if ($memoryMode !== 'none') {
+        if ($this->settings->memoryStorageEnabled()) {
             $t0 = microtime(true);
             $memories = $this->memory->search($agentPrompt, $this->settings->maxMemoryResults());
             $memPayload = $memories->map(fn (Memory $m) => [
@@ -364,7 +375,7 @@ class OrchestratorService
 
         if (! empty($plan['error'])) {
             $orchModel = (string) ($plan['_planner_model'] ?? $modelsResolved['orchestrator'] ?? '');
-            $plannerErr = (string) ($plan['message'] ?? 'Planner failed');
+            $plannerErr = StringCoercion::toString($plan['message'] ?? null, 'Planner failed');
             $this->logStep($run, 2, 'planner', $orchModel, null, null, 'failed', $prompt, json_encode(['router' => $routerCtx, 'route' => $modelRoute]), json_encode($plan), null, null, null, $planMs, $planTokens, $plannerErr, null);
             $run->update(['status' => 'failed', 'total_latency_ms' => (int) round((microtime(true) - $tRun) * 1000), 'total_token_estimate' => $tokenAcc + $planTokens]);
 
@@ -398,7 +409,7 @@ class OrchestratorService
             'orchestrator',
             'reasoning',
             'Planner created '.count($plan['checklist'] ?? []).'-step execution checklist.',
-            (string) ($plan['handoff_message'] ?? 'Sending execution task to Executor.'),
+            StringCoercion::toString($plan['handoff_message'] ?? null, 'Sending execution task to Executor.'),
             ['plan' => $plan, 'checklist' => $plan['checklist'] ?? []],
             'orchestrator',
             'executor'
@@ -427,7 +438,7 @@ class OrchestratorService
             || RepoTaskDetector::requiresRepositoryAccess($userPrompt);
 
         if (($workflow === 'orchestrator_only' || ! ($modelRoute['needs_executor'] ?? true)) && ! $mustRunExecutor) {
-            $body = (string) ($plan['summary'] ?? json_encode($plan));
+            $body = StringCoercion::toString($plan['summary'] ?? null, json_encode($plan) ?: '');
             $indicator = BosskuResponseIndicator::line($modelRoute, array_merge($modelsResolved, ['executor' => 'skipped']));
 
             return $this->completeRun(
@@ -449,12 +460,12 @@ class OrchestratorService
             );
         }
 
-        $preflightReads = $this->preflightReadTargetFiles($run, $plan, $emit);
+        $preflightReads = $this->preflightReadTargetFiles($run, $plan, $emit, $modelRoute);
 
         $skillName = (string) ($routerCtx['primary_skill']['name'] ?? 'cofounder');
         $step = [
             'id' => 1,
-            'title' => (string) ($plan['summary'] ?? 'Execute'),
+            'title' => StringCoercion::toString($plan['summary'] ?? null, 'Execute'),
             'task' => $agentPrompt,
             'skill' => $skillName,
             'tool' => null,
@@ -476,7 +487,7 @@ class OrchestratorService
             'from_agent' => 'orchestrator',
             'to_agent' => 'executor',
             'summary' => 'Executor is applying the plan.',
-            'message' => (string) ($plan['handoff_message'] ?? 'Executor received the plan.'),
+            'message' => StringCoercion::toString($plan['handoff_message'] ?? null, 'Executor received the plan.'),
             'step_number' => 3,
             'skill' => $skillName,
             'model' => $modelsResolved['executor'] ?? '',
@@ -498,14 +509,41 @@ class OrchestratorService
         $execResult = ExecutorEvidenceSupport::mergePreflightReads($execResult, $preflightReads);
         $execResult = $this->ensureExecutorEvidence($run, $plan, $execResult, $userPrompt, $emit);
         $modelsResolved['executor'] = (string) ($execResult['_executor_model'] ?? $modelsResolved['executor'] ?? '');
-        $execResult = $this->applyExecutorFileChanges($run, $execResult, $emit);
+        $approvalPipeline = $this->buildExecutorPipelineSnapshot(
+            $run,
+            $userPrompt,
+            $prompt,
+            $agentPrompt,
+            $conversation,
+            $modelRoute,
+            $modelsResolved,
+            $routerCtx,
+            $memPayload,
+            $plan,
+            $workflow,
+            $preflightReads,
+            $execProfileKey,
+            $skillName,
+            $step,
+            $skillRow,
+            $ruleLines,
+            $pbExcerpt,
+            $chkExcerpt,
+            $tokenAcc,
+            $tRun,
+        );
+        $afterApprovals = $this->applyOrPauseForExecutorApprovals($run, $execResult, $approvalPipeline, $emit);
+        if (($afterApprovals['awaiting_approvals'] ?? false) === true) {
+            return $afterApprovals;
+        }
+        $execResult = $afterApprovals;
 
         $exTok = $this->estimateTokens(json_encode($execResult) ?: '');
         $this->logStep($run, 3, 'executor', $modelsResolved['executor'], 'ollama', $skillName, ($execResult['status'] ?? '') === 'failed' ? 'failed' : 'success', json_encode($step), json_encode($execResult), json_encode($execResult), null, null, null, (int) ($execResult['latency_ms'] ?? 0), $exTok, null, $this->events->metadata(
             'executor',
             'coding',
             'Executor completed the requested changes.',
-            (string) ($execResult['handoff_message'] ?? 'Sending changes to Auditor.'),
+            StringCoercion::toString($execResult['handoff_message'] ?? null, 'Sending changes to Auditor.'),
             $this->events->executorArtifacts($execResult),
             'executor',
             'auditor'
@@ -515,6 +553,40 @@ class OrchestratorService
 
         if (! empty($execResult['tool_request'] ?? null)) {
             $this->tools->invoke($run->id, null, $execResult['tool_request'], $emit);
+        }
+
+        if ($this->shouldPauseForAgentEscalation($run, $execResult, 'executor_escalation')) {
+            return $this->pauseForAgentEscalation(
+                $run,
+                'executor_escalation',
+                'executor',
+                $execResult,
+                $this->buildExecutorPipelineSnapshot(
+                    $run,
+                    $userPrompt,
+                    $prompt,
+                    $agentPrompt,
+                    $conversation,
+                    $modelRoute,
+                    $modelsResolved,
+                    $routerCtx,
+                    $memPayload,
+                    $plan,
+                    $workflow,
+                    $preflightReads,
+                    $execProfileKey,
+                    $skillName,
+                    $step,
+                    $skillRow,
+                    $ruleLines,
+                    $pbExcerpt,
+                    $chkExcerpt,
+                    $tokenAcc,
+                    $tRun,
+                    null,
+                ),
+                $emit,
+            );
         }
 
         if ($this->shouldPauseForExecutorStuck($run, $execResult, null, 0)) {
@@ -619,13 +691,16 @@ class OrchestratorService
         float $tRun,
         array $executorOutputs,
         int $stepNum,
+        bool $skipAuditor = false,
+        array $cachedAudit = [],
     ): array {
-        $lastAudit = [];
+        $lastAudit = $cachedAudit;
         $lastSecurity = null;
         $lastFinal = null;
         $revisionRoundsUsed = 0;
 
-        $needsAuditor = ($modelRoute['needs_auditor'] ?? true)
+        $needsAuditor = ! $skipAuditor
+            && ($modelRoute['needs_auditor'] ?? true)
             && $this->settings->auditEnabled()
             && (str_contains($workflow, 'auditor'));
 
@@ -642,25 +717,35 @@ class OrchestratorService
                 'step_number' => $stepNum,
             ]));
             $tA = microtime(true);
-            $lastAudit = $this->auditor->auditStep(
-                $agentPrompt,
-                $routerCtx,
-                $modelRoute,
-                $plan,
-                $step,
-                $execResult,
-                $ruleLines,
-                $chkExcerpt,
-                ($modelRoute['risk_level'] ?? '') === 'high'
-            );
-            $auditMs = (int) round((microtime(true) - $tA) * 1000);
+            if ($this->executorFailedFromLlmJson($execResult)) {
+                $lastAudit = ExecutorEvidenceSupport::deterministicExecutorFailed(
+                    $this->executorFailureSummary($execResult),
+                );
+                $auditMs = (int) round((microtime(true) - $tA) * 1000);
+            }
+            else {
+                $lastAudit = $this->auditor->auditStep(
+                    $agentPrompt,
+                    $routerCtx,
+                    $modelRoute,
+                    $plan,
+                    $step,
+                    $execResult,
+                    $ruleLines,
+                    $chkExcerpt,
+                    ($modelRoute['risk_level'] ?? '') === 'high',
+                    $preflightReads,
+                    $run->id,
+                );
+                $auditMs = (int) round((microtime(true) - $tA) * 1000);
+            }
             $auditTok = $this->estimateTokens(json_encode($lastAudit) ?: '');
             $modelsResolved['auditor'] = (string) ($lastAudit['_auditor_model'] ?? $modelsResolved['auditor'] ?? '');
             $pass = ($lastAudit['_legacy_pass'] ?? false) === true;
             $this->logStep($run, $stepNum + 100, 'auditor', $modelsResolved['auditor'], 'ollama', $skillName, $pass ? 'success' : (($lastAudit['status'] ?? '') === 'needs_revision' ? 'needs_revision' : 'failed'), json_encode($step), json_encode($execResult), json_encode($lastAudit), null, null, null, $auditMs, $auditTok, null, $this->events->metadata(
                 'auditor',
                 'review',
-                (string) ($lastAudit['summary'] ?? 'Audit completed.'),
+                StringCoercion::toString($lastAudit['summary'] ?? null, 'Audit completed.'),
                 (($lastAudit['status'] ?? '') === 'needs_revision') ? 'Returning feedback to Executor.' : 'Sending audit result to Final Reviewer.',
                 ['audit' => $lastAudit, 'audit_findings' => $lastAudit['findings'] ?? []],
                 'auditor',
@@ -669,7 +754,76 @@ class OrchestratorService
             $tokenAcc += $auditTok;
             $this->emit($emit, $this->events->auditorDone($run, $lastAudit, $modelsResolved['auditor'], $auditMs, $auditTok));
 
-            if (($lastAudit['status'] ?? '') === 'needs_revision' && $this->settings->maxRevisionRounds() > 0) {
+            if ($this->shouldPauseForAgentEscalation($run, $lastAudit, 'auditor_escalation')) {
+                $pipeline = $this->buildExecutorPipelineSnapshot(
+                    $run,
+                    $userPrompt,
+                    $prompt,
+                    $agentPrompt,
+                    $conversation,
+                    $modelRoute,
+                    $modelsResolved,
+                    $routerCtx,
+                    $memPayload,
+                    $plan,
+                    $workflow,
+                    $preflightReads,
+                    $execProfileKey,
+                    $skillName,
+                    $step,
+                    $skillRow,
+                    $ruleLines,
+                    $pbExcerpt,
+                    $chkExcerpt,
+                    $tokenAcc,
+                    $tRun,
+                    null,
+                );
+                $pipeline['exec_result'] = $execResult;
+                $pipeline['last_audit'] = $lastAudit;
+                $pipeline['executor_outputs'] = $executorOutputs;
+                $pipeline['step_num'] = $stepNum;
+
+                return $this->pauseForAgentEscalation(
+                    $run,
+                    'auditor_escalation',
+                    'auditor',
+                    $lastAudit,
+                    $pipeline,
+                    $emit,
+                );
+            }
+
+            if (
+                ($lastAudit['status'] ?? '') === 'needs_revision'
+                && $this->executorFailedFromLlmJson($execResult)
+            ) {
+                $this->emit($emit, $this->basePayload($run, 'executor_revision_skipped', [
+                    'status' => 'warning',
+                    'agent' => 'executor',
+                    'summary' => 'Skipped executor revision: executor failed with JSON/model errors; re-running would not help.',
+                    'message' => StringCoercion::toString($execResult['known_issues'][0] ?? null, 'Executor LLM output was invalid.'),
+                ]));
+            }
+
+            if (
+                ($lastAudit['status'] ?? '') === 'needs_revision'
+                && ($execResult['needs_user_input'] ?? false) === true
+            ) {
+                $this->emit($emit, $this->basePayload($run, 'executor_revision_skipped', [
+                    'status' => 'warning',
+                    'agent' => 'executor',
+                    'summary' => 'Skipped executor revision: executor is waiting for your input first.',
+                    'message' => StringCoercion::toString($execResult['blockers'][0] ?? $execResult['known_issues'][0] ?? null, 'User input required.'),
+                ]));
+            }
+
+            if (
+                ($lastAudit['status'] ?? '') === 'needs_revision'
+                && $this->settings->maxRevisionRounds() > 0
+                && ! $this->executorFailedFromLlmJson($execResult)
+                && ($execResult['needs_user_input'] ?? false) !== true
+            ) {
                 $this->emit($emit, $this->basePayload($run, 'executor_revision_started', [
                     'status' => 'running',
                     'agent' => 'executor',
@@ -677,13 +831,21 @@ class OrchestratorService
                     'from_agent' => 'auditor',
                     'to_agent' => 'executor',
                     'summary' => 'Executor is applying audit feedback.',
-                    'message' => (string) ($lastAudit['summary'] ?? 'Audit requested a revision.'),
+                    'message' => StringCoercion::toString($lastAudit['summary'] ?? null, 'Audit requested a revision.'),
                 ]));
 
                 $revisionStep = array_merge($step, [
                     'id' => 2,
                     'title' => 'Fix audit feedback',
                 ]);
+                $auditFeedback = ExecutorEvidenceSupport::auditorPayloadForRevision(
+                    $lastAudit,
+                    $execResult,
+                    $preflightReads,
+                    $run->id,
+                );
+                $auditFeedback['original_prompt'] = $agentPrompt;
+
                 $revisionResult = $this->executor->execute(
                     $revisionStep,
                     $skillRow,
@@ -696,18 +858,42 @@ class OrchestratorService
                     $execProfileKey,
                     $this->projects->agentWorkspaceContext(),
                     $preflightReads,
-                    [
-                        'original_prompt' => $agentPrompt,
-                        'original_plan' => $plan,
-                        'executor_result' => $execResult,
-                        'audit_findings' => $lastAudit['findings'] ?? [],
-                        'required_fixes' => $lastAudit['required_fixes'] ?? [],
-                    ]
+                    $auditFeedback,
                 );
                 $revisionResult = ExecutorEvidenceSupport::mergePreflightReads($revisionResult, $preflightReads);
                 $revisionResult = $this->ensureExecutorEvidence($run, $plan, $revisionResult, $userPrompt, $emit);
                 $modelsResolved['executor'] = (string) ($revisionResult['_executor_model'] ?? $modelsResolved['executor'] ?? '');
-                $revisionResult = $this->applyExecutorFileChanges($run, $revisionResult, $emit);
+                $revPipeline = $this->buildExecutorPipelineSnapshot(
+                    $run,
+                    $userPrompt,
+                    $prompt,
+                    $agentPrompt,
+                    $conversation,
+                    $modelRoute,
+                    $modelsResolved,
+                    $routerCtx,
+                    $memPayload,
+                    $plan,
+                    $workflow,
+                    $preflightReads,
+                    $execProfileKey,
+                    $skillName,
+                    $revisionStep,
+                    $skillRow,
+                    $ruleLines,
+                    $pbExcerpt,
+                    $chkExcerpt,
+                    $tokenAcc,
+                    $tRun,
+                    $auditFeedback,
+                );
+                $revPipeline['last_audit'] = $lastAudit;
+                $revPipeline['exec_result'] = $revisionResult;
+                $revAfter = $this->applyOrPauseForExecutorApprovals($run, $revisionResult, $revPipeline, $emit);
+                if (($revAfter['awaiting_approvals'] ?? false) === true) {
+                    return $revAfter;
+                }
+                $revisionResult = $revAfter;
                 $revTok = $this->estimateTokens(json_encode($revisionResult) ?: '');
                 $this->logStep($run, 4, 'executor_revision', $modelsResolved['executor'], 'ollama', $skillName, ($revisionResult['status'] ?? '') === 'failed' ? 'failed' : 'success', json_encode($revisionStep), json_encode(['audit' => $lastAudit, 'previous_executor' => $execResult]), json_encode($revisionResult), null, null, null, (int) ($revisionResult['latency_ms'] ?? 0), $revTok, null, $this->events->metadata(
                     'executor',
@@ -761,7 +947,10 @@ class OrchestratorService
             }
         }
 
-        if (($modelRoute['needs_security_auditor'] ?? false)) {
+        $needsSecurityPass = ($modelRoute['needs_security_auditor'] ?? false)
+            || ($lastAudit['requires_security_audit'] ?? false);
+
+        if ($needsSecurityPass) {
             $execResult = $this->ensureExecutorEvidence($run, $plan, $execResult, $userPrompt, $emit);
 
             $this->emit($emit, $this->basePayload($run, 'security_auditor_started', ['status' => 'running']));
@@ -769,7 +958,7 @@ class OrchestratorService
             if (! ExecutorEvidenceSupport::hasReadEvidence($execResult, ExecutorEvidenceSupport::toolEvidenceForRun($run->id))) {
                 $lastSecurity = ExecutorEvidenceSupport::deterministicNoFilesRead();
             } else {
-                $lastSecurity = $this->securityAuditor->audit($agentPrompt, $modelRoute, $plan, $execResult, $run->id);
+                $lastSecurity = $this->securityAuditor->audit($agentPrompt, $modelRoute, $plan, $execResult, $run->id, $preflightReads);
             }
             $sMs = (int) round((microtime(true) - $tS) * 1000);
             $sTok = $this->estimateTokens(json_encode($lastSecurity) ?: '');
@@ -798,7 +987,7 @@ class OrchestratorService
             $this->logStep($run, $stepNum + 200, 'final_reviewer', $modelsResolved['final_reviewer'] ?? null, 'ollama', $skillName, 'success', null, null, json_encode($lastFinal), null, null, null, $fMs, $fTok, null, $this->events->metadata(
                 'final-reviewer',
                 'reasoning',
-                (string) ($lastFinal['reason'] ?? 'Final review completed.'),
+                StringCoercion::toString($lastFinal['reason'] ?? null, 'Final review completed.'),
                 'Final reviewer closed the run.',
                 ['final_review' => $lastFinal],
                 'final-reviewer',
@@ -878,6 +1067,22 @@ class OrchestratorService
 
         $memoryMode = (string) ($modelRoute['memory_mode'] ?? 'read_only');
         $this->writeMemoryIfNeeded($memoryMode, $prompt, $modelRoute, $modelsResolved, ['patch_summary' => Str::limit($body, 2000)], [], null, null);
+        $learningResult = $this->userSelfLearning->processAfterRun(
+            $run,
+            $prompt,
+            [],
+            $modelRoute,
+            [],
+            ['patch_summary' => Str::limit($body, 2000)],
+            [],
+        );
+        if ($emit !== null) {
+            $this->emit($emit, $this->basePayload($run, 'user_learning_stored', [
+                'status' => 'success',
+                'summary' => 'User self-learning recorded.',
+                'artifacts' => $learningResult,
+            ]));
+        }
 
         $totalMs = (int) round((microtime(true) - $tRun) * 1000);
         $run->update([
@@ -885,11 +1090,12 @@ class OrchestratorService
             'status' => 'completed',
             'total_latency_ms' => $totalMs,
             'total_token_estimate' => $tokenAcc + $tok,
-            'metadata' => [
+            'metadata' => array_merge($run->metadata ?? [], [
                 'routing_decision' => $modelRoute,
                 'models_resolved' => $modelsResolved,
+                'user_learning' => $learningResult,
                 'short_path' => $kind,
-            ],
+            ]),
         ]);
 
         $this->emit($emit, $this->events->runCompleted($run, $final, $totalMs, $tokenAcc + $tok, $modelRoute, $modelsResolved));
@@ -930,9 +1136,21 @@ class OrchestratorService
         array $modelsResolved,
         array $memPayload,
     ): string {
-        $status = (($execResult['status'] ?? '') === 'failed' || ($lastAudit['status'] ?? '') === 'failed') ? 'Partially Completed' : 'Completed';
-        $files = array_values(array_filter(array_map(fn ($file) => is_array($file) ? (string) ($file['path'] ?? '') : (string) $file, $execResult['files_changed'] ?? [])));
-        $commands = array_values(array_filter(array_map(fn ($command) => is_array($command) ? (string) ($command['command'] ?? '') : (string) $command, $execResult['commands_run'] ?? [])));
+        $commandOutcome = $this->summarizeCommandExecution($execResult);
+        $status = (($execResult['status'] ?? '') === 'failed' || ($lastAudit['status'] ?? '') === 'failed')
+            ? 'Partially Completed'
+            : 'Completed';
+        if ($commandOutcome['git_restore_failed']) {
+            $status = 'Partially Completed';
+        }
+        $files = array_values(array_filter(array_map(
+            fn ($file) => is_array($file)
+                ? StringCoercion::toString($file['path'] ?? null)
+                : StringCoercion::toString($file),
+            $execResult['files_changed'] ?? [],
+        )));
+        $executedCommands = $commandOutcome['executed_lines'];
+        $proposedCommands = $commandOutcome['proposed_lines'];
         $risks = $execResult['known_issues'] ?? [];
         if (($lastAudit['optional_improvements'] ?? []) !== []) {
             $risks = array_merge($risks, $lastAudit['optional_improvements']);
@@ -943,10 +1161,18 @@ class OrchestratorService
 
         $auditStatus = (string) ($lastAudit['status'] ?? 'not_run');
         $nextStep = 'Review the changed files and run any missing checks before merge.';
-        if ($commands === []) {
+        if ($commandOutcome['git_restore_failed']) {
+            $nextStep = 'Git restore did not complete. Run manually in the project: '
+                .implode('; ', array_slice($commandOutcome['failed_commands'], 0, 3));
+        } elseif ($executedCommands === [] && $proposedCommands !== []) {
+            $nextStep = 'Commands were proposed but not executed — run them manually in the project root.';
+        } elseif ($executedCommands === []) {
             $nextStep = 'Run the relevant test suite before merge.';
         } elseif ($lastFinal !== null && ($lastFinal['required_actions'] ?? []) !== []) {
-            $nextStep = implode('; ', $lastFinal['required_actions']);
+            $nextStep = implode('; ', array_map(
+                fn ($action) => StringCoercion::toString($action),
+                $lastFinal['required_actions'],
+            ));
         }
 
         $lines = [
@@ -961,16 +1187,23 @@ class OrchestratorService
             $status,
             '',
             '## What changed',
-            (string) ($execResult['patch_summary'] ?? $lastAudit['final_output'] ?? 'No change summary recorded.'),
+            $commandOutcome['summary_text'],
             '',
             '## Files changed',
             ...($files !== [] ? array_map(fn ($file) => '- '.$file, $files) : ['- No files recorded']),
             '',
-            '## Checks run',
-            ...($commands !== [] ? array_map(fn ($command) => '- '.$command, $commands) : ['- No checks recorded']),
+            '## Commands executed',
+            ...($executedCommands !== [] ? $executedCommands : ['- None (git/shell commands were not run or all failed)']),
+            '',
+            '## Commands proposed (not run)',
+            ...($proposedCommands !== [] ? $proposedCommands : ['- None']),
+            '',
+            '## Git status after commands',
+            ...($this->formatGitStatusLines($execResult['git_status_after'] ?? null)),
             '',
             '## Audit result',
             $auditStatus,
+            ...$this->auditDimensionLines($modelRoute, $lastAudit, $lastSecurity),
             '',
             '## Remaining risks',
             ...($risks !== [] ? array_map(fn ($risk) => '- '.$this->formatRiskLine($risk), $risks) : ['- Full verification status depends on the checks recorded above.']),
@@ -986,6 +1219,54 @@ class OrchestratorService
      * @param  array<string, mixed>  $execResult
      * @return array<string, mixed>
      */
+    /**
+     * @param  array<string, mixed>  $execResult
+     * @return array<string, mixed>
+     */
+    protected function applyExecutorCommands(Run $run, array $execResult, ?callable $emit): array
+    {
+        $commandsRun = is_array($execResult['commands_run'] ?? null) ? $execResult['commands_run'] : [];
+        if ($commandsRun === []) {
+            return $execResult;
+        }
+
+        $outcome = $this->projectCommands->runAllowedProjectCommands($commandsRun);
+        $execResult['_commands_executed'] = $outcome['executed'];
+        $execResult['git_status_after'] = $outcome['post_git_status'];
+
+        $failed = [];
+        foreach ($outcome['executed'] as $row) {
+            if (($row['ok'] ?? false) !== true) {
+                $cmd = StringCoercion::toString($row['command'] ?? null, 'git command');
+                $err = StringCoercion::toString($row['stderr'] ?? $row['reason'] ?? null, 'failed');
+                $failed[] = $cmd.': '.$err;
+            }
+        }
+
+        if ($failed !== []) {
+            $issues = is_array($execResult['known_issues'] ?? null) ? $execResult['known_issues'] : [];
+            $execResult['known_issues'] = array_values(array_merge($issues, $failed));
+            if (($execResult['status'] ?? '') !== 'failed') {
+                $execResult['status'] = 'partial';
+            }
+        }
+
+        if ($emit !== null && $outcome['executed'] !== []) {
+            $okCount = count(array_filter($outcome['executed'], static fn ($r) => ($r['ok'] ?? false) === true));
+            $this->emit($emit, $this->basePayload($run, 'commands_executed', [
+                'agent' => 'executor',
+                'status' => $failed === [] ? 'success' : 'warning',
+                'summary' => $okCount.'/'.count($outcome['executed']).' project command(s) executed.',
+                'artifacts' => [
+                    'commands_executed' => $outcome['executed'],
+                    'git_status_after' => $outcome['post_git_status'],
+                ],
+            ]));
+        }
+
+        return $execResult;
+    }
+
     protected function applyExecutorFileChanges(Run $run, array $execResult, ?callable $emit): array
     {
         $result = $this->executorFileApplier->applyFromExecutorResult($run->id, $execResult);
@@ -1017,6 +1298,14 @@ class OrchestratorService
                 'run_id' => $run->id,
                 'errors' => $report['errors'],
             ]);
+            if ($emit !== null) {
+                $emit($this->basePayload($run, 'files_apply_failed', [
+                    'agent' => 'executor',
+                    'status' => 'warning',
+                    'summary' => count($report['errors']).' file(s) could not be written to the active project (permissions or path).',
+                    'artifacts' => ['files_apply_errors' => $report['errors']],
+                ]));
+            }
         }
 
         return $execResult;
@@ -1025,13 +1314,13 @@ class OrchestratorService
     protected function formatRiskLine(mixed $risk): string
     {
         if (! is_array($risk)) {
-            return (string) $risk;
+            return StringCoercion::toString($risk);
         }
 
-        $issue = (string) ($risk['issue'] ?? $risk['title'] ?? 'Risk');
-        $severity = strtoupper((string) ($risk['severity'] ?? 'medium'));
-        $location = (string) ($risk['location'] ?? '');
-        $description = (string) ($risk['description'] ?? $risk['recommendation'] ?? '');
+        $issue = StringCoercion::toString($risk['issue'] ?? $risk['title'] ?? null, 'Risk');
+        $severity = strtoupper(StringCoercion::toString($risk['severity'] ?? null, 'medium'));
+        $location = StringCoercion::toString($risk['location'] ?? null);
+        $description = StringCoercion::toString($risk['description'] ?? $risk['recommendation'] ?? null);
 
         $line = "[{$severity}] {$issue}";
         if ($location !== '') {
@@ -1042,6 +1331,130 @@ class OrchestratorService
         }
 
         return $line;
+    }
+
+    /**
+     * @param  array<string, mixed>  $execResult
+     * @return array{
+     *   executed_lines: list<string>,
+     *   proposed_lines: list<string>,
+     *   failed_commands: list<string>,
+     *   git_restore_failed: bool,
+     *   summary_text: string,
+     * }
+     */
+    protected function summarizeCommandExecution(array $execResult): array
+    {
+        $proposed = $this->projectCommands->normalizeCommandList(
+            is_array($execResult['commands_run'] ?? null) ? $execResult['commands_run'] : [],
+        );
+        $executed = is_array($execResult['_commands_executed'] ?? null) ? $execResult['_commands_executed'] : [];
+
+        $executedLines = [];
+        $proposedLines = [];
+        $failedCommands = [];
+        $gitRestoreFailed = false;
+
+        foreach ($executed as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+            $cmd = StringCoercion::toString($row['command'] ?? null, '');
+            $ok = ($row['ok'] ?? false) === true;
+            $suffix = $ok ? '(exit 0)' : '(failed)';
+            $line = '- '.$cmd.' '.$suffix;
+            $outSnippet = $this->commandOutputSnippet($row);
+            if ($outSnippet !== '') {
+                $line .= "\n  ".$outSnippet;
+            }
+            $executedLines[] = $line;
+            if (! $ok) {
+                $failedCommands[] = $cmd;
+                if ($this->isRestoreLikeCommand($cmd)) {
+                    $gitRestoreFailed = true;
+                }
+            }
+        }
+
+        $executedSet = array_map(
+            static fn ($row) => is_array($row) ? StringCoercion::toString($row['command'] ?? null, '') : '',
+            $executed,
+        );
+
+        foreach ($proposed as $cmd) {
+            if (! in_array($cmd, $executedSet, true)) {
+                $proposedLines[] = '- '.$cmd;
+            }
+        }
+
+        foreach ($executed as $row) {
+            if (is_array($row) && ($row['skipped'] ?? false) === true) {
+                $cmd = StringCoercion::toString($row['command'] ?? null, '');
+                $proposedLines[] = '- '.$cmd.' (skipped: '.StringCoercion::toString($row['reason'] ?? null, 'blocked').')';
+            }
+        }
+
+        $patch = StringCoercion::toString($execResult['patch_summary'] ?? null, '');
+        $summaryText = $patch !== '' ? $patch : 'No change summary recorded.';
+        if ($gitRestoreFailed) {
+            $summaryText = 'Git restore did not complete successfully. '.$summaryText;
+        } elseif ($proposed !== [] && $executedLines === []) {
+            $summaryText = 'Commands were listed but not executed. '.$summaryText;
+        } elseif (
+            $patch !== ''
+            && preg_match('/\brestored?\b/i', $patch)
+            && $executedLines === []
+            && $proposed !== []
+        ) {
+            $summaryText = 'Note: summary mentions restore but git commands were not executed. '.$summaryText;
+        }
+
+        return [
+            'executed_lines' => $executedLines,
+            'proposed_lines' => $proposedLines,
+            'failed_commands' => $failedCommands,
+            'git_restore_failed' => $gitRestoreFailed,
+            'summary_text' => $summaryText,
+        ];
+    }
+
+    protected function isRestoreLikeCommand(string $command): bool
+    {
+        $lower = strtolower(trim($command));
+
+        return str_starts_with($lower, 'git restore') || str_starts_with($lower, 'git checkout');
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    protected function commandOutputSnippet(array $row): string
+    {
+        $stderr = trim(StringCoercion::toString($row['stderr'] ?? null, ''));
+        $stdout = trim(StringCoercion::toString($row['stdout'] ?? null, ''));
+        $text = $stderr !== '' ? $stderr : $stdout;
+        if ($text === '') {
+            return '';
+        }
+
+        $lines = preg_split("/\r\n|\n|\r/", $text) ?: [];
+        $snippet = implode(' ', array_slice(array_filter(array_map('trim', $lines)), 0, 3));
+
+        return mb_strlen($snippet) > 200 ? mb_substr($snippet, 0, 197).'…' : $snippet;
+    }
+
+    /**
+     * @return list<string>
+     */
+    protected function formatGitStatusLines(mixed $gitStatusAfter): array
+    {
+        if (! is_string($gitStatusAfter) || trim($gitStatusAfter) === '') {
+            return ['- (not captured)'];
+        }
+
+        $lines = preg_split("/\r\n|\n|\r/", trim($gitStatusAfter)) ?: [];
+
+        return $lines === [] ? ['- Clean working tree'] : array_map(static fn ($l) => '- '.$l, $lines);
     }
 
     /**
@@ -1161,6 +1574,29 @@ class OrchestratorService
             $lastSecurity,
             $lastFinal
         );
+
+        $storedConversation = is_array($run->metadata['conversation'] ?? null)
+            ? $run->metadata['conversation']
+            : [];
+        $learningResult = $this->userSelfLearning->processAfterRun(
+            $run,
+            $prompt,
+            $storedConversation,
+            $modelRoute,
+            $plan,
+            $executorOutputs[0] ?? [],
+            $lastAudit,
+        );
+        $run->update([
+            'metadata' => array_merge($run->metadata ?? [], ['user_learning' => $learningResult]),
+        ]);
+        if ($emit !== null) {
+            $this->emit($emit, $this->basePayload($run, 'user_learning_stored', [
+                'status' => 'success',
+                'summary' => 'User self-learning recorded to memory.',
+                'artifacts' => $learningResult,
+            ]));
+        }
 
         try {
             $run->refresh();
@@ -1561,24 +1997,56 @@ class OrchestratorService
         return [[
             'path' => $normalized,
             'found' => (bool) ($result['found'] ?? false),
-            'preview' => isset($result['preview']) ? Str::limit((string) $result['preview'], 500) : null,
+            'preview' => isset($result['preview']) ? Str::limit((string) $result['preview'], 2000) : null,
             'reason' => $reason,
             'tool_status' => $inv['status'] ?? 'error',
         ]];
     }
 
-    protected function preflightReadTargetFiles(Run $run, array $plan, ?callable $emit): array
+    /**
+     * @param  array<string, mixed>  $modelRoute
+     * @param  array<string, mixed>  $lastAudit
+     * @param  array<string, mixed>|null  $lastSecurity
+     * @return list<string>
+     */
+    protected function auditDimensionLines(array $modelRoute, array $lastAudit, ?array $lastSecurity): array
+    {
+        if (($modelRoute['audit_mode'] ?? '') !== 'full') {
+            return [];
+        }
+
+        return app(AuditReportFormatter::class)->formatDimensionSections($lastAudit, $lastSecurity);
+    }
+
+    /**
+     * @param  array<string, mixed>  $modelRoute
+     */
+    protected function preflightReadTargetFiles(Run $run, array $plan, ?callable $emit, array $modelRoute = []): array
     {
         $reads = [];
         $targets = is_array($plan['target_file_list'] ?? null) ? $plan['target_file_list'] : [];
 
         if ($targets === []) {
-            foreach (['composer.json', 'package.json', 'README.md', 'routes/web.php', 'routes/api.php', '.env.example'] as $bootstrap) {
-                $targets[] = ['path' => $bootstrap, 'reason' => 'bootstrap scan'];
+            $bootstrap = ['composer.json', 'package.json', 'README.md', 'routes/web.php', 'routes/api.php', '.env.example'];
+            if (($modelRoute['audit_mode'] ?? '') === 'full') {
+                $bootstrap = array_merge($bootstrap, [
+                    'docker-compose.yml',
+                    'compose.yaml',
+                    'phpunit.xml',
+                    'nuxt.config.ts',
+                    'vite.config.ts',
+                    'app/config/bossku.php',
+                    'config/bossku.php',
+                    'bootstrap/app.php',
+                ]);
+            }
+            foreach ($bootstrap as $path) {
+                $targets[] = ['path' => $path, 'reason' => 'bootstrap scan'];
             }
         }
 
-        foreach (array_slice($targets, 0, 10) as $target) {
+        $targetLimit = ($modelRoute['audit_mode'] ?? '') === 'full' ? 20 : 10;
+        foreach (array_slice($targets, 0, $targetLimit) as $target) {
             if (! is_array($target)) {
                 continue;
             }
@@ -1619,5 +2087,43 @@ class OrchestratorService
     protected function promptMentionsRepo(string $prompt): bool
     {
         return RepoTaskDetector::requiresRepositoryAccess($prompt);
+    }
+
+    /**
+     * @param  array<string, mixed>  $execResult
+     */
+    protected function executorFailedFromLlmJson(array $execResult): bool
+    {
+        if (($execResult['status'] ?? '') !== 'failed') {
+            return false;
+        }
+
+        $issues = is_array($execResult['known_issues'] ?? null) ? $execResult['known_issues'] : [];
+        foreach ($issues as $issue) {
+            $text = is_string($issue) ? $issue : StringCoercion::toString($issue);
+            if (
+                stripos($text, 'invalid_json') !== false
+                || stripos($text, 'All models failed') !== false
+            ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  array<string, mixed>  $execResult
+     */
+    protected function executorFailureSummary(array $execResult): string
+    {
+        $issues = is_array($execResult['known_issues'] ?? null) ? $execResult['known_issues'] : [];
+        $first = is_string($issues[0] ?? null) ? $issues[0] : StringCoercion::toString($issues[0] ?? null, '');
+
+        if ($first !== '') {
+            return 'Executor failed: '.$first.' Preflight reads are included as read_previews for context only.';
+        }
+
+        return 'Executor failed before producing valid JSON output. Preflight reads are included as read_previews for context only.';
     }
 }

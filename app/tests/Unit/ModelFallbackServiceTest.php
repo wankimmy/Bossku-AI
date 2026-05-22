@@ -39,7 +39,7 @@ class ModelFallbackServiceTest extends TestCase
             });
 
         /** @var LlmGateway $gateway */
-        $svc = new ModelFallbackService($gateway, new AgentPersonaService());
+        $svc = new ModelFallbackService($gateway, app(AgentPersonaService::class));
         $out = $svc->chatWithFallbacks(
             ['first-fail', 'second-ok'],
             $messages,

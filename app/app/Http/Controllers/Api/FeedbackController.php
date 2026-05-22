@@ -44,8 +44,8 @@ class FeedbackController extends Controller
 
     public function summary(string $targetType, string $targetId)
     {
-        /** @var \App\Services\Learning\FeedbackService $service */
-        $service = app(\App\Services\Learning\FeedbackService::class);
+        /** @var \App\Services\Feedback\FeedbackService $service */
+        $service = app(\App\Services\Feedback\FeedbackService::class);
 
         return response()->json($service->summary($targetType, $targetId));
     }

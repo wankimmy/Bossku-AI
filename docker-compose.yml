@@ -12,6 +12,8 @@ services:
       - ./app/.env
     environment:
       BOSSKU_REPO_PATH: /repo
+      # Allow php-fpm to write bind-mounted sibling repos under /workspace (see docker/php/entrypoint.sh).
+      BOSSKU_WORKSPACE_WRITABLE: ${BOSSKU_WORKSPACE_WRITABLE:-true}
       DB_CONNECTION: pgsql
       DB_HOST: postgres
       DB_PORT: 5432
@@ -27,6 +29,8 @@ services:
       - ./app:/var/www/html
       - ./:/repo
       - ../:/workspace
+      # Local dev only: run docker compose against sibling projects under /workspace
+      - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
       postgres:
         condition: service_healthy
@@ -62,6 +66,8 @@ services:
       HOST: 0.0.0.0
       PORT: "3000"
       NODE_ENV: production
+      # Set BOSSKU_WEB_DEV=true in repo-root .env for hot-reload (nuxt dev) instead of production build.
+      BOSSKU_WEB_DEV: ${BOSSKU_WEB_DEV:-false}
     depends_on:
       - nginx
     networks: [bossku]
@@ -74,8 +80,24 @@ services:
           echo "[bossku-web] Installing dependencies (dev deps required for nuxt build)..."
           NPM_CONFIG_PRODUCTION=false npm ci 2>/dev/null || NPM_CONFIG_PRODUCTION=false npm install
         fi
-        if [ ! -f .output/server/index.mjs ]; then
-          echo "[bossku-web] Running npm run build (first start may take a few minutes)..."
+        if [ "$${BOSSKU_WEB_DEV:-false}" = "true" ]; then
+          echo "[bossku-web] Dev mode (nuxt dev) on http://0.0.0.0:$${PORT:-3000}"
+          exec npm run dev -- --host 0.0.0.0 --port "$${PORT:-3000}"
+        fi
+        stamp=".output/server/index.mjs"
+        needs_build=0
+        if [ ! -f "$$stamp" ]; then
+          needs_build=1
+        else
+          for path in pages components composables utils layouts middleware plugins assets app.vue nuxt.config.ts; do
+            if [ -e "$$path" ] && find "$$path" -type f -newer "$$stamp" 2>/dev/null | head -1 | grep -q .; then
+              needs_build=1
+              break
+            fi
+          done
+        fi
+        if [ "$$needs_build" = "1" ]; then
+          echo "[bossku-web] Building Nuxt (source changed or first start; may take a few minutes)..."
           NPM_CONFIG_PRODUCTION=false npm run build
         fi
         echo "[bossku-web] Serving production build on http://0.0.0.0:$${PORT:-3000}"

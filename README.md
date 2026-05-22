@@ -183,6 +183,19 @@ See [`docs/architecture.md`](docs/architecture.md) for the full architecture ref
 
 ---
 
+## Security (optional — OSS defaults stay open)
+
+Local development needs **no login and no API token**. When you expose Bossku to the internet:
+
+1. Set in `app/.env`: `BOSSKU_API_AUTH_ENABLED=true` and `BOSSKU_API_TOKEN=<long-random-secret>`
+2. Set the same token for the UI: `NUXT_PUBLIC_API_TOKEN` on the frontend service
+3. Deploy with the production compose overlay: `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d`
+4. See [docs/production-deploy.md](docs/production-deploy.md) for TLS, CORS, and hardening
+
+Run endpoints are rate-limited (`BOSSKU_RUNS_RATE_PER_MINUTE`, default 60). Audit events are logged as `bossku.run.*` (no prompt body).
+
+---
+
 ## Mandatory Response Indicator
 
 Every BosskuAI-compliant response starts with:

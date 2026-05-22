@@ -3,10 +3,15 @@
 namespace App\Services\BosskuAi;
 
 use App\Models\BosskuAi\AgentPersona;
+use App\Services\Project\BosskuToolkitDetector;
+use App\Services\Project\BosskuToolkitPersonas;
 use Illuminate\Support\Facades\File;
 
 class AgentPersonaService
 {
+    public function __construct(
+        protected BosskuToolkitDetector $toolkitDetector,
+    ) {}
     /** @var array<string, AgentPersona|null> */
     protected array $cache = [];
 
@@ -69,7 +74,16 @@ class AgentPersonaService
         }
         $name = $row->display_name ?: $role;
 
-        return "## Agent persona ({$name})\n{$content}\n\n---\n\n{$builtinSystem}";
+        $block = "## Agent persona ({$name})\n{$content}";
+
+        if ($this->toolkitDetector->isBosskuToolkitRepository()) {
+            $overlay = trim(BosskuToolkitPersonas::forRole($role));
+            if ($overlay !== '') {
+                $block .= "\n\n## Bossku toolkit self-improvement\n{$overlay}";
+            }
+        }
+
+        return $block."\n\n---\n\n{$builtinSystem}";
     }
 
     /**
@@ -147,10 +161,43 @@ class AgentPersonaService
     }
 
     /**
+     * Create missing pipeline persona rows (idempotent; does not overwrite saved edits).
+     */
+    public function ensurePipelinePersonas(): void
+    {
+        $names = self::defaultDisplayNames();
+        $stubs = AgentPersonaBuiltinPrompts::previews();
+        $created = false;
+
+        foreach (self::PIPELINE_ROLES as $role) {
+            if (AgentPersona::query()->where('role', $role)->exists()) {
+                continue;
+            }
+
+            $fromMd = $this->defaultContentFromAgentsMd($role);
+            $content = $fromMd ?? ($stubs[$role] ?? 'BosskuAI '.$role.' agent.');
+
+            AgentPersona::query()->create([
+                'role' => $role,
+                'display_name' => $names[$role] ?? ucfirst(str_replace('_', ' ', $role)),
+                'content' => $content,
+                'enabled' => true,
+            ]);
+            $created = true;
+        }
+
+        if ($created) {
+            $this->clearCache();
+        }
+    }
+
+    /**
      * @return list<array{role: string, display_name: string, content_preview: string, enabled: bool, updated_at: string|null}>
      */
     public function listForApi(): array
     {
+        $this->ensurePipelinePersonas();
+
         return AgentPersona::query()
             ->orderBy('role')
             ->get()

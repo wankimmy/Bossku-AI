@@ -49,6 +49,11 @@ class ProjectFilesControllerTest extends TestCase
             ->assertJsonPath('path', '')
             ->assertJsonFragment(['name' => 'src', 'type' => 'dir']);
 
+        $this->getJson('/api/project/tree?path=src')
+            ->assertOk()
+            ->assertJsonPath('path', 'src')
+            ->assertJsonFragment(['name' => 'hello.txt', 'type' => 'file']);
+
         $this->getJson('/api/project/file?path=src/hello.txt')
             ->assertOk()
             ->assertJsonPath('path', 'src/hello.txt')

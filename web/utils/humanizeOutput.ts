@@ -1,3 +1,5 @@
+import { formatToolCallSummary, isToolCallEvent } from './formatToolCall'
+
 export interface RiskItem {
   issue: string
   severity: string
@@ -194,6 +196,10 @@ export function humanizeActivitySummary(
   agent: string,
   evt: UnknownRecord,
 ): string {
+  if (isToolCallEvent(evt)) {
+    return formatToolCallSummary(evt)
+  }
+
   const meta = asRecord(evt.metadata) ?? {}
   const raw = String(
     evt.error ?? evt.summary ?? meta.summary ?? evt.output ?? meta.message ?? meta.error ?? '',
@@ -218,6 +224,11 @@ function summaryFromArtifacts(agent: string, artifacts?: UnknownRecord): string 
   }
   if (agent === 'auditor' && asArray(artifacts.audit_findings).length) {
     return `Auditor found ${asArray(artifacts.audit_findings).length} item(s).`
+  }
+  if (asArray(artifacts.commands_executed).length) {
+    const rows = asArray(artifacts.commands_executed)
+    const ok = rows.filter(row => asRecord(row)?.ok === true).length
+    return `${ok}/${rows.length} git command(s) executed.`
   }
   return ''
 }

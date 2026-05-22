@@ -18,10 +18,25 @@ export type ClarificationAnswer = {
   free_text?: string
 }
 
+export type ClarificationProof = {
+  from_agent?: string
+  files_read?: unknown[]
+  files_changed?: unknown[]
+  proof_files?: string[]
+  blockers?: string[]
+  known_issues?: unknown[]
+  findings?: unknown[]
+  required_fixes?: string[]
+  commands_run?: unknown[]
+}
+
 export type ClarificationRequest = {
   runId: string
   stage: string
   summary: string
   assumptions: string[]
   questions: ClarificationQuestion[]
+  from_agent?: string
+  origin?: string
+  proof?: ClarificationProof
 }

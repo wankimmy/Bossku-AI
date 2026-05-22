@@ -2,6 +2,7 @@
 
 namespace App\Services\Orchestrator;
 
+use App\Support\StringCoercion;
 use App\Services\BosskuAi\AgentPersonaService;
 use App\Services\BosskuAi\ModelFallbackService;
 use App\Services\BosskuAi\ModelRoutingConfig;
@@ -22,17 +23,35 @@ class SecurityAuditorService
      * @param  array<string, mixed>  $executorResult
      * @return array<string, mixed>
      */
+    /**
+     * @param  list<array<string, mixed>>  $preflightReads
+     */
     public function audit(
         string $userPrompt,
         array $route,
         array $plan,
         array $executorResult,
         ?string $runId = null,
+        array $preflightReads = [],
     ): array {
         $toolEvidence = ExecutorEvidenceSupport::toolEvidenceForRun($runId);
+        $previewMax = (int) config('bossku.security_audit_preview_max_files', 10);
+        $executorPayload = ExecutorEvidenceSupport::executorPayloadForAudit(
+            $executorResult,
+            $preflightReads,
+            $runId,
+            $previewMax,
+        );
 
         if (! ExecutorEvidenceSupport::hasReadEvidence($executorResult, $toolEvidence)) {
             return ExecutorEvidenceSupport::deterministicNoFilesRead();
+        }
+
+        if (
+            ExecutorEvidenceSupport::countFilesRead($executorResult) > 0
+            && ($executorPayload['read_previews'] ?? []) === []
+        ) {
+            return ExecutorEvidenceSupport::deterministicNoReadableContent();
         }
 
         $cfg = $this->config->securityAuditor();
@@ -56,11 +75,11 @@ SYS;
             'route' => $route,
             'plan_summary' => $plan['summary'] ?? null,
             'target_files' => $plan['target_file_list'] ?? [],
-            'executor' => ExecutorEvidenceSupport::executorPayloadForAudit($executorResult),
+            'executor' => $executorPayload,
             'tool_evidence' => $toolEvidence,
         ], JSON_THROW_ON_ERROR);
 
-        $handoffMessage = (string) ($executorResult['handoff_message'] ?? 'Security audit handoff from auditor pipeline.');
+        $handoffMessage = StringCoercion::toString($executorResult['handoff_message'] ?? null, 'Security audit handoff from auditor pipeline.');
         $userContent = $this->personas->wrapHandoffUserContent('security_auditor', 'auditor', $handoffMessage, $payload);
 
         $messages = [

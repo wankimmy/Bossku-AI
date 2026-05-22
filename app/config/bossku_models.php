@@ -54,8 +54,8 @@ return [
 
     'executor' => [
         'default' => [
-            'primary' => 'qwen3-coder-next',
-            'fallback' => ['glm-5.1', 'kimi-k2.6', 'deepseek-v4-pro'],
+            'primary' => 'glm-5.1',
+            'fallback' => ['deepseek-v4-pro', 'kimi-k2.6', 'qwen3-coder-next'],
             'max_context_files' => 15,
             'max_tokens' => 12000,
             'temperature' => 0.2,
@@ -63,8 +63,8 @@ return [
             'retry_count' => 1,
         ],
         'frontend_ui' => [
-            'primary' => 'qwen3-coder-next',
-            'fallback' => ['glm-5.1', 'kimi-k2.6', 'deepseek-v4-pro'],
+            'primary' => 'glm-5.1',
+            'fallback' => ['deepseek-v4-pro', 'kimi-k2.6', 'qwen3-coder-next'],
             'max_context_files' => 20,
             'max_tokens' => 14000,
             'temperature' => 0.25,
@@ -72,8 +72,8 @@ return [
             'retry_count' => 1,
         ],
         'backend' => [
-            'primary' => 'qwen3-coder-next',
-            'fallback' => ['glm-5.1', 'kimi-k2.6', 'deepseek-v4-pro'],
+            'primary' => 'glm-5.1',
+            'fallback' => ['deepseek-v4-pro', 'kimi-k2.6', 'qwen3-coder-next'],
             'max_context_files' => 15,
             'max_tokens' => 12000,
             'temperature' => 0.2,

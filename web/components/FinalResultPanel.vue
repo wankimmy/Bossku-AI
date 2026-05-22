@@ -30,7 +30,7 @@ defineProps<{ result: FinalResult }>()
       </div>
       <div>
         <dt class="text-xs font-semibold uppercase text-zinc-500">
-          Checks run
+          Commands executed
         </dt>
         <dd class="mt-1">
           <ul v-if="result.checksRun.length" class="space-y-1 font-mono text-xs">
@@ -39,6 +39,14 @@ defineProps<{ result: FinalResult }>()
             </li>
           </ul>
           <span v-else class="text-zinc-500">None recorded</span>
+        </dd>
+      </div>
+      <div v-if="result.gitStatusAfter" class="md:col-span-2">
+        <dt class="text-xs font-semibold uppercase text-zinc-500">
+          Git status after commands
+        </dt>
+        <dd class="mt-1 whitespace-pre-wrap font-mono text-xs text-zinc-600 dark:text-zinc-400">
+          {{ result.gitStatusAfter || 'Clean working tree' }}
         </dd>
       </div>
       <div>

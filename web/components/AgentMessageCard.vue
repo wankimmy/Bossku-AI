@@ -25,6 +25,36 @@ const showPlainDetail = computed(() =>
 )
 
 const detailOpen = ref(false)
+
+const proofFiles = computed((): string[] => {
+  const arts = props.message.artifacts
+  if (!arts || typeof arts !== 'object') return []
+  const fromProof = Array.isArray((arts as Record<string, unknown>).proof_files)
+    ? ((arts as Record<string, unknown>).proof_files as string[])
+    : []
+  if (fromProof.length) return fromProof
+  const paths = new Set<string>()
+  for (const key of ['files_read', 'files_changed'] as const) {
+    const items = (arts as Record<string, unknown>)[key]
+    if (!Array.isArray(items)) continue
+    for (const item of items) {
+      if (typeof item === 'string') paths.add(item)
+      else if (item && typeof item === 'object' && typeof (item as Record<string, unknown>).path === 'string') {
+        paths.add((item as Record<string, unknown>).path as string)
+      }
+    }
+  }
+  return [...paths]
+})
+
+const needsInput = computed(() =>
+  Boolean((props.message.artifacts as Record<string, unknown> | undefined)?.needs_user_input),
+)
+
+const blockers = computed((): string[] => {
+  const b = (props.message.artifacts as Record<string, unknown> | undefined)?.blockers
+  return Array.isArray(b) ? b.map(String).filter(Boolean) : []
+})
 </script>
 
 <template>
@@ -72,6 +102,28 @@ const detailOpen = ref(false)
         <p v-else-if="!message.router && !message.risks?.length" class="text-zinc-500 italic text-xs">
           Processing…
         </p>
+
+        <div
+          v-if="needsInput"
+          class="mb-2 rounded-lg border border-amber-500/40 bg-amber-950/30 px-3 py-2 text-xs text-amber-200"
+        >
+          <span class="font-medium">Needs your input</span>
+          <span v-if="message.from_agent"> from {{ message.from_agent }}</span>
+          <ul v-if="blockers.length" class="mt-1 list-disc pl-4 text-amber-200/90">
+            <li v-for="(b, i) in blockers" :key="i">{{ b }}</li>
+          </ul>
+        </div>
+
+        <div v-if="proofFiles.length" class="mb-2">
+          <p class="text-xs text-zinc-500 mb-1">Proof (files)</p>
+          <div class="flex flex-wrap gap-1">
+            <span
+              v-for="path in proofFiles.slice(0, 12)"
+              :key="path"
+              class="rounded bg-zinc-800/80 px-1.5 py-0.5 font-mono text-[10px] text-zinc-400"
+            >{{ path }}</span>
+          </div>
+        </div>
 
         <RouterSummaryBlock v-if="message.router" :router="message.router" class="text-zinc-100" />
 

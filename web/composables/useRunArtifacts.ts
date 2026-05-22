@@ -12,6 +12,7 @@ import type {
   RoutingSummary,
   TestRun,
 } from '../types/bossku'
+import { formatToolCallSummary, formatToolCallTitle, isToolCallEvent } from '../utils/formatToolCall'
 import { formatAgentStepOutput, parseRiskItems } from '../utils/humanizeOutput'
 
 type UnknownRecord = Record<string, unknown>
@@ -30,6 +31,7 @@ export function useRunArtifacts(items: UnknownRecord[] = []): NormalizedRunArtif
   const filesRead: FileRead[] = []
   const filesChanged: FileChange[] = []
   const commandsRun: CommandRun[] = []
+  let gitStatusAfter: string | undefined
   const testsRun: TestRun[] = []
   const auditFindings: AuditFinding[] = []
   const routingSummary: RoutingSummary = { backend: 'Ollama' }
@@ -41,7 +43,9 @@ export function useRunArtifacts(items: UnknownRecord[] = []): NormalizedRunArtif
     const metadata = asRecord(item.metadata) ?? {}
     const artifacts = mergeArtifacts(event, metadata)
     const type = String(event.type ?? item.type ?? '')
-    const agent = String(event.agent ?? metadata.agent ?? inferAgent(type))
+    const agent = isToolCallEvent(event)
+      ? 'tools'
+      : String(event.agent ?? metadata.agent ?? inferAgent(type))
     const status = normalizeStatus(String(event.status ?? item.status ?? metadata.status ?? 'completed'))
 
     if (type === 'memory_retrieved' || asArray(event.memory_used).length > 0 || asArray(artifacts.memory_used).length > 0) {
@@ -53,6 +57,10 @@ export function useRunArtifacts(items: UnknownRecord[] = []): NormalizedRunArtif
     pushAll(filesRead, asFileReads(artifacts.files_read))
     pushAll(filesChanged, asFileChanges(artifacts.files_changed))
     pushAll(commandsRun, asCommands(artifacts.commands_run))
+    pushAll(commandsRun, asExecutedCommands(artifacts.commands_executed))
+    if (typeof artifacts.git_status_after === 'string' && artifacts.git_status_after.trim()) {
+      gitStatusAfter = artifacts.git_status_after.trim()
+    }
     pushAll(testsRun, asTests(artifacts.tests_run))
     pushAll(auditFindings, asAuditFindings(artifacts.audit_findings))
     pushAll(auditFindings, asAuditFindings(artifacts.findings))
@@ -71,6 +79,7 @@ export function useRunArtifacts(items: UnknownRecord[] = []): NormalizedRunArtif
     }
 
     if (agent || type) {
+      const toolSummary = isToolCallEvent(event) ? formatToolCallSummary(event) : undefined
       const rawOutput = stringOrUndefined(
         event.error ?? event.message ?? metadata.message ?? metadata.error ?? item.output,
       )
@@ -82,12 +91,12 @@ export function useRunArtifacts(items: UnknownRecord[] = []): NormalizedRunArtif
       messages.push({
         id: String(item.id ?? event.id ?? `${type || agent}-${idx}`),
         agent,
-        title: titleForAgent(agent),
+        title: isToolCallEvent(event) ? formatToolCallTitle(event) : titleForAgent(agent),
         status,
         model_role: stringOrUndefined(event.model_role ?? metadata.model_role),
         model: stringOrUndefined(event.model ?? item.model ?? metadata.model),
-        summary: existingSummary ?? formatted.summary,
-        message: formatted.detail,
+        summary: toolSummary ?? existingSummary ?? formatted.summary,
+        message: isToolCallEvent(event) ? toolSummary : formatted.detail,
         risks: formatted.risks,
         router: formatted.router,
         from_agent: stringOrUndefined(event.from_agent ?? metadata.from_agent),
@@ -122,7 +131,8 @@ export function useRunArtifacts(items: UnknownRecord[] = []): NormalizedRunArtif
     commandsRun,
     testsRun,
     auditFindings: dedupeBy(auditFindings, item => item.id || item.title),
-    finalResult: parseFinalResult(finalRaw, filesChanged, commandsRun, auditFindings),
+    finalResult: parseFinalResult(finalRaw, filesChanged, commandsRun, auditFindings, gitStatusAfter),
+    gitStatusAfter,
     routingSummary,
     memoryUsed,
   }
@@ -211,12 +221,21 @@ function buildHandoff(messages: AgentMessage[]): HandoffNode[] {
   })
 }
 
-function parseFinalResult(raw: string, files: FileChange[], commands: CommandRun[], findings: AuditFinding[]): FinalResult {
+function parseFinalResult(
+  raw: string,
+  files: FileChange[],
+  commands: CommandRun[],
+  findings: AuditFinding[],
+  gitStatusAfter?: string,
+): FinalResult {
+  const executedChecks = sectionLines(raw, 'Commands executed').map(stripBullet)
+  const legacyChecks = sectionLines(raw, 'Checks run').map(stripBullet)
   const result: FinalResult = {
     status: readMarkdownSection(raw, 'Status') || (raw ? 'Completed' : undefined),
     summary: readMarkdownSection(raw, 'What changed') || raw,
     filesChanged: sectionLines(raw, 'Files changed').map(stripBullet),
-    checksRun: sectionLines(raw, 'Checks run').map(stripBullet),
+    checksRun: executedChecks.length ? executedChecks : legacyChecks,
+    gitStatusAfter,
     auditResult: readMarkdownSection(raw, 'Audit result') || (findings.length ? 'needs review' : undefined),
     remainingRisks: parseRemainingRisks(raw, findings),
     nextStep: readMarkdownSection(raw, 'Next recommended step'),
@@ -269,6 +288,8 @@ function parseRemainingRisks(raw: string, findings: AuditFinding[]): RiskItem[] 
 }
 
 function inferAgent(type: string) {
+  if (type === 'tool_call') return 'tools'
+  if (type === 'commands_executed') return 'executor'
   if (type.includes('planner')) return 'orchestrator'
   if (type.includes('executor')) return 'executor'
   if (type.includes('security')) return 'security-auditor'
@@ -301,6 +322,11 @@ function summaryFromArtifacts(artifacts: UnknownRecord, type: string) {
   }
   if (type.includes('auditor') && asArray(artifacts.audit_findings).length) {
     return `Auditor found ${asArray(artifacts.audit_findings).length} item(s).`
+  }
+  if (type === 'commands_executed' && asArray(artifacts.commands_executed).length) {
+    const rows = asArray(artifacts.commands_executed)
+    const ok = rows.filter((row) => asRecord(row)?.ok === true).length
+    return `${ok}/${rows.length} git command(s) executed.`
   }
   return undefined
 }
@@ -352,6 +378,21 @@ function asCommands(value: unknown): CommandRun[] {
       exit_code: numberOrUndefined(record.exit_code),
       duration_ms: numberOrUndefined(record.duration_ms),
       output_summary: stringOrUndefined(record.output_summary),
+    }
+  }).filter(item => item.command)
+}
+
+function asExecutedCommands(value: unknown): CommandRun[] {
+  return asArray(value).map((item) => {
+    const record = asRecord(item) ?? {}
+    const ok = record.ok === true
+    const skipped = record.skipped === true
+    const stderr = stringOrUndefined(record.stderr ?? record.reason)
+    return {
+      command: String(record.command ?? ''),
+      status: skipped ? 'skipped' : (ok ? 'completed' : 'failed'),
+      exit_code: numberOrUndefined(record.exit_code),
+      output_summary: stderr,
     }
   }).filter(item => item.command)
 }
@@ -417,7 +458,26 @@ function dedupeBy<T>(items: T[], key: (item: T) => string) {
 }
 
 function stringOrUndefined(value: unknown): string | undefined {
-  return value === undefined || value === null || value === '' ? undefined : String(value)
+  if (value === undefined || value === null || value === '') return undefined
+  if (typeof value === 'string') return value
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value)
+  if (Array.isArray(value)) {
+    const lines = value.map((item) => {
+      if (typeof item === 'string') return item
+      if (item && typeof item === 'object') return JSON.stringify(item)
+      return String(item)
+    }).filter(Boolean)
+    return lines.length ? lines.join('\n') : undefined
+  }
+  if (typeof value === 'object') {
+    try {
+      return JSON.stringify(value)
+    }
+    catch {
+      return undefined
+    }
+  }
+  return String(value)
 }
 
 function numberOrUndefined(value: unknown): number | undefined {

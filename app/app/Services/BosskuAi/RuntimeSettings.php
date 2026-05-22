@@ -113,7 +113,7 @@ class RuntimeSettings
             default => (string) config('bossku_models.defaults.executor_default', 'qwen3-coder-next'),
         };
 
-        return $this->getString($key, $this->codingModel() ?: $default);
+        return $this->getString($key, $default);
     }
 
     public function embeddingModel(): string

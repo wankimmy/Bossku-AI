@@ -2,6 +2,7 @@
 
 namespace App\Services\Orchestrator;
 
+use App\Support\StringCoercion;
 use App\Services\Governance\ApprovalGateService;
 use App\Services\Governance\RiskClassifier;
 use App\Services\Project\FileWriteApplier;
@@ -49,12 +50,12 @@ class ExecutorFileChangeApplier
                 continue;
             }
 
-            $path = (string) ($item['path'] ?? '');
+            $path = StringCoercion::toString($item['path'] ?? null);
             if ($path === '') {
                 continue;
             }
 
-            $changeType = (string) ($item['change_type'] ?? 'modified');
+            $changeType = StringCoercion::toString($item['change_type'] ?? null, 'modified');
 
             try {
                 if ($changeType === 'deleted') {
@@ -124,7 +125,7 @@ class ExecutorFileChangeApplier
                 'after' => $after,
                 'diff' => $diff,
                 'change_type' => $changeType,
-                'summary' => (string) ($item['summary'] ?? ''),
+                'summary' => StringCoercion::toString($item['summary'] ?? null),
             ],
         );
 
@@ -139,9 +140,6 @@ class ExecutorFileChangeApplier
         ];
     }
 
-    /**
-     * @param  array<string, mixed>  $item
-     */
     /**
      * @param  array<string, mixed>  $item
      * @return array{path: string, before: string, after: string, diff: string, change_type: string}
@@ -165,7 +163,7 @@ class ExecutorFileChangeApplier
                 'after' => '',
                 'diff' => $diff,
                 'change_type' => 'deleted',
-                'summary' => (string) ($item['summary'] ?? ''),
+                'summary' => StringCoercion::toString($item['summary'] ?? null),
             ],
         );
 

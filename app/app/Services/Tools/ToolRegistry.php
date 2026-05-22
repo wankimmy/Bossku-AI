@@ -8,6 +8,7 @@ use App\Services\Governance\ApprovalGateService;
 use App\Services\Governance\RiskClassifier;
 use App\Services\Project\ProjectFileDiscovery;
 use App\Services\Project\ProjectPathResolver;
+use App\Support\ToolCallFormatter;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -71,6 +72,7 @@ class ToolRegistry
                 && is_array($result)
                 && ! empty($result['approval_id'])
                 && $this->approvals->autoApplyFileWritesEnabled()
+                && ! (bool) config('bossku.require_user_approval_before_apply', true)
             ) {
                 $this->approvals->autoApproveAndApply((string) $result['approval_id']);
                 $result['status'] = 'auto_applied';
@@ -97,7 +99,11 @@ class ToolRegistry
             $emit([
                 'type' => 'tool_call',
                 'run_id' => $runId,
+                'agent' => 'tools',
                 'tool' => $tool,
+                'payload' => ToolCallFormatter::payloadPreview($tool, $payload),
+                'summary' => ToolCallFormatter::summary($tool, $payload, $status),
+                'message' => ToolCallFormatter::actionDetail($tool, $payload),
                 'latency_ms' => $latency,
                 'status' => $status,
             ]);

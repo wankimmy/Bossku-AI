@@ -30,9 +30,11 @@ class DataExplorerApiTest extends TestCase
         Run::query()->create(['prompt' => 'a', 'status' => 'running']);
         Run::query()->create(['prompt' => 'b', 'status' => 'completed']);
 
+        $expected = Run::query()->count();
+
         $this->getJson('/api/data/tables/bossku_ai_runs?per_page=1&page=1')
             ->assertOk()
-            ->assertJsonPath('total', 2)
+            ->assertJsonPath('total', $expected)
             ->assertJsonCount(1, 'rows');
     }
 

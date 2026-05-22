@@ -64,6 +64,14 @@ export const agentTheme: Record<string, { color: string; bg: string; border: str
     dot: 'bg-zinc-500',
     icon: '💾',
   },
+  tools: {
+    color: 'text-sky-300',
+    bg: 'bg-sky-950/50',
+    border: 'border-sky-800/50',
+    text: 'text-sky-400',
+    dot: 'bg-sky-500',
+    icon: '🔧',
+  },
   system: {
     color: 'text-zinc-400',
     bg: 'bg-zinc-800/40',

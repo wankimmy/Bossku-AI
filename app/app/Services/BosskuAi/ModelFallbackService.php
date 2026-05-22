@@ -2,6 +2,7 @@
 
 namespace App\Services\BosskuAi;
 
+use App\Support\LlmJsonParser;
 use Illuminate\Support\Facades\Log;
 
 class ModelFallbackService
@@ -43,8 +44,11 @@ class ModelFallbackService
                         throw new \RuntimeException('empty_response');
                     }
                     if ($isValidJson !== null) {
-                        $decoded = $this->tryJson($text);
-                        if ($decoded === null || ! $isValidJson($decoded)) {
+                        $parsed = LlmJsonParser::parseObject($text);
+                        if (! $parsed['ok'] || ! is_array($parsed['data'])) {
+                            throw new \RuntimeException('invalid_json_parse');
+                        }
+                        if (! $isValidJson($parsed['data'])) {
                             throw new \RuntimeException('invalid_json_schema');
                         }
                     }
@@ -69,7 +73,9 @@ class ModelFallbackService
                         'fallback_reason' => $idx > 0 ? $lastError : null,
                         'input_tokens' => $out['input_tokens'],
                         'output_tokens' => $out['output_tokens'],
-                        'parsed' => $isValidJson ? $this->tryJson($text) : null,
+                        'parsed' => $isValidJson
+                            ? (LlmJsonParser::parseObject($text)['data'] ?? null)
+                            : null,
                     ];
                 } catch (\Throwable $e) {
                     $lastError = $e->getMessage();
@@ -104,16 +110,4 @@ class ModelFallbackService
         }
     }
 
-    /** @return mixed */
-    protected function tryJson(string $raw): mixed
-    {
-        $clean = trim($raw);
-        $clean = preg_replace('/^```(?:json)?\s*/i', '', $clean) ?? $clean;
-        $clean = preg_replace('/\s*```$/', '', $clean) ?? $clean;
-        try {
-            return json_decode($clean, true, 512, JSON_THROW_ON_ERROR);
-        } catch (\Throwable) {
-            return null;
-        }
-    }
 }

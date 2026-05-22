@@ -6,7 +6,12 @@ definePageMeta({ layout: 'default' })
 const { list, get, save, reset } = useAgentPersonas()
 const toast = useToast()
 
-const { data: listData, pending: listPending, refresh: refreshList } = await useAsyncData('agent-personas-list', () => list())
+const {
+  data: listData,
+  pending: listPending,
+  error: listError,
+  refresh: refreshList,
+} = await useAsyncData('agent-personas-list', () => list())
 
 const roles = computed<AgentPersonaListItem[]>(() => listData.value ?? [])
 const selectedRole = ref<string | null>(null)
@@ -20,15 +25,21 @@ watch(roles, (r) => {
 const detail = ref<AgentPersonaDetail | null>(null)
 const editedContent = ref('')
 const editedEnabled = ref(true)
+const savedContent = ref('')
+const savedEnabled = ref(true)
 const showBuiltin = ref(false)
 const saving = ref(false)
-const dirty = ref(false)
+
+const isDirty = computed(
+  () => editedContent.value !== savedContent.value || editedEnabled.value !== savedEnabled.value,
+)
 
 async function loadDetail(role: string) {
   detail.value = await get(role)
   editedContent.value = detail.value.content ?? ''
   editedEnabled.value = detail.value.enabled
-  dirty.value = false
+  savedContent.value = editedContent.value
+  savedEnabled.value = editedEnabled.value
 }
 
 watch(selectedRole, async (role) => {
@@ -38,11 +49,22 @@ watch(selectedRole, async (role) => {
 }, { immediate: true })
 
 function selectRole(role: string) {
-  if (dirty.value && !confirm('Discard unsaved changes?')) {
-    return
-  }
+  if (role === selectedRole.value) return
   selectedRole.value = role
 }
+
+onBeforeRouteLeave((to, from, next) => {
+  if (!isDirty.value) {
+    next()
+    return
+  }
+  if (confirm('You have unsaved persona changes. Leave without saving?')) {
+    next()
+  }
+  else {
+    next(false)
+  }
+})
 
 async function handleSave() {
   if (!selectedRole.value) return
@@ -50,7 +72,6 @@ async function handleSave() {
   try {
     await save(selectedRole.value, { content: editedContent.value, enabled: editedEnabled.value })
     await Promise.all([refreshList(), loadDetail(selectedRole.value)])
-    dirty.value = false
     toast.success('Persona saved.')
   }
   catch {
@@ -67,7 +88,6 @@ async function handleReset() {
   try {
     await reset(selectedRole.value)
     await Promise.all([refreshList(), loadDetail(selectedRole.value)])
-    dirty.value = false
     toast.success('Persona reset to default.')
   }
   catch {
@@ -78,9 +98,6 @@ async function handleReset() {
   }
 }
 
-watch([editedContent, editedEnabled], () => {
-  dirty.value = true
-})
 </script>
 
 <template>
@@ -94,6 +111,29 @@ watch([editedContent, editedEnabled], () => {
       </div>
 
       <div v-if="listPending" class="text-sm text-zinc-500">Loading roles…</div>
+      <div
+        v-else-if="listError"
+        class="rounded-lg border border-rose-900/50 bg-rose-950/30 px-3 py-3 text-sm text-rose-300"
+      >
+        <p>Could not load personas. Check that the API is running.</p>
+        <button
+          type="button"
+          class="mt-2 text-xs underline hover:text-rose-200"
+          @click="refreshList()"
+        >
+          Retry
+        </button>
+      </div>
+      <div v-else-if="roles.length === 0" class="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-3 text-sm text-zinc-400">
+        <p>No agent roles returned.</p>
+        <button
+          type="button"
+          class="mt-2 text-xs text-emerald-400 hover:text-emerald-300"
+          @click="refreshList()"
+        >
+          Reload
+        </button>
+      </div>
       <div v-else class="space-y-1">
         <button
           v-for="item in roles"
@@ -146,15 +186,16 @@ watch([editedContent, editedEnabled], () => {
           <pre class="px-4 pb-4 text-xs text-zinc-500 whitespace-pre-wrap font-mono">{{ detail.builtin_preview }}</pre>
         </details>
 
-        <div class="flex flex-wrap gap-2">
+        <div class="flex flex-wrap items-center gap-2">
           <button
             type="button"
             class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
-            :disabled="saving"
+            :disabled="saving || !isDirty"
             @click="handleSave"
           >
             {{ saving ? 'Saving…' : 'Save' }}
           </button>
+          <span v-if="isDirty" class="text-xs text-amber-400/90">Unsaved changes</span>
           <button
             type="button"
             class="rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-300 hover:bg-zinc-800 disabled:opacity-50"

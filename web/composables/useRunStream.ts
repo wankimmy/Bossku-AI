@@ -1,4 +1,5 @@
 import type { ClarificationAnswer, ClarificationRequest } from '~/types/clarification'
+import { apiAuthHeaders } from '~/utils/apiAuthHeaders'
 import { buildClarificationRequest, isAwaitingClarification } from '~/utils/clarificationStream'
 
 export type { ClarificationAnswer, ClarificationQuestion, ClarificationRequest } from '~/types/clarification'
@@ -98,6 +99,7 @@ export function useRunStream() {
       const res = await fetch(`${base}/api/runs/stream`, {
         method: 'POST',
         headers: {
+          ...apiAuthHeaders(),
           'Content-Type': 'application/json',
           Accept: 'text/event-stream',
         },
@@ -151,6 +153,48 @@ export function useRunStream() {
     }
   }
 
+  async function continueAfterApprovals(runId: string) {
+    stop()
+    error.value = null
+    running.value = true
+    activeRunId.value = runId
+    const base = useApiBase()
+    abort = new AbortController()
+
+    try {
+      const res = await fetch(`${base}/api/runs/${runId}/continue-approvals/stream`, {
+        method: 'POST',
+        headers: { ...apiAuthHeaders(), Accept: 'text/event-stream' },
+        signal: abort.signal,
+      })
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => '')
+        throw new Error(text || `Continue approvals failed (${res.status})`)
+      }
+
+      const reader = res.body?.getReader()
+      if (!reader) throw new Error('No response body from continue-approvals stream.')
+
+      await consumeSseStream(reader, trackEvent)
+    }
+    catch (e: unknown) {
+      if (e instanceof DOMException && e.name === 'AbortError') {
+        running.value = false
+        return
+      }
+      const lastType = events.value.at(-1)?.type
+      const reachedTerminal = lastType !== undefined && TERMINAL_EVENT_TYPES.has(String(lastType))
+      if (!reachedTerminal && !isAwaitingClarification(events.value)) {
+        error.value = e instanceof Error ? e.message : 'Continue after approvals was interrupted.'
+      }
+    }
+    finally {
+      running.value = false
+      abort = null
+    }
+  }
+
   async function continueRun(runId: string, answers: ClarificationAnswer[]) {
     stop()
     error.value = null
@@ -163,6 +207,7 @@ export function useRunStream() {
       const res = await fetch(`${base}/api/runs/${runId}/continue/stream`, {
         method: 'POST',
         headers: {
+          ...apiAuthHeaders(),
           'Content-Type': 'application/json',
           Accept: 'text/event-stream',
         },
@@ -213,6 +258,7 @@ export function useRunStream() {
     clarificationRequest,
     start,
     continueRun,
+    continueAfterApprovals,
     stop,
   }
 }

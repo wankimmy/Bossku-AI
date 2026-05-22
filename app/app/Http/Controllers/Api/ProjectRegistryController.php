@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\BosskuAi\Project;
 use App\Services\Project\ProjectFileDiscovery;
 use App\Services\Project\ProjectPathResolver;
+use App\Services\Project\ProjectRuntimeHints;
 use App\Services\Project\ProjectService;
 use App\Services\Project\ProjectSkillsBootstrapService;
 use Illuminate\Http\Request;
@@ -17,6 +18,7 @@ class ProjectRegistryController extends Controller
         protected ProjectPathResolver $paths,
         protected ProjectSkillsBootstrapService $skillsBootstrap,
         protected ProjectFileDiscovery $discovery,
+        protected ProjectRuntimeHints $runtimeHints,
     ) {}
 
     public function list()
@@ -81,12 +83,17 @@ class ProjectRegistryController extends Controller
             }
         }
 
+        $runtimeHints = $available && $root !== null
+            ? $this->runtimeHints->summarize($root)
+            : null;
+
         return response()->json([
             'project' => $project,
             'repo_root' => $root,
             'available' => $available,
             'error' => $error,
             'manifest_total' => $manifestTotal,
+            'runtime_hints' => $runtimeHints,
         ]);
     }
 

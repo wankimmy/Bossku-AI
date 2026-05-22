@@ -2,6 +2,7 @@
 import { useLandingChat } from '~/composables/useLandingChat'
 import { parseClarificationApiResponse } from '~/utils/clarificationFromApi'
 import type { ClarificationRequest } from '~/types/clarification'
+import type { Approval } from '~/types/api'
 
 definePageMeta({ layout: 'default' })
 
@@ -18,9 +19,12 @@ const {
   activeRunId,
   start,
   continueRun,
+  continueAfterApprovals,
   stop,
 } = useRunStream()
+const runApprovals = useRunApprovals()
 const submittingClarification = ref(false)
+const continuingApprovals = ref(false)
 const apiClarificationRequest = ref<ClarificationRequest | null>(null)
 const apiClarificationLoading = ref(false)
 const apiClarificationFetchedFor = ref<string | null>(null)
@@ -151,7 +155,11 @@ const effectiveClarificationRequest = computed((): ClarificationRequest | null =
 )
 
 const showClarificationModal = computed(
-  () => effectiveClarificationRequest.value !== null,
+  () => effectiveClarificationRequest.value !== null && !runApprovals.awaitingApprovals.value,
+)
+
+const showApprovalModal = computed(
+  () => runApprovals.awaitingApprovals.value && runApprovals.current.value !== null,
 )
 
 const resolvedRunId = computed(() =>
@@ -161,7 +169,19 @@ const resolvedRunId = computed(() =>
 
 watchEffect(async () => {
   const runId = resolvedRunId.value
-  const awaiting = awaitingClarification.value || status.value === 'awaiting_input'
+  const needsApprovals = events.value.some(
+    (e: Record<string, unknown>) => e.type === 'approval_requested',
+  ) || (status.value === 'awaiting_input' && !awaitingClarification.value)
+
+  if (needsApprovals && runId && !awaitingClarification.value) {
+    await runApprovals.fetchPending(runId)
+  }
+})
+
+watchEffect(async () => {
+  const runId = resolvedRunId.value
+  const awaiting = awaitingClarification.value
+    || (status.value === 'awaiting_input' && !runApprovals.awaitingApprovals.value)
 
   if (!awaiting || !runId) {
     apiClarificationRequest.value = null
@@ -195,6 +215,24 @@ watchEffect(async () => {
   }
 })
 
+async function onApprovalDecided() {
+  const runId = resolvedRunId.value
+  if (!runId) return
+  runApprovals.shiftQueue()
+  await runApprovals.fetchPending(runId)
+  if (runApprovals.pendingCount.value > 0) return
+  continuingApprovals.value = true
+  focusAgentsPanel()
+  toast.info('Continuing run with your decisions…')
+  try {
+    await continueAfterApprovals(runId)
+    chat.saveRunEvents(events.value)
+  }
+  finally {
+    continuingApprovals.value = false
+  }
+}
+
 async function submitClarification(
   answers: Array<{ question_id: string; option_id?: string; free_text?: string }>,
 ) {
@@ -216,7 +254,7 @@ function submit() {
   const userText = prompt.value.trim()
   if (running.value || submittingClarification.value) return
 
-  if (showClarificationModal.value) {
+  if (showClarificationModal.value || showApprovalModal.value) {
     return
   }
 
@@ -578,8 +616,17 @@ watch(
       @submit="submitClarification"
     />
 
+    <ChangeApprovalModal
+      :open="showApprovalModal"
+      :approval="runApprovals.current.value"
+      :pending-count="runApprovals.pendingCount.value"
+      :submitting="continuingApprovals || running"
+      @approve="onApprovalDecided"
+      @reject="onApprovalDecided"
+    />
+
     <div
-      v-if="!showClarificationModal"
+      v-if="!showClarificationModal && !showApprovalModal"
       class="fixed inset-x-0 bottom-0 z-30 border-t border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-950 md:hidden"
     >
       <button

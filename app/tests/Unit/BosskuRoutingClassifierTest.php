@@ -16,6 +16,7 @@ class BosskuRoutingClassifierTest extends TestCase
         parent::setUp();
 
         // Tests are deterministic: don't depend on container .env BOSSKU_* or live LLM router responses.
+        Setting::query()->delete();
         Setting::setValue('routing_llm_enabled', '0');
         config([
             'bossku_models.router.enabled' => false,
@@ -41,6 +42,22 @@ class BosskuRoutingClassifierTest extends TestCase
         $this->assertTrue($r['needs_executor']);
         $this->assertTrue($r['needs_auditor']);
         $this->assertTrue($r['needs_repo_context']);
+    }
+
+    #[Test]
+    public function full_repo_audit_enables_multi_dimension_and_security_pass(): void
+    {
+        $r = $this->classify('help me audit splitlah repo, is there any features u think need to add ? audit full');
+        $this->assertSame('full', $r['audit_mode']);
+        $this->assertTrue($r['needs_security_auditor']);
+        $this->assertStringContainsString('security', (string) $r['workflow']);
+    }
+
+    #[Test]
+    public function security_only_audit_skips_full_mode(): void
+    {
+        $r = $this->classify('Run OWASP security audit on authentication endpoints');
+        $this->assertNotSame('full', $r['audit_mode'] ?? 'full');
     }
 
     #[Test]
@@ -148,18 +165,20 @@ class BosskuRoutingClassifierTest extends TestCase
     }
 
     #[Test]
-    public function default_executor_model_is_glm_not_gpt55(): void
+    public function default_executor_model_matches_config_default(): void
     {
         $cfg = app(ModelRoutingConfig::class);
-        $this->assertStringContainsString('glm', strtolower((string) $cfg->executorProfile('default')['primary']));
+        $expected = strtolower((string) config('bossku_models.defaults.executor_default', ''));
+        $this->assertSame($expected, strtolower((string) $cfg->executorProfile('default')['primary']));
         $this->assertStringNotContainsString('gpt-5.5', strtolower((string) $cfg->executorProfile('default')['primary']));
     }
 
     #[Test]
-    public function high_risk_executor_uses_deepseek(): void
+    public function high_risk_executor_matches_config_default(): void
     {
         $cfg = app(ModelRoutingConfig::class);
-        $this->assertStringContainsString('deepseek', strtolower((string) $cfg->executorProfile('high_risk')['primary']));
+        $expected = strtolower((string) config('bossku_models.executor.high_risk.primary', config('bossku_models.defaults.executor_high_risk')));
+        $this->assertSame($expected, strtolower((string) $cfg->executorProfile('high_risk')['primary']));
     }
 
     #[DataProvider('riskUpgradeProvider')]

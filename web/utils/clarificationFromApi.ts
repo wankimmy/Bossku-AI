@@ -1,4 +1,4 @@
-import type { ClarificationQuestion, ClarificationRequest } from '~/types/clarification'
+import type { ClarificationProof, ClarificationQuestion, ClarificationRequest } from '~/types/clarification'
 import {
   fallbackQuestionsFromEvent,
   parseClarificationQuestions,
@@ -54,11 +54,18 @@ export function parseClarificationApiResponse(
     ? record.assumptions.map(String)
     : []
 
+  const proof = (record.proof != null && typeof record.proof === 'object'
+    ? (record.proof as ClarificationProof)
+    : undefined)
+
   return {
     runId,
     stage,
     summary,
     assumptions,
     questions,
+    from_agent: record.from_agent != null ? String(record.from_agent) : undefined,
+    origin: record.origin != null ? String(record.origin) : undefined,
+    proof,
   }
 }

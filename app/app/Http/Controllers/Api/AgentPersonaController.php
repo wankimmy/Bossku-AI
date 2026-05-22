@@ -23,6 +23,11 @@ class AgentPersonaController extends Controller
     public function show(string $role)
     {
         $role = $this->personas->normalizeRole($role);
+        if (! in_array($role, AgentPersonaService::PIPELINE_ROLES, true)) {
+            return response()->json(['message' => 'Unknown agent role.'], 404);
+        }
+
+        $this->personas->ensurePipelinePersonas();
         $row = AgentPersona::query()->find($role);
         if ($row === null) {
             return response()->json(['message' => 'Unknown agent role.'], 404);

@@ -17,9 +17,11 @@ const activateLoading = ref<string | null>(null)
 
 const repoRoot = ref('')
 const currentPath = ref('')
-const treeEntries = ref<ProjectTreeEntry[]>([])
-const expandedDirs = ref<Set<string>>(new Set())
+/** Directory path ("" = root) → immediate children from /project/tree */
+const treeChildrenByPath = ref<Record<string, ProjectTreeEntry[]>>({})
+const expandedDirs = ref<Record<string, boolean>>({})
 const treeLoading = ref(false)
+const treeLoadingPath = ref<string | null>(null)
 
 const searchQuery = ref('')
 const searchResults = ref<{ path: string; line: number; preview: string }[]>([])
@@ -33,6 +35,30 @@ const fileLoading = ref(false)
 
 const mobileTab = ref<'tree' | 'file' | 'changes'>('tree')
 const api = useApi()
+
+type VisibleTreeRow = {
+  entry: ProjectTreeEntry
+  depth: number
+}
+
+/** Flattened rows for the sidebar — keeps reactivity in this page (no recursive child). */
+const visibleTreeRows = computed((): VisibleTreeRow[] => {
+  const rows: VisibleTreeRow[] = []
+  const children = treeChildrenByPath.value
+  const expanded = expandedDirs.value
+
+  const walk = (dirPath: string, depth: number) => {
+    for (const entry of children[dirPath] ?? []) {
+      rows.push({ entry, depth })
+      if (entry.type === 'dir' && expanded[entry.path]) {
+        walk(entry.path, depth + 1)
+      }
+    }
+  }
+
+  walk('', 0)
+  return rows
+})
 
 async function loadRoot() {
   try {
@@ -62,9 +88,9 @@ const hostPathWarning = computed(() => {
   return ''
 })
 
-/** Reset file/tree UI and reload from the active project mount. */
 async function reloadProjectWorkspace() {
-  expandedDirs.value = new Set()
+  expandedDirs.value = {}
+  treeChildrenByPath.value = {}
   currentPath.value = ''
   selectedPath.value = ''
   fileContents.value = ''
@@ -126,17 +152,41 @@ async function activateProject(id: string) {
 }
 
 async function loadTree(path = '') {
-  treeLoading.value = true
+  const isRoot = path === ''
+  if (isRoot) {
+    treeLoading.value = true
+  }
+  else {
+    treeLoadingPath.value = path
+  }
   try {
     const res = await fetchTree(path)
-    if (path === '' || path === currentPath.value) {
-      treeEntries.value = res.entries
-      currentPath.value = res.path
+    const key = (res.path ?? path).replace(/\\/g, '/')
+    const requestKey = path.replace(/\\/g, '/')
+    const next: Record<string, ProjectTreeEntry[]> = {
+      ...treeChildrenByPath.value,
+      [key]: res.entries,
+    }
+    if (requestKey !== '' && requestKey !== key) {
+      next[requestKey] = res.entries
+    }
+    treeChildrenByPath.value = next
+    if (isRoot || path === currentPath.value) {
+      currentPath.value = key
     }
     return res.entries
   }
+  catch (e: unknown) {
+    toast.error(e instanceof Error ? e.message : `Could not load folder: ${path || '/'}`)
+    throw e
+  }
   finally {
-    treeLoading.value = false
+    if (isRoot) {
+      treeLoading.value = false
+    }
+    else if (treeLoadingPath.value === path) {
+      treeLoadingPath.value = null
+    }
   }
 }
 
@@ -147,12 +197,16 @@ async function openDir(path: string) {
 }
 
 async function toggleDir(entry: ProjectTreeEntry) {
-  if (expandedDirs.value.has(entry.path)) {
-    expandedDirs.value.delete(entry.path)
+  if (expandedDirs.value[entry.path]) {
+    const next = { ...expandedDirs.value }
+    delete next[entry.path]
+    expandedDirs.value = next
     return
   }
-  expandedDirs.value.add(entry.path)
-  await loadTree(entry.path)
+  if (!treeChildrenByPath.value[entry.path]?.length) {
+    await loadTree(entry.path)
+  }
+  expandedDirs.value = { ...expandedDirs.value, [entry.path]: true }
 }
 
 async function openFile(path: string) {
@@ -382,31 +436,43 @@ onMounted(() => {
           </button>
         </div>
 
-        <div v-if="treeLoading" class="text-xs text-zinc-500">
+        <div v-if="treeLoading && !(treeChildrenByPath['']?.length)" class="text-xs text-zinc-500">
           Loading…
         </div>
-        <ul v-else class="max-h-[50vh] space-y-0.5 overflow-auto text-sm">
-          <li v-for="entry in treeEntries" :key="entry.path">
-            <button
-              v-if="entry.type === 'dir'"
-              type="button"
-              class="flex w-full items-center gap-1 rounded px-2 py-1 text-left text-zinc-300 hover:bg-zinc-800"
-              @click="toggleDir(entry)"
+        <div v-else class="max-h-[50vh] overflow-auto text-sm">
+          <p v-if="!(treeChildrenByPath['']?.length)" class="px-2 text-xs text-zinc-500">
+            No files in this folder.
+          </p>
+          <ul v-else class="space-y-0.5">
+            <li
+              v-for="{ entry, depth } in visibleTreeRows"
+              :key="entry.path"
+              :style="{ paddingLeft: `${depth * 12}px` }"
             >
-              <span>{{ expandedDirs.has(entry.path) ? '▼' : '▶' }}</span>
-              <span class="truncate">{{ entry.name }}/</span>
-            </button>
-            <button
-              v-else
-              type="button"
-              class="w-full truncate rounded px-2 py-1 text-left font-mono text-xs text-zinc-400 hover:bg-zinc-800"
-              :class="selectedPath === entry.path ? 'bg-zinc-800 text-emerald-400' : ''"
-              @click="openFile(entry.path)"
-            >
-              {{ entry.name }}
-            </button>
-          </li>
-        </ul>
+              <button
+                v-if="entry.type === 'dir'"
+                type="button"
+                class="flex w-full items-center gap-1 rounded px-2 py-1 text-left text-zinc-300 hover:bg-zinc-800"
+                @click="toggleDir(entry)"
+              >
+                <span class="w-3 shrink-0 text-center text-[10px] text-zinc-500">
+                  <span v-if="treeLoadingPath === entry.path">…</span>
+                  <span v-else>{{ expandedDirs[entry.path] ? '▼' : '▶' }}</span>
+                </span>
+                <span class="truncate">{{ entry.name }}/</span>
+              </button>
+              <button
+                v-else
+                type="button"
+                class="w-full truncate rounded px-2 py-1 text-left font-mono text-xs text-zinc-400 hover:bg-zinc-800"
+                :class="selectedPath === entry.path ? 'bg-zinc-800 text-emerald-400' : ''"
+                @click="openFile(entry.path)"
+              >
+                {{ entry.name }}
+              </button>
+            </li>
+          </ul>
+        </div>
       </aside>
 
       <!-- File viewer -->

@@ -113,6 +113,7 @@ export interface FinalResult {
   summary?: string
   filesChanged: string[]
   checksRun: string[]
+  gitStatusAfter?: string
   auditResult?: string
   remainingRisks: RiskItem[]
   nextStep?: string
@@ -137,6 +138,7 @@ export interface NormalizedRunArtifacts {
   filesRead: FileRead[]
   filesChanged: FileChange[]
   commandsRun: CommandRun[]
+  gitStatusAfter?: string
   testsRun: TestRun[]
   auditFindings: AuditFinding[]
   finalResult: FinalResult

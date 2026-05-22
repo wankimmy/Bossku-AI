@@ -3,12 +3,14 @@
 namespace Tests\Feature;
 
 use App\Models\BosskuAi\Project;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 class WorkspaceGraphTest extends TestCase
 {
+    use RefreshDatabase;
     private string $repo;
 
     protected function setUp(): void

@@ -34,32 +34,39 @@ use App\Http\Controllers\Api\SoulController;
 use App\Http\Controllers\Api\UsageController;
 use Illuminate\Support\Facades\Route;
 
-// ── Ollama Cloud health ───────────────────────────────────────────────────────
+// Public (no API token) — health probe and OAuth browser redirects
 Route::get('/health/ollama', OllamaHealthController::class);
+Route::get('/oauth/codex/callback', [CodexOAuthController::class, 'callback']);
+Route::get('/oauth/codex/authorize', [CodexOAuthController::class, 'authorize']);
 
-// ── Runs ─────────────────────────────────────────────────────────────────────
-Route::get('/runs/stream', [RunController::class, 'stream']);
-Route::post('/runs/stream', [RunController::class, 'streamPost']);
-Route::post('/runs', [RunController::class, 'store']);
-Route::get('/runs', [RunController::class, 'index']);
-Route::get('/runs/{id}', [RunController::class, 'show']);
-Route::get('/runs/{id}/clarification', [RunController::class, 'clarification']);
-Route::post('/runs/{id}/continue/stream', [RunController::class, 'continueStream']);
+Route::middleware('bossku.api')->group(function () {
+    $runsRate = max(1, (int) config('bossku.runs_rate_per_minute', 60));
 
-// Run sub-resources
-Route::get('/runs/{id}/timeline', [RunController::class, 'timeline']);
-Route::get('/runs/{id}/messages', [RunController::class, 'messages']);
-Route::get('/runs/{id}/tool-calls', [RunController::class, 'toolCalls']);
-Route::get('/runs/{id}/file-changes', [RunController::class, 'fileChanges']);
-Route::get('/runs/{id}/audit', [RunController::class, 'auditData']);
-Route::get('/runs/{id}/usage', [RunController::class, 'usageData']);
-Route::get('/runs/{id}/feedback', [RunController::class, 'feedbackData']);
+    Route::middleware("throttle:{$runsRate},1")->group(function () {
+        Route::get('/runs/stream', [RunController::class, 'stream']);
+        Route::post('/runs/stream', [RunController::class, 'streamPost']);
+        Route::post('/runs', [RunController::class, 'store']);
+        Route::post('/runs/{id}/continue/stream', [RunController::class, 'continueStream']);
+        Route::post('/runs/{id}/continue-approvals/stream', [RunController::class, 'continueApprovalsStream']);
+    });
 
-// Run actions
-Route::post('/runs/{runId}/pause', [RunActionController::class, 'pause']);
-Route::post('/runs/{runId}/resume', [RunActionController::class, 'resume']);
-Route::post('/runs/{runId}/steps/{stepId}/rerun', [RunActionController::class, 'rerunStep']);
-Route::post('/runs/{runId}/create-skill', [RunActionController::class, 'createSkill']);
+    Route::get('/runs', [RunController::class, 'index']);
+    Route::get('/runs/{id}', [RunController::class, 'show']);
+    Route::get('/runs/{id}/clarification', [RunController::class, 'clarification']);
+    Route::get('/runs/{id}/approvals', [RunController::class, 'approvals']);
+
+    Route::get('/runs/{id}/timeline', [RunController::class, 'timeline']);
+    Route::get('/runs/{id}/messages', [RunController::class, 'messages']);
+    Route::get('/runs/{id}/tool-calls', [RunController::class, 'toolCalls']);
+    Route::get('/runs/{id}/file-changes', [RunController::class, 'fileChanges']);
+    Route::get('/runs/{id}/audit', [RunController::class, 'auditData']);
+    Route::get('/runs/{id}/usage', [RunController::class, 'usageData']);
+    Route::get('/runs/{id}/feedback', [RunController::class, 'feedbackData']);
+
+    Route::post('/runs/{runId}/pause', [RunActionController::class, 'pause']);
+    Route::post('/runs/{runId}/resume', [RunActionController::class, 'resume']);
+    Route::post('/runs/{runId}/steps/{stepId}/rerun', [RunActionController::class, 'rerunStep']);
+    Route::post('/runs/{runId}/create-skill', [RunActionController::class, 'createSkill']);
 
 // ── Skills ────────────────────────────────────────────────────────────────────
 Route::get('/skills', [SkillController::class, 'index']);
@@ -95,8 +102,6 @@ Route::put('/settings', [SettingsApiController::class, 'update']);
 Route::get('/settings/inference-catalog', [InferenceCatalogController::class, 'index']);
 
 Route::get('/oauth/codex/status', [CodexOAuthController::class, 'status']);
-Route::get('/oauth/codex/authorize', [CodexOAuthController::class, 'authorize']);
-Route::get('/oauth/codex/callback', [CodexOAuthController::class, 'callback']);
 Route::delete('/oauth/codex', [CodexOAuthController::class, 'disconnect']);
 
 // ── Knowledge import ──────────────────────────────────────────────────────────
@@ -204,3 +209,4 @@ Route::get('/approvals', [ApprovalController::class, 'index']);
 Route::get('/approvals/{id}', [ApprovalController::class, 'show']);
 Route::post('/approvals/{id}/approve', [ApprovalController::class, 'approve']);
 Route::post('/approvals/{id}/reject', [ApprovalController::class, 'reject']);
+});

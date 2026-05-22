@@ -29,6 +29,8 @@ class BosskuAiSpecSeeder extends Seeder
             'change_summary' => 'Initial soul from spec seeder',
         ]);
 
+        $this->call(AgentPersonaSeeder::class);
+
         // ── LLM Providers (no demo model routes — configure in Settings) ───────
         LlmProvider::firstOrCreate(
             ['slug' => 'ollama-local'],

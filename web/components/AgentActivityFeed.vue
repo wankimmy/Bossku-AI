@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { themeForAgent } from '../utils/agentTheme'
+import { formatToolCallSummary, formatToolCallTitle, isToolCallEvent } from '../utils/formatToolCall'
 import { humanizeActivitySummary } from '../utils/humanizeOutput'
 
 defineProps<{
@@ -8,6 +9,7 @@ defineProps<{
 }>()
 
 function inferAgent(type: string): string {
+  if (type === 'tool_call') return 'tools'
   if (type.includes('planner') || type.includes('orchestrat')) return 'orchestrator'
   if (type.includes('executor')) return 'executor'
   if (type.includes('security')) return 'security-auditor'
@@ -20,14 +22,25 @@ function inferAgent(type: string): string {
 }
 
 function label(evt: Record<string, unknown>): string {
+  if (isToolCallEvent(evt)) return formatToolCallTitle(evt)
   const type = String(evt.type ?? '')
+  if (type === 'commands_executed') return 'Git commands executed'
+  if (type === 'approval_requested') return 'Approval required'
   return type.replaceAll('_', ' ').replace(/\b\w/g, c => c.toUpperCase())
 }
 
 function summary(evt: Record<string, unknown>): string {
+  if (isToolCallEvent(evt)) {
+    const text = formatToolCallSummary(evt)
+    return text.length > 240 ? `${text.slice(0, 240)}…` : text
+  }
   const agent = inferAgent(String(evt.type ?? ''))
   const text = humanizeActivitySummary(agent, evt)
   return text.length > 200 ? `${text.slice(0, 200)}…` : text
+}
+
+function agentForEvent(evt: Record<string, unknown>): string {
+  return String(evt.agent ?? inferAgent(String(evt.type ?? '')))
 }
 
 function statusDot(evt: Record<string, unknown>): string {
@@ -53,7 +66,11 @@ function statusDot(evt: Record<string, unknown>): string {
       <div class="absolute left-[15px] top-3 bottom-3 w-px bg-zinc-800" />
 
       <div
-        v-for="(evt, idx) in events.filter(e => e.type !== 'clarification_requested')"
+        v-for="(evt, idx) in events.filter(e => {
+          if (e.type !== 'clarification_requested') return true
+          const origin = String(e.origin ?? e.artifacts?.clarification?.origin ?? '')
+          return origin.endsWith('_escalation')
+        })"
         :key="idx"
         class="relative flex gap-3 pb-4"
       >
@@ -68,9 +85,9 @@ function statusDot(evt: Record<string, unknown>): string {
         <!-- Content -->
         <div class="flex-1 min-w-0 pt-0.5">
           <div class="flex flex-wrap items-center gap-1.5 mb-0.5">
-            <span class="text-xs" :class="themeForAgent(inferAgent(String(evt.type ?? ''))).text">
-              {{ themeForAgent(inferAgent(String(evt.type ?? ''))).icon }}
-              <span class="font-medium ml-0.5">{{ inferAgent(String(evt.type ?? '')) }}</span>
+            <span class="text-xs" :class="themeForAgent(agentForEvent(evt)).text">
+              {{ themeForAgent(agentForEvent(evt)).icon }}
+              <span class="font-medium ml-0.5">{{ agentForEvent(evt) }}</span>
             </span>
             <span class="text-xs text-zinc-600">·</span>
             <span class="text-xs text-zinc-400 font-medium">{{ label(evt) }}</span>

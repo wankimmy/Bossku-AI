@@ -27,6 +27,20 @@ class AgentPersonaApiTest extends TestCase
     }
 
     #[Test]
+    public function index_bootstraps_defaults_when_table_empty(): void
+    {
+        AgentPersona::query()->delete();
+
+        $expected = count(\App\Services\BosskuAi\AgentPersonaService::PIPELINE_ROLES);
+
+        $this->getJson('/api/agent-personas')
+            ->assertOk()
+            ->assertJsonCount($expected, 'data');
+
+        $this->assertSame($expected, AgentPersona::query()->count());
+    }
+
+    #[Test]
     public function show_returns_role_detail(): void
     {
         $this->getJson('/api/agent-personas/executor')

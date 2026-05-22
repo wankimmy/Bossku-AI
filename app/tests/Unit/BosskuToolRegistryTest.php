@@ -48,5 +48,23 @@ class BosskuToolRegistryTest extends TestCase
         $this->assertCount(1, $events);
         $this->assertSame('tool_call', $events[0]['type']);
         $this->assertSame('log', $events[0]['tool']);
+        $this->assertSame('tools', $events[0]['agent']);
+        $this->assertStringContainsString('emit-test', (string) ($events[0]['summary'] ?? ''));
+    }
+
+    #[Test]
+    public function file_read_emit_includes_path_in_summary(): void
+    {
+        $registry = app(ToolRegistry::class);
+        $events = [];
+        $registry->invoke(null, null, [
+            'tool' => 'file_read_safe',
+            'payload' => ['path' => 'routes/api.php'],
+        ], function (array $evt) use (&$events) {
+            $events[] = $evt;
+        });
+
+        $this->assertCount(1, $events);
+        $this->assertStringContainsString('routes/api.php', (string) ($events[0]['summary'] ?? ''));
     }
 }

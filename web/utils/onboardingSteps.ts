@@ -60,7 +60,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     body: 'Example: "Audit the payment controller for security issues" or "Add a health check endpoint". Watch the agent activity panel on the right while the run progresses.',
     selector: '[data-tour="chat-prompt"]',
     route: '/',
-    placement: 'top',
+    placement: 'bottom',
   },
   {
     id: 'runs',

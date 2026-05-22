@@ -30,6 +30,7 @@ use App\Services\Orchestrator\PlannerService;
 use App\Services\Orchestrator\SecurityAuditorService;
 use App\Services\Orchestrator\WriterService;
 use App\Services\Data\DataExplorerService;
+use App\Services\Project\ProjectCommandRunner;
 use App\Services\Tools\ToolRegistry;
 use Illuminate\Support\ServiceProvider;
 
@@ -103,5 +104,8 @@ class AppServiceProvider extends ServiceProvider
         });
     }
 
-    public function boot(): void {}
+    public function boot(): void
+    {
+        $this->app->make(ProjectCommandRunner::class)->logDockerAvailability();
+    }
 }

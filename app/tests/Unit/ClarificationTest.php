@@ -10,18 +10,22 @@ use Tests\TestCase;
 class ClarificationTest extends TestCase
 {
     #[Test]
-    public function executor_stuck_detector_flags_failed_status(): void
+    public function executor_stuck_detector_does_not_flag_failed_without_blocker(): void
     {
-        $this->assertTrue(ExecutorStuckDetector::isStuck([
+        $this->assertFalse(ExecutorStuckDetector::isStuck([
             'status' => 'failed',
             'known_issues' => ['Could not read files'],
         ]));
     }
 
     #[Test]
-    public function executor_stuck_detector_flags_needs_user_input(): void
+    public function executor_stuck_detector_flags_needs_user_input_via_wants_user_input(): void
     {
-        $this->assertTrue(ExecutorStuckDetector::isStuck([
+        $this->assertTrue(ExecutorStuckDetector::wantsUserInput([
+            'status' => 'success',
+            'needs_user_input' => true,
+        ]));
+        $this->assertFalse(ExecutorStuckDetector::isStuck([
             'status' => 'success',
             'needs_user_input' => true,
         ]));

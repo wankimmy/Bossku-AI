@@ -3,6 +3,7 @@
 namespace App\Services\Orchestrator;
 
 use App\Models\BosskuAi\Run;
+use App\Support\StringCoercion;
 
 class RunEventFactory
 {
@@ -17,7 +18,7 @@ class RunEventFactory
             'model_role' => 'reasoning',
             'model' => $model,
             'summary' => 'Planner created '.count($plan['checklist'] ?? []).'-step execution checklist.',
-            'message' => (string) ($plan['task_summary'] ?? $plan['summary'] ?? 'Planner completed.'),
+            'message' => StringCoercion::toString($plan['task_summary'] ?? $plan['summary'] ?? null, 'Planner completed.'),
             'artifacts' => [
                 'plan' => $plan,
                 'checklist' => $plan['checklist'] ?? [],
@@ -32,6 +33,7 @@ class RunEventFactory
     public function executorDone(Run $run, array $result, string $model, int $latencyMs, int $tokenEstimate, string $type = 'executor_step_done'): array
     {
         $revision = $type === 'executor_revision_done';
+        $patchOut = StringCoercion::toString($result['patch_summary'] ?? null, '');
 
         return $this->event($run, $type, [
             'agent' => 'executor',
@@ -41,11 +43,13 @@ class RunEventFactory
             'model_role' => 'coding',
             'model' => $model,
             'summary' => $revision ? 'Executor applied audit follow-up fixes.' : 'Executor completed the requested changes.',
-            'message' => (string) ($result['patch_summary'] ?? ''),
+            'message' => StringCoercion::toString($result['patch_summary'] ?? null, ''),
             'artifacts' => $this->executorArtifacts($result),
             'latency_ms' => $latencyMs,
             'token_estimate' => $tokenEstimate,
-            'output' => $result['patch_summary'] ?? json_encode($result),
+            'output' => $patchOut !== ''
+                ? $patchOut
+                : (json_encode($result, JSON_UNESCAPED_UNICODE) ?: ''),
         ]);
     }
 
@@ -61,7 +65,7 @@ class RunEventFactory
             'status' => $status === 'needs_revision' ? 'needs_revision' : (($audit['_legacy_pass'] ?? false) ? 'success' : 'fail'),
             'model_role' => 'review',
             'model' => $model,
-            'summary' => (string) ($audit['summary'] ?? 'Audit completed.'),
+            'summary' => StringCoercion::toString($audit['summary'] ?? null, 'Audit completed.'),
             'message' => $status === 'needs_revision' ? 'Returning feedback to Executor.' : 'Sending audit result to Final Reviewer.',
             'artifacts' => [
                 'audit' => $audit,
@@ -83,8 +87,8 @@ class RunEventFactory
             'status' => 'success',
             'model_role' => 'reasoning',
             'model' => $model,
-            'summary' => (string) ($review['summary'] ?? $review['reason'] ?? 'Final review completed.'),
-            'message' => (string) ($review['reason'] ?? ''),
+            'summary' => StringCoercion::toString($review['summary'] ?? $review['reason'] ?? null, 'Final review completed.'),
+            'message' => StringCoercion::toString($review['reason'] ?? null),
             'artifacts' => [
                 'final_review' => $review,
             ],
@@ -140,24 +144,35 @@ class RunEventFactory
         string $stage,
         string $summary,
         array $assumptions = [],
+        ?string $fromAgent = null,
+        ?string $origin = null,
+        array $proof = [],
     ): array {
+        $from = $fromAgent ?? 'orchestrator';
+        $originKey = $origin ?? $stage;
+
         return $this->event($run, 'clarification_requested', [
-            'agent' => 'orchestrator',
-            'from_agent' => 'orchestrator',
+            'agent' => $from,
+            'from_agent' => $from,
             'to_agent' => 'user',
             'status' => 'awaiting_input',
             'model_role' => 'reasoning',
             'summary' => $summary,
             'message' => $summary,
             'stage' => $stage,
+            'origin' => $originKey,
             'questions' => $questions,
             'assumptions' => $assumptions,
             'artifacts' => [
                 'clarification' => [
                     'stage' => $stage,
+                    'origin' => $originKey,
+                    'from_agent' => $from,
                     'questions' => $questions,
                     'assumptions' => $assumptions,
+                    'proof' => $proof,
                 ],
+                'proof' => $proof,
             ],
         ]);
     }
@@ -170,6 +185,44 @@ class RunEventFactory
             'status' => 'running',
             'summary' => 'Continuing run with '.$answerCount.' clarification answer(s).',
             'message' => 'Resuming pipeline after your input.',
+        ]);
+    }
+
+    /**
+     * @param  list<string>  $approvalIds
+     * @param  array<string, mixed>|null  $current
+     * @return array<string, mixed>
+     */
+    public function approvalRequested(
+        Run $run,
+        array $approvalIds,
+        ?array $current,
+        int $pendingCount,
+    ): array {
+        return $this->event($run, 'approval_requested', [
+            'agent' => 'executor',
+            'from_agent' => 'executor',
+            'to_agent' => 'user',
+            'status' => 'awaiting_input',
+            'model_role' => 'coding',
+            'summary' => $pendingCount.' change(s) need your approval before the run can continue.',
+            'message' => 'Review each file change and command. Approve or reject with an optional comment for the executor.',
+            'artifacts' => [
+                'approval_ids' => $approvalIds,
+                'pending_count' => $pendingCount,
+                'current_approval' => $current,
+            ],
+        ]);
+    }
+
+    /** @return array<string, mixed> */
+    public function approvalFeedbackReceived(Run $run, string $feedback): array
+    {
+        return $this->event($run, 'approval_feedback_received', [
+            'agent' => 'orchestrator',
+            'status' => 'running',
+            'summary' => 'Continuing run with your approval decisions.',
+            'message' => $feedback,
         ]);
     }
 
@@ -225,7 +278,13 @@ class RunEventFactory
             'files_read' => $result['files_read'] ?? [],
             'files_changed' => $result['files_changed'] ?? [],
             'commands_run' => $result['commands_run'] ?? [],
+            'commands_executed' => $result['_commands_executed'] ?? [],
+            'git_status_after' => $result['git_status_after'] ?? null,
             'tests_run' => $result['tests_run'] ?? [],
+            'needs_user_input' => (bool) ($result['needs_user_input'] ?? false),
+            'blockers' => is_array($result['blockers'] ?? null) ? $result['blockers'] : [],
+            'suggested_options' => is_array($result['suggested_options'] ?? null) ? $result['suggested_options'] : [],
+            'proof_files' => ExecutorEvidenceSupport::proofFilePaths($result),
         ]);
     }
 

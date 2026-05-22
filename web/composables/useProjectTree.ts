@@ -14,7 +14,11 @@ export function useProjectTree() {
   const api = useApi()
 
   async function fetchTree(path = '') {
-    return api.get<ProjectTreeResponse>('/project/tree', { path: path || undefined })
+    const params: Record<string, string> = {}
+    if (path !== '') {
+      params.path = path
+    }
+    return api.get<ProjectTreeResponse>('/project/tree', params)
   }
 
   return { fetchTree }

@@ -14,6 +14,23 @@ mkdir -p "$APP/bootstrap/cache" \
          "$APP/storage/app/private"
 chmod -R 0777 "$APP/bootstrap/cache" "$APP/storage" 2>/dev/null || true
 
+# Bind-mounted /workspace is often not writable by www-data on Windows/macOS Docker Desktop.
+# php-fpm refuses root; entrypoint (root) chmods project trees in the background so FPM can start immediately.
+if [ "${BOSSKU_WORKSPACE_WRITABLE:-true}" = "true" ] && [ -d /workspace ]; then
+  (
+    for proj in /workspace/*/; do
+      [ -d "$proj" ] || continue
+      find "$proj" -maxdepth 12 \
+        \( -path '*/node_modules' -o -path '*/node_modules/*' \
+        -o -path '*/vendor' -o -path '*/vendor/*' \
+        -o -path '*/.git' -o -path '*/.git/*' \) -prune \
+        -o -exec chmod a+rwX {} + 2>/dev/null || true
+    done
+    echo "[bossku] /workspace permission sync complete"
+  ) &
+  echo "[bossku] Syncing /workspace permissions for www-data (background)..."
+fi
+
 # ── Only run bootstrap steps when starting php-fpm (not artisan one-offs) ─────
 case "$1" in php-fpm*|php*)
 

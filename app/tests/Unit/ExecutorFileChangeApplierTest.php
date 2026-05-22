@@ -27,6 +27,7 @@ class ExecutorFileChangeApplierTest extends TestCase
         config([
             'bossku.repo_root' => $this->repo,
             'bossku.auto_apply_file_writes' => true,
+            'bossku.require_user_approval_before_apply' => false,
         ]);
 
         Project::query()->create([

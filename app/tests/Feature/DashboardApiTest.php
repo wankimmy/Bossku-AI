@@ -36,7 +36,7 @@ class DashboardApiTest extends TestCase
 
         $stats = $response->json('stats');
         $this->assertIsInt($stats['total_runs']);
-        $this->assertSame(1, $stats['total_runs']);
+        $this->assertSame(Run::query()->count(), $stats['total_runs']);
     }
 
     /** @test */
@@ -66,7 +66,7 @@ class DashboardApiTest extends TestCase
         $stats = $response->json('stats');
         $this->assertIsInt($stats['total_runs']);
         $this->assertIsInt($stats['skills_count']);
-        $this->assertSame(0, $stats['total_runs']);
-        $this->assertSame(0, $stats['skills_count']);
+        $this->assertSame(Run::query()->count(), $stats['total_runs']);
+        $this->assertSame(Skill::query()->count(), $stats['skills_count']);
     }
 }

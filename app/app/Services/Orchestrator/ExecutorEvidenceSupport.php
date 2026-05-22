@@ -3,6 +3,7 @@
 namespace App\Services\Orchestrator;
 
 use App\Models\BosskuAi\ToolCall;
+use App\Support\StringCoercion;
 
 /**
  * Shared helpers for executor file-read evidence (auditor / security auditor).
@@ -118,11 +119,18 @@ class ExecutorEvidenceSupport
             if ($path === '') {
                 continue;
             }
-            $out[] = [
+            $preview = StringCoercion::toString($result['preview'] ?? null, '');
+            $entry = [
                 'tool' => 'file_read_safe',
                 'path' => $path,
                 'found' => (bool) ($result['found'] ?? true),
             ];
+            if ($preview !== '') {
+                $entry['preview'] = mb_strlen($preview) > 400
+                    ? mb_substr($preview, 0, 399).'…'
+                    : $preview;
+            }
+            $out[] = $entry;
         }
 
         return $out;
@@ -138,17 +146,234 @@ class ExecutorEvidenceSupport
     }
 
     /**
+     * Slim preflight rows for the executor LLM prompt (no file previews).
+     *
+     * @param  list<array<string, mixed>>  $reads
+     * @return array{_reads: list<array{path: string, found: bool, reason: string}>, _omitted: int}
+     */
+    public static function slimReadsForExecutorPrompt(array $reads, int $max = 12): array
+    {
+        $slim = [];
+        foreach ($reads as $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+            $path = StringCoercion::toString($item['path'] ?? null);
+            if ($path === '') {
+                continue;
+            }
+            $slim[] = [
+                'path' => $path,
+                'found' => (bool) ($item['found'] ?? true),
+                'reason' => StringCoercion::toString($item['reason'] ?? null, 'read during preflight'),
+            ];
+        }
+
+        $omitted = max(0, count($slim) - $max);
+        if ($omitted > 0) {
+            $slim = array_slice($slim, 0, $max);
+        }
+
+        $out = ['reads' => $slim];
+        if ($omitted > 0) {
+            $out['note'] = $omitted.' additional preflight read(s) omitted from this prompt to save context.';
+        }
+
+        return $out;
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $preflightReads
+     * @return list<array{path: string, preview: string}>
+     */
+    public static function readPreviewsForAudit(array $preflightReads, int $max = 5, int $previewChars = 800): array
+    {
+        $out = [];
+        foreach ($preflightReads as $item) {
+            if (! is_array($item) || count($out) >= $max) {
+                continue;
+            }
+            $path = StringCoercion::toString($item['path'] ?? null);
+            $preview = StringCoercion::toString($item['preview'] ?? null, '');
+            if ($path === '' || $preview === '' || ($item['found'] ?? true) !== true) {
+                continue;
+            }
+            $out[] = [
+                'path' => $path,
+                'preview' => mb_strlen($preview) > $previewChars
+                    ? mb_substr($preview, 0, $previewChars - 1).'…'
+                    : $preview,
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * Preflight reads with truncated previews for security / high-risk executor tasks.
+     *
+     * @param  list<array<string, mixed>>  $reads
+     * @return array{reads: list<array{path: string, found: bool, reason: string, preview?: string}>, note?: string}
+     */
+    public static function readsWithPreviewForExecutorPrompt(array $reads, int $maxFiles = 8, int $charsPerFile = 1500): array
+    {
+        $out = [];
+        foreach ($reads as $item) {
+            if (! is_array($item) || count($out) >= $maxFiles) {
+                continue;
+            }
+            $path = StringCoercion::toString($item['path'] ?? null);
+            if ($path === '' || ($item['found'] ?? true) !== true) {
+                continue;
+            }
+            $preview = StringCoercion::toString($item['preview'] ?? null, '');
+            $row = [
+                'path' => $path,
+                'found' => true,
+                'reason' => StringCoercion::toString($item['reason'] ?? null, 'read during preflight'),
+            ];
+            if ($preview !== '') {
+                $row['preview'] = mb_strlen($preview) > $charsPerFile
+                    ? mb_substr($preview, 0, $charsPerFile - 1).'…'
+                    : $preview;
+            }
+            $out[] = $row;
+        }
+
+        $omitted = max(0, count(array_filter($reads, static fn ($r) => is_array($r))) - $maxFiles);
+        $result = ['reads' => $out];
+        if ($omitted > 0) {
+            $result['note'] = $omitted.' additional read(s) omitted from this prompt.';
+        }
+
+        return $result;
+    }
+
+    public static function wantsPreviewReadsInExecutorPrompt(array $modelRoute, array $plan = []): bool
+    {
+        if (($modelRoute['needs_security_auditor'] ?? false) === true) {
+            return true;
+        }
+        if (($modelRoute['risk_level'] ?? '') === 'high') {
+            return true;
+        }
+        $skill = strtolower((string) ($plan['skill'] ?? $modelRoute['skill'] ?? ''));
+
+        return str_contains($skill, 'security') || str_contains($skill, 'audit');
+    }
+
+    /**
      * @param  array<string, mixed>  $execResult
+     * @param  list<array<string, mixed>>  $preflightReads
      * @return array<string, mixed>
      */
-    public static function executorPayloadForAudit(array $execResult): array
-    {
-        return [
+    public static function executorPayloadForAudit(
+        array $execResult,
+        array $preflightReads = [],
+        ?string $runId = null,
+        int $previewMaxFiles = 5,
+    ): array {
+        $payload = [
             'status' => $execResult['status'] ?? null,
             'patch_summary' => $execResult['patch_summary'] ?? null,
             'files_read' => $execResult['files_read'] ?? [],
             'files_changed' => $execResult['files_changed'] ?? [],
             'commands_run' => $execResult['commands_run'] ?? [],
+            'read_previews' => self::readPreviewsForAudit(
+                $preflightReads,
+                $previewMaxFiles,
+                (int) config('bossku.audit_preview_chars', 800),
+            ),
+            'tool_evidence' => self::toolEvidenceForRun($runId),
+            'proof_files' => self::proofFilePaths($execResult),
+        ];
+
+        if (($execResult['status'] ?? '') === 'failed') {
+            $issues = is_array($execResult['known_issues'] ?? null) ? $execResult['known_issues'] : [];
+            $payload['executor_error'] = is_string($issues[0] ?? null)
+                ? $issues[0]
+                : StringCoercion::toString($issues[0] ?? null, '');
+        }
+
+        return $payload;
+    }
+
+    /**
+     * @param  array<string, mixed>  $audit
+     * @param  array<string, mixed>  $execResult
+     * @param  list<array<string, mixed>>  $preflightReads
+     * @return array<string, mixed>
+     */
+    public static function auditorPayloadForRevision(
+        array $audit,
+        array $execResult,
+        array $preflightReads = [],
+        ?string $runId = null,
+    ): array {
+        return [
+            'original_prompt' => null,
+            'audit' => [
+                'status' => $audit['status'] ?? null,
+                'summary' => $audit['summary'] ?? null,
+                'findings' => $audit['findings'] ?? [],
+                'required_fixes' => $audit['required_fixes'] ?? [],
+                'optional_improvements' => $audit['optional_improvements'] ?? [],
+            ],
+            'executor_result' => self::executorPayloadForAudit($execResult, $preflightReads, $runId),
+            'read_previews' => self::readPreviewsForAudit($preflightReads),
+            'tool_evidence' => self::toolEvidenceForRun($runId),
+            'proof_files' => self::proofFilePaths($execResult),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $result
+     * @return list<string>
+     */
+    public static function proofFilePaths(array $result): array
+    {
+        $paths = [];
+        foreach (['files_read', 'files_changed'] as $key) {
+            $items = is_array($result[$key] ?? null) ? $result[$key] : [];
+            foreach ($items as $item) {
+                if (is_string($item) && $item !== '') {
+                    $paths[$item] = true;
+
+                    continue;
+                }
+                if (is_array($item)) {
+                    $path = StringCoercion::toString($item['path'] ?? null);
+                    if ($path !== '') {
+                        $paths[$path] = true;
+                    }
+                }
+            }
+        }
+
+        return array_keys($paths);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public static function deterministicExecutorFailed(string $reason = ''): array
+    {
+        $summary = $reason !== ''
+            ? $reason
+            : 'Executor could not produce valid JSON output. Check model settings (Settings → Models) or retry the run.';
+
+        return [
+            'status' => 'failed',
+            'summary' => $summary,
+            'findings' => [],
+            'required_fixes' => [],
+            'optional_improvements' => [],
+            'risk_level' => 'medium',
+            'requires_security_audit' => false,
+            'requires_final_reviewer' => true,
+            'final_output' => $summary,
+            '_legacy_pass' => false,
+            '_deterministic' => true,
         ];
     }
 
@@ -158,6 +383,23 @@ class ExecutorEvidenceSupport
     public static function deterministicNoFilesRead(string $reason = ''): array
     {
         $summary = $reason !== '' ? $reason : 'No repository files were read during this run. Register and activate the project under Project → Paths, ensure the repo is mounted in Docker (/workspace), then retry the audit.';
+
+        return [
+            'status' => 'revise',
+            'summary' => $summary,
+            'security_issues' => [],
+            '_deterministic' => true,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public static function deterministicNoReadableContent(string $reason = ''): array
+    {
+        $summary = $reason !== ''
+            ? $reason
+            : 'Files were listed as present but no readable content was captured. Check the active project mount (/workspace), file permissions, and that preflight file_read_safe returned previews.';
 
         return [
             'status' => 'revise',

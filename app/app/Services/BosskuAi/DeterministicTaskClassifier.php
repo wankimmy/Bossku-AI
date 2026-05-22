@@ -26,22 +26,26 @@ class DeterministicTaskClassifier
         $executorProfile = 'default';
         $memoryMode = 'read_and_write';
         $tokenLevel = 'medium';
+        $auditMode = 'standard';
 
         // Repository audit / review — must run executor + read files (never orchestrator_only)
         if (RepoTaskDetector::requiresRepositoryAccess($prompt)) {
-            $taskType = 'security';
+            $auditMode = RepoTaskDetector::isFullRepositoryAudit($prompt) ? 'full' : 'repo';
+            $taskType = 'code_edit';
             $skill = 'generic';
-            $workflow = 'orchestrator_executor_auditor';
+            $workflow = $auditMode === 'full'
+                ? 'orchestrator_executor_auditor_security'
+                : 'orchestrator_executor_auditor';
             $needsRepo = true;
             $needsFileEdit = false;
             $needsExecutor = true;
             $needsAuditor = true;
-            $needsSecurity = false;
+            $needsSecurity = $auditMode === 'full';
             $needsFinal = false;
-            $needsTest = false;
+            $needsTest = $auditMode === 'full';
             $executorProfile = 'default';
             $memoryMode = 'read_only';
-            $tokenLevel = 'medium';
+            $tokenLevel = $auditMode === 'full' ? 'high' : 'medium';
         }
 
         // Smoke / connectivity checks (no repo work)
@@ -234,6 +238,7 @@ class DeterministicTaskClassifier
 
         return [
             'task_type' => $taskType,
+            'audit_mode' => $auditMode,
             'risk_level' => $risk,
             'skill' => $skill,
             'workflow' => $workflow,

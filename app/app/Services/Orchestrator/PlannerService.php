@@ -3,6 +3,7 @@
 namespace App\Services\Orchestrator;
 
 use App\Services\BosskuAi\LlmErrorFormatter;
+use App\Support\StringCoercion;
 use App\Services\BosskuAi\ModelFallbackService;
 use App\Services\BosskuAi\ModelRoutingConfig;
 use App\Services\BosskuAi\RuntimeSettings;
@@ -53,6 +54,8 @@ suggested_tests (string[]),
 risk_notes (string[]),
 constraints (string[]),
 handoff_message (string).
+Each checklist step must reference concrete file paths from repo_index or preflight evidence.
+handoff_message MUST list target paths you expect the executor to touch (comma-separated paths).
 Do not invent file paths; if unknown, use empty target_file_list and set allow_broad_repo_scan true only when strictly necessary.
 Use relative paths from the repository root only (e.g. app/Http/Controllers/FooController.php, config/database.php).
 SYS;
@@ -159,33 +162,39 @@ SYS;
             ];
         }
 
-        $decoded['task_summary'] = (string) ($decoded['task_summary'] ?? $decoded['summary'] ?? mb_substr($prompt, 0, 220));
-        $decoded['goal'] = (string) ($decoded['goal'] ?? 'Complete the user request with focused changes and visible audit trail.');
-        $decoded['risk_level'] = (string) ($decoded['risk_level'] ?? $modelRoute['risk_level'] ?? 'medium');
+        $decoded['task_summary'] = StringCoercion::toString(
+            $decoded['task_summary'] ?? $decoded['summary'] ?? null,
+            mb_substr($prompt, 0, 220),
+        );
+        $decoded['goal'] = StringCoercion::toString(
+            $decoded['goal'] ?? null,
+            'Complete the user request with focused changes and visible audit trail.',
+        );
+        $decoded['risk_level'] = StringCoercion::toString($decoded['risk_level'] ?? $modelRoute['risk_level'] ?? null, 'medium');
         $decoded['selected_skill'] = $skill;
-        $decoded['memory_strategy'] = (string) ($decoded['memory_strategy'] ?? $modelRoute['memory_mode'] ?? 'read_only');
+        $decoded['memory_strategy'] = StringCoercion::toString($decoded['memory_strategy'] ?? $modelRoute['memory_mode'] ?? null, 'read_only');
         $decoded['expected_artifacts'] = is_array($decoded['expected_artifacts'] ?? null)
             ? $decoded['expected_artifacts']
             : ['files_changed', 'audit_findings', 'final_summary'];
         $decoded['checklist'] = array_values(array_map(
             fn ($item, $idx) => [
-                'id' => (string) ($item['id'] ?? 'plan-'.($idx + 1)),
-                'title' => (string) ($item['title'] ?? 'Plan item '.($idx + 1)),
-                'description' => (string) ($item['description'] ?? ''),
-                'owner' => (string) ($item['owner'] ?? 'executor'),
-                'status' => (string) ($item['status'] ?? 'pending'),
+                'id' => StringCoercion::toString($item['id'] ?? null, 'plan-'.($idx + 1)),
+                'title' => StringCoercion::toString($item['title'] ?? null, 'Plan item '.($idx + 1)),
+                'description' => StringCoercion::toString($item['description'] ?? null),
+                'owner' => StringCoercion::toString($item['owner'] ?? null, 'executor'),
+                'status' => StringCoercion::toString($item['status'] ?? null, 'pending'),
             ],
             $checklist,
             array_keys($checklist)
         ));
-        $decoded['summary'] = (string) ($decoded['summary'] ?? $decoded['task_summary']);
+        $decoded['summary'] = StringCoercion::toString($decoded['summary'] ?? $decoded['task_summary'] ?? null);
         $decoded['target_file_list'] = is_array($decoded['target_file_list'] ?? null) ? $decoded['target_file_list'] : [];
         $decoded['allow_broad_repo_scan'] = (bool) ($decoded['allow_broad_repo_scan'] ?? ($decoded['target_file_list'] === []));
-        $decoded['executor_profile'] = (string) ($decoded['executor_profile'] ?? $modelRoute['executor_profile'] ?? 'default');
+        $decoded['executor_profile'] = StringCoercion::toString($decoded['executor_profile'] ?? $modelRoute['executor_profile'] ?? null, 'default');
         $decoded['suggested_tests'] = is_array($decoded['suggested_tests'] ?? null) ? $decoded['suggested_tests'] : [];
         $decoded['risk_notes'] = is_array($decoded['risk_notes'] ?? null) ? $decoded['risk_notes'] : [];
         $decoded['constraints'] = is_array($decoded['constraints'] ?? null) ? $decoded['constraints'] : [];
-        $decoded['handoff_message'] = (string) ($decoded['handoff_message'] ?? 'Sending execution task to Executor.');
+        $decoded['handoff_message'] = StringCoercion::toString($decoded['handoff_message'] ?? null, 'Sending execution task to Executor.');
 
         return $decoded;
     }

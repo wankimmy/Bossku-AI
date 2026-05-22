@@ -8,6 +8,7 @@ use App\Models\BosskuAi\Run;
 use App\Services\Orchestrator\OrchestratorService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class RunController extends Controller
@@ -28,6 +29,40 @@ class RunController extends Controller
     public function clarification(string $id, OrchestratorService $orchestrator)
     {
         return response()->json($orchestrator->clarificationForRun($id));
+    }
+
+    public function approvals(string $id, OrchestratorService $orchestrator)
+    {
+        return response()->json($orchestrator->approvalsForRun($id));
+    }
+
+    public function continueApprovalsStream(string $id, OrchestratorService $orchestrator): StreamedResponse
+    {
+        return response()->stream(function () use ($orchestrator, $id) {
+            try {
+                $orchestrator->continueAfterApprovals($id, function (array $evt) {
+                    echo 'data: '.json_encode($evt, JSON_THROW_ON_ERROR)."\n\n";
+                    if (ob_get_level() > 0) {
+                        ob_flush();
+                    }
+                    flush();
+                });
+            } catch (\Throwable $e) {
+                echo 'data: '.json_encode([
+                    'type' => 'run_failed',
+                    'status' => 'fail',
+                    'error' => $e->getMessage(),
+                ], JSON_THROW_ON_ERROR)."\n\n";
+                flush();
+            }
+        }, 200, [
+            'Content-Type' => 'text/event-stream',
+            'Cache-Control' => 'no-cache',
+            'Connection' => 'keep-alive',
+            'X-Accel-Buffering' => 'no',
+            'Access-Control-Allow-Origin' => env('FRONTEND_URL', 'http://localhost:28470'),
+            'Vary' => 'Origin',
+        ]);
     }
 
     public function continueStream(Request $request, string $id, OrchestratorService $orchestrator): StreamedResponse
@@ -72,14 +107,36 @@ class RunController extends Controller
     public function store(Request $request, OrchestratorService $orchestrator)
     {
         $data = $this->validateRunInput($request);
+        $started = microtime(true);
+
+        Log::info('bossku.run.started', [
+            'channel' => 'sync',
+            'ip' => $request->ip(),
+            'prompt_length' => strlen($data['prompt']),
+        ]);
 
         try {
             $result = $orchestrator->run($data['prompt'], null, $data['conversation']);
         } catch (\Throwable $e) {
+            Log::warning('bossku.run.failed', [
+                'ip' => $request->ip(),
+                'prompt_length' => strlen($data['prompt']),
+                'duration_ms' => (int) round((microtime(true) - $started) * 1000),
+                'error' => $e->getMessage(),
+            ]);
+
             return response()->json([
                 'message' => $e->getMessage(),
             ], 422);
         }
+
+        Log::info('bossku.run.completed', [
+            'run_id' => $result['run_id'] ?? null,
+            'ip' => $request->ip(),
+            'prompt_length' => strlen($data['prompt']),
+            'duration_ms' => (int) round((microtime(true) - $started) * 1000),
+            'status' => $result['routing']['risk_level'] ?? null,
+        ]);
 
         return response()->json($result);
     }
@@ -107,16 +164,45 @@ class RunController extends Controller
      */
     private function streamRun(OrchestratorService $orchestrator, string $prompt, array $conversation): StreamedResponse
     {
-        return response()->stream(function () use ($orchestrator, $prompt, $conversation) {
+        $ip = request()->ip();
+        $promptLength = strlen($prompt);
+
+        return response()->stream(function () use ($orchestrator, $prompt, $conversation, $ip, $promptLength) {
+            $started = microtime(true);
+            $runId = null;
+
+            Log::info('bossku.run.stream_started', [
+                'ip' => $ip,
+                'prompt_length' => $promptLength,
+            ]);
+
             try {
-                $orchestrator->run($prompt, function (array $evt) {
+                $orchestrator->run($prompt, function (array $evt) use (&$runId) {
+                    if (isset($evt['run_id'])) {
+                        $runId = $evt['run_id'];
+                    }
                     echo 'data: '.json_encode($evt, JSON_THROW_ON_ERROR)."\n\n";
                     if (ob_get_level() > 0) {
                         ob_flush();
                     }
                     flush();
                 }, $conversation);
+
+                Log::info('bossku.run.stream_completed', [
+                    'run_id' => $runId,
+                    'ip' => $ip,
+                    'prompt_length' => $promptLength,
+                    'duration_ms' => (int) round((microtime(true) - $started) * 1000),
+                ]);
             } catch (\Throwable $e) {
+                Log::warning('bossku.run.stream_failed', [
+                    'run_id' => $runId,
+                    'ip' => $ip,
+                    'prompt_length' => $promptLength,
+                    'duration_ms' => (int) round((microtime(true) - $started) * 1000),
+                    'error' => $e->getMessage(),
+                ]);
+
                 echo 'data: '.json_encode([
                     'type' => 'run_failed',
                     'status' => 'fail',

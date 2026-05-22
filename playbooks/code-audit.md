@@ -1,6 +1,8 @@
 # Playbook: Code audit
 
-**Goal:** correctness + maintainability before security deep dive.
+**Goal:** full repository audits cover **functionality → design & best practices → performance → tests**, then a dedicated **security** pass. Security-only prompts skip the full dimension set.
+
+**Routing:** `audit_mode=full` on repo audit prompts (Bossku `RepoTaskDetector` + `PromptRouteClassifier`).
 
 **Skills**
 

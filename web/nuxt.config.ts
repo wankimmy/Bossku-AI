@@ -16,11 +16,17 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       apiBase:
-        process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:28480'
+        process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:28480',
+      apiToken: process.env.NUXT_PUBLIC_API_TOKEN || '',
     }
   },
   tailwindcss: {
     cssPath: '~/assets/css/tailwind.css'
+  },
+  // Avoid stale HTML in the browser referencing deleted hashed chunks after rebuild.
+  routeRules: {
+    '/**': { headers: { 'cache-control': 'no-cache' } },
+    '/_nuxt/**': { headers: { 'cache-control': 'public, max-age=31536000, immutable' } },
   },
 })
 
