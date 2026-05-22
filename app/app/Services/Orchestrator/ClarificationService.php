@@ -32,6 +32,13 @@ class ClarificationService
             return $this->emptyProceed();
         }
 
+        if (
+            $this->settings->orchestratorClarificationMode() === 'smart'
+            && ClarificationPromptAnalyzer::isClearEnough($userPrompt, $modelRoute)
+        ) {
+            return $this->emptyProceed();
+        }
+
         try {
             $parsed = $this->callLlm($userPrompt, $conversation, $modelRoute, $stage, $context);
         } catch (\Throwable) {
@@ -39,6 +46,20 @@ class ClarificationService
         }
 
         return $this->normalize($parsed, $stage, $userPrompt);
+    }
+
+    /**
+     * Whether pre-execution clarification should run (smart mode uses heuristics; always mode is gated elsewhere).
+     *
+     * @param  array<string, mixed>  $modelRoute
+     */
+    public function shouldAskForPrompt(string $userPrompt, array $modelRoute): bool
+    {
+        return match ($this->settings->orchestratorClarificationMode()) {
+            'off' => false,
+            'always' => true,
+            default => ! ClarificationPromptAnalyzer::isClearEnough($userPrompt, $modelRoute),
+        };
     }
 
     /**
@@ -87,8 +108,18 @@ class ClarificationService
             }
         }
 
+        $mode = $this->settings->orchestratorClarificationMode();
+        $ready = (bool) ($parsed['ready_to_proceed'] ?? false);
+        if ($mode === 'always') {
+            $ready = false;
+        }
+
         if ($questions === []) {
+            if ($mode === 'smart' && $ready) {
+                return $this->emptyProceed();
+            }
             $questions = $this->fallbackQuestions($userPrompt, $stage, [])['questions'];
+            $ready = false;
         }
 
         foreach ($questions as $qIdx => $question) {
@@ -102,11 +133,6 @@ class ClarificationService
             fn ($a) => is_string($a) ? trim($a) : '',
             is_array($parsed['assumptions'] ?? null) ? $parsed['assumptions'] : [],
         )));
-
-        $ready = (bool) ($parsed['ready_to_proceed'] ?? false);
-        if ($this->settings->orchestratorClarificationMode() === 'always') {
-            $ready = false;
-        }
 
         $summary = trim((string) ($parsed['summary'] ?? ''));
         if ($summary === '') {
@@ -178,24 +204,31 @@ class ClarificationService
         $fallbacks = [$this->settings->reasoningModel()];
         $models = array_values(array_unique(array_filter([$primary, ...$fallbacks])));
 
+        $clarificationMode = $this->settings->orchestratorClarificationMode();
+
         $system = <<<'SYS'
-You are a skeptical BosskuAI orchestrator. Before acting, you must surface ambiguity and risks.
+You are a skeptical BosskuAI orchestrator. Surface only ambiguity that would change what agents do next.
 Output ONLY valid JSON (no markdown) with keys:
 summary (string, one line for the user),
 assumptions (string[], what you would do if the user says proceed),
-ready_to_proceed (boolean — use false when clarification is required),
-questions (array of 1-3 items: {
+ready_to_proceed (boolean — true when the prompt is clear enough to run without asking),
+questions (array of 0-3 items: {
   id: string,
   prompt: string,
   why_it_matters: string,
   allow_free_text: true,
-  options: array of exactly 3 items: { id, label, recommendation?: boolean } — short labels
+  options: array of 2-3 items: { id, label, recommendation?: boolean } — short labels
 }).
-Be concise. Always provide exactly 3 options per question (A/B/C style). Mark the safest recommended option with recommendation: true.
+Rules:
+- If the prompt is unambiguous, set ready_to_proceed true and questions [].
+- Prefer ONE question for a single blocking unknown; use 2-3 only for independent unknowns (scope + environment + risk).
+- Do not ask generic confirmation when the user already named files, routes, or a concrete fix.
+- When you ask, provide 2-3 options per question (A/B/C). Mark the safest recommended option with recommendation: true.
 SYS;
 
         $user = json_encode([
             'stage' => $stage,
+            'clarification_mode' => $clarificationMode,
             'user_prompt' => $userPrompt,
             'conversation' => array_slice($conversation, -10),
             'routing' => [

@@ -205,7 +205,7 @@ class OrchestratorService
             ]));
         }
 
-        if ($this->shouldRequireClarification($run)) {
+        if ($this->shouldRequireClarification($run, $userPrompt, $modelRoute)) {
             $clarification = $this->clarification->ask($userPrompt, $conversation, $modelRoute, 'pre_execution', []);
             if ($clarification['questions'] !== [] && ! $clarification['ready_to_proceed']) {
                 return $this->pauseForClarification(

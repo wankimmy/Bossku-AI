@@ -92,7 +92,10 @@ function submit() {
         </p>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+      <div
+        class="grid grid-cols-1 gap-2"
+        :class="question.options.length <= 2 ? 'sm:grid-cols-2' : 'sm:grid-cols-3'"
+      >
         <button
           v-for="opt in question.options.slice(0, 3)"
           :key="opt.id"

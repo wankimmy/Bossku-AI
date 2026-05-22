@@ -2,6 +2,7 @@
 
 namespace Tests\Unit;
 
+use App\Models\BosskuAi\Setting;
 use App\Services\Orchestrator\ClarificationService;
 use App\Services\Orchestrator\ExecutorStuckDetector;
 use PHPUnit\Framework\Attributes\Test;
@@ -32,13 +33,16 @@ class ClarificationTest extends TestCase
     }
 
     #[Test]
-    public function clarification_normalize_produces_questions(): void
+    public function clarification_normalize_produces_questions_in_smart_mode(): void
     {
+        Setting::query()->delete();
+        Setting::setValue('orchestrator_clarification_mode', 'smart');
+
         $service = app(ClarificationService::class);
         $out = $service->normalize([
             'summary' => 'Need scope',
             'assumptions' => ['Will audit read-only'],
-            'ready_to_proceed' => true,
+            'ready_to_proceed' => false,
             'questions' => [
                 [
                     'id' => 'q1',
@@ -55,6 +59,40 @@ class ClarificationTest extends TestCase
         $this->assertCount(1, $out['questions']);
         $this->assertSame('q1', $out['questions'][0]['id']);
         $this->assertCount(3, $out['questions'][0]['options']);
+    }
+
+    #[Test]
+    public function smart_normalize_proceeds_when_ready_with_no_questions(): void
+    {
+        Setting::query()->delete();
+        Setting::setValue('orchestrator_clarification_mode', 'smart');
+
+        $service = app(ClarificationService::class);
+        $out = $service->normalize([
+            'summary' => 'Clear request',
+            'ready_to_proceed' => true,
+            'questions' => [],
+        ], 'pre_execution', 'Create hello-world.txt');
+
+        $this->assertTrue($out['ready_to_proceed']);
+        $this->assertSame([], $out['questions']);
+    }
+
+    #[Test]
+    public function always_mode_forces_fallback_when_llm_returns_empty_questions(): void
+    {
+        Setting::query()->delete();
+        Setting::setValue('orchestrator_clarification_mode', 'always');
+
+        $service = app(ClarificationService::class);
+        $out = $service->normalize([
+            'summary' => 'Confirm',
+            'ready_to_proceed' => true,
+            'questions' => [],
+        ], 'pre_execution', 'do something vague');
+
+        $this->assertFalse($out['ready_to_proceed']);
+        $this->assertCount(1, $out['questions']);
     }
 
     #[Test]

@@ -92,7 +92,27 @@ describe('clarification stream handling', () => {
       null,
     )
     expect(req?.questions[0].prompt).toBe('How deep?')
-    expect(req?.questions[0].options).toHaveLength(3)
+    expect(req?.questions[0].options).toHaveLength(2)
+  })
+
+  it('preserves single question from SSE without adding more questions', () => {
+    const req = buildClarificationRequest(
+      [{
+        type: 'clarification_requested',
+        run_id: 'run-1',
+        questions: [{
+          id: 'q1',
+          prompt: 'Which environment?',
+          options: [
+            { id: 'local', label: 'Local' },
+            { id: 'prod', label: 'Production', recommendation: true },
+          ],
+        }],
+      }],
+      null,
+    )
+    expect(req?.questions).toHaveLength(1)
+    expect(req?.questions[0].prompt).toBe('Which environment?')
   })
 })
 
@@ -118,7 +138,7 @@ describe('clarification API response parsing', () => {
 
     expect(req?.runId).toBe('run-api-1')
     expect(req?.questions[0].prompt).toBe('Which pricing?')
-    expect(req?.questions[0].options).toHaveLength(3)
+    expect(req?.questions[0].options).toHaveLength(2)
     expect(req?.assumptions).toEqual(['B2B SaaS'])
   })
 

@@ -272,12 +272,16 @@ class RuntimeSettings
         return $this->getBool('routing_llm_enabled', (bool) config('bossku_models.defaults.router_llm_enabled', true));
     }
 
-    /** @return 'always'|'off' */
+    /** @return 'smart'|'always'|'off' */
     public function orchestratorClarificationMode(): string
     {
-        $mode = strtolower($this->getString('orchestrator_clarification_mode', 'always'));
+        $default = strtolower((string) config('bossku.orchestrator_clarification_mode', 'smart'));
+        $mode = strtolower($this->getString('orchestrator_clarification_mode', $default));
 
-        return $mode === 'off' ? 'off' : 'always';
+        return match ($mode) {
+            'off', 'always' => $mode,
+            default => 'smart',
+        };
     }
 
     /** @deprecated Use orchestratorModelForRouting() */

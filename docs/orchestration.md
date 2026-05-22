@@ -18,6 +18,16 @@ Routing flags (`needs_auditor`, `needs_security_auditor`, `needs_final_reviewer`
 
 Optional env: `BOSSKU_DEFAULT_WORKFLOW=orchestrator_executor` (see `config/bossku.php`); heuristics in `DeterministicTaskClassifier` and `PromptRouteClassifier` override this per prompt.
 
+### Pre-execution clarification
+
+`BOSSKU_ORCHESTRATOR_CLARIFICATION_MODE` (Settings → `orchestrator_clarification_mode`):
+
+| Mode | Behavior |
+|------|----------|
+| `smart` (default) | Skip when the prompt is clear; otherwise ask 0–3 questions (prefer one) |
+| `always` | Ask before every run until the user answers once |
+| `off` | Never ask pre-execution clarification |
+
 ## The Five Services
 
 ```

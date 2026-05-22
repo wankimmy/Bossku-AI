@@ -72,6 +72,7 @@ class SettingsApiController extends Controller
         $rules['model_aliases.*'] = 'sometimes|string|max:255';
         $rules['ollama_api_key'] = 'sometimes|nullable|string|max:512';
         $rules['anthropic_api_key'] = 'sometimes|nullable|string|max:512';
+        $rules['orchestrator_clarification_mode'] = 'sometimes|nullable|string|in:smart,always,off';
 
         $data = $request->validate($rules);
 

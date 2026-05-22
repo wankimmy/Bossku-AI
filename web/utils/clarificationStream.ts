@@ -97,9 +97,13 @@ export function parseClarificationQuestions(rawQuestions: unknown[]): Clarificat
         }))
         .filter(o => o.label !== '')
 
+      const minOptions = 2
       const padded = [...options.slice(0, 3)]
-      for (let i = padded.length; i < 3; i++) {
+      for (let i = padded.length; i < minOptions; i++) {
         const def = DEFAULT_CLARIFICATION_OPTIONS[i]
+        if (!def) {
+          break
+        }
         padded.push({
           id: def.id,
           label: def.label,

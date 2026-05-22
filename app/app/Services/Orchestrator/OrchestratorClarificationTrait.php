@@ -111,7 +111,10 @@ trait OrchestratorClarificationTrait
         ];
     }
 
-    protected function shouldRequireClarification(Run $run): bool
+    /**
+     * @param  array<string, mixed>  $modelRoute
+     */
+    protected function shouldRequireClarification(Run $run, string $userPrompt = '', array $modelRoute = []): bool
     {
         if ($this->settings->orchestratorClarificationMode() === 'off') {
             return false;
@@ -119,7 +122,15 @@ trait OrchestratorClarificationTrait
         /** @var array<string, mixed> $meta */
         $meta = is_array($run->metadata) ? $run->metadata : [];
 
-        return empty($meta['clarification_answers']);
+        if (! empty($meta['clarification_answers'])) {
+            return false;
+        }
+
+        if ($this->settings->orchestratorClarificationMode() === 'always') {
+            return true;
+        }
+
+        return $this->clarification->shouldAskForPrompt($userPrompt, $modelRoute);
     }
 
     /**

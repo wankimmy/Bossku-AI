@@ -69,4 +69,8 @@ return [
      * Documented default pipeline name. Routing heuristics (DeterministicTaskClassifier / PromptRouteClassifier) remain primary.
      */
     'default_workflow' => env('BOSSKU_DEFAULT_WORKFLOW', 'orchestrator_executor'),
+    /**
+     * Pre-execution clarification: smart (default), always (every run), or off.
+     */
+    'orchestrator_clarification_mode' => env('BOSSKU_ORCHESTRATOR_CLARIFICATION_MODE', 'smart'),
 ];
