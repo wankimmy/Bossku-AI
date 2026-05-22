@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useLandingChat } from '~/composables/useLandingChat'
+import { isAwaitingApprovals } from '~/utils/approvalStream'
 import { parseClarificationApiResponse } from '~/utils/clarificationFromApi'
 import type { ClarificationRequest } from '~/types/clarification'
 import type { Approval } from '~/types/api'
@@ -70,10 +71,25 @@ const finalOutput = computed(() => {
   const done = events.value.findLast((e: Record<string, unknown>) => e.type === 'run_completed')
   return done ? String(done.output ?? done.final_output ?? '') : ''
 })
+const awaitingApprovalsFromEvents = computed(() => isAwaitingApprovals(events.value))
+
 const runError = computed(() => {
-  if (error.value) return String(error.value)
+  if (runApprovals.awaitingApprovals.value || awaitingApprovalsFromEvents.value) {
+    return ''
+  }
+  if (error.value) {
+    const err = String(error.value)
+    if (err.includes('continue-approvals')) return ''
+    return err
+  }
   const failed = events.value.findLast((e: Record<string, unknown>) => e.type === 'run_failed')
   if (!failed) return ''
+  const msg = String(
+    failed.error ?? failed.message ?? failed.summary ?? '',
+  )
+  if (msg.includes('continue-approvals') || msg.includes('change approvals')) {
+    return ''
+  }
   const plannerFailed = events.value.findLast((e: Record<string, unknown>) => e.type === 'planner_failed')
   return String(
     failed.error ?? failed.message ?? plannerFailed?.error ?? plannerFailed?.message ?? failed.summary ?? 'Run failed.',
@@ -95,11 +111,11 @@ watch(running, (isRunning) => {
 })
 
 watch(
-  () => [running.value, finalOutput.value, runError.value, awaitingClarification.value] as const,
-  ([isRunning, output, err, awaiting]) => {
+  () => [running.value, finalOutput.value, runError.value, awaitingClarification.value, awaitingApprovalsFromEvents.value, runApprovals.awaitingApprovals.value] as const,
+  ([isRunning, output, err, awaitingClar, awaitingAppr, awaitingApprState]) => {
     if (isRunning) return
     chat.saveRunEvents(events.value)
-    if (awaiting) return
+    if (awaitingClar || awaitingAppr || awaitingApprState) return
     if (output) {
       recordAssistantReply(output)
       toast.success('Task completed.')
@@ -155,7 +171,9 @@ const effectiveClarificationRequest = computed((): ClarificationRequest | null =
 )
 
 const showClarificationModal = computed(
-  () => effectiveClarificationRequest.value !== null && !runApprovals.awaitingApprovals.value,
+  () => effectiveClarificationRequest.value !== null
+    && !runApprovals.awaitingApprovals.value
+    && !awaitingApprovalsFromEvents.value,
 )
 
 const showApprovalModal = computed(
@@ -167,11 +185,22 @@ const resolvedRunId = computed(() =>
   ?? String(events.value.find(e => e.run_id)?.run_id ?? ''),
 )
 
+watch(
+  () => events.value.filter((e: Record<string, unknown>) => e.type === 'approval_requested').length,
+  () => {
+    const approvalEvt = events.value.findLast(
+      (e: Record<string, unknown>) => e.type === 'approval_requested',
+    )
+    if (approvalEvt) {
+      runApprovals.seedFromSseEvent(approvalEvt)
+    }
+  },
+)
+
 watchEffect(async () => {
   const runId = resolvedRunId.value
-  const needsApprovals = events.value.some(
-    (e: Record<string, unknown>) => e.type === 'approval_requested',
-  ) || (status.value === 'awaiting_input' && !awaitingClarification.value)
+  const needsApprovals = awaitingApprovalsFromEvents.value
+    || events.value.some((e: Record<string, unknown>) => e.type === 'approval_requested')
 
   if (needsApprovals && runId && !awaitingClarification.value) {
     await runApprovals.fetchPending(runId)
@@ -181,7 +210,11 @@ watchEffect(async () => {
 watchEffect(async () => {
   const runId = resolvedRunId.value
   const awaiting = awaitingClarification.value
-    || (status.value === 'awaiting_input' && !runApprovals.awaitingApprovals.value)
+    || (
+      status.value === 'awaiting_input'
+      && !runApprovals.awaitingApprovals.value
+      && !awaitingApprovalsFromEvents.value
+    )
 
   if (!awaiting || !runId) {
     apiClarificationRequest.value = null
@@ -362,6 +395,11 @@ watch(
 )
 
 watch(showClarificationModal, (open) => {
+  if (!open) return
+  mobileTab.value = 'chat'
+})
+
+watch(showApprovalModal, (open) => {
   if (!open) return
   mobileTab.value = 'chat'
 })

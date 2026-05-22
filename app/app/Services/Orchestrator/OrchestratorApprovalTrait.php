@@ -121,12 +121,16 @@ trait OrchestratorApprovalTrait
             'metadata' => $meta,
         ]);
 
+        $pendingCount = count($pendingIds);
+        $summary = $pendingCount.' change(s) need your approval before the run can continue.';
+
         $this->emit($emit, $this->events->approvalRequested(
             $run,
             $pendingIds,
             $first !== null ? $this->executorApprovals->serializeApproval($first) : null,
-            count($pendingIds),
+            $pendingCount,
         ));
+        $this->emit($emit, $this->events->runPaused($run, 'executor_approvals', $summary));
 
         return [
             'run_id' => $run->id,

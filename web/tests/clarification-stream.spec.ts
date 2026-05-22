@@ -14,6 +14,15 @@ describe('clarification stream handling', () => {
     expect(isAwaitingClarification(events)).toBe(true)
   })
 
+  it('does not treat approval_requested as clarification even with awaiting_input', () => {
+    expect(isAwaitingClarification([{
+      type: 'approval_requested',
+      status: 'awaiting_input',
+      to_agent: 'user',
+      summary: '3 change(s) need your approval',
+    }])).toBe(false)
+  })
+
   it('detects awaiting_input handoff to user as clarification pause', () => {
     const events = [
       { type: 'memory_retrieved', status: 'success' },

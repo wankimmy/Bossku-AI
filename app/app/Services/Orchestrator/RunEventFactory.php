@@ -193,6 +193,17 @@ class RunEventFactory
      * @param  array<string, mixed>|null  $current
      * @return array<string, mixed>
      */
+    public function runPaused(Run $run, string $stage, string $summary): array
+    {
+        return $this->event($run, 'run_paused', [
+            'agent' => 'orchestrator',
+            'status' => 'awaiting_input',
+            'stage' => $stage,
+            'summary' => $summary,
+            'message' => $summary,
+        ]);
+    }
+
     public function approvalRequested(
         Run $run,
         array $approvalIds,

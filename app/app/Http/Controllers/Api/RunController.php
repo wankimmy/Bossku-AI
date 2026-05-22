@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\BosskuAi\FeedbackItem;
 use App\Models\BosskuAi\Run;
 use App\Services\Orchestrator\OrchestratorService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -65,7 +66,7 @@ class RunController extends Controller
         ]);
     }
 
-    public function continueStream(Request $request, string $id, OrchestratorService $orchestrator): StreamedResponse
+    public function continueStream(Request $request, string $id, OrchestratorService $orchestrator): StreamedResponse|JsonResponse
     {
         $validated = $request->validate([
             'answers' => 'required|array|min:1',
@@ -76,6 +77,11 @@ class RunController extends Controller
 
         /** @var list<array{question_id: string, option_id?: string|null, free_text?: string|null}> $answers */
         $answers = $validated['answers'];
+
+        $misroute = $this->executorApprovalsMisrouteResponse($id);
+        if ($misroute !== null) {
+            return $misroute;
+        }
 
         return response()->stream(function () use ($orchestrator, $id, $answers) {
             try {
@@ -318,5 +324,27 @@ class RunController extends Controller
             ->get();
 
         return response()->json($feedback);
+    }
+
+    private function executorApprovalsMisrouteResponse(string $runId): ?JsonResponse
+    {
+        $run = Run::query()->find($runId);
+        if ($run === null || $run->status !== 'awaiting_input') {
+            return null;
+        }
+
+        /** @var array<string, mixed> $meta */
+        $meta = is_array($run->metadata) ? $run->metadata : [];
+        /** @var array<string, mixed> $checkpoint */
+        $checkpoint = is_array($meta['checkpoint'] ?? null) ? $meta['checkpoint'] : [];
+        if (($checkpoint['stage'] ?? null) !== 'executor_approvals') {
+            return null;
+        }
+
+        return response()->json([
+            'message' => 'Run is awaiting change approvals. POST /api/runs/'.$runId.'/continue-approvals/stream after all items are approved or rejected.',
+            'stage' => 'executor_approvals',
+            'resume_endpoint' => '/api/runs/'.$runId.'/continue-approvals/stream',
+        ], 409);
     }
 }

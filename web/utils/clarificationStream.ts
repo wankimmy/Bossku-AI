@@ -27,10 +27,20 @@ export const DEFAULT_CLARIFICATION_OPTIONS = [
 
 function isClarificationPauseEvent(evt: ClarificationSseEvent | undefined): boolean {
   if (!evt) return false
-  if (evt.type === 'clarification_requested') return true
+  const type = String(evt.type ?? '')
+  if (type === 'approval_requested' || type === 'approval_feedback_received') return false
+  if (String(evt.stage ?? '') === 'executor_approvals') return false
+  if (type === 'clarification_requested') return true
   if (String(evt.status) !== 'awaiting_input') return false
   const toAgent = evt.to_agent
-  return toAgent === undefined || toAgent === null || String(toAgent) === 'user'
+  if (toAgent !== undefined && toAgent !== null && String(toAgent) !== 'user') return false
+  if (Array.isArray(evt.questions) && evt.questions.length > 0) return true
+  const artifacts = evt.artifacts
+  if (artifacts !== null && typeof artifacts === 'object') {
+    const clarification = (artifacts as Record<string, unknown>).clarification
+    if (clarification !== null && typeof clarification === 'object') return true
+  }
+  return type === 'orchestrator' || type.includes('clarification')
 }
 
 export function lastClarificationEventIndex(events: ClarificationSseEvent[]): number {

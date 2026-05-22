@@ -28,6 +28,10 @@ export function parseClarificationApiResponse(
     return null
   }
 
+  if (data.stage === 'executor_approvals') {
+    return null
+  }
+
   const clar = data.clarification
   if (clar === null || clar === undefined || typeof clar !== 'object') {
     return null

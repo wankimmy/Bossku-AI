@@ -22,6 +22,13 @@ trait OrchestratorClarificationTrait
         /** @var array<string, mixed> $checkpoint */
         $checkpoint = is_array($meta['checkpoint'] ?? null) ? $meta['checkpoint'] : [];
         $stage = (string) ($checkpoint['stage'] ?? 'pre_execution');
+
+        if ($stage === 'executor_approvals') {
+            throw new \InvalidArgumentException(
+                'Run is awaiting change approvals. POST /api/runs/'.$runId.'/continue-approvals/stream after all items are approved or rejected.',
+            );
+        }
+
         /** @var array<string, mixed> $pipeline */
         $pipeline = is_array($checkpoint['pipeline'] ?? null) ? $checkpoint['pipeline'] : [];
         /** @var list<array<string, mixed>> $questions */
@@ -39,12 +46,6 @@ trait OrchestratorClarificationTrait
         $run->update(['status' => 'running', 'metadata' => $meta]);
 
         $this->emit($emit, $this->events->clarificationReceived($run, count($answers)));
-
-        if ($stage === 'executor_approvals') {
-            throw new \InvalidArgumentException(
-                'Run is awaiting change approvals. POST /api/runs/{id}/continue-approvals/stream after all items are approved or rejected.',
-            );
-        }
 
         if ($stage === 'executor_escalation') {
             return $this->resumeFromExecutorEscalation($run, $pipeline, $answerBlock, $emit);
@@ -98,11 +99,14 @@ trait OrchestratorClarificationTrait
         /** @var array<string, mixed> $checkpoint */
         $checkpoint = is_array($meta['checkpoint'] ?? null) ? $meta['checkpoint'] : [];
 
+        $stage = $checkpoint['stage'] ?? null;
+        $clarification = ($stage === 'executor_approvals') ? null : ($checkpoint['clarification'] ?? null);
+
         return [
             'run_id' => $run->id,
             'status' => $run->status,
-            'stage' => $checkpoint['stage'] ?? null,
-            'clarification' => $checkpoint['clarification'] ?? null,
+            'stage' => $stage,
+            'clarification' => $clarification,
             'answers' => $meta['clarification_answers'] ?? [],
         ];
     }

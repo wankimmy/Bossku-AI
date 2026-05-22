@@ -1,5 +1,6 @@
 import type { ClarificationAnswer, ClarificationRequest } from '~/types/clarification'
 import { apiAuthHeaders } from '~/utils/apiAuthHeaders'
+import { isAwaitingApprovals } from '~/utils/approvalStream'
 import { buildClarificationRequest, isAwaitingClarification } from '~/utils/clarificationStream'
 
 export type { ClarificationAnswer, ClarificationQuestion, ClarificationRequest } from '~/types/clarification'
@@ -131,8 +132,9 @@ export function useRunStream() {
       const lastType = events.value.at(-1)?.type
       const reachedTerminal = lastType !== undefined && TERMINAL_EVENT_TYPES.has(String(lastType))
       const pausedForClarification = isAwaitingClarification(events.value)
+      const pausedForApprovals = isAwaitingApprovals(events.value)
 
-      if (!reachedTerminal && !pausedForClarification) {
+      if (!reachedTerminal && !pausedForClarification && !pausedForApprovals) {
         if (events.value.length === 0) {
           error.value
             = 'Stream failed to start: the API closed before any events (often HTTP 500). '
@@ -185,7 +187,8 @@ export function useRunStream() {
       }
       const lastType = events.value.at(-1)?.type
       const reachedTerminal = lastType !== undefined && TERMINAL_EVENT_TYPES.has(String(lastType))
-      if (!reachedTerminal && !isAwaitingClarification(events.value)) {
+      const paused = isAwaitingClarification(events.value) || isAwaitingApprovals(events.value)
+      if (!reachedTerminal && !paused) {
         error.value = e instanceof Error ? e.message : 'Continue after approvals was interrupted.'
       }
     }
@@ -216,6 +219,9 @@ export function useRunStream() {
       })
 
       if (!res.ok) {
+        if (res.status === 409) {
+          return
+        }
         const text = await res.text().catch(() => '')
         throw new Error(text || `Continue stream failed (${res.status})`)
       }
@@ -236,8 +242,9 @@ export function useRunStream() {
       const lastType = events.value.at(-1)?.type
       const reachedTerminal = lastType !== undefined && TERMINAL_EVENT_TYPES.has(String(lastType))
       const pausedForClarification = isAwaitingClarification(events.value)
+      const pausedForApprovals = isAwaitingApprovals(events.value)
 
-      if (!reachedTerminal && !pausedForClarification) {
+      if (!reachedTerminal && !pausedForClarification && !pausedForApprovals) {
         error.value = e instanceof Error ? e.message : 'Continue stream was interrupted.'
       }
     }
