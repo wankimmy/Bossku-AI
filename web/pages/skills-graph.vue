@@ -3,13 +3,12 @@ import type { WorkspaceGraphResponse } from '~/types/api'
 
 definePageMeta({ layout: 'graph' })
 
-const base = useApiBase()
 const api = useApi()
 const toast = useToast()
 const bootstrapLoading = ref(false)
 
 const { data: graphData, pending, refresh } = await useFetch<WorkspaceGraphResponse>(
-  `${base}/api/workspace/graph`,
+  apiUrl('/workspace/graph'),
   { server: false },
 )
 

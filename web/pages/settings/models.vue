@@ -1,9 +1,8 @@
 <script setup lang="ts">
 definePageMeta({ layout: 'default' })
 
-const base = useApiBase()
 const route = useRoute()
-const { data, refresh, pending, error } = await useFetch<Record<string, string>>(`${base}/api/settings`, {
+const { data, refresh, pending, error } = await useFetch<Record<string, string>>(apiUrl('/settings'), {
   server: false,
   lazy: true,
 })
@@ -24,7 +23,7 @@ const codexStatusLoading = ref(true)
 async function loadCodexStatus() {
   codexStatusLoading.value = true
   try {
-    codexStatus.value = await $fetch<CodexStatus>(`${base}/api/oauth/codex/status`)
+    codexStatus.value = await $fetch<CodexStatus>(apiUrl('/oauth/codex/status'))
   }
   catch {
     codexStatus.value = { connected: false, configured: false, expires_at: null, account_hint: null, last_refresh: null }
@@ -194,7 +193,7 @@ async function save() {
   const anthropicTrimmed = anthropicApiKeyInput.value.trim()
   if (anthropicTrimmed) body.anthropic_api_key = anthropicTrimmed
 
-  await $fetch(`${base}/api/settings`, {
+  await $fetch(apiUrl('/settings'), {
     method: 'PUT',
     body,
   })
@@ -223,12 +222,12 @@ function connectCodex() {
     toast.error('Codex OAuth is not configured. Set CODEX_OAUTH_CLIENT_ID in the server environment.')
     return
   }
-  window.location.href = `${base}/api/oauth/codex/authorize`
+  window.location.href = apiUrl('/oauth/codex/authorize')
 }
 
 async function disconnectCodex() {
   try {
-    await $fetch(`${base}/api/oauth/codex`, { method: 'DELETE' })
+    await $fetch(apiUrl('/oauth/codex'), { method: 'DELETE' })
     await loadCodexStatus()
     await refreshCatalog()
     toast.success('Codex disconnected.')

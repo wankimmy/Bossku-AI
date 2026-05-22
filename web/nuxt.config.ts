@@ -15,18 +15,23 @@ export default defineNuxtConfig({
   modules: ['@nuxtjs/tailwindcss'],
   runtimeConfig: {
     public: {
-      apiBase:
-        process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:28480',
+      // Empty = browser calls same-origin /api (proxied to Laravel in Docker).
+      apiBase: process.env.NUXT_PUBLIC_API_BASE ?? '',
       apiToken: process.env.NUXT_PUBLIC_API_TOKEN || '',
-    }
+    },
   },
   tailwindcss: {
-    cssPath: '~/assets/css/tailwind.css'
+    cssPath: '~/assets/css/tailwind.css',
   },
   // Avoid stale HTML in the browser referencing deleted hashed chunks after rebuild.
   routeRules: {
+    '/api/**': {
+      proxy:
+        process.env.NUXT_API_PROXY_TARGET || 'http://127.0.0.1:28480/api/**',
+    },
     '/**': { headers: { 'cache-control': 'no-cache' } },
-    '/_nuxt/**': { headers: { 'cache-control': 'public, max-age=31536000, immutable' } },
+    '/_nuxt/**': {
+      headers: { 'cache-control': 'public, max-age=31536000, immutable' },
+    },
   },
 })
-

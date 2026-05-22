@@ -1,6 +1,5 @@
 <script setup lang="ts">
 definePageMeta({ layout: 'default' })
-const base = useApiBase()
 const q = ref('')
 const results = ref<unknown[]>([])
 const searching = ref(false)
@@ -8,7 +7,7 @@ const searching = ref(false)
 async function search() {
   searching.value = true
   try {
-    const res = await $fetch<unknown[]>(`${base}/api/memory/search`, {
+    const res = await $fetch<unknown[]>(apiUrl('/memory/search'), {
       method: 'POST',
       body: { query: q.value, top_k: 8 },
     })
@@ -20,7 +19,7 @@ async function search() {
   }
 }
 
-const { data, pending, refresh } = await useFetch(`${base}/api/memory`, { server: false })
+const { data, pending, refresh } = await useFetch(apiUrl('/memory'), { server: false })
 </script>
 
 <template>

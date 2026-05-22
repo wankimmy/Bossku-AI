@@ -20,10 +20,8 @@ export type InferenceOptgroup = {
 }
 
 export function useInferenceCatalog() {
-  const base = useApiBase()
-
   const { data, refresh, pending, error } = useFetch<InferenceCatalog>(
-    `${base}/api/settings/inference-catalog`,
+    apiUrl('/settings/inference-catalog'),
     { server: false, lazy: true },
   )
 

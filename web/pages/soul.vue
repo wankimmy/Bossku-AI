@@ -4,7 +4,6 @@ import type { SoulVersion } from '~/types/api'
 definePageMeta({ layout: 'default' })
 
 const api = useApi()
-const base = useApiBase()
 
 interface SoulData {
   content: string
@@ -12,8 +11,8 @@ interface SoulData {
   suggestions?: string[]
 }
 
-const { data: soulData, pending, refresh } = await useFetch<SoulData>(`${base}/api/soul`, { server: false })
-const { data: versionsData, refresh: refreshVersions } = useFetch<{ data: SoulVersion[] }>(`${base}/api/soul/versions`, { server: false })
+const { data: soulData, pending, refresh } = await useFetch<SoulData>(apiUrl('/soul'), { server: false })
+const { data: versionsData, refresh: refreshVersions } = useFetch<{ data: SoulVersion[] }>(apiUrl('/soul/versions'), { server: false })
 
 const suggestions = ref<string[]>([])
 watch(soulData, (v) => {

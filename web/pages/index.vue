@@ -138,9 +138,8 @@ async function syncRun() {
   chat.addUserTurn(userText)
   syncConvQuery()
   prompt.value = ''
-  const base = useApiBase()
   try {
-    const res = await $fetch<{ final_output?: string }>(`${base}/api/runs`, {
+    const res = await $fetch<{ final_output?: string }>(apiUrl('/runs'), {
       method: 'POST',
       body: { prompt: userText, conversation: prior },
     })
@@ -235,8 +234,7 @@ watchEffect(async () => {
   apiClarificationFetchedFor.value = runId
   apiClarificationLoading.value = true
   try {
-    const base = useApiBase()
-    const data = await $fetch<Record<string, unknown>>(`${base}/api/runs/${runId}/clarification`)
+    const data = await $fetch<Record<string, unknown>>(apiUrl(`/runs/${runId}/clarification`))
     if (resolvedRunId.value !== runId) return
     apiClarificationRequest.value = parseClarificationApiResponse(data, runId)
   }

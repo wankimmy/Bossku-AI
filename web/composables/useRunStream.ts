@@ -1,3 +1,4 @@
+import { apiUrl } from '~/composables/useApiBase'
 import type { ClarificationAnswer, ClarificationRequest } from '~/types/clarification'
 import { apiAuthHeaders } from '~/utils/apiAuthHeaders'
 import { isAwaitingApprovals } from '~/utils/approvalStream'
@@ -93,11 +94,10 @@ export function useRunStream() {
       activeRunId.value = null
     }
     running.value = true
-    const base = useApiBase()
     abort = new AbortController()
 
     try {
-      const res = await fetch(`${base}/api/runs/stream`, {
+      const res = await fetch(apiUrl('/runs/stream'), {
         method: 'POST',
         headers: {
           ...apiAuthHeaders(),
@@ -160,11 +160,10 @@ export function useRunStream() {
     error.value = null
     running.value = true
     activeRunId.value = runId
-    const base = useApiBase()
     abort = new AbortController()
 
     try {
-      const res = await fetch(`${base}/api/runs/${runId}/continue-approvals/stream`, {
+      const res = await fetch(apiUrl(`/runs/${runId}/continue-approvals/stream`), {
         method: 'POST',
         headers: { ...apiAuthHeaders(), Accept: 'text/event-stream' },
         signal: abort.signal,
@@ -203,11 +202,10 @@ export function useRunStream() {
     error.value = null
     running.value = true
     activeRunId.value = runId
-    const base = useApiBase()
     abort = new AbortController()
 
     try {
-      const res = await fetch(`${base}/api/runs/${runId}/continue/stream`, {
+      const res = await fetch(apiUrl(`/runs/${runId}/continue/stream`), {
         method: 'POST',
         headers: {
           ...apiAuthHeaders(),

@@ -1,12 +1,12 @@
 <script setup lang="ts">
 definePageMeta({ layout: 'default' })
-const base = useApiBase()
 const q = ref('')
 const uri = computed(() => {
-  const u = new URL(`${base}/api/skills`)
-  if (q.value) u.searchParams.set('q', q.value)
+  const path = q.value
+    ? `/skills?q=${encodeURIComponent(q.value)}`
+    : '/skills'
 
-  return u.toString()
+  return apiUrl(path)
 })
 const { data, pending } = await useFetch(() => uri.value, { server: false })
 </script>

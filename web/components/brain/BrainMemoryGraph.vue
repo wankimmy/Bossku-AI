@@ -4,9 +4,8 @@ import { filterGraph, graphStats, toCyElements } from '~/composables/useGraphVie
 
 const CytoscapeWrapper = defineAsyncComponent(() => import('~/components/graph/CytoscapeWrapper.vue'))
 
-const base = useApiBase()
 const { data, pending, refresh } = await useFetch<KnowledgeGraphResponse>(
-  `${base}/api/brain/memory-graph`,
+  apiUrl('/brain/memory-graph'),
   { server: false },
 )
 

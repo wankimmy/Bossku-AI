@@ -73,10 +73,12 @@ docker compose exec backend php artisan db:seed
 docker compose exec backend php artisan bosskuai:import-knowledge --fresh
 ```
 
-- **UI**: http://localhost:28470
-- **API**: http://localhost:28480
+- **UI**: http://localhost:28470 (browser API calls go to `/api/...` on this port; Nitro proxies to Laravel)
+- **API** (direct): http://localhost:28480 — for `curl`, OAuth callback, and debugging
 
 Host ports are set in `docker-compose.yml` (defaults `28470` / `28480` / `28432` / `28379`) so they do not clash with other apps on `3000`, `8000`, `5432`, or `6379`. Override via repo-root `.env`: `BOSSKU_PORT_WEB`, `BOSSKU_PORT_API`, etc.
+
+To call the API from another origin (split-host UI), set `NUXT_PUBLIC_API_BASE=http://localhost:28480` on the frontend service and ensure `CORS_ORIGINS` matches your UI origin in `app/.env`.
 
 #### Frontend (production build only)
 
@@ -86,7 +88,7 @@ Docker serves a **production Nuxt build** (`npm run build` + Nitro server), not 
 - **After you change UI code**:
 
 ```bash
-docker compose exec frontend npm run build
+docker compose exec -e NUXT_API_PROXY_TARGET=http://nginx/api/** -e NUXT_PUBLIC_API_BASE= frontend npm run build
 docker compose restart frontend
 ```
 

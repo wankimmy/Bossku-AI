@@ -4,10 +4,9 @@ import type { WorkspaceGraphResponse } from '~/types/api'
 definePageMeta({ layout: 'graph' })
 
 const api = useApi()
-const base = useApiBase()
 
 const { data: graphData, pending, refresh } = await useFetch<WorkspaceGraphResponse>(
-  `${base}/api/knowledge-graph`,
+  apiUrl('/knowledge-graph'),
   { server: false },
 )
 

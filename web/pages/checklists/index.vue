@@ -1,7 +1,6 @@
 <script setup lang="ts">
 definePageMeta({ layout: 'default' })
-const base = useApiBase()
-const { data, pending } = await useFetch(`${base}/api/checklists`, { server: false })
+const { data, pending } = await useFetch(apiUrl('/checklists'), { server: false })
 </script>
 
 <template>

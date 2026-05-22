@@ -4,10 +4,9 @@ import type { Approval, UsageEvent, FeedbackItem } from '~/types/api'
 definePageMeta({ layout: 'default' })
 
 const route = useRoute()
-const base = useApiBase()
 const api = useApi()
 
-const { data, pending } = await useFetch<Record<string, unknown>>(() => `${base}/api/runs/${route.params.id}`, { server: false })
+const { data, pending } = await useFetch<Record<string, unknown>>(() => apiUrl(`/runs/${route.params.id}`), { server: false })
 
 type Tab =
   | 'overview'

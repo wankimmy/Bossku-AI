@@ -4,28 +4,26 @@ import { normalizeBrainData } from '~/composables/useBrainStats'
 
 definePageMeta({ layout: 'default' })
 
-const base = useApiBase()
-
 type Tab = 'overview' | 'memory' | 'learning' | 'candidates' | 'feedback' | 'conflicts'
 const activeTab = ref<Tab>('overview')
 
-const { data: rawBrain } = await useFetch<Record<string, unknown>>(`${base}/api/brain`, { server: false })
+const { data: rawBrain } = await useFetch<Record<string, unknown>>(apiUrl('/brain'), { server: false })
 const brainData = computed(() => normalizeBrainData(rawBrain.value as Parameters<typeof normalizeBrainData>[0]))
 
 const { data: learningData, refresh: refreshLearning } = await useFetch<{ data: LearningEvent[] }>(
-  `${base}/api/learning?status=pending`,
+  apiUrl('/learning?status=pending'),
   { server: false, immediate: false },
 )
 const learningEvents = computed(() => learningData.value?.data ?? [])
 
 const { data: candidatesData, refresh: refreshCandidates } = await useFetch<{ data: SkillCandidate[] }>(
-  `${base}/api/skill-candidates?status=pending`,
+  apiUrl('/skill-candidates?status=pending'),
   { server: false, immediate: false },
 )
 const candidates = computed(() => candidatesData.value?.data ?? [])
 
 const { data: graphData, pending: graphPending, refresh: refreshGraph } = await useFetch(
-  `${base}/api/knowledge-graph`,
+  apiUrl('/knowledge-graph'),
   { server: false, immediate: false },
 )
 const graphFetched = ref(false)

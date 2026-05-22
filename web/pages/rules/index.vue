@@ -1,11 +1,10 @@
 <script setup lang="ts">
 definePageMeta({ layout: 'default' })
-const base = useApiBase()
 const editing = ref<Record<string, string>>({})
 
 const { data, pending, refresh } = await useFetch<{
   data: Array<{ id: string; name: string; rule_text: string; scope: string; priority: number }>
-}>(`${base}/api/rules`, { server: false })
+}>(apiUrl('/rules'), { server: false })
 
 watch(() => data.value?.data, (rows) => {
   if (!rows) return
@@ -16,7 +15,7 @@ watch(() => data.value?.data, (rows) => {
 })
 
 async function save(id: string) {
-  await $fetch(`${base}/api/rules/${id}`, {
+  await $fetch(apiUrl(`/rules/${id}`), {
     method: 'PATCH',
     body: { rule_text: editing.value[id] },
   })
