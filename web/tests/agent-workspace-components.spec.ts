@@ -108,6 +108,7 @@ describe('agent workspace components', () => {
           auditResult: 'pass_with_notes',
           remainingRisks: [{ issue: 'Full suite not run', severity: 'medium' }],
           nextStep: 'Run full suite',
+          nextPrompt: 'Run php artisan test for app/Foo.php and report any failures.',
         },
       },
       global: {
@@ -119,5 +120,7 @@ describe('agent workspace components', () => {
     expect(audit.text()).toContain('Add coverage')
     expect(final.text()).toContain('Safe to merge')
     expect(final.text()).toContain('Run full suite')
+    expect(final.text()).toContain('Run php artisan test for app/Foo.php')
+    expect(final.find('[data-testid="final-next-prompt-copy"]').exists()).toBe(true)
   })
 })

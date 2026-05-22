@@ -241,6 +241,7 @@ function parseFinalResult(
     nextStep: readMarkdownSection(raw, 'Next recommended step'),
     raw,
   }
+  result.nextPrompt = readMarkdownSection(raw, 'Next prompt') ?? result.nextStep
   if (result.filesChanged.length === 0) {
     result.filesChanged = files.map(file => file.path)
   }

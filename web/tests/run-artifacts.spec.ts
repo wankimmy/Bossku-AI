@@ -121,6 +121,45 @@ describe('useRunArtifacts', () => {
     expect(normalized.routingSummary.fastModel).toBe('kimi-k2.6:cloud')
   })
 
+  it('parses next prompt section from final output', () => {
+    const normalized = useRunArtifacts([
+      {
+        type: 'run_completed',
+        agent: 'final-reviewer',
+        status: 'success',
+        output: [
+          '[BOSSKUAI]',
+          '## Status',
+          'Completed',
+          '## Next recommended step',
+          'Run the relevant test suite before merge.',
+          '## Next prompt',
+          'Read and verify the changes in hello-world.txt. Confirm each file matches the intended outcome, then run the project test suite and report pass/fail with any errors.',
+        ].join('\n'),
+      },
+    ])
+
+    expect(normalized.finalResult.nextStep).toBe('Run the relevant test suite before merge.')
+    expect(normalized.finalResult.nextPrompt).toContain('hello-world.txt')
+    expect(normalized.finalResult.nextPrompt).toContain('test suite')
+  })
+
+  it('falls back next prompt to next step when section missing', () => {
+    const normalized = useRunArtifacts([
+      {
+        type: 'run_completed',
+        agent: 'final-reviewer',
+        status: 'success',
+        output: [
+          '## Next recommended step',
+          'Run full suite locally',
+        ].join('\n'),
+      },
+    ])
+
+    expect(normalized.finalResult.nextPrompt).toBe('Run full suite locally')
+  })
+
   it('parses JSON remaining risks from final output', () => {
     const normalized = useRunArtifacts([
       {

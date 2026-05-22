@@ -117,6 +117,7 @@ export interface FinalResult {
   auditResult?: string
   remainingRisks: RiskItem[]
   nextStep?: string
+  nextPrompt?: string
   raw?: string
 }
 

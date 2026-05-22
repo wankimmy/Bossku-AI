@@ -1175,6 +1175,15 @@ class OrchestratorService
             ));
         }
 
+        $nextPrompt = $this->buildNextPrompt(
+            $files,
+            $commandOutcome,
+            $executedCommands,
+            $proposedCommands,
+            $nextStep,
+            $lastFinal,
+        );
+
         $lines = [
             '[BOSSKUAI]',
             'Skill: '.(string) ($modelRoute['skill'] ?? 'general'),
@@ -1210,15 +1219,105 @@ class OrchestratorService
             '',
             '## Next recommended step',
             $nextStep,
+            '',
+            '## Next prompt',
+            $nextPrompt,
         ];
 
         return implode("\n", $lines);
     }
 
     /**
-     * @param  array<string, mixed>  $execResult
-     * @return array<string, mixed>
+     * Paste-ready follow-up prompt for the user to send in the next Bossku run.
+     *
+     * @param  list<string>  $files
+     * @param  array{executed_lines: list<string>, proposed_lines: list<string>, failed_commands: list<string>, git_restore_failed: bool, summary_text: string}  $commandOutcome
+     * @param  list<string>  $executedCommandLines
+     * @param  list<string>  $proposedCommandLines
+     * @param  array<string, mixed>|null  $lastFinal
      */
+    protected function buildNextPrompt(
+        array $files,
+        array $commandOutcome,
+        array $executedCommandLines,
+        array $proposedCommandLines,
+        string $nextStep,
+        ?array $lastFinal,
+    ): string {
+        if ($lastFinal !== null) {
+            $actions = is_array($lastFinal['required_actions'] ?? null) ? $lastFinal['required_actions'] : [];
+            foreach ($actions as $action) {
+                $line = trim(StringCoercion::toString($action));
+                if ($line !== '') {
+                    return $line;
+                }
+            }
+        }
+
+        if (($commandOutcome['git_restore_failed'] ?? false) === true) {
+            $failed = is_array($commandOutcome['failed_commands'] ?? null) ? $commandOutcome['failed_commands'] : [];
+            $cmds = array_values(array_filter(array_map(
+                static fn ($cmd) => trim(StringCoercion::toString($cmd)),
+                $failed,
+            )));
+            if ($cmds !== []) {
+                return 'In the active project, run:'."\n".implode("\n", $cmds);
+            }
+        }
+
+        if ($executedCommandLines === [] && $proposedCommandLines !== []) {
+            $cmds = $this->stripCommandBulletLines($proposedCommandLines);
+            if ($cmds !== []) {
+                return "Run these commands in the active project root:\n".implode("\n", $cmds);
+            }
+        }
+
+        if ($files !== [] && $executedCommandLines === []) {
+            $listed = implode(', ', array_slice($files, 0, 5));
+            $suffix = count($files) > 5 ? ' (and others)' : '';
+
+            return 'Read and verify the changes in '.$listed.$suffix
+                .'. Confirm each file matches the intended outcome, then run the project test suite and report pass/fail with any errors.';
+        }
+
+        $normalized = strtolower(trim($nextStep));
+        if (str_contains($normalized, 'test suite') || str_contains($normalized, 'run the relevant test')) {
+            return 'Run the project\'s test suite for the active repo and report pass/fail with any errors.';
+        }
+        if (str_contains($normalized, 'review the changed files')) {
+            return 'Review each changed file in the active project, note anything unexpected, and run the appropriate checks before merge.';
+        }
+        if (str_contains($normalized, 'commands were proposed but not executed')) {
+            return 'Run the proposed project commands from the run summary in the active project root and report stdout/stderr.';
+        }
+        if (str_contains($normalized, 'git restore did not complete')) {
+            return $nextStep;
+        }
+
+        return $nextStep !== '' ? $nextStep : 'Continue the task in the active project and report results.';
+    }
+
+    /**
+     * @param  list<string>  $lines
+     * @return list<string>
+     */
+    protected function stripCommandBulletLines(array $lines): array
+    {
+        $out = [];
+        foreach ($lines as $line) {
+            $text = trim($line);
+            if (str_starts_with($text, '- ')) {
+                $text = substr($text, 2);
+            }
+            $text = trim($text);
+            if ($text !== '') {
+                $out[] = $text;
+            }
+        }
+
+        return $out;
+    }
+
     /**
      * @param  array<string, mixed>  $execResult
      * @return array<string, mixed>
