@@ -253,7 +253,8 @@ async function onApprovalDecided() {
   if (!runId) return
   runApprovals.shiftQueue()
   await runApprovals.fetchPending(runId)
-  if (runApprovals.pendingCount.value > 0) return
+  if (runApprovals.pending.value.length > 0) return
+  runApprovals.clear()
   continuingApprovals.value = true
   focusAgentsPanel()
   toast.info('Continuing run with your decisions…')

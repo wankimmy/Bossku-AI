@@ -1,5 +1,6 @@
+import { computed, ref } from 'vue'
 import type { Approval } from '~/types/api'
-import { hydrateApprovalsFromEvent, type ApprovalSseEvent } from '~/utils/approvalStream'
+import { hydrateApprovalsFromEvent, type ApprovalSseEvent } from '../utils/approvalStream'
 
 export interface RunApprovalsState {
   pending: Approval[]
@@ -14,9 +15,16 @@ export function useRunApprovals() {
   const ssePendingCount = ref(0)
 
   const current = computed(() => pending.value[0] ?? null)
-  const pendingCount = computed(() =>
-    pending.value.length > 0 ? pending.value.length : ssePendingCount.value,
-  )
+  const pendingCount = computed(() => {
+    if (pending.value.length > 0) {
+      return pending.value.length
+    }
+    if (stage.value === 'executor_approvals' && ssePendingCount.value > 0 && !loading.value) {
+      return ssePendingCount.value
+    }
+
+    return pending.value.length
+  })
   const awaitingApprovals = computed(
     () => stage.value === 'executor_approvals' && pendingCount.value > 0,
   )
@@ -55,6 +63,7 @@ export function useRunApprovals() {
 
   function shiftQueue() {
     pending.value = pending.value.slice(1)
+    ssePendingCount.value = pending.value.length
   }
 
   function clear() {

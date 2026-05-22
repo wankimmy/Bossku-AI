@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import type { Approval } from '~/types/api'
+import SideBySideDiffViewer from '../SideBySideDiffViewer.vue'
 
 const props = defineProps<{ approval: Approval }>()
 const emit = defineEmits<{ approve: []; reject: []; close: [] }>()
@@ -71,7 +73,17 @@ const riskCls = (r?: string) => {
             </span>
           </div>
 
-          <div v-if="approval.evidence">
+          <SideBySideDiffViewer
+            v-if="approval.operation_type === 'file_write' || approval.operation_type === 'terminal_command'"
+            class="max-h-64"
+            :path="String(approval.evidence?.path ?? '')"
+            :change-type="String(approval.evidence?.change_type ?? '')"
+            :diff="typeof approval.evidence?.diff === 'string' ? approval.evidence.diff : ''"
+            :before="String(approval.evidence?.before ?? '')"
+            :after="String(approval.evidence?.after ?? '')"
+            :command-text="approval.operation_type === 'terminal_command' ? String(approval.evidence?.command ?? '') : ''"
+          />
+          <div v-else-if="approval.evidence">
             <div class="text-xs text-zinc-500 uppercase tracking-wide mb-1">Evidence</div>
             <pre class="text-xs text-zinc-400 bg-zinc-800 border border-zinc-700 rounded p-3 overflow-x-auto max-h-32">{{ JSON.stringify(approval.evidence, null, 2) }}</pre>
           </div>

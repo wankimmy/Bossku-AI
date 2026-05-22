@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { computed, ref, watch } from 'vue'
 import type { Approval } from '~/types/api'
+import SideBySideDiffViewer from './SideBySideDiffViewer.vue'
 
 const props = defineProps<{
   open: boolean
@@ -14,16 +16,19 @@ const emit = defineEmits<{
 }>()
 
 const note = ref('')
-const api = useApi()
 const loading = ref(false)
 
 watch(() => props.approval?.id, () => {
   note.value = ''
 })
 
+const evidence = computed(() => props.approval?.evidence ?? {})
+
+const isTerminalCommand = computed(() => props.approval?.operation_type === 'terminal_command')
+
 const isDelete = computed(() => {
-  const ev = props.approval?.evidence ?? {}
-  if (props.approval?.operation_type === 'terminal_command') {
+  const ev = evidence.value
+  if (isTerminalCommand.value) {
     const cmd = String(ev.command ?? '').toLowerCase()
     return cmd.includes('restore') || cmd.includes('checkout') || cmd.includes('delete')
   }
@@ -31,13 +36,23 @@ const isDelete = computed(() => {
 })
 
 const diffText = computed(() => {
-  const ev = props.approval?.evidence ?? {}
+  const ev = evidence.value
   if (typeof ev.diff === 'string' && ev.diff.trim()) return ev.diff
-  if (props.approval?.operation_type === 'terminal_command') {
-    return String(ev.command ?? '')
-  }
   return ''
 })
+
+const commandText = computed(() => {
+  if (!isTerminalCommand.value) return ''
+  return String(evidence.value.command ?? '')
+})
+
+const showDiffViewer = computed(() =>
+  !isTerminalCommand.value && (
+    diffText.value !== ''
+    || String(evidence.value.before ?? '') !== ''
+    || String(evidence.value.after ?? '') !== ''
+  ),
+)
 
 async function doApprove() {
   if (!props.approval || loading.value) return
@@ -56,6 +71,7 @@ async function doReject() {
   if (!props.approval || loading.value) return
   loading.value = true
   try {
+    const api = useApi()
     await api.post(`/approvals/${props.approval.id}/reject`, { note: note.value || undefined })
     emit('reject', note.value)
     note.value = ''
@@ -80,17 +96,18 @@ const riskCls = (r?: string) => {
   <Teleport to="body">
     <div
       v-if="open && approval"
-      class="fixed inset-0 z-[70] flex items-center justify-center bg-black/75 p-4"
+      class="fixed inset-0 z-[70] flex items-center justify-center bg-black/75 p-3 sm:p-4"
       role="dialog"
       aria-modal="true"
       data-testid="change-approval-modal"
     >
       <div
-        class="flex w-full max-w-2xl max-h-[90vh] flex-col overflow-hidden rounded-xl border shadow-2xl"
+        class="flex h-[min(92vh,900px)] w-full max-w-[min(96vw,1400px)] flex-col overflow-hidden rounded-xl border shadow-2xl"
         :class="isDelete ? 'border-red-500/60 bg-zinc-900' : 'border-amber-500/50 bg-zinc-900'"
+        data-testid="change-approval-dialog"
         @click.stop
       >
-        <div class="shrink-0 border-b border-zinc-700 px-5 py-4">
+        <div class="shrink-0 border-b border-zinc-700 px-5 py-3">
           <div class="flex items-start gap-2">
             <span class="text-lg" :class="isDelete ? 'text-red-400' : 'text-amber-400'" aria-hidden="true">
               {{ isDelete ? '⚠' : '✎' }}
@@ -102,7 +119,7 @@ const riskCls = (r?: string) => {
               <p class="mt-0.5 text-xs text-zinc-500">
                 {{ pendingCount }} item(s) waiting · executor is paused until you decide
               </p>
-              <p v-if="approval.description" class="mt-2 text-sm text-zinc-300">
+              <p v-if="approval.description" class="mt-1.5 text-sm text-zinc-300 line-clamp-2">
                 {{ approval.description }}
               </p>
               <p v-if="approval.risk_level" class="mt-1 text-xs">
@@ -113,35 +130,46 @@ const riskCls = (r?: string) => {
           </div>
         </div>
 
-        <div class="min-h-0 flex-1 overflow-y-auto px-5 py-4 space-y-3">
-          <div v-if="approval.evidence?.why" class="text-sm text-zinc-400">
-            <span class="text-xs uppercase text-zinc-500">Why</span>
-            <p class="mt-1">{{ approval.evidence.why }}</p>
-          </div>
-          <div v-if="approval.evidence?.summary" class="text-sm text-zinc-400">
-            <span class="text-xs uppercase text-zinc-500">Summary</span>
-            <p class="mt-1">{{ approval.evidence.summary }}</p>
-          </div>
-          <div v-if="diffText">
-            <div class="text-xs uppercase text-zinc-500 mb-1">
-              {{ approval.operation_type === 'terminal_command' ? 'Command' : 'Diff' }}
+        <div class="flex min-h-0 flex-1 flex-col gap-3 px-5 py-3">
+          <div
+            v-if="evidence.why || evidence.summary"
+            class="shrink-0 space-y-2 text-sm text-zinc-400"
+          >
+            <div v-if="evidence.why">
+              <span class="text-xs uppercase text-zinc-500">Why</span>
+              <p class="mt-0.5">{{ evidence.why }}</p>
             </div>
-            <pre class="text-xs text-zinc-300 bg-zinc-950 border border-zinc-800 rounded-lg p-3 overflow-x-auto max-h-48 whitespace-pre-wrap">{{ diffText }}</pre>
+            <div v-if="evidence.summary">
+              <span class="text-xs uppercase text-zinc-500">Summary</span>
+              <p class="mt-0.5">{{ evidence.summary }}</p>
+            </div>
           </div>
-          <div>
+
+          <SideBySideDiffViewer
+            v-if="showDiffViewer || isTerminalCommand"
+            class="min-h-0 flex-1"
+            :path="String(evidence.path ?? '')"
+            :change-type="String(evidence.change_type ?? 'modified')"
+            :diff="diffText"
+            :before="String(evidence.before ?? '')"
+            :after="String(evidence.after ?? '')"
+            :command-text="commandText"
+          />
+
+          <div class="shrink-0">
             <label class="text-xs text-zinc-500 uppercase tracking-wide block mb-1">
               Comment for executor (optional)
             </label>
             <textarea
               v-model="note"
-              rows="3"
+              rows="2"
               class="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 outline-none focus:border-zinc-500"
               placeholder="e.g. Use routes/api.php instead, or skip this delete…"
             />
           </div>
         </div>
 
-        <div class="shrink-0 flex gap-3 px-5 py-4 border-t border-zinc-700">
+        <div class="shrink-0 flex gap-3 px-5 py-3 border-t border-zinc-700">
           <button
             type="button"
             class="flex-1 py-2.5 text-sm rounded-lg bg-emerald-900/70 text-emerald-300 border border-emerald-700 hover:bg-emerald-800/70 disabled:opacity-50"
