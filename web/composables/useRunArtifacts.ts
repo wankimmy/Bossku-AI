@@ -170,11 +170,75 @@ function applyRouting(
     ?? (type === 'routing_decision' ? event : undefined),
   )
   applyModelsRecord(models, routing)
+  if (type === 'agents_skipped') {
+    const skipped = asStringArray(artifacts.skipped_agents)
+    if (skipped.length > 0) {
+      routing.skippedAgents = [...new Set([...(routing.skippedAgents ?? []), ...skipped])]
+    }
+  }
+
   if (route) {
     routing.workflow = stringOrUndefined(route.workflow) ?? routing.workflow
     routing.skill = stringOrUndefined(route.skill) ?? routing.skill
     routing.riskLevel = stringOrUndefined(route.risk_level) ?? routing.riskLevel
+    const pipeline = asStringArray(artifacts.pipeline_agents ?? route.pipeline_agents)
+    const skipped = asStringArray(artifacts.skipped_agents ?? route.skipped_agents)
+    if (pipeline.length > 0) routing.pipelineAgents = pipeline
+    if (skipped.length > 0) {
+      routing.skippedAgents = [...new Set([...(routing.skippedAgents ?? []), ...skipped])]
+    }
   }
+
+  routing.pipelinePath = formatPipelinePath(
+    routing.workflow,
+    routing.pipelineAgents,
+    routing.skippedAgents,
+  )
+}
+
+function formatPipelinePath(
+  workflow?: string,
+  pipelineAgents?: string[],
+  skippedAgents?: string[],
+): string | undefined {
+  const labels = (pipelineAgents ?? []).map(agentLabel)
+  if (labels.length === 0 && workflow) {
+    labels.push(...workflowToAgentLabels(workflow))
+  }
+  if (labels.length === 0) return undefined
+
+  let path = `Route: ${labels.join(' → ')}`
+  const skipped = (skippedAgents ?? []).map(agentLabel)
+  if (skipped.length > 0) {
+    path += ` (${skipped.join(', ')} skipped)`
+  }
+
+  return path
+}
+
+function workflowToAgentLabels(workflow: string): string[] {
+  if (workflow === 'direct_answer') return ['direct answer']
+  if (workflow === 'writer_only') return ['writer']
+  if (workflow === 'orchestrator_only') return ['orchestrator']
+
+  const labels: string[] = ['orchestrator']
+  if (workflow.includes('executor')) labels.push('executor')
+  if (/_auditor(?:_|$)/.test(workflow)) labels.push('auditor')
+  if (workflow.includes('security')) labels.push('security-auditor')
+  if (workflow.includes('final_reviewer')) labels.push('final-reviewer')
+
+  return labels
+}
+
+function agentLabel(agent: string): string {
+  if (agent === 'direct_answer') return 'direct answer'
+  if (agent === 'security-auditor') return 'security-auditor'
+  return agent
+}
+
+function asStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  return value.filter((item): item is string => typeof item === 'string' && item.trim() !== '')
 }
 
 function applyModelsRecord(models: UnknownRecord | undefined, routing: RoutingSummary) {

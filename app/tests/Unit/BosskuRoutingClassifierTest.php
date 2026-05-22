@@ -88,7 +88,25 @@ class BosskuRoutingClassifierTest extends TestCase
         $this->assertSame('ui_ux', $r['task_type']);
         $this->assertSame('frontend_ui', $r['executor_profile']);
         $this->assertTrue($r['needs_executor']);
+        $this->assertFalse($r['needs_auditor']);
         $this->assertFalse($r['needs_final_reviewer']);
+    }
+
+    #[Test]
+    public function simple_file_create_skips_auditor(): void
+    {
+        $r = $this->classify('Create hello-world.txt with Hello World');
+        $this->assertSame('orchestrator_executor', $r['workflow']);
+        $this->assertTrue($r['needs_executor']);
+        $this->assertFalse($r['needs_auditor']);
+        $this->assertFalse($r['needs_security_auditor']);
+    }
+
+    #[Test]
+    public function validation_typo_skips_auditor(): void
+    {
+        $r = $this->classify('Fix Laravel validation message typo');
+        $this->assertFalse($r['needs_auditor']);
     }
 
     #[Test]

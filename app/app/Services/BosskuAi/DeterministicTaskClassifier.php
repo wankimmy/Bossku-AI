@@ -15,12 +15,12 @@ class DeterministicTaskClassifier
 
         $taskType = 'unknown';
         $skill = 'generic';
-        $workflow = 'orchestrator_executor_auditor';
-        $needsRepo = true;
+        $workflow = 'orchestrator_executor';
+        $needsRepo = false;
         $needsFileEdit = true;
         $needsTest = false;
         $needsExecutor = true;
-        $needsAuditor = true;
+        $needsAuditor = false;
         $needsSecurity = false;
         $needsFinal = false;
         $executorProfile = 'default';
@@ -83,7 +83,7 @@ class DeterministicTaskClassifier
             $tokenLevel = 'low';
         }
 
-        // Questions
+        // Questions — orchestrator surveys via index; no executor unless user asks to change code
         if (preg_match('/^(explain|what is|what are|how does|why|define)\b/i', trim($prompt))
             || (str_contains($lower, 'policy') && str_contains($lower, 'gate') && str_contains($lower, 'vs'))) {
             $taskType = 'question';
@@ -91,15 +91,40 @@ class DeterministicTaskClassifier
             if (! str_contains($lower, 'laravel') && str_contains($lower, 'react')) {
                 $skill = 'react';
             }
-            $workflow = 'direct_answer';
             $needsRepo = str_contains($lower, 'repo') || str_contains($lower, 'my project') || str_contains($lower, 'this codebase');
+            if ($needsRepo && ! preg_match('/\b(change|fix|update|implement|add|create|modify)\b/i', $lower)) {
+                $workflow = 'orchestrator_only';
+                $memoryMode = 'read_only';
+            }
+            else {
+                $workflow = 'direct_answer';
+                $memoryMode = $needsRepo ? 'read_only' : 'none';
+            }
             $needsFileEdit = false;
             $needsExecutor = false;
             $needsAuditor = false;
             $needsTest = false;
             $executorProfile = 'none';
-            $memoryMode = $needsRepo ? 'read_only' : 'none';
             $tokenLevel = 'low';
+        }
+
+        // Simple implementation (create/fix/update) — executor only, no mandatory audit
+        if (
+            ! RepoTaskDetector::requiresRepositoryAccess($prompt)
+            && preg_match('/\b(create|add|write|implement|fix|update|refactor|modify|patch)\b/i', $lower)
+            && ! preg_match('/\b(audit|review|scan|inspect|analyse|analyze)\b/i', $lower)
+            && ! in_array($workflow, ['direct_answer', 'writer_only', 'orchestrator_only'], true)
+        ) {
+            $taskType = str_contains($lower, 'fix') || str_contains($lower, 'bug') ? 'bug_fix' : 'code_edit';
+            $workflow = 'orchestrator_executor';
+            $needsRepo = true;
+            $needsFileEdit = true;
+            $needsExecutor = true;
+            $needsAuditor = false;
+            $needsSecurity = false;
+            $needsFinal = false;
+            $needsTest = str_contains($lower, 'test') || str_contains($lower, 'phpunit') || str_contains($lower, 'pest');
+            $memoryMode = 'read_and_write';
         }
 
         // Marketing / social
@@ -173,6 +198,12 @@ class DeterministicTaskClassifier
             $taskType = 'ui_ux';
             $skill = 'uiux';
             $executorProfile = 'frontend_ui';
+            if (! RepoTaskDetector::requiresRepositoryAccess($prompt)) {
+                $workflow = 'orchestrator_executor';
+                $needsAuditor = false;
+                $needsExecutor = true;
+                $needsFileEdit = true;
+            }
         }
 
         // Redis
@@ -186,7 +217,8 @@ class DeterministicTaskClassifier
             $taskType = 'bug_fix';
             $skill = 'laravel';
             $executorProfile = 'backend';
-            $workflow = 'orchestrator_executor_auditor';
+            $workflow = 'orchestrator_executor';
+            $needsAuditor = false;
             $needsFinal = false;
             $needsSecurity = false;
         }
@@ -226,13 +258,15 @@ class DeterministicTaskClassifier
             }
         } elseif ($risk === 'medium') {
             $needsFinal = false;
-            if ($taskType === 'unknown') {
-                $workflow = 'orchestrator_executor_auditor';
+            if (! WorkflowRouteHelper::workflowIncludesAuditor($workflow)
+                && ! in_array($workflow, ['direct_answer', 'writer_only', 'orchestrator_only', 'orchestrator_executor_auditor_security', 'orchestrator_executor_auditor_security_final_reviewer'], true)) {
+                $workflow = 'orchestrator_executor';
+                $needsAuditor = false;
             }
         } else {
             $needsFinal = false;
-            if ($workflow === 'orchestrator_executor_auditor' && in_array($taskType, ['question', 'marketing', 'documentation'], true)) {
-                // already set
+            if ($workflow === 'orchestrator_executor_auditor' && ! ($needsAuditor ?? false)) {
+                $workflow = 'orchestrator_executor';
             }
         }
 

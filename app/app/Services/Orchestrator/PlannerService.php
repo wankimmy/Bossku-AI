@@ -53,7 +53,12 @@ executor_profile (one of: default, frontend_ui, backend, devops, high_risk),
 suggested_tests (string[]),
 risk_notes (string[]),
 constraints (string[]),
-handoff_message (string).
+handoff_message (string),
+execution_mode ("answer_only"|"delegate_executor"|"user_must_run_commands"),
+user_commands (string[], commands the user must run locally when automation is blocked).
+You survey and plan; the executor implements edits and runs narrow tests only. Do not ask the executor to re-audit the whole repo.
+When routing.needs_executor is false, set execution_mode to answer_only and keep checklist owner orchestrator.
+When docker compose or host-only commands are required but may be unavailable in Bossku, set execution_mode to user_must_run_commands and list exact commands in user_commands.
 Each checklist step must reference concrete file paths from repo_index or preflight evidence.
 handoff_message MUST list target paths you expect the executor to touch (comma-separated paths).
 Do not invent file paths; if unknown, use empty target_file_list and set allow_broad_repo_scan true only when strictly necessary.
@@ -195,6 +200,9 @@ SYS;
         $decoded['risk_notes'] = is_array($decoded['risk_notes'] ?? null) ? $decoded['risk_notes'] : [];
         $decoded['constraints'] = is_array($decoded['constraints'] ?? null) ? $decoded['constraints'] : [];
         $decoded['handoff_message'] = StringCoercion::toString($decoded['handoff_message'] ?? null, 'Sending execution task to Executor.');
+        $defaultMode = ($modelRoute['needs_executor'] ?? true) ? 'delegate_executor' : 'answer_only';
+        $decoded['execution_mode'] = StringCoercion::toString($decoded['execution_mode'] ?? null, $defaultMode);
+        $decoded['user_commands'] = is_array($decoded['user_commands'] ?? null) ? $decoded['user_commands'] : [];
 
         return $decoded;
     }

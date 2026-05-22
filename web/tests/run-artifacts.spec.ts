@@ -121,6 +121,36 @@ describe('useRunArtifacts', () => {
     expect(normalized.routingSummary.fastModel).toBe('kimi-k2.6:cloud')
   })
 
+  it('builds pipeline path and skipped agents from routing artifacts', () => {
+    const normalized = useRunArtifacts([
+      {
+        type: 'model_router_done',
+        agent: 'router',
+        status: 'success',
+        routing: {
+          workflow: 'orchestrator_executor',
+          needs_auditor: false,
+        },
+        artifacts: {
+          routing_decision: { workflow: 'orchestrator_executor', needs_auditor: false },
+          pipeline_agents: ['orchestrator', 'executor'],
+          skipped_agents: ['auditor', 'security-auditor', 'final-reviewer'],
+        },
+      },
+      {
+        type: 'agents_skipped',
+        agent: 'orchestrator',
+        status: 'success',
+        artifacts: { skipped_agents: ['auditor'] },
+      },
+    ])
+
+    expect(normalized.routingSummary.workflow).toBe('orchestrator_executor')
+    expect(normalized.routingSummary.pipelinePath).toBe(
+      'Route: orchestrator → executor (auditor, security-auditor, final-reviewer skipped)',
+    )
+  })
+
   it('parses next prompt section from final output', () => {
     const normalized = useRunArtifacts([
       {

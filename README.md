@@ -117,15 +117,14 @@ See [`docs/installation.md`](docs/installation.md) for full setup including pgve
 
 ## Architecture
 
-BosskuAI follows a five-stage pipeline for every run:
+BosskuAI routes each prompt to a **workflow** (see [`docs/orchestration.md`](docs/orchestration.md)). Simple edits use `orchestrator_executor` (plan + code + tests, no mandatory audit). Audits and high-risk changes add auditor, security, and/or final-reviewer stages.
 
 ```
-User Prompt
-  └─► OrchestratorService  (intent, skill match, memory query, model routing)
-        └─► PlannerService  (execution plan with risk levels, step persistence)
-              └─► ExecutorService  (step-by-step execution, approval gates, SSE streaming)
-                    └─► AuditorService  (quality, security, performance, maintainability)
-                          └─► FinalReviewerService  (completion check, risk summary, next step)
+User Prompt → routing (workflow + needs_* flags)
+  └─► OrchestratorService / PlannerService  (survey, plan, optional preflight)
+        └─► ExecutorService  (when needs_executor; edits + narrow tests)
+              └─► AuditorService  (only when needs_auditor + workflow includes auditor)
+                    └─► Security / FinalReviewer  (high risk or explicit audit)
 ```
 
 After each run, the self-learning loop runs:

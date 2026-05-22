@@ -20,6 +20,34 @@ const roleModels = computed(() => ({
   fast: models.value?.router || models.value?.direct_answer || '',
 }))
 
+const pipelineAgents = computed(() => {
+  const meta = props.metadata as Record<string, unknown> | undefined
+  const fromArtifacts = meta?.pipeline_agents
+  if (Array.isArray(fromArtifacts)) return fromArtifacts.filter(item => typeof item === 'string')
+  return []
+})
+
+const skippedAgents = computed(() => {
+  const meta = props.metadata as Record<string, unknown> | undefined
+  const fromArtifacts = meta?.skipped_agents
+  if (Array.isArray(fromArtifacts)) return fromArtifacts.filter(item => typeof item === 'string')
+  return []
+})
+
+const pipelinePath = computed(() => {
+  const agents = pipelineAgents.value
+  if (agents.length > 0) {
+    let path = agents.join(' → ')
+    if (skippedAgents.value.length > 0) {
+      path += ` (${skippedAgents.value.join(', ')} skipped)`
+    }
+    return `Route: ${path}`
+  }
+  const wf = String(decision.value?.workflow ?? '')
+  if (!wf) return ''
+  return `Route: ${wf.replaceAll('_', ' → ')}`
+})
+
 const why = computed(() => {
   if (!decision.value) return 'No routing metadata on this run. Older runs may only have raw step data.'
   const parts = [
@@ -39,6 +67,13 @@ const why = computed(() => {
     <h2 class="text-base font-semibold text-zinc-900 dark:text-zinc-100">
       Model routing
     </h2>
+    <p
+      v-if="pipelinePath"
+      class="mt-2 font-mono text-xs text-zinc-600 dark:text-zinc-400"
+      data-testid="routing-pipeline-path"
+    >
+      {{ pipelinePath }}
+    </p>
     <dl class="mt-3 grid gap-3 sm:grid-cols-2">
       <div>
         <dt class="text-xs font-medium uppercase tracking-wide text-zinc-500">

@@ -12,6 +12,7 @@ use App\Support\StringCoercion;
 use App\Services\BosskuAi\BosskuResponseIndicator;
 use App\Services\BosskuAi\ContextBudgetGuard;
 use App\Services\BosskuAi\RepoTaskDetector;
+use App\Services\BosskuAi\WorkflowRouteHelper;
 use App\Services\BosskuAi\MemoryService;
 use App\Services\BosskuAi\ModelRoutingConfig;
 use App\Services\BosskuAi\PromptRouteClassifier;
@@ -128,6 +129,7 @@ class OrchestratorService
             'personas_applied' => $personasApplied,
         ]));
 
+        $skippedAgents = WorkflowRouteHelper::skippedAgentsForRoute($modelRoute);
         $this->emit($emit, $this->basePayload($run, 'model_router_done', [
             'status' => 'success',
             'agent' => 'router',
@@ -142,8 +144,21 @@ class OrchestratorService
             'artifacts' => [
                 'routing_decision' => $modelRoute,
                 'models_resolved' => $modelsResolved,
+                'pipeline_agents' => WorkflowRouteHelper::pipelineAgentsForWorkflow((string) ($modelRoute['workflow'] ?? '')),
+                'skipped_agents' => $skippedAgents,
             ],
         ]));
+        if ($skippedAgents !== []) {
+            $this->emit($emit, $this->basePayload($run, 'agents_skipped', [
+                'status' => 'success',
+                'agent' => 'orchestrator',
+                'summary' => 'Skipped for this route: '.implode(', ', $skippedAgents),
+                'artifacts' => [
+                    'skipped_agents' => $skippedAgents,
+                    'workflow' => $modelRoute['workflow'] ?? null,
+                ],
+            ]));
+        }
 
         $memoryMode = (string) ($modelRoute['memory_mode'] ?? 'read_only');
         $memPayload = [];
@@ -423,22 +438,41 @@ class OrchestratorService
         $execProfileKey = (string) ($plan['executor_profile'] ?? $modelRoute['executor_profile'] ?? 'default');
         $plan = $this->budgetGuard->narrowPlan($plan, $execProfileKey);
 
-        if (
-            RepoTaskDetector::requiresRepositoryAccess($userPrompt)
-            || ($modelRoute['needs_repo_context'] ?? false)
-        ) {
-            $workflow = 'orchestrator_executor_auditor';
+        if (RepoTaskDetector::requiresRepositoryAccess($userPrompt)) {
+            $auditMode = RepoTaskDetector::isFullRepositoryAudit($userPrompt) ? 'full' : 'repo';
+            $workflow = $auditMode === 'full'
+                ? 'orchestrator_executor_auditor_security'
+                : 'orchestrator_executor_auditor';
             $modelRoute['workflow'] = $workflow;
             $modelRoute['needs_executor'] = true;
             $modelRoute['needs_auditor'] = true;
+            $modelRoute['audit_mode'] = $auditMode;
+            if ($auditMode === 'full') {
+                $modelRoute['needs_security_auditor'] = true;
+            }
+            $workflow = (string) $modelRoute['workflow'];
         }
+
+        $plan = $this->enrichPlanWithExecutionHints($plan, $modelRoute);
 
         $mustRunExecutor = ($modelRoute['needs_executor'] ?? true)
             || ($modelRoute['needs_security_auditor'] ?? false)
             || RepoTaskDetector::requiresRepositoryAccess($userPrompt);
 
         if (($workflow === 'orchestrator_only' || ! ($modelRoute['needs_executor'] ?? true)) && ! $mustRunExecutor) {
+            $preflightReads = [];
+            if ($workflow === 'orchestrator_only' && ($modelRoute['needs_repo_context'] ?? false)) {
+                $preflightReads = $this->preflightReadTargetFiles($run, $plan, $emit, $modelRoute);
+            }
             $body = StringCoercion::toString($plan['summary'] ?? null, json_encode($plan) ?: '');
+            $survey = $this->formatPreflightSurveySummary($preflightReads);
+            if ($survey !== '') {
+                $body = trim($body."\n\n".$survey);
+            }
+            $userCmdBlock = $this->formatUserCommandsFromPlan($plan);
+            if ($userCmdBlock !== '') {
+                $body = trim($body."\n\n".$userCmdBlock);
+            }
             $indicator = BosskuResponseIndicator::line($modelRoute, array_merge($modelsResolved, ['executor' => 'skipped']));
 
             return $this->completeRun(
@@ -700,9 +734,9 @@ class OrchestratorService
         $revisionRoundsUsed = 0;
 
         $needsAuditor = ! $skipAuditor
-            && ($modelRoute['needs_auditor'] ?? true)
+            && ($modelRoute['needs_auditor'] ?? false)
             && $this->settings->auditEnabled()
-            && (str_contains($workflow, 'auditor'));
+            && WorkflowRouteHelper::workflowIncludesAuditor($workflow);
 
         if ($needsAuditor && ($execResult['needs_audit'] ?? true)) {
             $execResult = $this->ensureExecutorEvidence($run, $plan, $execResult, $userPrompt, $emit);
@@ -947,8 +981,10 @@ class OrchestratorService
             }
         }
 
-        $needsSecurityPass = ($modelRoute['needs_security_auditor'] ?? false)
-            || ($lastAudit['requires_security_audit'] ?? false);
+        $needsSecurityPass = (
+            (($modelRoute['needs_security_auditor'] ?? false) && WorkflowRouteHelper::workflowIncludesSecurityAuditor($workflow))
+            || ($lastAudit['requires_security_audit'] ?? false)
+        );
 
         if ($needsSecurityPass) {
             $execResult = $this->ensureExecutorEvidence($run, $plan, $execResult, $userPrompt, $emit);
@@ -971,7 +1007,10 @@ class OrchestratorService
             ]));
         }
 
-        if (($modelRoute['needs_final_reviewer'] ?? false) && ($modelRoute['risk_level'] ?? '') === 'high') {
+        if (
+            ($modelRoute['needs_final_reviewer'] ?? false)
+            && WorkflowRouteHelper::workflowIncludesFinalReviewer($workflow)
+        ) {
             $this->emit($emit, $this->basePayload($run, 'final_reviewer_started', [
                 'status' => 'running',
                 'agent' => 'final-reviewer',
@@ -2224,5 +2263,119 @@ class OrchestratorService
         }
 
         return 'Executor failed before producing valid JSON output. Preflight reads are included as read_previews for context only.';
+    }
+
+    /**
+     * @param  array<string, mixed>  $plan
+     * @param  array<string, mixed>  $modelRoute
+     * @return array<string, mixed>
+     */
+    protected function enrichPlanWithExecutionHints(array $plan, array $modelRoute): array
+    {
+        $commands = $this->collectPlanCommands($plan);
+        $needsDocker = $commands !== [] && $this->planCommandsNeedDocker($commands);
+
+        if ($needsDocker && ! $this->projectCommands->dockerComposeEnabled()) {
+            $plan['execution_mode'] = 'user_must_run_commands';
+            $plan['user_commands'] = $commands;
+        } elseif ($modelRoute['needs_executor'] ?? false) {
+            $plan['execution_mode'] = 'delegate_executor';
+        } else {
+            $plan['execution_mode'] = 'answer_only';
+        }
+
+        return $plan;
+    }
+
+    /**
+     * @param  array<string, mixed>  $plan
+     * @return list<string>
+     */
+    protected function collectPlanCommands(array $plan): array
+    {
+        $out = [];
+        foreach (['suggested_tests', 'user_commands', 'commands_run'] as $key) {
+            $items = is_array($plan[$key] ?? null) ? $plan[$key] : [];
+            foreach ($items as $item) {
+                if (is_string($item) && trim($item) !== '') {
+                    $out[] = trim($item);
+                }
+            }
+        }
+        foreach (is_array($plan['checklist'] ?? null) ? $plan['checklist'] : [] as $step) {
+            if (! is_array($step)) {
+                continue;
+            }
+            $cmd = $step['command'] ?? $step['test_command'] ?? null;
+            if (is_string($cmd) && trim($cmd) !== '') {
+                $out[] = trim($cmd);
+            }
+        }
+
+        return array_values(array_unique($out));
+    }
+
+    /**
+     * @param  list<string>  $commands
+     */
+    protected function planCommandsNeedDocker(array $commands): bool
+    {
+        foreach ($commands as $command) {
+            if (preg_match('/\bdocker\s+compose\b/i', $command) === 1) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $preflightReads
+     */
+    protected function formatPreflightSurveySummary(array $preflightReads): string
+    {
+        if ($preflightReads === []) {
+            return '';
+        }
+
+        $lines = ['## Repository survey (preflight)'];
+        foreach (array_slice($preflightReads, 0, 12) as $read) {
+            if (! is_array($read)) {
+                continue;
+            }
+            $path = (string) ($read['path'] ?? 'unknown');
+            if (! ($read['found'] ?? false)) {
+                $lines[] = '- `'.$path.'`: not found';
+
+                continue;
+            }
+            $preview = StringCoercion::toString($read['preview'] ?? $read['excerpt'] ?? null, '');
+            $preview = strlen($preview) > 200 ? substr($preview, 0, 200).'…' : $preview;
+            $lines[] = '- `'.$path.'`: '.($preview !== '' ? $preview : 'read ok');
+        }
+
+        return implode("\n", $lines);
+    }
+
+    /**
+     * @param  array<string, mixed>  $plan
+     */
+    protected function formatUserCommandsFromPlan(array $plan): string
+    {
+        if (($plan['execution_mode'] ?? '') !== 'user_must_run_commands') {
+            return '';
+        }
+
+        $commands = is_array($plan['user_commands'] ?? null) ? $plan['user_commands'] : $this->collectPlanCommands($plan);
+        if ($commands === []) {
+            return '';
+        }
+
+        $lines = ['## Commands to run locally', 'Docker is unavailable in this Bossku environment; run these on your machine:'];
+        foreach ($commands as $command) {
+            $lines[] = '```bash'."\n".$command."\n".'```';
+        }
+
+        return implode("\n\n", $lines);
     }
 }

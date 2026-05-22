@@ -130,6 +130,10 @@ export interface RoutingSummary {
   workflow?: string
   skill?: string
   riskLevel?: string
+  /** Human-readable pipeline, e.g. "orchestrator → executor (auditor skipped)". */
+  pipelinePath?: string
+  pipelineAgents?: string[]
+  skippedAgents?: string[]
 }
 
 export interface NormalizedRunArtifacts {

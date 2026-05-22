@@ -65,4 +65,8 @@ return [
     'max_search_matches' => (int) env('BOSSKU_MAX_SEARCH_MATCHES', 100),
     'max_glob_matches' => (int) env('BOSSKU_MAX_GLOB_MATCHES', 100),
     'max_manifest_paths' => (int) env('BOSSKU_MAX_MANIFEST_PATHS', 5000),
+    /**
+     * Documented default pipeline name. Routing heuristics (DeterministicTaskClassifier / PromptRouteClassifier) remain primary.
+     */
+    'default_workflow' => env('BOSSKU_DEFAULT_WORKFLOW', 'orchestrator_executor'),
 ];

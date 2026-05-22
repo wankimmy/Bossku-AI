@@ -98,30 +98,36 @@ class RepoTaskDetector
      */
     public static function enforceExecutorForRepo(array $route, string $prompt): array
     {
-        if (! self::requiresRepositoryAccess($prompt) && ! ($route['needs_repo_context'] ?? false)) {
+        $requiresAudit = self::requiresRepositoryAccess($prompt);
+        $needsRepoContext = (bool) ($route['needs_repo_context'] ?? false);
+
+        if (! $requiresAudit && ! $needsRepoContext) {
+            return $route;
+        }
+
+        if ($needsRepoContext) {
+            $route['needs_repo_context'] = true;
+        }
+
+        if (! $requiresAudit) {
+            // Repo context for Q&A or planning only — do not force executor or auditor.
             return $route;
         }
 
         $route['needs_repo_context'] = true;
         $route['needs_executor'] = true;
+        $route['needs_auditor'] = true;
+        $workflow = (string) ($route['workflow'] ?? 'orchestrator_executor_auditor');
+        if (in_array($workflow, ['direct_answer', 'writer_only', 'orchestrator_only'], true)) {
+            $route['workflow'] = 'orchestrator_executor_auditor';
+        }
 
-        if (self::requiresRepositoryAccess($prompt)) {
-            $route['needs_auditor'] = true;
-            $workflow = (string) ($route['workflow'] ?? 'orchestrator_executor_auditor');
-            if (in_array($workflow, ['direct_answer', 'writer_only', 'orchestrator_only'], true)) {
-                $route['workflow'] = 'orchestrator_executor_auditor';
-            }
-            if ($workflow === 'orchestrator_executor') {
-                $route['workflow'] = 'orchestrator_executor_auditor';
-            }
-
-            $route['audit_mode'] = self::isFullRepositoryAudit($prompt) ? 'full' : 'repo';
-            if ($route['audit_mode'] === 'full') {
-                $route['needs_security_auditor'] = true;
-                $wf = (string) ($route['workflow'] ?? 'orchestrator_executor_auditor');
-                if ($wf === 'orchestrator_executor_auditor') {
-                    $route['workflow'] = 'orchestrator_executor_auditor_security';
-                }
+        $route['audit_mode'] = self::isFullRepositoryAudit($prompt) ? 'full' : 'repo';
+        if ($route['audit_mode'] === 'full') {
+            $route['needs_security_auditor'] = true;
+            $wf = (string) ($route['workflow'] ?? 'orchestrator_executor_auditor');
+            if ($wf === 'orchestrator_executor_auditor' || $wf === 'orchestrator_executor') {
+                $route['workflow'] = 'orchestrator_executor_auditor_security';
             }
         }
 

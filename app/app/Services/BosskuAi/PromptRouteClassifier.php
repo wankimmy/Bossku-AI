@@ -44,7 +44,9 @@ You are BosskuAI task router. Reply ONLY with valid JSON (no markdown) keys:
 task_type (one of: question, code_generation, code_edit, bug_fix, refactor, ui_ux, backend, frontend, devops, documentation, test_generation, security, database, payment, authentication, authorization, deployment, seo, marketing, unknown),
 risk_level (low|medium|high),
 skill (one of: laravel, php, nuxt, vue, react, docker, nginx, mysql, mariadb, postgresql, redis, security, seo, uiux, devops, testing, documentation, marketing, generic),
-workflow (one of: direct_answer, writer_only, orchestrator_only, orchestrator_executor, orchestrator_executor_auditor, orchestrator_executor_auditor_security, orchestrator_executor_auditor_security_final_reviewer),
+workflow (one of: direct_answer, writer_only, orchestrator_only, orchestrator_executor, orchestrator_executor_auditor, orchestrator_executor_auditor_security, orchestrator_executor_auditor_security_final_reviewer).
+Use orchestrator_executor for typical code create/fix/update (plan + implement + tests) WITHOUT needs_auditor.
+Use orchestrator_executor_auditor only when the user asks for audit/review/scan or the change is broad and needs independent review.
 needs_repo_context (boolean),
 needs_file_edit (boolean),
 needs_test_run (boolean),
@@ -188,19 +190,28 @@ SYS;
                 $route['workflow'] = 'orchestrator_executor_auditor_security';
             }
         } else {
-            $w = (string) ($route['workflow'] ?? 'orchestrator_executor_auditor');
+            $w = (string) ($route['workflow'] ?? 'orchestrator_executor');
             if (str_contains($w, 'final_reviewer')) {
-                $w = 'orchestrator_executor_auditor';
+                $w = 'orchestrator_executor_auditor_security';
             }
-            if (str_contains($w, 'security')) {
-                $w = 'orchestrator_executor_auditor';
-            }
-            if (in_array($w, ['direct_answer', 'writer_only', 'orchestrator_only', 'orchestrator_executor'], true)) {
+            if (in_array($w, ['direct_answer', 'writer_only', 'orchestrator_only', 'orchestrator_executor', 'orchestrator_executor_auditor', 'orchestrator_executor_auditor_security', 'orchestrator_executor_auditor_security_final_reviewer'], true)) {
                 // keep short workflows from router/heuristic
             } elseif (! str_starts_with($w, 'orchestrator_')) {
-                $w = 'orchestrator_executor_auditor';
+                $w = 'orchestrator_executor';
             }
             $route['workflow'] = $w;
+
+            if (! WorkflowRouteHelper::workflowIncludesAuditor($w) && ! ($route['needs_auditor'] ?? false)) {
+                $route['needs_auditor'] = false;
+            }
+        }
+
+        if ($risk === 'medium' && ! ($route['needs_auditor'] ?? false) && ! ($route['needs_security_auditor'] ?? false)) {
+            $w = (string) ($route['workflow'] ?? '');
+            if (! in_array($w, ['direct_answer', 'writer_only', 'orchestrator_only', 'orchestrator_executor_auditor_security', 'orchestrator_executor_auditor_security_final_reviewer'], true)
+                && ! WorkflowRouteHelper::workflowIncludesAuditor($w)) {
+                $route['workflow'] = 'orchestrator_executor';
+            }
         }
 
         return $route;

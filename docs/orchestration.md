@@ -1,6 +1,22 @@
 # Orchestration Pipeline
 
-BosskuAI's run execution passes through five ordered services. Each service has a single responsibility and hands its output to the next stage. Understanding this pipeline helps you debug failed runs, tune prompts, and extend the system.
+BosskuAI's run execution passes through ordered services. The **workflow** chosen at routing time decides which agents actually run—not every prompt uses executor → auditor → final-reviewer.
+
+## Workflow matrix
+
+| Workflow | Agents that run | Typical prompt |
+|----------|----------------|------------------|
+| `direct_answer` | Fast model only | Short Q&A, smoke `test` |
+| `writer_only` | Writer | Marketing copy, docs without repo edits |
+| `orchestrator_only` | Planner + optional preflight reads | Explain codebase, survey without edits |
+| `orchestrator_executor` | Planner → executor (+ narrow tests) | Create/fix/update files (default) |
+| `orchestrator_executor_auditor` | + auditor | Repo audit/review/scan |
+| `orchestrator_executor_auditor_security` | + security auditor | Full repo audit (`audit full`) |
+| `…_final_reviewer` | + final reviewer | High-risk (auth, payment, deploy) |
+
+Routing flags (`needs_auditor`, `needs_security_auditor`, `needs_final_reviewer`) **and** the workflow string must both allow a stage. Skipped agents emit `agents_skipped` SSE with `skipped_agents` in routing artifacts.
+
+Optional env: `BOSSKU_DEFAULT_WORKFLOW=orchestrator_executor` (see `config/bossku.php`); heuristics in `DeterministicTaskClassifier` and `PromptRouteClassifier` override this per prompt.
 
 ## The Five Services
 

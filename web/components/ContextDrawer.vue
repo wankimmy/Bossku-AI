@@ -60,7 +60,7 @@ const memory = computed(() => props.contextEvents.flatMap((event) => {
             Routing reason
           </dt>
           <dd class="mt-1 text-zinc-600 dark:text-zinc-400">
-            {{ artifacts.routingSummary.workflow || 'Waiting for routing.' }}
+            {{ artifacts.routingSummary.pipelinePath || artifacts.routingSummary.workflow || 'Waiting for routing.' }}
           </dd>
         </div>
       </dl>
