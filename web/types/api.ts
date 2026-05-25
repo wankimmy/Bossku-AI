@@ -80,6 +80,7 @@ export interface LlmProvider {
   type: string
   base_url?: string
   api_key_masked?: string
+  available_models?: string[]
   is_active: boolean
   health_status: 'healthy' | 'degraded' | 'offline' | string
   last_checked_at?: string
@@ -89,8 +90,12 @@ export interface LlmProvider {
 export interface ModelRoute {
   id: string
   role: string
+  primary_provider_id?: string
   primary_model: string
+  primary_provider_name?: string
+  fallback_provider_id?: string
   fallback_model?: string
+  fallback_provider_name?: string
   provider_id?: string
   is_active?: boolean
 }

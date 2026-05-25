@@ -12,7 +12,8 @@ class RunEventFactoryTest extends TestCase
     #[Test]
     public function planner_done_payload_contains_visual_workflow_fields(): void
     {
-        $run = Run::query()->create([
+        $run = new Run([
+            'id' => '00000000-0000-0000-0000-000000000001',
             'prompt' => 'Improve controller',
             'status' => 'running',
             'metadata' => [],
@@ -58,5 +59,44 @@ class RunEventFactoryTest extends TestCase
         $this->assertSame('coding', $metadata['model_role']);
         $this->assertSame('Executor changed files.', $metadata['summary']);
         $this->assertSame('app/Foo.php', $metadata['artifacts']['files_changed'][0]['path']);
+    }
+
+    #[Test]
+    public function post_memory_eval_done_payload_reports_review_metadata(): void
+    {
+        $run = new Run([
+            'id' => '00000000-0000-0000-0000-000000000002',
+            'prompt' => 'Improve controller',
+            'status' => 'running',
+            'metadata' => [],
+        ]);
+
+        $factory = new RunEventFactory;
+
+        $payload = $factory->postMemoryEvalDone(
+            $run,
+            [
+                'score' => 0.86,
+                'verdict' => 'pass',
+                'summary' => 'Final response, proof, and memory capture are aligned.',
+                'recommendation' => 'Keep the current memory template.',
+                'dimensions' => [],
+            ],
+            'mock-evaluator',
+            42,
+            11
+        );
+
+        $this->assertSame('post_memory_eval_done', $payload['type']);
+        $this->assertSame('evaluator', $payload['agent']);
+        $this->assertSame('memory', $payload['from_agent']);
+        $this->assertSame('system', $payload['to_agent']);
+        $this->assertSame('review', $payload['model_role']);
+        $this->assertSame('mock-evaluator', $payload['model']);
+        $this->assertSame(0.86, $payload['artifacts']['evaluation']['score']);
+        $this->assertSame('pass', $payload['artifacts']['evaluation']['verdict']);
+        $this->assertSame('Keep the current memory template.', $payload['artifacts']['evaluation']['recommendation']);
+        $this->assertSame(42, $payload['latency_ms']);
+        $this->assertSame(11, $payload['token_estimate']);
     }
 }

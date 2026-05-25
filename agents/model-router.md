@@ -1,43 +1,32 @@
-# Model router (BosskuAI)
+# Model Router Agent
 
-Concrete **defaults live in**:
+Use for role/model selection and workflow routing.
 
-- Laravel / Docker MVP: [`app/config/bossku_models.php`](../app/config/bossku_models.php)
-- Workspace YAML hint file: [`ai-assistant/config/model-router.yaml`](../ai-assistant/config/model-router.yaml)
-- Cross-tool narrative: [`ai-assistant/references/always-on-model-router.md`](../ai-assistant/references/always-on-model-router.md)
+## Sources
 
-Tools (Cursor / Codex / OpenCode) cannot always switch models per message — BosskuAI **documents intent** you should follow manually when the UI allows.
+- Laravel defaults: `app/config/bossku_models.php`
+- Workspace hints: `ai-assistant/config/model-router.yaml`
+- Narrative reference: `ai-assistant/references/always-on-model-router.md`
 
-## Design goals
+## Contract
 
-1. **Orchestrator and executor must not share the primary model by default** when both phases run and both model slots are configurable.
-2. **Expensive reasoning** for planning, architecture, audit, and final review.
-3. **Cheaper / coding-oriented** executor when risk is low.
-4. **Small/local** models only for summarization, classification, formatting, lightweight memory cleanup — not auth/payment-critical paths.
-5. **Never route blindly**: note task type + risk + why (internal reasoning or orchestrator logs).
+1. Classify task type, risk, skill, workflow, memory mode, and token level.
+2. Use fast/router models for classification and summarization only.
+3. Use reasoning models for planning and final closure.
+4. Use coding models for normal implementation.
+5. Use review models for audit, security, and high-risk checks.
+6. Escalate risk for auth, billing, payments, tenant isolation, privacy, migrations, production, secrets, or destructive actions.
+7. Prefer direct answer for trivial questions to save tokens.
 
-## Target role map (authoritative naming for docs)
+## Role Map
 
-| Role | Model role | Runtime |
-|---|---|---|
-| Orchestrator | reasoning | Ollama |
-| Executor | coding | Ollama |
-| Auditor | review | Ollama |
-| Security auditor | review | Ollama |
-| Final reviewer | reasoning | Ollama |
-| Router / classify | fast | Ollama |
+| Pipeline role | Model role |
+|---|---|
+| Router | fast |
+| Orchestrator | reasoning |
+| Executor | coding |
+| Auditor | review |
+| Security auditor | review |
+| Final reviewer | reasoning |
 
-Concrete model names come from `OLLAMA_REASONING_MODEL`, `OLLAMA_CODING_MODEL`, `OLLAMA_REVIEW_MODEL`, and `OLLAMA_FAST_MODEL` when set, with older `BOSSKU_*` keys kept as compatibility aliases.
-
-## Routing table
-
-| Task type | Best model role | Recommended model line | Reason |
-|---|---|---|---|
-| Ambiguous requirement / architecture | Planner | Orchestrator primary | Fewer wrong files; cheaper rework |
-| Standard feature / refactor | Coder | Executor primary | Tokens scale with code volume |
-| Security / auth / payment review | Reviewer | Auditor primary | Strong safety reasoning |
-| Ship checklist / completeness | Reviewer | Final reviewer primary | Consolidates risks + next actions |
-| Trivial Q&A | Planner or Coder | Direct answer / smallest sufficient | Saves orchestration overhead |
-| High-risk execution | Coder (+ reviewer after) | Use high-risk Ollama coding/review route | Single wrong line is costly |
-
-Escalate executor toward the high-risk Ollama route when `bossku_models.php` high-risk triggers apply.
+Return only the route fields the caller expects. Do not add prose when JSON is requested.

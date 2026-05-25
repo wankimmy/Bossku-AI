@@ -162,6 +162,19 @@ export function formatAgentStepOutput(
     }
   }
 
+  if (agent === 'evaluator' || parsed.verdict || parsed.score !== undefined || parsed.dimensions) {
+    const score = typeof parsed.score === 'number' ? parsed.score : Number(parsed.score ?? NaN)
+    const verdict = String(parsed.verdict ?? parsed.status ?? 'completed').trim() || 'completed'
+    const percent = Number.isFinite(score) ? `${score.toFixed(2)}` : ''
+    const summary = percent
+      ? `Post-memory eval ${verdict} — ${percent}`
+      : `Post-memory eval ${verdict}`
+    return {
+      summary,
+      detail: stringOrUndefined(parsed.summary ?? parsed.recommendation ?? parsed.message),
+    }
+  }
+
   if (agent === 'auditor' && Array.isArray(parsed.findings)) {
     const count = parsed.findings.length
     const status = String(parsed.status ?? 'completed')
@@ -225,6 +238,14 @@ function summaryFromArtifacts(agent: string, artifacts?: UnknownRecord): string 
   if (agent === 'auditor' && asArray(artifacts.audit_findings).length) {
     return `Auditor found ${asArray(artifacts.audit_findings).length} item(s).`
   }
+  if (agent === 'evaluator' && asRecord(artifacts.evaluation)) {
+    const evalData = asRecord(artifacts.evaluation) ?? {}
+    const score = typeof evalData.score === 'number' ? evalData.score : Number(evalData.score ?? NaN)
+    const verdict = String(evalData.verdict ?? 'completed')
+    return Number.isFinite(score)
+      ? `Post-memory eval ${verdict} — ${score.toFixed(2)}`
+      : `Post-memory eval ${verdict}`
+  }
   if (asArray(artifacts.commands_executed).length) {
     const rows = asArray(artifacts.commands_executed)
     const ok = rows.filter(row => asRecord(row)?.ok === true).length
@@ -238,6 +259,7 @@ function inferAgentFromType(type: string): string {
   if (type.includes('executor')) return 'executor'
   if (type.includes('security')) return 'security-auditor'
   if (type.includes('auditor')) return 'auditor'
+  if (type.includes('eval')) return 'evaluator'
   if (type.includes('final')) return 'final-reviewer'
   if (type.includes('router')) return 'router'
   return 'system'

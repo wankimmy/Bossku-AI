@@ -73,6 +73,7 @@ test.describe('settings sub-pages navigation', () => {
     const pageErrors: string[] = []
     page.on('pageerror', err => pageErrors.push(String(err)))
 
+    await page.addInitScript(() => localStorage.setItem('bossku_onboarding_v1', '1'))
     await page.goto('/settings/providers', { waitUntil: 'load' })
 
     await expect(page.locator('body')).not.toBeEmpty()
@@ -83,9 +84,27 @@ test.describe('settings sub-pages navigation', () => {
     const pageErrors: string[] = []
     page.on('pageerror', err => pageErrors.push(String(err)))
 
+    await page.addInitScript(() => localStorage.setItem('bossku_onboarding_v1', '1'))
     await page.goto('/settings/model-routing', { waitUntil: 'load' })
 
     await expect(page.locator('body')).not.toBeEmpty()
+    await page.getByRole('button', { name: /\+ Add Route/i }).click()
+    await page.waitForTimeout(1000)
+    await expect(page.getByRole('heading', { name: 'New Route' })).toBeVisible()
+    await expect(page.locator('form select')).toHaveCount(4, { timeout: 10_000 })
+    expect(pageErrors).toEqual([])
+  })
+
+  test('/settings/models renders dropdown-backed model selectors', async ({ page }) => {
+    const pageErrors: string[] = []
+    page.on('pageerror', err => pageErrors.push(String(err)))
+
+    await page.addInitScript(() => localStorage.setItem('bossku_onboarding_v1', '1'))
+    await page.goto('/settings/models', { waitUntil: 'load' })
+
+    await expect(page.locator('body')).not.toBeEmpty()
+    await page.waitForFunction(() => document.querySelectorAll('select').length >= 10)
+    expect(await page.locator('select').count()).toBeGreaterThanOrEqual(10)
     expect(pageErrors).toEqual([])
   })
 })

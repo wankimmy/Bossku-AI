@@ -13,7 +13,8 @@ class SoulBootstrapCommand extends Command
 
     public function handle(): int
     {
-        $path = base_path('bossku/soul.md');
+        $repoSoulPath = rtrim((string) config('bossku.repo_root'), '/\\').'/bossku/soul.md';
+        $path = is_file($repoSoulPath) ? $repoSoulPath : base_path('bossku/soul.md');
 
         if (! file_exists($path)) {
             $this->error("Soul file not found at: {$path}");

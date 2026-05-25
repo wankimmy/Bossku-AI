@@ -4,6 +4,7 @@ namespace Tests\Unit;
 
 use App\Models\BosskuAi\GraphEdge;
 use App\Models\BosskuAi\GraphNode;
+use App\Models\BosskuAi\SoulVersion;
 use App\Models\BosskuAi\Skill;
 use Database\Seeders\BosskuAiSpecSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -46,5 +47,40 @@ class BosskuAiSpecSeederTest extends TestCase
                 ->value('has_conflict')
         );
         $this->assertGreaterThanOrEqual(1, GraphEdge::where('relation', 'conflicts_with')->count());
+    }
+
+    #[Test]
+    public function seeder_preserves_existing_active_soul_version(): void
+    {
+        SoulVersion::create([
+            'version' => 'v9.9.9',
+            'content' => 'User edited soul content.',
+            'active' => true,
+            'change_summary' => 'User custom version',
+        ]);
+
+        $this->seed(BosskuAiSpecSeeder::class);
+        $this->seed(BosskuAiSpecSeeder::class);
+
+        $this->assertSame(1, SoulVersion::query()->count());
+        $this->assertSame(1, SoulVersion::query()->where('active', true)->count());
+        $this->assertDatabaseHas('bossku_ai_soul_versions', [
+            'version' => 'v9.9.9',
+            'content' => 'User edited soul content.',
+            'active' => true,
+        ]);
+    }
+
+    #[Test]
+    public function seeder_bootstraps_soul_from_repo_root(): void
+    {
+        config(['bossku.repo_root' => dirname(base_path())]);
+
+        $this->seed(BosskuAiSpecSeeder::class);
+
+        $this->assertStringContainsString(
+            'BosskuAI Soul v1.1.0',
+            (string) SoulVersion::query()->where('active', true)->value('content')
+        );
     }
 }

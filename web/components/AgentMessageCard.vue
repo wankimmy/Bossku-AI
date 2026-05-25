@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue'
 import type { AgentMessage } from '../types/bossku'
 import { themeForAgent } from '../utils/agentTheme'
 
@@ -25,6 +26,35 @@ const showPlainDetail = computed(() =>
 )
 
 const detailOpen = ref(false)
+
+const evaluation = computed(() => {
+  const arts = props.message.artifacts
+  if (!arts || typeof arts !== 'object') return null
+  const data = (arts as Record<string, unknown>).evaluation
+  if (!data || typeof data !== 'object') return null
+  return data as Record<string, unknown>
+})
+
+const evaluationScore = computed(() => {
+  const value = evaluation.value?.score
+  const score = typeof value === 'number' ? value : Number(value ?? NaN)
+  return Number.isFinite(score) ? score : null
+})
+
+const evaluationProofSummary = computed(() => {
+  const data = evaluation.value?.proof_summary
+  if (!data || typeof data !== 'object') return []
+  const record = data as Record<string, unknown>
+  return [
+    ['files read', record.files_read],
+    ['files changed', record.files_changed],
+    ['tests run', record.tests_run],
+    ['audit findings', record.audit_findings],
+    ['security pass', record.security_pass],
+  ]
+    .filter(([, value]) => value !== undefined && value !== null)
+    .map(([label, value]) => `${label}: ${value}`)
+})
 
 const proofFiles = computed((): string[] => {
   const arts = props.message.artifacts
@@ -84,6 +114,24 @@ const blockers = computed((): string[] => {
         <span v-if="message.token_estimate !== undefined" class="text-xs text-zinc-600">
           ~{{ message.token_estimate }} tok
         </span>
+        <span
+          v-if="message.from_agent"
+          class="rounded-full border border-zinc-700 bg-zinc-900/70 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-zinc-400"
+        >
+          from {{ message.from_agent }}
+        </span>
+        <span
+          v-if="message.to_agent"
+          class="rounded-full border border-zinc-700 bg-zinc-900/70 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-zinc-400"
+        >
+          to {{ message.to_agent }}
+        </span>
+        <span
+          v-if="evaluationScore !== null"
+          class="rounded-full border border-fuchsia-500/50 bg-fuchsia-950/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fuchsia-200"
+        >
+          eval {{ evaluationScore.toFixed(2) }}
+        </span>
       </div>
 
       <div
@@ -122,6 +170,39 @@ const blockers = computed((): string[] => {
               :key="path"
               class="rounded bg-zinc-800/80 px-1.5 py-0.5 font-mono text-[10px] text-zinc-400"
             >{{ path }}</span>
+          </div>
+        </div>
+
+        <div
+          v-if="evaluation"
+          class="mb-2 rounded-lg border border-fuchsia-500/30 bg-fuchsia-950/20 px-3 py-2 text-xs text-fuchsia-100"
+        >
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="font-medium">Post-memory eval</span>
+            <span
+              v-if="evaluation.verdict"
+              class="rounded-full border border-fuchsia-400/40 bg-fuchsia-900/50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fuchsia-200"
+            >
+              {{ evaluation.verdict }}
+            </span>
+            <span v-if="evaluationScore !== null" class="text-fuchsia-200/90">
+              score {{ evaluationScore.toFixed(2) }}
+            </span>
+          </div>
+          <p v-if="evaluation.summary" class="mt-1 text-fuchsia-50/90">
+            {{ evaluation.summary }}
+          </p>
+          <p v-if="evaluation.recommendation" class="mt-1 text-fuchsia-200/90">
+            {{ evaluation.recommendation }}
+          </p>
+          <div v-if="evaluationProofSummary.length" class="mt-2 flex flex-wrap gap-1">
+            <span
+              v-for="(item, i) in evaluationProofSummary"
+              :key="i"
+              class="rounded bg-fuchsia-900/40 px-1.5 py-0.5 font-mono text-[10px] text-fuchsia-200"
+            >
+              {{ item }}
+            </span>
           </div>
         </div>
 

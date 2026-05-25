@@ -37,7 +37,9 @@ class PromptRouteClassifier
             'output_tokens' => null,
         ];
 
-        if ($this->settings->routingLlmEnabled() && ($routerCfg['enabled'] ?? true)) {
+        $skipRouterLlm = $this->shouldSkipRouterLlm($base, $detRisk);
+
+        if ($this->settings->routingLlmEnabled() && ($routerCfg['enabled'] ?? true) && ! $skipRouterLlm) {
             try {
                 $system = <<<'SYS'
 You are BosskuAI task router. Reply ONLY with valid JSON (no markdown) keys:
@@ -111,6 +113,26 @@ SYS;
             'models_resolved' => $modelsResolved,
             'router_meta' => $routerMeta,
         ];
+    }
+
+    /**
+     * Short, low-risk prompts should not pay the router LLM tax when the
+     * deterministic classifier already has a decisive answer.
+     *
+     * @param  array<string, mixed>  $base
+     * @param  array{risk: string, reasons: list<string>, upgraded: bool}  $detRisk
+     */
+    protected function shouldSkipRouterLlm(array $base, array $detRisk): bool
+    {
+        if (($detRisk['risk'] ?? 'low') !== 'low') {
+            return false;
+        }
+
+        return in_array((string) ($base['workflow'] ?? ''), ['direct_answer', 'writer_only', 'orchestrator_only'], true)
+            && ! ($base['needs_executor'] ?? false)
+            && ! ($base['needs_auditor'] ?? false)
+            && ! ($base['needs_security_auditor'] ?? false)
+            && ! ($base['needs_final_reviewer'] ?? false);
     }
 
     /**

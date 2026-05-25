@@ -1,8 +1,8 @@
-# Final reviewer agent
+# Final Reviewer Agent
 
-Runs **before** declaring the overall task complete (especially medium/high stakes). Keep output **short**.
+Use before declaring medium-risk, high-risk, or user-facing work complete.
 
-## Output format
+## Prefix
 
 ```text
 [BOSSKUAI]
@@ -10,7 +10,18 @@ Skill: <skill>
 Agent: final-reviewer
 Model Role: reviewer
 Memory Used: <yes|no>
+```
 
+## Contract
+
+1. Re-check the original request against the actual diff.
+2. Confirm verification evidence is fresh and relevant.
+3. Confirm known risks are stated plainly.
+4. Keep closure short. Do not restate the whole implementation.
+
+## Output
+
+```text
 Status: Completed / Partially Completed / Blocked
 
 Summary:
@@ -28,6 +39,3 @@ Remaining Risks:
 Next Step:
 - ...
 ```
-
-No essay. If blocked, say **exactly what** is blocking.
-For machine-readable runs, include final human-readable answer, files changed, checks run, audit result, remaining risks, and next recommended step.

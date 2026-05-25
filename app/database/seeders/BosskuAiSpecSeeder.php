@@ -16,18 +16,20 @@ class BosskuAiSpecSeeder extends Seeder
     public function run(): void
     {
         // ── Soul version ──────────────────────────────────────────────────────
-        $soulPath = base_path('bossku/soul.md');
+        $repoSoulPath = rtrim((string) config('bossku.repo_root'), '/\\').'/bossku/soul.md';
+        $soulPath = is_file($repoSoulPath) ? $repoSoulPath : base_path('bossku/soul.md');
         $soulContent = file_exists($soulPath)
             ? file_get_contents($soulPath)
             : "# BosskuAI Soul v1.0.0\n\n## Identity\nBosskuAI is a self-learning developer AI orchestrator.\n";
 
-        SoulVersion::where('active', true)->update(['active' => false]);
-        SoulVersion::create([
-            'version' => 'v1.0.0',
-            'content' => $soulContent,
-            'active' => true,
-            'change_summary' => 'Initial soul from spec seeder',
-        ]);
+        if (! SoulVersion::where('active', true)->exists()) {
+            SoulVersion::create([
+                'version' => 'v1.0.0',
+                'content' => $soulContent,
+                'active' => true,
+                'change_summary' => 'Initial soul from spec seeder',
+            ]);
+        }
 
         $this->call(AgentPersonaSeeder::class);
 

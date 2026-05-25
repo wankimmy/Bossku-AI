@@ -46,10 +46,31 @@ describe('useRunArtifacts', () => {
         status: 'success',
         output: '[BOSSKUAI]\n\n## Status\nCompleted',
       },
+      {
+        type: 'post_memory_eval_done',
+        agent: 'evaluator',
+        status: 'success',
+        from_agent: 'memory',
+        to_agent: 'system',
+        model_role: 'review',
+        artifacts: {
+          evaluation: {
+            score: 0.88,
+            verdict: 'pass',
+            summary: 'Final response, proof, and memory capture are aligned.',
+            recommendation: 'Keep the current memory template.',
+            dimensions: [
+              { id: 'final_response', label: 'Final response', score: 0.9 },
+            ],
+          },
+        },
+      },
     ])
 
-    expect(normalized.agentMessages).toHaveLength(4)
+    expect(normalized.agentMessages).toHaveLength(5)
     expect(normalized.agentMessages[0].agent).toBe('orchestrator')
+    expect(normalized.agentMessages[4].agent).toBe('evaluator')
+    expect(normalized.agentMessages[4].summary).toContain('0.88')
     expect(normalized.handoffNodes.map(node => node.agent)).toEqual([
       'orchestrator',
       'executor',
@@ -149,6 +170,57 @@ describe('useRunArtifacts', () => {
     expect(normalized.routingSummary.pipelinePath).toBe(
       'Route: orchestrator → executor (auditor, security-auditor, final-reviewer skipped)',
     )
+  })
+
+  it('derives live plan checklist status from executor events', () => {
+    const running = useRunArtifacts([
+      {
+        type: 'planner_done',
+        agent: 'orchestrator',
+        status: 'success',
+        artifacts: {
+          checklist: [
+            { id: 'plan-1', title: 'Implement requested change', owner: 'executor', status: 'pending' },
+            { id: 'plan-2', title: 'Review implementation', owner: 'auditor', status: 'pending' },
+          ],
+        },
+      },
+      {
+        type: 'executor_step_started',
+        agent: 'executor',
+        status: 'running',
+      },
+    ])
+
+    expect(running.checklist[0].status).toBe('running')
+    expect(running.checklist[1].status).toBe('pending')
+
+    const completed = useRunArtifacts([
+      {
+        type: 'planner_done',
+        agent: 'orchestrator',
+        status: 'success',
+        artifacts: {
+          checklist: [
+            { id: 'plan-1', title: 'Implement requested change', owner: 'executor', status: 'pending' },
+            { id: 'plan-2', title: 'Review implementation', owner: 'auditor', status: 'pending' },
+          ],
+        },
+      },
+      {
+        type: 'executor_step_done',
+        agent: 'executor',
+        status: 'success',
+      },
+      {
+        type: 'auditor_done',
+        agent: 'auditor',
+        status: 'success',
+      },
+    ])
+
+    expect(completed.checklist[0].status).toBe('completed')
+    expect(completed.checklist[1].status).toBe('completed')
   })
 
   it('parses next prompt section from final output', () => {

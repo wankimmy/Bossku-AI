@@ -32,9 +32,11 @@ const apiClarificationFetchedFor = ref<string | null>(null)
 const toast = useToast()
 type PanelTab = 'agents' | 'plan' | 'changes' | 'audit' | 'memory'
 type MobileTab = 'chat' | PanelTab
+type ThreadTab = 'chat' | 'process'
 
 const rightPanelTab = ref<PanelTab>('agents')
 const mobileTab = ref<MobileTab>('chat')
+const threadTab = ref<ThreadTab>('chat')
 
 const panelTabs: PanelTab[] = ['agents', 'plan', 'changes', 'audit', 'memory']
 const mobileTabs: MobileTab[] = ['chat', ...panelTabs]
@@ -99,11 +101,17 @@ const runError = computed(() => {
 function recordAssistantReply(content: string) {
   const text = content.trim()
   if (!text) return
-  const runId = String(events.value.find(e => e.run_id)?.run_id ?? '')
-  if (runId && lastRecordedRunId.value === runId) return
-  lastRecordedRunId.value = runId || `local_${Date.now()}`
+  const recordKey = assistantRecordKey(text)
+  if (lastRecordedRunId.value === recordKey) return
+  lastRecordedRunId.value = recordKey
   chat.addAssistantTurn(text)
   chat.saveRunEvents(events.value)
+}
+
+function assistantRecordKey(content: string) {
+  const runId = String(events.value.find(e => e.run_id)?.run_id ?? '')
+  if (runId) return runId
+  return `conv:${chat.activeId.value ?? 'local'}:${content}`
 }
 
 watch(running, (isRunning) => {
@@ -128,6 +136,7 @@ watch(
 function focusAgentsPanel() {
   rightPanelTab.value = 'agents'
   mobileTab.value = 'agents'
+  threadTab.value = 'process'
 }
 
 async function syncRun() {
@@ -332,7 +341,8 @@ function applyConversationFromRoute() {
     events.value = chat.getRunEvents(convId)
     backfillAssistantFromEvents(events.value as Record<string, unknown>[])
     if (events.value.length > 0) focusAgentsPanel()
-    lastRecordedRunId.value = null
+    const restoredOutput = assistantOutputFromEvents(events.value as Record<string, unknown>[])
+    lastRecordedRunId.value = restoredOutput ? assistantRecordKey(restoredOutput) : null
     return
   }
   chat.clearActiveConversation()
@@ -355,6 +365,7 @@ function newSession() {
   lastRecordedRunId.value = null
   prompt.value = ''
   mobileTab.value = 'chat'
+  threadTab.value = 'chat'
   router.replace({ path: '/', query: {} })
   toast.info('New session — previous messages hidden until you open them in Conversations.')
 }
@@ -367,18 +378,6 @@ watch(runError, (val) => {
   if (val && !running.value) toast.error(val.length > 80 ? val.slice(0, 80) + '…' : val)
 })
 
-const hasChatContent = computed(() =>
-  chat.turns.value.length > 0
-  || events.value.length > 0
-  || running.value
-  || awaitingClarification.value,
-)
-
-/** Agent steps for the latest run — always below all user/AI bubbles. */
-const showAgentActivity = computed(
-  () => running.value || artifacts.value.agentMessages.length > 0,
-)
-
 const chatThreadRef = ref<HTMLElement | null>(null)
 
 function scrollChatToBottom() {
@@ -389,7 +388,7 @@ function scrollChatToBottom() {
 }
 
 watch(
-  () => [chat.turns.value.length, events.value.length, artifacts.value.agentMessages.length, running.value] as const,
+  () => [chat.turns.value.length, events.value.length, artifacts.value.agentMessages.length, running.value, threadTab.value] as const,
   () => scrollChatToBottom(),
 )
 
@@ -475,7 +474,7 @@ watch(
             </div>
           </div>
           <p v-if="hasActiveSession && chat.turns.value.length > 0" class="mt-1 text-xs text-zinc-500">
-            Your question → AI reply → agent steps (oldest at top).
+            Chat shows user/AI turns. Agent Process shows the planner, executor, audit, proof, and handoffs for this conversation.
             <button type="button" class="ml-1 text-emerald-500 hover:underline" @click="newSession">
               Start fresh
             </button>
@@ -529,46 +528,19 @@ watch(
           </div>
         </section>
 
-        <!-- Chat thread: Q/A oldest→newest, then agent activity for the current run -->
+        <!-- Conversation thread: chat and agent process are derived from the same saved run events. -->
         <section
           ref="chatThreadRef"
           class="max-h-[min(70vh,720px)] space-y-4 overflow-y-auto rounded-lg border border-zinc-800/60 bg-zinc-950/40 p-3"
           aria-live="polite"
         >
-          <div
-            v-if="!hasChatContent"
-            class="flex flex-col items-center justify-center py-16 text-center"
-          >
-            <span class="text-4xl mb-3">🤖</span>
-            <p class="text-sm text-zinc-400">Describe a task and hit <span class="font-semibold text-emerald-400">Run task</span>.</p>
-            <p class="text-xs text-zinc-600 mt-1">
-              Past threads live under
-              <NuxtLink to="/conversations" class="text-emerald-500 hover:underline">Conversations</NuxtLink>.
-              Use <span class="font-medium text-zinc-400">New session</span> to clear the page.
-            </p>
-          </div>
-
-          <ChatTurnBubble
-            v-for="turn in chat.displayTurns.value"
-            :key="turn.id"
-            :turn="turn"
+          <LandingConversationTabs
+            v-model="threadTab"
+            :turns="chat.displayTurns.value"
+            :agent-messages="artifacts.agentMessages"
+            :handoff-nodes="artifacts.handoffNodes"
+            :running="running"
           />
-
-          <div
-            v-if="showAgentActivity"
-            class="space-y-4 border-t border-zinc-800/80 pt-4"
-          >
-            <p class="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-              Agent activity (current run)
-            </p>
-            <AgentMessageCard
-              v-for="(message, idx) in artifacts.agentMessages"
-              :key="message.id"
-              :message="message"
-              :is-last="idx === artifacts.agentMessages.length - 1"
-              :is-running="running"
-            />
-          </div>
         </section>
 
         <FinalResultPanel v-if="artifacts.finalResult.raw" :result="artifacts.finalResult" />

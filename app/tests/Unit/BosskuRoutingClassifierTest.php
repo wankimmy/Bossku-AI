@@ -4,13 +4,17 @@ namespace Tests\Unit;
 
 use App\Models\BosskuAi\Setting;
 use App\Services\BosskuAi\ModelRoutingConfig;
+use App\Services\BosskuAi\ModelFallbackService;
 use App\Services\BosskuAi\PromptRouteClassifier;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 class BosskuRoutingClassifierTest extends TestCase
 {
+    use RefreshDatabase;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -67,6 +71,22 @@ class BosskuRoutingClassifierTest extends TestCase
         $this->assertSame('direct_answer', $r['workflow']);
         $this->assertFalse($r['needs_executor']);
         $this->assertFalse($r['needs_auditor']);
+    }
+
+    #[Test]
+    public function short_low_risk_prompts_skip_the_llm_router_when_heuristics_are_decisive(): void
+    {
+        Setting::setValue('routing_llm_enabled', '1');
+        config(['bossku_models.router.enabled' => true]);
+
+        $fallback = $this->createMock(ModelFallbackService::class);
+        $fallback->expects($this->never())->method('chatWithFallbacks');
+        $this->app->instance(ModelFallbackService::class, $fallback);
+
+        $r = $this->classify('test');
+
+        $this->assertSame('direct_answer', $r['workflow']);
+        $this->assertSame('low', $r['risk_level']);
     }
 
     #[Test]

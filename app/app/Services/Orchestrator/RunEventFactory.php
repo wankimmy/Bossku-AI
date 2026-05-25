@@ -98,6 +98,68 @@ class RunEventFactory
         ]);
     }
 
+    /** @return array<string, mixed> */
+    public function memorySynced(Run $run, array $learningResult, string $summary = 'Memory updater saved durable notes.'): array
+    {
+        return $this->event($run, 'memory_synced', [
+            'agent' => 'memory',
+            'from_agent' => 'memory',
+            'to_agent' => 'evaluator',
+            'status' => 'success',
+            'model_role' => 'fast',
+            'summary' => $summary,
+            'message' => 'Handing durable run notes to the eval agent.',
+            'artifacts' => [
+                'learning_result' => $learningResult,
+            ],
+        ]);
+    }
+
+    /** @return array<string, mixed> */
+    public function postMemoryEvalStarted(Run $run, string $summary = 'Post-memory evaluation is starting.'): array
+    {
+        return $this->event($run, 'post_memory_eval_started', [
+            'agent' => 'evaluator',
+            'from_agent' => 'memory',
+            'to_agent' => 'evaluator',
+            'status' => 'running',
+            'model_role' => 'review',
+            'summary' => $summary,
+            'message' => 'Evaluating the final response, proof, and memory capture.',
+        ]);
+    }
+
+    /** @return array<string, mixed> */
+    public function postMemoryEvalDone(
+        Run $run,
+        array $evaluation,
+        ?string $model,
+        int $latencyMs,
+        int $tokenEstimate,
+    ): array {
+        return $this->event($run, 'post_memory_eval_done', [
+            'agent' => 'evaluator',
+            'from_agent' => 'memory',
+            'to_agent' => 'system',
+            'status' => 'success',
+            'model_role' => 'review',
+            'model' => $model,
+            'summary' => StringCoercion::toString(
+                $evaluation['summary'] ?? null,
+                'Post-memory evaluation completed.'
+            ),
+            'message' => StringCoercion::toString($evaluation['recommendation'] ?? null, ''),
+            'artifacts' => [
+                'evaluation' => $evaluation,
+                'proof_summary' => $evaluation['proof_summary'] ?? [],
+                'memory_summary' => $evaluation['memory_summary'] ?? [],
+            ],
+            'latency_ms' => $latencyMs,
+            'token_estimate' => $tokenEstimate,
+            'output' => json_encode($evaluation) ?: '',
+        ]);
+    }
+
     /**
      * @param  array<string, mixed>  $modelRoute
      * @param  array<string, string>  $modelsResolved
@@ -316,6 +378,8 @@ class RunEventFactory
     protected function agentForType(string $type): string
     {
         return match (true) {
+            str_contains($type, 'post_memory_eval') => 'evaluator',
+            str_contains($type, 'memory_synced') => 'memory',
             str_contains($type, 'planner') => 'orchestrator',
             str_contains($type, 'executor') => 'executor',
             str_contains($type, 'security') => 'security-auditor',
@@ -333,7 +397,7 @@ class RunEventFactory
         return match ($agent) {
             'orchestrator', 'final-reviewer' => 'reasoning',
             'executor' => 'coding',
-            'auditor', 'security-auditor' => 'review',
+            'auditor', 'security-auditor', 'evaluator' => 'review',
             'router', 'memory' => 'fast',
             default => 'system',
         };

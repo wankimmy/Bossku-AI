@@ -13,10 +13,7 @@ class ModelRoutingController extends Controller
         $routes = ModelRoute::with(['primaryProvider:id,name', 'fallbackProvider:id,name'])
             ->orderBy('role')
             ->get()
-            ->map(fn ($r) => array_merge($r->toArray(), [
-                'primary_provider_name'  => $r->primaryProvider?->name,
-                'fallback_provider_name' => $r->fallbackProvider?->name,
-            ]));
+            ->map(fn (ModelRoute $r) => $this->routePayload($r));
 
         return response()->json($routes);
     }
@@ -34,9 +31,9 @@ class ModelRoutingController extends Controller
             'is_active'             => 'boolean',
         ]);
 
-        $route = ModelRoute::create($data);
+        $route = ModelRoute::create($data)->load(['primaryProvider:id,name', 'fallbackProvider:id,name']);
 
-        return response()->json($route->load(['primaryProvider:id,name', 'fallbackProvider:id,name']), 201);
+        return response()->json($this->routePayload($route), 201);
     }
 
     public function update(string $id, Request $request)
@@ -55,8 +52,9 @@ class ModelRoutingController extends Controller
         ]);
 
         $route->update($data);
+        $route->load(['primaryProvider:id,name', 'fallbackProvider:id,name']);
 
-        return response()->json($route->load(['primaryProvider:id,name', 'fallbackProvider:id,name']));
+        return response()->json($this->routePayload($route));
     }
 
     public function destroy(string $id)
@@ -64,5 +62,16 @@ class ModelRoutingController extends Controller
         ModelRoute::findOrFail($id)->delete();
 
         return response()->json(['message' => 'Route deleted.']);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function routePayload(ModelRoute $route): array
+    {
+        return array_merge($route->toArray(), [
+            'primary_provider_name' => $route->primaryProvider?->name,
+            'fallback_provider_name' => $route->fallbackProvider?->name,
+        ]);
     }
 }

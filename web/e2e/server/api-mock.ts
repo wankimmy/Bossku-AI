@@ -251,6 +251,28 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
     return
   }
 
+  if (pathname === '/api/settings/inference-catalog' && method === 'GET') {
+    json(res, {
+      ollama: [
+        { id: 'qwen3-coder-next', label: 'Qwen 3 Coder Next' },
+        { id: 'kimi-k2.6', label: 'Kimi K2.6' },
+        { id: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro' },
+        { id: 'glm-5.1', label: 'GLM 5.1' },
+      ],
+      anthropic: [
+        { id: 'claude-sonnet-4-5', label: 'Claude Sonnet 4.5' },
+        { id: 'claude-opus-4-1', label: 'Claude Opus 4.1' },
+      ],
+      codex: [
+        { id: 'gpt-5.1-codex', label: 'GPT-5.1 Codex' },
+        { id: 'gpt-5.1-codex-mini', label: 'GPT-5.1 Codex Mini' },
+      ],
+      anthropic_configured: true,
+      codex_connected: true,
+    })
+    return
+  }
+
   // ── New spec endpoints ────────────────────────────────────────────────────
 
   if (pathname === '/api/dashboard' && method === 'GET') {

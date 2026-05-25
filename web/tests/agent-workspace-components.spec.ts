@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
 import AgentHandoffFlow from '../components/AgentHandoffFlow.vue'
+import AgentMessageCard from '../components/AgentMessageCard.vue'
 import PlanChecklist from '../components/PlanChecklist.vue'
 import ChangeTrackerPanel from '../components/ChangeTrackerPanel.vue'
 import AuditFindingsPanel from '../components/AuditFindingsPanel.vue'
 import FinalResultPanel from '../components/FinalResultPanel.vue'
 import RiskItemList from '../components/RiskItemList.vue'
 import FileDiffViewer from '../components/FileDiffViewer.vue'
+import LandingConversationTabs from '../components/LandingConversationTabs.vue'
 import TestResultPanel from '../components/TestResultPanel.vue'
 import UiEmptyState from '../components/ui/EmptyState.vue'
 
@@ -41,6 +43,43 @@ describe('agent workspace components', () => {
     expect(wrapper.text()).toContain('executor')
   })
 
+  it('renders eval agent messages with proof and memory handoff metadata', () => {
+    const wrapper = mount(AgentMessageCard, {
+      props: {
+        message: {
+          id: 'eval-1',
+          agent: 'evaluator',
+          title: 'Post-memory eval',
+          status: 'completed',
+          model_role: 'review',
+          summary: 'Eval score 0.88',
+          message: 'Final response, proof, and memory capture are aligned.',
+          from_agent: 'memory',
+          to_agent: 'system',
+          artifacts: {
+            evaluation: {
+              score: 0.88,
+              verdict: 'pass',
+              recommendation: 'Keep the current memory template.',
+              proof_summary: {
+                files_read: 1,
+                files_changed: 1,
+                tests_run: 1,
+              },
+            },
+            proof_files: ['app/Http/Controllers/UserController.php'],
+          },
+        },
+      },
+    })
+
+    expect(wrapper.text()).toContain('Post-memory eval')
+    expect(wrapper.text()).toContain('0.88')
+    expect(wrapper.text()).toContain('memory')
+    expect(wrapper.text()).toContain('system')
+    expect(wrapper.text()).toContain('UserController.php')
+  })
+
   it('renders change tracking with fallback diff text', () => {
     const wrapper = mount(ChangeTrackerPanel, {
       props: {
@@ -72,6 +111,52 @@ describe('agent workspace components', () => {
     expect(wrapper.find('.text-rose-300').exists()).toBe(true)
     expect(wrapper.text()).toContain('new line')
     expect(wrapper.text()).toContain('old line')
+  })
+
+  it('switches the landing conversation between chat and agent process lanes', async () => {
+    const wrapper = mount(LandingConversationTabs, {
+      props: {
+        modelValue: 'chat',
+        turns: [
+          { id: 'turn-1', role: 'user', content: 'Fix the bug', createdAt: 1779667200000 },
+          { id: 'turn-2', role: 'assistant', content: 'The bug is fixed.', createdAt: 1779667260000 },
+        ],
+        agentMessages: [
+          {
+            id: 'agent-1',
+            agent: 'executor',
+            title: 'Executor',
+            status: 'completed',
+            summary: 'Changed one file.',
+          },
+        ],
+        handoffNodes: [
+          { agent: 'orchestrator', label: 'Orchestrator', status: 'completed' },
+          { agent: 'executor', label: 'Executor', status: 'completed' },
+        ],
+      },
+      global: {
+        stubs: {
+          NuxtLink: { template: '<a><slot /></a>' },
+          ChatTurnBubble: { props: ['turn'], template: '<article>{{ turn.role }}: {{ turn.content }}</article>' },
+          AgentHandoffFlow: { props: ['nodes'], template: '<section>workflow {{ nodes.length }}</section>' },
+          AgentMessageCard: { props: ['message'], template: '<article>{{ message.title }} {{ message.summary }}</article>' },
+        },
+      },
+    })
+
+    expect(wrapper.text()).toContain('Fix the bug')
+    expect(wrapper.text()).not.toContain('Changed one file.')
+
+    const processButton = wrapper.findAll('button').find(button => button.text().includes('Agent Process'))
+    expect(processButton).toBeTruthy()
+    await processButton!.trigger('click')
+    await wrapper.setProps({ modelValue: 'process' })
+
+    expect(wrapper.emitted('update:modelValue')?.[0]).toEqual(['process'])
+    expect(wrapper.text()).toContain('workflow 2')
+    expect(wrapper.text()).toContain('Changed one file.')
+    expect(wrapper.text()).not.toContain('Fix the bug')
   })
 
   it('renders new file with green lines from after content', () => {

@@ -16,6 +16,24 @@ import { formatToolCallSummary, formatToolCallTitle, isToolCallEvent } from '../
 import { formatAgentStepOutput, parseRiskItems } from '../utils/humanizeOutput'
 
 type UnknownRecord = Record<string, unknown>
+type EventProgress = {
+  plannerRunning: boolean
+  plannerDone: boolean
+  plannerFailed: boolean
+  executorRunning: boolean
+  executorDone: boolean
+  executorFailed: boolean
+  auditorRunning: boolean
+  auditorDone: boolean
+  auditorFailed: boolean
+  auditorNeedsRevision: boolean
+  memoryRunning: boolean
+  memoryDone: boolean
+  finalRunning: boolean
+  finalDone: boolean
+  runCompleted: boolean
+  runFailed: boolean
+}
 
 const WORKFLOW: HandoffNode[] = [
   { agent: 'orchestrator', label: 'Orchestrator', status: 'pending' },
@@ -121,11 +139,15 @@ export function useRunArtifacts(items: UnknownRecord[] = []): NormalizedRunArtif
   }
 
   inferRoutingFromMessages(messages, routingSummary)
+  const resolvedChecklist = resolveChecklistProgress(
+    dedupeChecklistLatest(checklist),
+    items,
+  )
 
   return {
     agentMessages: messages,
     handoffNodes: buildHandoff(messages),
-    checklist: dedupeBy(checklist, item => item.id || item.title),
+    checklist: resolvedChecklist,
     filesRead: dedupeBy(filesRead, item => item.path),
     filesChanged: dedupeBy(filesChanged, item => `${item.change_type}:${item.path}:${item.summary ?? ''}`),
     commandsRun,
@@ -269,7 +291,7 @@ function inferRoutingFromMessages(messages: AgentMessage[], routing: RoutingSumm
 function modelRoleForAgent(agent: string): string {
   if (agent === 'orchestrator' || agent === 'final-reviewer') return 'reasoning'
   if (agent === 'executor') return 'coding'
-  if (agent === 'auditor' || agent === 'security-auditor') return 'review'
+  if (agent === 'auditor' || agent === 'security-auditor' || agent === 'evaluator') return 'review'
   if (agent === 'router' || agent === 'memory') return 'fast'
   return 'system'
 }
@@ -283,6 +305,150 @@ function buildHandoff(messages: AgentMessage[]): HandoffNode[] {
     const message = revision ?? matches.at(-1)
     return { ...node, status: message?.status ?? node.status }
   })
+}
+
+function dedupeChecklistLatest(items: PlanChecklistItem[]): PlanChecklistItem[] {
+  const order: string[] = []
+  const byKey = new Map<string, PlanChecklistItem>()
+  for (const item of items) {
+    const key = item.id || item.title
+    if (!key) continue
+    if (!byKey.has(key)) order.push(key)
+    byKey.set(key, { ...byKey.get(key), ...item })
+  }
+  return order.map(key => byKey.get(key)).filter(Boolean) as PlanChecklistItem[]
+}
+
+function resolveChecklistProgress(
+  items: PlanChecklistItem[],
+  events: UnknownRecord[],
+): PlanChecklistItem[] {
+  if (items.length === 0) return []
+
+  const progress = eventProgress(events)
+  return items.map((item) => {
+    const status = normalizeStatus(String(item.status ?? 'pending'))
+    if (isTerminalChecklistStatus(status)) return { ...item, status }
+
+    const owner = String(item.owner ?? '').toLowerCase()
+    if (owner.includes('executor')) {
+      if (progress.executorFailed) return { ...item, status: 'failed' }
+      if (progress.executorDone || progress.runCompleted) return { ...item, status: 'completed' }
+      if (progress.executorRunning) return { ...item, status: 'running' }
+    }
+
+    if (owner.includes('auditor') || owner.includes('audit')) {
+      if (progress.auditorNeedsRevision) return { ...item, status: 'needs_revision' }
+      if (progress.auditorFailed) return { ...item, status: 'failed' }
+      if (progress.auditorDone) return { ...item, status: 'completed' }
+      if (progress.auditorRunning) return { ...item, status: 'running' }
+    }
+
+    if (owner.includes('orchestrator') || owner.includes('planner')) {
+      if (progress.plannerFailed) return { ...item, status: 'failed' }
+      if (progress.plannerDone) return { ...item, status: 'completed' }
+      if (progress.plannerRunning) return { ...item, status: 'running' }
+    }
+
+    if (owner.includes('memory')) {
+      if (progress.memoryDone) return { ...item, status: 'completed' }
+      if (progress.memoryRunning) return { ...item, status: 'running' }
+    }
+
+    if (owner.includes('final')) {
+      if (progress.runFailed) return { ...item, status: 'failed' }
+      if (progress.finalDone || progress.runCompleted) return { ...item, status: 'completed' }
+      if (progress.finalRunning) return { ...item, status: 'running' }
+    }
+
+    return { ...item, status }
+  })
+}
+
+function isTerminalChecklistStatus(status: string): boolean {
+  return ['completed', 'passed', 'failed', 'needs_revision', 'skipped'].includes(status)
+}
+
+function eventProgress(events: UnknownRecord[]): EventProgress {
+  const progress = {
+    plannerRunning: false,
+    plannerDone: false,
+    plannerFailed: false,
+    executorRunning: false,
+    executorDone: false,
+    executorFailed: false,
+    auditorRunning: false,
+    auditorDone: false,
+    auditorFailed: false,
+    auditorNeedsRevision: false,
+    memoryRunning: false,
+    memoryDone: false,
+    finalRunning: false,
+    finalDone: false,
+    runCompleted: false,
+    runFailed: false,
+  }
+
+  for (const item of events) {
+    const event = unwrapStep(item)
+    const metadata = asRecord(item.metadata) ?? {}
+    const type = String(event.type ?? item.type ?? '').toLowerCase()
+    const agent = String(event.agent ?? metadata.agent ?? inferAgent(type)).toLowerCase()
+    const status = normalizeStatus(
+      String(event.status ?? item.status ?? metadata.status ?? ''),
+    ).toLowerCase()
+    const running = status === 'running' || type.endsWith('_started')
+    const done = ['completed', 'passed'].includes(status) || type.endsWith('_done')
+    const failed = ['failed', 'error'].includes(status) || type.endsWith('_failed') || type === 'run_failed'
+
+    if (type === 'run_completed') progress.runCompleted = true
+    if (type === 'run_failed') progress.runFailed = true
+
+    applyAgentProgress(progress, agent, type, running, done, failed, status)
+  }
+
+  return progress
+}
+
+function applyAgentProgress(
+  progress: EventProgress,
+  agent: string,
+  type: string,
+  running: boolean,
+  done: boolean,
+  failed: boolean,
+  status: string,
+) {
+  const key = `${agent}:${type}`
+
+  if (key.includes('planner') || key.includes('orchestrator')) {
+    progress.plannerRunning ||= running
+    progress.plannerDone ||= done
+    progress.plannerFailed ||= failed
+  }
+
+  if (key.includes('executor')) {
+    progress.executorRunning ||= running
+    progress.executorDone ||= done
+    progress.executorFailed ||= failed
+  }
+
+  if (key.includes('auditor') || key.includes('audit')) {
+    progress.auditorRunning ||= running
+    progress.auditorDone ||= done && status !== 'needs_revision'
+    progress.auditorFailed ||= failed
+    progress.auditorNeedsRevision ||= status === 'needs_revision'
+  }
+
+  if (key.includes('memory')) {
+    progress.memoryRunning ||= running
+    progress.memoryDone ||= done
+  }
+
+  if (key.includes('final') || type === 'run_completed' || type === 'run_failed') {
+    progress.finalRunning ||= running
+    progress.finalDone ||= done || type === 'run_completed'
+  }
 }
 
 function parseFinalResult(
@@ -359,6 +525,7 @@ function inferAgent(type: string) {
   if (type.includes('executor')) return 'executor'
   if (type.includes('security')) return 'security-auditor'
   if (type.includes('auditor')) return 'auditor'
+  if (type.includes('eval')) return 'evaluator'
   if (type.includes('final')) return 'final-reviewer'
   if (type.includes('router')) return 'router'
   if (type.includes('memory')) return 'memory'
@@ -387,6 +554,14 @@ function summaryFromArtifacts(artifacts: UnknownRecord, type: string) {
   }
   if (type.includes('auditor') && asArray(artifacts.audit_findings).length) {
     return `Auditor found ${asArray(artifacts.audit_findings).length} item(s).`
+  }
+  if (type.includes('eval') && asRecord(artifacts.evaluation)) {
+    const evalData = asRecord(artifacts.evaluation) ?? {}
+    const score = typeof evalData.score === 'number' ? evalData.score : Number(evalData.score ?? NaN)
+    const verdict = String(evalData.verdict ?? 'completed')
+    return Number.isFinite(score)
+      ? `Post-memory eval ${verdict} — ${score.toFixed(2)}`
+      : `Post-memory eval ${verdict}`
   }
   if (type === 'commands_executed' && asArray(artifacts.commands_executed).length) {
     const rows = asArray(artifacts.commands_executed)

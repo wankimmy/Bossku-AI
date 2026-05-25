@@ -6,6 +6,7 @@ export type AgentName =
   | 'final-reviewer'
   | 'router'
   | 'memory'
+  | 'evaluator'
   | 'system'
 
 export type StepStatus =

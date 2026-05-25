@@ -45,6 +45,7 @@ class OrchestratorService
         protected FinalReviewerService $finalReviewer,
         protected DirectAnswerService $directAnswer,
         protected WriterService $writer,
+        protected PostMemoryEvaluationService $postMemoryEvaluation,
         protected ToolRegistry $tools,
         protected RuntimeSettings $settings,
         protected PromptRouteClassifier $promptRouteClassifier,
@@ -1736,6 +1737,51 @@ class OrchestratorService
             ]));
         }
 
+        if ($emit !== null) {
+            $this->emit($emit, $this->events->memorySynced($run, $learningResult));
+        }
+
+        $tEval = microtime(true);
+        $evaluation = $this->postMemoryEvaluation->evaluate(
+            $finalOutput,
+            $memPayload,
+            $executorOutputs[0] ?? [],
+            $lastAudit,
+            $learningResult,
+            $lastSecurity,
+            $lastFinal,
+            $modelRoute,
+            $modelsResolved,
+        );
+        $evalMs = (int) round((microtime(true) - $tEval) * 1000);
+        $evalTok = $this->estimateTokens(json_encode($evaluation) ?: '');
+        $run->update([
+            'metadata' => array_merge($run->metadata ?? [], ['post_memory_eval' => $evaluation]),
+        ]);
+        $this->logStep($run, 10000, 'post_memory_eval', $modelsResolved['evaluator'] ?? null, 'ollama', null, 'success', null, null, json_encode($evaluation), null, null, null, $evalMs, $evalTok, null, $this->events->metadata(
+            'evaluator',
+            'review',
+            StringCoercion::toString($evaluation['summary'] ?? null, 'Post-memory evaluation completed.'),
+            StringCoercion::toString($evaluation['recommendation'] ?? null, ''),
+            [
+                'evaluation' => $evaluation,
+                'proof_summary' => $evaluation['proof_summary'] ?? [],
+                'memory_summary' => $evaluation['memory_summary'] ?? [],
+            ],
+            'memory',
+            'system'
+        ));
+        if ($emit !== null) {
+            $this->emit($emit, $this->events->postMemoryEvalStarted($run));
+            $this->emit($emit, $this->events->postMemoryEvalDone(
+                $run,
+                $evaluation,
+                $modelsResolved['evaluator'] ?? null,
+                $evalMs,
+                $evalTok,
+            ));
+        }
+
         try {
             $run->refresh();
             $this->knowledgeGraph->buildForRun($run);
@@ -1775,6 +1821,7 @@ class OrchestratorService
             'playbooks_used' => collect($routerCtx['playbooks'] ?? [])->pluck('name')->all(),
             'audit' => $lastAudit,
             'routing' => $modelRoute,
+            'post_memory_eval' => $evaluation,
         ];
     }
 

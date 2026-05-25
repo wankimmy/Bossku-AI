@@ -14,6 +14,7 @@ function inferAgent(type: string): string {
   if (type.includes('executor')) return 'executor'
   if (type.includes('security')) return 'security-auditor'
   if (type.includes('auditor')) return 'auditor'
+  if (type.includes('eval')) return 'evaluator'
   if (type.includes('final')) return 'final-reviewer'
   if (type.includes('personas')) return 'router'
   if (type.includes('router') || type.includes('routing')) return 'router'
@@ -24,6 +25,7 @@ function inferAgent(type: string): string {
 function label(evt: Record<string, unknown>): string {
   if (isToolCallEvent(evt)) return formatToolCallTitle(evt)
   const type = String(evt.type ?? '')
+  if (type.includes('eval')) return 'Post-memory eval'
   if (type === 'commands_executed') return 'Git commands executed'
   if (type === 'approval_requested') return 'Approval required'
   return type.replaceAll('_', ' ').replace(/\b\w/g, c => c.toUpperCase())

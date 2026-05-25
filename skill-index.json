@@ -491,6 +491,26 @@
       ]
     },
     {
+      "id": "bosskuai-hyperframes",
+      "cluster": "design",
+      "status": "active",
+      "triggers": [
+        "hyperframes composition",
+        "hyperframes-cli",
+        "preview render",
+        "GSAP-assisted animation"
+      ],
+      "keywords": [
+        "hyperframes",
+        "composition authoring",
+        "render workflow",
+        "preview",
+        "timeline",
+        "scene blocks",
+        "animation"
+      ]
+    },
+    {
       "id": "bosskuai-i18n-l10n",
       "cluster": "design",
       "status": "active",
