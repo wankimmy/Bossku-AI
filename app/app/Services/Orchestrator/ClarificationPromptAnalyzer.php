@@ -41,6 +41,10 @@ class ClarificationPromptAnalyzer
             return false;
         }
 
+        if (self::hasDecisionFork($lower)) {
+            return false;
+        }
+
         if (self::hasConcreteImplementationTarget($trimmed, $lower)) {
             return true;
         }
@@ -69,5 +73,14 @@ class ClarificationPromptAnalyzer
         }
 
         return false;
+    }
+
+    protected static function hasDecisionFork(string $lower): bool
+    {
+        if (! preg_match('/\b(or|vs\.?|versus)\b/u', $lower)) {
+            return false;
+        }
+
+        return (bool) preg_match('/\b(create|add|write|implement|fix|update|refactor|change|remove|delete)\b/u', $lower);
     }
 }

@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\ChecklistController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\FeedbackController;
 use App\Http\Controllers\Api\KnowledgeGraphController;
+use App\Http\Controllers\Api\KnowledgeCaptureController;
 use App\Http\Controllers\Api\KnowledgeImportApiController;
 use App\Http\Controllers\Api\LearningController;
 use App\Http\Controllers\Api\LogsController;
@@ -106,6 +107,9 @@ Route::delete('/oauth/codex', [CodexOAuthController::class, 'disconnect']);
 
 // ── Knowledge import ──────────────────────────────────────────────────────────
 Route::post('/knowledge/import', KnowledgeImportApiController::class);
+Route::post('/knowledge/urls', [KnowledgeCaptureController::class, 'urls']);
+Route::post('/knowledge/import-memory', [KnowledgeCaptureController::class, 'importMemory']);
+Route::get('/knowledge/recent', [KnowledgeCaptureController::class, 'recent']);
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 Route::get('/dashboard', [DashboardController::class, 'index']);

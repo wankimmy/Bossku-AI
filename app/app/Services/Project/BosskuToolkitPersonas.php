@@ -10,9 +10,9 @@ class BosskuToolkitPersonas
     public static function sharedPreamble(): string
     {
         return <<<'TXT'
-SELF-IMPROVEMENT MODE: active repo is Bossku-AI (Laravel API in app/, Nuxt UI in web/, pipeline in OrchestratorService).
-Improve Bossku itself: routing, evidence, audit, memory, project commands, security, and public readiness.
-Use small testable diffs, cite real file evidence, and run focused checks for changed surfaces.
+SELF-IMPROVEMENT MODE: active repo is Bossku-AI.
+Keep prompts lean, preserve routing/contracts, and prefer the smallest change that solves the request.
+Read targeted evidence before editing. Ask only when the missing answer would change scope, target files, risk, or verification.
 TXT;
     }
 
@@ -21,12 +21,12 @@ TXT;
         $shared = self::sharedPreamble();
 
         return match ($role) {
-            'router' => $shared."\nRoute Bossku feature work through executor + auditor when code changes.",
-            'orchestrator', 'planner' => $shared."\nPlan with target files, tests, risk, and handoff; keep context narrow.",
-            'executor' => $shared."\nRead the affected service/controller/test before editing; report commands_run and tests_run.",
-            'auditor' => $shared."\nAudit pipeline correctness, API/UX contracts, sync-run performance, and maintainability.",
-            'security_auditor' => $shared."\nFocus on optional auth, docker.sock, workspace mounts, shell commands, and secrets.",
-            'final_reviewer' => $shared."\nClose only with fresh verification, docs impact, and remaining risks.",
+            'router' => $shared."\nClassify the task with minimal context and choose the lightest safe workflow.",
+            'orchestrator', 'planner' => $shared."\nRestate the goal, blockers, target files, tests, risks, and next handoff in compact form.",
+            'executor' => $shared."\nRead the touched files first, make the smallest safe diff, and report exact commands plus tests.",
+            'auditor' => $shared."\nCheck correctness, regressions, security, and token waste against the plan and evidence.",
+            'security_auditor' => $shared."\nInspect auth, secrets, shells, mounts, and data leakage paths only.",
+            'final_reviewer' => $shared."\nClose only after fresh verification and a clear list of remaining risks.",
             'direct_answer', 'writer', 'clarification' => $shared,
             default => $shared,
         };

@@ -30,6 +30,20 @@ const defaultSettings = load<Record<string, string>>('settings-public.json')
 
 let settingsState: Record<string, string> = { ...defaultSettings }
 let lastSettingsPut: Record<string, unknown> | null = null
+let knowledgeRecent = {
+  data: [
+    {
+      id: 'k_1',
+      human_summary: 'Mock knowledge article',
+      content: 'Mock knowledge article body stored from an imported URL.',
+      type: 'knowledge',
+      source: 'url',
+      tags: ['knowledge', 'research'],
+      is_active: true,
+      updated_at: '2026-05-25T00:00:00.000000Z',
+    },
+  ],
+}
 
 function cors(res: ServerResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*')
@@ -66,6 +80,20 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
   if (pathname === '/api/__e2e/reset' && method === 'POST') {
     settingsState = { ...defaultSettings }
     lastSettingsPut = null
+    knowledgeRecent = {
+      data: [
+        {
+          id: 'k_1',
+          human_summary: 'Mock knowledge article',
+          content: 'Mock knowledge article body stored from an imported URL.',
+          type: 'knowledge',
+          source: 'url',
+          tags: ['knowledge', 'research'],
+          is_active: true,
+          updated_at: '2026-05-25T00:00:00.000000Z',
+        },
+      ],
+    }
     json(res, { ok: true })
     return
   }
@@ -248,6 +276,73 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
 
   if (pathname === '/api/knowledge/import' && method === 'POST') {
     json(res, { imported: 1, skills: 1, playbooks: 0 })
+    return
+  }
+
+  if (pathname === '/api/knowledge/recent' && method === 'GET') {
+    json(res, knowledgeRecent)
+    return
+  }
+
+  if (pathname === '/api/knowledge/urls' && method === 'POST') {
+    knowledgeRecent = {
+      data: [
+        {
+          id: 'k_url_2',
+          human_summary: 'Mock knowledge article',
+          content: 'Mock knowledge article body stored from an imported URL.',
+          type: 'knowledge',
+          source: 'url',
+          tags: ['knowledge', 'research', 'ai'],
+          is_active: true,
+          updated_at: new Date().toISOString(),
+        },
+        ...knowledgeRecent.data,
+      ],
+    }
+    json(res, {
+      created: 1,
+      skipped: 1,
+      failed: 0,
+      items: [
+        { source: 'https://example.com/article', status: 'imported', title: 'Mock knowledge article', memory_id: 'k_url_2' },
+        { source: 'https://youtu.be/abc123XYZ09', status: 'skipped', message: 'Duplicate content.' },
+      ],
+    })
+    return
+  }
+
+  if (pathname === '/api/knowledge/import-memory' && method === 'POST') {
+    const raw = await readBody(req)
+    let source = 'codex'
+    try {
+      source = String(JSON.parse(raw || '{}').source ?? 'codex')
+    }
+    catch {
+      //
+    }
+    const title = source === 'claude' ? 'Imported Claude memory' : 'Imported Codex memory'
+    knowledgeRecent = {
+      data: [
+        {
+          id: `k_${source}_1`,
+          human_summary: title,
+          content: `${title} from local fixture memory.`,
+          type: 'knowledge',
+          source,
+          tags: ['knowledge', source],
+          is_active: true,
+          updated_at: new Date().toISOString(),
+        },
+        ...knowledgeRecent.data,
+      ],
+    }
+    json(res, {
+      created: 1,
+      skipped: 0,
+      failed: 0,
+      items: [{ source, status: 'imported', title, memory_id: `k_${source}_1` }],
+    })
     return
   }
 

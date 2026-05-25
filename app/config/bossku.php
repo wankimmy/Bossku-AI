@@ -10,6 +10,10 @@ return [
     'runs_rate_per_minute' => (int) env('BOSSKU_RUNS_RATE_PER_MINUTE', 60),
 
     'repo_root' => env('BOSSKU_REPO_PATH') ?: (dirname((string) base_path())),
+    'knowledge_import_paths' => [
+        'codex' => array_values(array_filter(explode(PATH_SEPARATOR, (string) env('BOSSKU_CODEX_MEMORY_PATHS', '')))),
+        'claude' => array_values(array_filter(explode(PATH_SEPARATOR, (string) env('BOSSKU_CLAUDE_MEMORY_PATHS', '')))),
+    ],
     'workspace_mount' => env('BOSSKU_WORKSPACE_MOUNT', '/workspace'),
     'workspace_host_prefix' => env('BOSSKU_WORKSPACE_HOST_PREFIX', ''),
     'ollama_base_url' => env('OLLAMA_BASE_URL', 'http://127.0.0.1:11434'),

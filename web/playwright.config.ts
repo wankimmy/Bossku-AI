@@ -2,6 +2,8 @@ import { defineConfig, devices } from '@playwright/test'
 
 const mockPort = 8001
 const mockBase = `http://127.0.0.1:${mockPort}`
+const webPort = Number(process.env.E2E_WEB_PORT || 3000)
+const webBase = `http://127.0.0.1:${webPort}`
 
 export default defineConfig({
   testDir: './e2e/specs',
@@ -35,8 +37,8 @@ export default defineConfig({
       env: { ...process.env, MOCK_PORT: String(mockPort) },
     },
     {
-      command: 'npx nuxi dev --port 3000 --host 127.0.0.1',
-      url: 'http://127.0.0.1:3000',
+      command: `npx nuxi dev --port ${webPort} --host 127.0.0.1`,
+      url: webBase,
       reuseExistingServer: !process.env.CI,
       timeout: 180_000,
       env: {
@@ -46,7 +48,7 @@ export default defineConfig({
     },
   ],
   use: {
-    baseURL: 'http://127.0.0.1:3000',
+    baseURL: webBase,
     trace: 'on-first-retry',
   },
 })

@@ -15,6 +15,7 @@ export const SIDEBAR_LINKS: SidebarLink[] = [
   { to: '/data', label: '🗄 Data' },
   { to: '/skills', label: '⚡ Skills' },
   { to: '/memory', label: '🧠 Memory' },
+  { to: '/knowledge', label: '📚 Knowledge' },
   { to: '/brain', label: '🔬 Brain' },
   { to: '/knowledge-graph', label: '🕸 Knowledge Graph' },
   { to: '/skills-graph', label: '📈 Skills Graph' },

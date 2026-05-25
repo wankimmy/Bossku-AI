@@ -12,6 +12,7 @@ const routes: Row[] = [
   { path: '/checklists', heading: /^\s*Checklists\s*$/ },
   { path: '/checklists/cl_1', heading: /^\s*Release QA\s*$/ },
   { path: '/memory', heading: /^\s*Memory inspector\s*$/ },
+  { path: '/knowledge', heading: /^\s*Knowledge\s*$/ },
   { path: '/runs', heading: /^\s*Run history\s*$/ },
   { path: '/runs/r_1', heading: /^\s*Run detail\s*$/ },
   { path: '/settings', heading: /^\s*Settings\s*$/ },

@@ -207,7 +207,7 @@ class ClarificationService
         $clarificationMode = $this->settings->orchestratorClarificationMode();
 
         $system = <<<'SYS'
-You are a skeptical BosskuAI orchestrator. Surface only ambiguity that would change what agents do next.
+You are a skeptical BosskuAI orchestrator. Surface only ambiguity that changes what agents do next.
 Output ONLY valid JSON (no markdown) with keys:
 summary (string, one line for the user),
 assumptions (string[], what you would do if the user says proceed),
@@ -220,10 +220,11 @@ questions (array of 0-3 items: {
   options: array of 2-3 items: { id, label, recommendation?: boolean } — short labels
 }).
 Rules:
+- Only ask when the answer would change scope, target files, risk, data policy, environment, verification, or definition of done.
 - If the prompt is unambiguous, set ready_to_proceed true and questions [].
-- Prefer ONE question for a single blocking unknown; use 2-3 only for independent unknowns (scope + environment + risk).
+- Prefer ONE question for a single blocking unknown; use 2-3 only for independent blockers that are truly independent.
 - Do not ask generic confirmation when the user already named files, routes, or a concrete fix.
-- When you ask, provide 2-3 options per question (A/B/C). Mark the safest recommended option with recommendation: true.
+- When you ask, make the question decision-oriented and concrete, then provide 2-3 options. Mark the safest recommended option with recommendation: true.
 SYS;
 
         $user = json_encode([
@@ -301,18 +302,18 @@ SYS;
         return [
             'questions' => [[
                 'id' => 'scope-1',
-                'prompt' => 'Confirm how BosskuAI should interpret your request: "'.$short.'"',
-                'why_it_matters' => 'Avoids wrong assumptions before any code or audit work runs.',
+                'prompt' => 'Which blocker should BosskuAI resolve first before acting on "'.$short.'"?',
+                'why_it_matters' => 'The answer changes scope, target files, or verification before the run starts.',
                 'options' => [
-                    ['id' => 'proceed', 'label' => 'Proceed with your best interpretation', 'recommendation' => true],
-                    ['id' => 'narrow', 'label' => 'Start narrow — minimal scope first', 'recommendation' => false],
-                    ['id' => 'explain', 'label' => 'Explain options only — no repo changes yet', 'recommendation' => false],
+                    ['id' => 'scope', 'label' => 'Scope or target files', 'recommendation' => true],
+                    ['id' => 'environment', 'label' => 'Environment or repo access', 'recommendation' => false],
+                    ['id' => 'risk', 'label' => 'Risk, policy, or verification', 'recommendation' => false],
                 ],
                 'allow_free_text' => true,
             ]],
-            'assumptions' => ['Will follow the selected scope and active project mount.'],
+            'assumptions' => ['Will follow the selected blocker and active project mount.'],
             'ready_to_proceed' => false,
-            'summary' => 'Quick confirmation before BosskuAI runs agents on your request.',
+            'summary' => 'Need one decision-changing blocker before BosskuAI runs agents on your request.',
         ];
     }
 

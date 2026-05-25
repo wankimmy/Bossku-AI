@@ -3,13 +3,17 @@
 namespace Tests\Unit;
 
 use App\Models\BosskuAi\Setting;
+use App\Services\BosskuAi\ModelFallbackService;
 use App\Services\Orchestrator\ClarificationService;
 use App\Services\Orchestrator\ExecutorStuckDetector;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 class ClarificationTest extends TestCase
 {
+    use RefreshDatabase;
+
     #[Test]
     public function executor_stuck_detector_does_not_flag_failed_without_blocker(): void
     {
@@ -59,6 +63,44 @@ class ClarificationTest extends TestCase
         $this->assertCount(1, $out['questions']);
         $this->assertSame('q1', $out['questions'][0]['id']);
         $this->assertCount(3, $out['questions'][0]['options']);
+    }
+
+    #[Test]
+    public function clarification_falls_back_to_blocker_question_for_ambiguous_prompt(): void
+    {
+        Setting::query()->delete();
+        Setting::setValue('orchestrator_clarification_mode', 'smart');
+
+        $this->mock(ModelFallbackService::class, function ($mock) {
+            $mock->shouldReceive('chatWithFallbacks')
+                ->once()
+                ->andReturn([
+                    'parsed' => [
+                        'summary' => '',
+                        'assumptions' => [],
+                        'ready_to_proceed' => false,
+                        'questions' => [],
+                    ],
+                    'model_used' => 'kimi-k2.6',
+                    'model_resolved' => 'kimi-k2.6',
+                    'fallback_used' => false,
+                ]);
+        });
+
+        $service = app(ClarificationService::class);
+        $out = $service->ask(
+            'Should I update the API or the UI for this feature?',
+            [],
+            ['workflow' => 'orchestrator_executor'],
+            'pre_execution',
+        );
+
+        $this->assertFalse($out['ready_to_proceed']);
+        $this->assertCount(1, $out['questions']);
+        $this->assertStringContainsString('Which blocker should BosskuAI resolve first', $out['questions'][0]['prompt']);
+        $this->assertNotEmpty($out['questions'][0]['why_it_matters']);
+        $this->assertCount(3, $out['questions'][0]['options']);
+        $this->assertTrue($out['questions'][0]['options'][0]['recommendation']);
     }
 
     #[Test]
