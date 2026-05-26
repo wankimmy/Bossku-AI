@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
             'bossku.api' => \App\Http\Middleware\BosskuApiAuth::class,
+            'secure.headers' => \App\Http\Middleware\SecureHeaders::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
