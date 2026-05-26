@@ -10,6 +10,8 @@ const api = useApi()
 const loading = ref(false)
 const note = ref('')
 
+const requestChangesDisabled = computed(() => loading.value || !note.value.trim())
+
 const fileReview = computed(() => {
   if (props.approval.operation_type === 'terminal_command') {
     return { blocked: false, reason: null as string | null }
@@ -45,11 +47,11 @@ async function doApprove() {
   finally { loading.value = false }
 }
 
-async function doReject() {
-  if (loading.value) return
+async function doRequestChanges() {
+  if (loading.value || !note.value.trim()) return
   loading.value = true
   try {
-    await api.post(`/approvals/${props.approval.id}/reject`, { note: note.value || undefined })
+    await api.post(`/approvals/${props.approval.id}/reject`, { note: note.value.trim() })
     emit('reject')
   }
   catch (err) {
@@ -76,24 +78,34 @@ async function doReject() {
         <p v-if="fileReview.blocked" class="mt-2 text-xs text-amber-300">
           {{ fileReview.reason }}
         </p>
-        <div class="mt-3 flex flex-wrap gap-2">
-          <button
-            type="button"
-            class="px-3 py-1.5 text-xs rounded bg-emerald-900/70 text-emerald-300 border border-emerald-700 hover:bg-emerald-800/70 disabled:opacity-50"
-            :disabled="loading || fileReview.blocked"
-            :title="fileReview.blocked ? (fileReview.reason ?? 'Change blocked') : undefined"
-            @click="doApprove"
-          >
-            {{ fileReview.blocked ? 'Approve blocked' : 'Approve' }}
-          </button>
-          <button
-            type="button"
-            class="px-3 py-1.5 text-xs rounded bg-red-900/70 text-red-300 border border-red-700 hover:bg-red-800/70 disabled:opacity-50"
-            :disabled="loading"
-            @click="doReject"
-          >
-            Reject
-          </button>
+        <div class="mt-3">
+          <textarea
+            v-model="note"
+            rows="2"
+            data-testid="code-review-instructions"
+            class="mb-2 w-full bg-zinc-900/80 border border-zinc-700 rounded px-2 py-1.5 text-xs text-zinc-100 placeholder-zinc-600"
+            placeholder="Code review instructions (required to request changes)"
+          />
+          <div class="flex flex-wrap gap-2">
+            <button
+              type="button"
+              class="px-3 py-1.5 text-xs rounded bg-emerald-900/70 text-emerald-300 border border-emerald-700 hover:bg-emerald-800/70 disabled:opacity-50"
+              :disabled="loading || fileReview.blocked"
+              :title="fileReview.blocked ? (fileReview.reason ?? 'Change blocked') : undefined"
+              @click="doApprove"
+            >
+              {{ fileReview.blocked ? 'Approve blocked' : 'Approve' }}
+            </button>
+            <button
+              type="button"
+              class="px-3 py-1.5 text-xs rounded bg-red-900/70 text-red-300 border border-red-700 hover:bg-red-800/70 disabled:opacity-50"
+              :disabled="requestChangesDisabled"
+              data-testid="request-changes-btn"
+              @click="doRequestChanges"
+            >
+              Request changes
+            </button>
+          </div>
         </div>
       </div>
     </div>

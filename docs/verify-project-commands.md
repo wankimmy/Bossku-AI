@@ -44,7 +44,7 @@ For Laravel without compose, agents may use `php artisan test` at the repo root 
 
 ## Approval flow
 
-When `BOSSKU_REQUIRE_USER_APPROVAL=true`, each file change and each `commands_run` line is shown in the **Change approval** modal before execution.
+When `BOSSKU_REQUIRE_USER_APPROVAL=true`, each file change is shown in the **Change approval** modal before it is written. Allowlisted `commands_run` entries (e.g. `php artisan test`, `git status`) run automatically unless you set `BOSSKU_REQUIRE_USER_APPROVAL_FOR_COMMANDS=true`.
 
 ## PHPUnit (Bossku-AI)
 

@@ -19,6 +19,8 @@ return [
     'ollama_base_url' => env('OLLAMA_BASE_URL', 'http://127.0.0.1:11434'),
     'ollama_api_key' => env('OLLAMA_API_KEY'),
     'max_revision_rounds' => env('BOSSKUAI_MAX_REVISION_ROUNDS', 1),
+    /** Max executor re-proposal rounds after user code-review "request changes" on approvals. */
+    'max_approval_review_rounds' => (int) env('BOSSKU_MAX_APPROVAL_REVIEW_ROUNDS', 3),
     'show_raw_json' => env('BOSSKUAI_SHOW_RAW_JSON', true),
     /**
      * When false, MemoryService skips Ollama /api/embed and LLM humanize (text fallback only).
@@ -35,6 +37,11 @@ return [
      * (with optional comment) before applying; the run pauses until all are decided.
      */
     'require_user_approval_before_apply' => env('BOSSKU_REQUIRE_USER_APPROVAL', true),
+    /**
+     * When false (default), allowlisted commands_run run immediately while file writes still use the approval modal.
+     * Only applies when require_user_approval_before_apply is true.
+     */
+    'require_user_approval_for_commands' => env('BOSSKU_REQUIRE_USER_APPROVAL_FOR_COMMANDS', false),
     /**
      * Docker only: when true, entrypoint chmods /workspace so www-data can auto-apply file writes.
      */

@@ -28,11 +28,16 @@ trait OrchestratorApprovalTrait
         $fileProposal = $this->executorApprovals->proposeFileChanges($run->id, $execResult);
         $execResult = $fileProposal['execResult'];
         $pending = $fileProposal['pending_approval_ids'];
-        $commandPending = $this->executorApprovals->proposeCommands(
-            $run->id,
-            is_array($execResult['commands_run'] ?? null) ? $execResult['commands_run'] : [],
-        );
-        $pending = array_values(array_merge($pending, $commandPending));
+
+        if ($this->executorApprovals->requireUserApprovalForCommands()) {
+            $commandPending = $this->executorApprovals->proposeCommands(
+                $run->id,
+                is_array($execResult['commands_run'] ?? null) ? $execResult['commands_run'] : [],
+            );
+            $pending = array_values(array_merge($pending, $commandPending));
+        } else {
+            $execResult = $this->applyExecutorCommands($run, $execResult, $emit);
+        }
 
         if ($pending === []) {
             return $execResult;
@@ -72,7 +77,10 @@ trait OrchestratorApprovalTrait
         }
 
         if ($this->executorApprovals->hasPendingForRun($runId)) {
-            throw new \InvalidArgumentException('Run still has pending approvals.');
+            $pendingCount = count($this->executorApprovals->pendingIdsForRun($runId));
+            throw new \InvalidArgumentException(
+                'Run still has pending approvals ('.$pendingCount.' remaining).',
+            );
         }
 
         /** @var array<string, mixed> $meta */
@@ -169,11 +177,20 @@ trait OrchestratorApprovalTrait
             $execResult['user_approval_feedback'] = $feedback;
         }
 
-        $revertOutcome = $this->runExecutorRevertForRejectedFiles($run, $execResult, $pipeline, $feedback, $emit);
-        $execResult = $revertOutcome['execResult'];
-        $pipeline = $revertOutcome['pipeline'];
-        if ($revertOutcome['paused'] !== null) {
-            return $revertOutcome['paused'];
+        $reviewOutcome = $this->runExecutorRevisionForUserCodeReview($run, $execResult, $pipeline, $feedback, $emit);
+        $execResult = $reviewOutcome['execResult'];
+        $pipeline = $reviewOutcome['pipeline'];
+        if ($reviewOutcome['paused'] !== null) {
+            return $reviewOutcome['paused'];
+        }
+
+        if ($this->executorApprovals->hasRejectedFileWritesWithoutReviewNotes($run->id)) {
+            $revertOutcome = $this->runExecutorRevertForRejectedFiles($run, $execResult, $pipeline, $feedback, $emit);
+            $execResult = $revertOutcome['execResult'];
+            $pipeline = $revertOutcome['pipeline'];
+            if ($revertOutcome['paused'] !== null) {
+                return $revertOutcome['paused'];
+            }
         }
 
         $userPrompt = (string) ($pipeline['user_prompt'] ?? $run->prompt);
@@ -477,6 +494,173 @@ trait OrchestratorApprovalTrait
             (int) ($revisionResult['latency_ms'] ?? 0),
             $revTok,
             'executor_revert_done',
+        ));
+
+        $pipeline['exec_result'] = $revisionResult;
+        $pipeline['models_resolved'] = $modelsResolved;
+
+        return ['execResult' => $revisionResult, 'pipeline' => $pipeline, 'paused' => null];
+    }
+
+    protected function approvalReviewRoundsUsed(Run $run): int
+    {
+        /** @var array<string, mixed> $meta */
+        $meta = is_array($run->metadata) ? $run->metadata : [];
+
+        return (int) ($meta['approval_review_rounds'] ?? 0);
+    }
+
+    protected function incrementApprovalReviewRounds(Run $run): void
+    {
+        /** @var array<string, mixed> $meta */
+        $meta = is_array($run->metadata) ? $run->metadata : [];
+        $meta['approval_review_rounds'] = $this->approvalReviewRoundsUsed($run) + 1;
+        $run->update(['metadata' => $meta]);
+    }
+
+    protected function canRunApprovalReviewRound(Run $run): bool
+    {
+        return $this->approvalReviewRoundsUsed($run) < $this->settings->maxApprovalReviewRounds();
+    }
+
+    /**
+     * @param  array<string, mixed>  $execResult
+     * @param  array<string, mixed>  $pipeline
+     * @return array{execResult: array<string, mixed>, pipeline: array<string, mixed>, paused: array<string, mixed>|null}
+     */
+    protected function runExecutorRevisionForUserCodeReview(
+        Run $run,
+        array $execResult,
+        array $pipeline,
+        string $feedback,
+        ?callable $emit,
+        ?string $explicitInstructions = null,
+    ): array {
+        if (! $this->canRunApprovalReviewRound($run)) {
+            return ['execResult' => $execResult, 'pipeline' => $pipeline, 'paused' => null];
+        }
+
+        $review = $explicitInstructions !== null && trim($explicitInstructions) !== ''
+            ? ['instructions' => trim($explicitInstructions), 'items' => []]
+            : $this->executorApprovals->collectCodeReviewInstructions($run->id);
+
+        if ($review['instructions'] === '') {
+            return ['execResult' => $execResult, 'pipeline' => $pipeline, 'paused' => null];
+        }
+
+        $userPrompt = (string) ($pipeline['user_prompt'] ?? $run->prompt);
+        $prompt = (string) ($pipeline['effective_prompt'] ?? $userPrompt);
+        $agentPrompt = (string) ($pipeline['agent_prompt'] ?? '');
+        /** @var array<string, mixed> $modelRoute */
+        $modelRoute = is_array($pipeline['model_route'] ?? null) ? $pipeline['model_route'] : [];
+        /** @var array<string, string> $modelsResolved */
+        $modelsResolved = is_array($pipeline['models_resolved'] ?? null) ? $pipeline['models_resolved'] : [];
+        /** @var array<string, mixed> $routerCtx */
+        $routerCtx = is_array($pipeline['router_ctx'] ?? null) ? $pipeline['router_ctx'] : [];
+        /** @var array<string, mixed> $plan */
+        $plan = is_array($pipeline['plan'] ?? null) ? $pipeline['plan'] : [];
+        /** @var list<array<string, mixed>> $memPayload */
+        $memPayload = is_array($pipeline['mem_payload'] ?? null) ? $pipeline['mem_payload'] : [];
+        $workflow = (string) ($pipeline['workflow'] ?? $modelRoute['workflow'] ?? '');
+        $tokenAcc = (int) ($pipeline['token_acc'] ?? 0);
+        $tRun = (float) ($pipeline['t_run'] ?? microtime(true));
+        $preflightReads = is_array($pipeline['preflight_reads'] ?? null) ? $pipeline['preflight_reads'] : [];
+        $execProfileKey = (string) ($pipeline['exec_profile_key'] ?? 'default');
+        $skillName = (string) ($pipeline['skill_name'] ?? 'cofounder');
+        /** @var array<string, mixed> $step */
+        $step = is_array($pipeline['step'] ?? null) ? $pipeline['step'] : [];
+        /** @var array<string, mixed> $skillRow */
+        $skillRow = is_array($pipeline['skill_row'] ?? null) ? $pipeline['skill_row'] : ['name' => $skillName, 'content' => ''];
+        $ruleLines = is_array($pipeline['rule_lines'] ?? null) ? $pipeline['rule_lines'] : [];
+        $pbExcerpt = (string) ($pipeline['playbook_excerpt'] ?? '');
+        $chkExcerpt = (string) ($pipeline['checklist_excerpt'] ?? '');
+        $conversation = is_array($pipeline['conversation'] ?? null) ? $pipeline['conversation'] : [];
+
+        $revisionStep = array_merge($step, [
+            'id' => 2,
+            'title' => 'Apply user code review',
+            'task' => 'User requested changes on rejected file proposals. Apply their code review instructions and re-propose files for approval.',
+        ]);
+
+        $reviewPayload = ExecutorEvidenceSupport::userCodeReviewPayloadForRevision(
+            $execResult,
+            $run->id,
+            $review['instructions'],
+            $review['items'],
+            $feedback,
+            $preflightReads,
+        );
+
+        $this->emit($emit, $this->basePayload($run, 'executor_code_review_started', [
+            'status' => 'running',
+            'agent' => 'executor',
+            'summary' => 'Executor is applying your code review instructions.',
+            'message' => 'Updated proposals will be shown for approval.',
+        ]));
+
+        $revisionResult = $this->executor->execute(
+            $revisionStep,
+            $skillRow,
+            $ruleLines,
+            $pbExcerpt,
+            $chkExcerpt,
+            null,
+            $plan,
+            $modelRoute,
+            $execProfileKey,
+            $this->projects->agentWorkspaceContext(),
+            $preflightReads,
+            $reviewPayload,
+        );
+        $revisionResult = ExecutorEvidenceSupport::mergePreflightReads($revisionResult, $preflightReads);
+        $revisionResult = $this->ensureExecutorEvidence($run, $plan, $revisionResult, $userPrompt, $emit);
+        $modelsResolved['executor'] = (string) ($revisionResult['_executor_model'] ?? $modelsResolved['executor'] ?? '');
+
+        $this->incrementApprovalReviewRounds($run);
+
+        $revPipeline = $this->buildExecutorPipelineSnapshot(
+            $run,
+            $userPrompt,
+            $prompt,
+            $agentPrompt,
+            $conversation,
+            $modelRoute,
+            $modelsResolved,
+            $routerCtx,
+            $memPayload,
+            $plan,
+            $workflow,
+            $preflightReads,
+            $execProfileKey,
+            $skillName,
+            $revisionStep,
+            $skillRow,
+            $ruleLines,
+            $pbExcerpt,
+            $chkExcerpt,
+            $tokenAcc,
+            $tRun,
+            $reviewPayload,
+        );
+        $revPipeline['exec_result'] = $revisionResult;
+
+        $revAfter = $this->applyOrPauseForExecutorApprovals($run, $revisionResult, $revPipeline, $emit);
+        if (($revAfter['awaiting_approvals'] ?? false) === true) {
+            return ['execResult' => $revisionResult, 'pipeline' => $revPipeline, 'paused' => $revAfter];
+        }
+
+        if (is_array($revAfter)) {
+            $revisionResult = $revAfter;
+        }
+
+        $revTok = $this->estimateTokens(json_encode($revisionResult) ?: '');
+        $this->emit($emit, $this->events->executorDone(
+            $run,
+            $revisionResult,
+            $modelsResolved['executor'] ?? '',
+            (int) ($revisionResult['latency_ms'] ?? 0),
+            $revTok,
+            'executor_code_review_done',
         ));
 
         $pipeline['exec_result'] = $revisionResult;

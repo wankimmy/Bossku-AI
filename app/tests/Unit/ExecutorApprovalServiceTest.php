@@ -26,7 +26,9 @@ class ExecutorApprovalServiceTest extends TestCase
         config([
             'bossku.repo_root' => $this->repo,
             'bossku.require_user_approval_before_apply' => true,
+            'bossku.require_user_approval_for_commands' => false,
             'bossku.auto_apply_file_writes' => true,
+            'bossku.auto_execute_project_commands' => true,
         ]);
 
         Project::query()->create([
@@ -47,7 +49,7 @@ class ExecutorApprovalServiceTest extends TestCase
     }
 
     #[Test]
-    public function it_creates_pending_file_and_command_approvals_without_applying(): void
+    public function it_creates_pending_file_approval_without_applying(): void
     {
         File::put($this->repo.'/keep.txt', "original\n");
         $runId = Run::query()->create(['prompt' => 'test', 'status' => 'running'])->id;
@@ -60,10 +62,8 @@ class ExecutorApprovalServiceTest extends TestCase
                 'after' => "changed\n",
             ]],
         ]);
-        $cmdPending = $service->proposeCommands($runId, ['git status']);
 
         $this->assertCount(1, $fileOut['pending_approval_ids']);
-        $this->assertCount(1, $cmdPending);
         $this->assertSame("original\n", File::get($this->repo.'/keep.txt'));
 
         $this->assertDatabaseHas('bossku_ai_approvals', [
@@ -71,6 +71,21 @@ class ExecutorApprovalServiceTest extends TestCase
             'status' => 'pending',
             'operation_type' => 'file_write',
         ]);
+        $this->assertDatabaseMissing('bossku_ai_approvals', [
+            'run_id' => $runId,
+            'operation_type' => 'terminal_command',
+        ]);
+    }
+
+    #[Test]
+    public function propose_commands_still_available_when_command_approval_enabled(): void
+    {
+        config(['bossku.require_user_approval_for_commands' => true]);
+        $runId = Run::query()->create(['prompt' => 'test', 'status' => 'running'])->id;
+        $service = app(ExecutorApprovalService::class);
+        $cmdPending = $service->proposeCommands($runId, ['git status']);
+
+        $this->assertCount(1, $cmdPending);
         $this->assertDatabaseHas('bossku_ai_approvals', [
             'run_id' => $runId,
             'status' => 'pending',

@@ -428,12 +428,27 @@ watchEffect(async () => {
   }
 })
 
-async function onApprovalDecided() {
+async function onApprovalDecided(payload: { runHasPending: boolean }) {
   const runId = resolvedRunId.value
   if (!runId) return
-  runApprovals.shiftQueue()
-  await runApprovals.fetchPending(runId)
-  if (runApprovals.pending.value.length > 0) return
+
+  if (payload.runHasPending) {
+    const refresh = await runApprovals.fetchPending(runId)
+    if (!refresh.ok) {
+      toast.error('Could not refresh approval queue—try again.')
+    }
+    return
+  }
+
+  const refresh = await runApprovals.fetchPending(runId)
+  if (!refresh.ok) {
+    toast.error('Could not refresh approval queue—try again.')
+    return
+  }
+  if (runApprovals.pending.value.length > 0) {
+    return
+  }
+
   runApprovals.clear()
   continuingApprovals.value = true
   focusAgentsPanel()
@@ -447,16 +462,27 @@ async function onApprovalDecided() {
   }
 }
 
-async function submitClarification(
-  answers: Array<{ question_id: string; option_id?: string; free_text?: string }>,
-) {
+async function submitClarification(payload: {
+  answers: Array<{ question_id: string; option_id?: string; free_text?: string }>
+  review_decision: 'approve' | 'request_changes'
+  code_review_comment?: string
+}) {
   const req = effectiveClarificationRequest.value
   if (!req?.runId || submittingClarification.value) return
   submittingClarification.value = true
   focusAgentsPanel()
-  toast.info('Continuing run with your answers…')
+  toast.info(
+    payload.review_decision === 'request_changes'
+      ? 'Sending code review feedback…'
+      : 'Continuing run with your answers…',
+  )
   try {
-    await continueRun(req.runId, answers)
+    await continueRun(
+      req.runId,
+      payload.answers,
+      payload.review_decision,
+      payload.code_review_comment,
+    )
     chat.saveRunEvents(events.value)
   }
   finally {
@@ -555,18 +581,26 @@ watch(runError, (val) => {
   if (val && !running.value) toast.error(val.length > 80 ? val.slice(0, 80) + '…' : val)
 })
 
-const chatThreadRef = ref<HTMLElement | null>(null)
+const conversationTabsRef = ref<{
+  scrollChatToBottom: () => void
+  scrollProcessToBottom: () => void
+} | null>(null)
 
-function scrollChatToBottom() {
+function scrollThreadToBottom() {
   nextTick(() => {
-    const el = chatThreadRef.value
-    if (el) el.scrollTop = el.scrollHeight
+    if (threadTab.value === 'process') {
+      conversationTabsRef.value?.scrollProcessToBottom()
+    }
+    else {
+      conversationTabsRef.value?.scrollChatToBottom()
+    }
   })
 }
 
 watch(
   () => [chat.turns.value.length, events.value.length, artifacts.value.agentMessages.length, running.value, threadTab.value] as const,
-  () => scrollChatToBottom(),
+  () => scrollThreadToBottom(),
+  { flush: 'post' },
 )
 
 watch(showClarificationModal, (open) => {
@@ -754,13 +788,13 @@ onMounted(() => {
           </div>
         </section>
 
-        <!-- Conversation thread: chat and agent process are derived from the same saved run events. -->
+        <!-- Chat and agent process each have their own vertical scroll (see LandingConversationTabs). -->
         <section
-          ref="chatThreadRef"
-          class="max-h-[min(70vh,720px)] space-y-4 overflow-y-auto rounded-lg border border-zinc-800/60 bg-zinc-950/40 p-3"
+          class="overflow-hidden rounded-lg border border-zinc-800/60 bg-zinc-950/40"
           aria-live="polite"
         >
           <LandingConversationTabs
+            ref="conversationTabsRef"
             v-model="threadTab"
             :turns="chat.displayTurns.value"
             :agent-messages="artifacts.agentMessages"
@@ -856,8 +890,7 @@ onMounted(() => {
       :approval="runApprovals.current.value"
       :pending-count="runApprovals.pendingCount.value"
       :submitting="continuingApprovals || running"
-      @approve="onApprovalDecided"
-      @reject="onApprovalDecided"
+      @decided="onApprovalDecided"
     />
 
     <div

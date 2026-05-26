@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import type { ChatTurn } from '~/composables/useLandingChat'
 import type { AgentMessage, HandoffNode } from '~/types/bossku'
 
@@ -24,30 +25,62 @@ const tabs: Array<{ value: ThreadTab; label: string; hint: string }> = [
   { value: 'process', label: 'Agent Process', hint: 'Planner, executor, audit, proof' },
 ]
 
+const chatScrollRef = ref<HTMLElement | null>(null)
+const processScrollRef = ref<HTMLElement | null>(null)
+
 function selectTab(tab: ThreadTab) {
   emit('update:modelValue', tab)
 }
+
+function scrollPaneToBottom(el: HTMLElement | null) {
+  if (!el) return
+  el.scrollTop = el.scrollHeight
+}
+
+function scrollChatToBottom() {
+  scrollPaneToBottom(chatScrollRef.value)
+}
+
+function scrollProcessToBottom() {
+  scrollPaneToBottom(processScrollRef.value)
+}
+
+defineExpose({
+  scrollChatToBottom,
+  scrollProcessToBottom,
+})
 </script>
 
 <template>
-  <div class="space-y-4">
-    <div class="flex flex-wrap items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-950/70 p-1">
-      <button
-        v-for="tab in tabs"
-        :key="tab.value"
-        type="button"
-        class="flex-1 rounded-md px-3 py-2 text-left text-xs transition-colors sm:flex-none sm:min-w-40"
-        :class="props.modelValue === tab.value
-          ? 'bg-zinc-800 text-zinc-100 shadow'
-          : 'text-zinc-500 hover:bg-zinc-900 hover:text-zinc-300'"
-        @click="selectTab(tab.value)"
-      >
-        <span class="block font-semibold">{{ tab.label }}</span>
-        <span class="mt-0.5 block text-[11px] opacity-80">{{ tab.hint }}</span>
-      </button>
+  <div
+    class="flex min-h-[320px] max-h-[min(70vh,720px)] flex-col"
+    data-testid="landing-conversation-tabs"
+  >
+    <div class="shrink-0 border-b border-zinc-800/60 px-3 pt-3 pb-2">
+      <div class="flex flex-wrap items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-950/70 p-1">
+        <button
+          v-for="tab in tabs"
+          :key="tab.value"
+          type="button"
+          class="flex-1 rounded-md px-3 py-2 text-left text-xs transition-colors sm:flex-none sm:min-w-40"
+          :class="props.modelValue === tab.value
+            ? 'bg-zinc-800 text-zinc-100 shadow'
+            : 'text-zinc-500 hover:bg-zinc-900 hover:text-zinc-300'"
+          @click="selectTab(tab.value)"
+        >
+          <span class="block font-semibold">{{ tab.label }}</span>
+          <span class="mt-0.5 block text-[11px] opacity-80">{{ tab.hint }}</span>
+        </button>
+      </div>
     </div>
 
-    <div v-if="props.modelValue === 'chat'" class="space-y-4">
+    <div
+      v-if="props.modelValue === 'chat'"
+      ref="chatScrollRef"
+      class="min-h-0 flex-1 space-y-4 overflow-y-auto px-3 py-3"
+      data-testid="chat-thread-scroll"
+      aria-label="Chat messages"
+    >
       <div
         v-if="turns.length === 0"
         class="flex flex-col items-center justify-center py-16 text-center"
@@ -70,7 +103,13 @@ function selectTab(tab: ThreadTab) {
       />
     </div>
 
-    <div v-else class="space-y-4">
+    <div
+      v-else
+      ref="processScrollRef"
+      class="min-h-0 flex-1 space-y-4 overflow-y-auto px-3 py-3"
+      data-testid="agent-process-scroll"
+      aria-label="Agent process"
+    >
       <div
         v-if="!running && agentMessages.length === 0"
         class="flex flex-col items-center justify-center py-16 text-center"

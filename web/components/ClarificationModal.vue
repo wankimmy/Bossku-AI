@@ -9,7 +9,11 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  submit: [answers: ClarificationAnswer[]]
+  submit: [payload: {
+    answers: ClarificationAnswer[]
+    review_decision: 'approve' | 'request_changes'
+    code_review_comment?: string
+  }]
 }>()
 
 watch(

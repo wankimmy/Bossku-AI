@@ -358,6 +358,37 @@ class ExecutorEvidenceSupport
         ];
     }
 
+    /**
+     * @param  array<string, mixed>  $execResult
+     * @param  list<array{path: string, change_type: string, before: string, user_note: string}>  $rejectedItems
+     * @return array<string, mixed>
+     */
+    public static function userCodeReviewPayloadForRevision(
+        array $execResult,
+        string $runId,
+        string $codeReviewInstructions,
+        array $rejectedItems = [],
+        string $userContext = '',
+        array $preflightReads = [],
+    ): array {
+        return [
+            'revision_type' => 'user_code_review',
+            'code_review_instructions' => $codeReviewInstructions,
+            'rejected_items' => $rejectedItems,
+            'user_approval_feedback' => $userContext,
+            'required_actions' => [
+                'Apply the user code review instructions exactly.',
+                'For each affected path, supply complete `after` file contents or a valid unified `diff`.',
+                'Do not re-propose rejected content unchanged; address every instruction.',
+                'List updated paths in patch_summary; user must approve before files are written.',
+            ],
+            'executor_result' => self::executorPayloadForAudit($execResult, $preflightReads, $runId),
+            'read_previews' => self::readPreviewsForAudit($preflightReads),
+            'tool_evidence' => self::toolEvidenceForRun($runId),
+            'proof_files' => self::proofFilePaths($execResult),
+        ];
+    }
+
     public static function auditorPayloadForRevision(
         array $audit,
         array $execResult,

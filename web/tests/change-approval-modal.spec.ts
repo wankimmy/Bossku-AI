@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import ChangeApprovalModal from '../components/ChangeApprovalModal.vue'
 import SideBySideDiffViewer from '../components/SideBySideDiffViewer.vue'
 
-const post = vi.fn().mockResolvedValue({})
+const post = vi.fn().mockResolvedValue({ run_has_pending: false })
 
 vi.mock('../composables/useApi', () => ({
   useApi: () => ({ post }),
@@ -66,7 +66,7 @@ describe('ChangeApprovalModal', () => {
     })
   })
 
-  it('emits approve when API returns 422 not pending', async () => {
+  it('emits decided when API returns 422 not pending', async () => {
     post.mockRejectedValueOnce({
       status: 422,
       data: { message: 'Approval is not pending.' },
@@ -84,7 +84,50 @@ describe('ChangeApprovalModal', () => {
 
     const approveBtn = wrapper.findAll('button').find(b => b.text().includes('Approve'))
     await approveBtn!.trigger('click')
-    expect(wrapper.emitted('approve')).toHaveLength(1)
+    expect(wrapper.emitted('decided')).toHaveLength(1)
+    expect(wrapper.emitted('decided')?.[0]?.[0]).toMatchObject({ runHasPending: true })
+  })
+
+  it('emits decided with runHasPending true when more items remain', async () => {
+    post.mockResolvedValueOnce({ run_has_pending: true })
+    const wrapper = mount(ChangeApprovalModal, {
+      props: {
+        open: true,
+        approval,
+        pendingCount: 3,
+      },
+      global: {
+        stubs: { Teleport: true },
+      },
+    })
+
+    const approveBtn = wrapper.findAll('button').find(b => b.text().includes('Approve'))
+    await approveBtn!.trigger('click')
+    expect(wrapper.emitted('decided')?.[0]?.[0]).toEqual({
+      runHasPending: true,
+      note: '',
+    })
+  })
+
+  it('emits decided with runHasPending false when queue is drained', async () => {
+    post.mockResolvedValueOnce({ run_has_pending: false })
+    const wrapper = mount(ChangeApprovalModal, {
+      props: {
+        open: true,
+        approval,
+        pendingCount: 1,
+      },
+      global: {
+        stubs: { Teleport: true },
+      },
+    })
+
+    const approveBtn = wrapper.findAll('button').find(b => b.text().includes('Approve'))
+    await approveBtn!.trigger('click')
+    expect(wrapper.emitted('decided')?.[0]?.[0]).toEqual({
+      runHasPending: false,
+      note: '',
+    })
   })
 
   it('disables approve for placeholder wipe proposal', () => {
@@ -119,6 +162,68 @@ describe('ChangeApprovalModal', () => {
     expect(wrapper.find('[data-testid="diff-review-warning"]').exists()).toBe(true)
   })
 
+  it('disables request changes without code review comment', () => {
+    const wrapper = mount(ChangeApprovalModal, {
+      props: {
+        open: true,
+        approval,
+        pendingCount: 1,
+      },
+      global: {
+        stubs: { Teleport: true },
+      },
+    })
+
+    const requestBtn = wrapper.get('[data-testid="request-changes-btn"]')
+    expect((requestBtn.element as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it('calls reject API with note when request changes is clicked', async () => {
+    post.mockClear()
+    const wrapper = mount(ChangeApprovalModal, {
+      props: {
+        open: true,
+        approval,
+        pendingCount: 1,
+      },
+      global: {
+        stubs: { Teleport: true },
+      },
+    })
+
+    await wrapper.get('[data-testid="code-review-instructions"]').setValue('Use api routes file')
+    await wrapper.get('[data-testid="request-changes-btn"]').trigger('click')
+
+    expect(post).toHaveBeenCalledWith('/approvals/ap-1/reject', {
+      note: 'Use api routes file',
+    })
+  })
+
+  it('renders terminal command without file safety warning', () => {
+    const wrapper = mount(ChangeApprovalModal, {
+      props: {
+        open: true,
+        approval: {
+          id: 'ap-cmd',
+          operation_type: 'terminal_command',
+          description: 'Run command: php artisan test',
+          risk_level: 'medium',
+          status: 'pending',
+          evidence: { command: 'php artisan test' },
+        },
+        pendingCount: 2,
+      },
+      global: {
+        stubs: { Teleport: true },
+      },
+    })
+
+    expect(wrapper.text()).toContain('php artisan test')
+    expect(wrapper.find('[data-testid="diff-review-warning"]').exists()).toBe(false)
+    const approveBtn = wrapper.findAll('button').find(b => b.text().includes('Approve'))
+    expect(approveBtn?.attributes('disabled')).toBeUndefined()
+  })
+
   it('highlights remove and add cells in split viewer', () => {
     const wrapper = mount(SideBySideDiffViewer, {
       props: {
@@ -131,5 +236,17 @@ describe('ChangeApprovalModal', () => {
 
     expect(wrapper.find('.text-rose-200').exists()).toBe(true)
     expect(wrapper.find('.text-emerald-200').exists()).toBe(true)
+  })
+
+  it('command viewer does not show file empty-after warning', () => {
+    const wrapper = mount(SideBySideDiffViewer, {
+      props: {
+        commandText: 'php artisan test',
+        changeType: 'command',
+      },
+    })
+
+    expect(wrapper.find('[data-testid="diff-review-warning"]').exists()).toBe(false)
+    expect(wrapper.text()).toContain('php artisan test')
   })
 })

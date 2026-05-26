@@ -145,18 +145,19 @@ describe('agent workspace components', () => {
       },
     })
 
-    expect(wrapper.text()).toContain('Fix the bug')
-    expect(wrapper.text()).not.toContain('Changed one file.')
+    expect(wrapper.get('[data-testid="chat-thread-scroll"]').text()).toContain('Fix the bug')
+    expect(wrapper.find('[data-testid="agent-process-scroll"]').exists()).toBe(false)
 
     const processButton = wrapper.findAll('button').find(button => button.text().includes('Agent Process'))
     expect(processButton).toBeTruthy()
     await processButton!.trigger('click')
     await wrapper.setProps({ modelValue: 'process' })
+    await wrapper.vm.$nextTick()
 
     expect(wrapper.emitted('update:modelValue')?.[0]).toEqual(['process'])
-    expect(wrapper.text()).toContain('workflow 2')
-    expect(wrapper.text()).toContain('Changed one file.')
-    expect(wrapper.text()).not.toContain('Fix the bug')
+    expect(wrapper.get('[data-testid="agent-process-scroll"]').text()).toContain('workflow 2')
+    expect(wrapper.get('[data-testid="agent-process-scroll"]').text()).toContain('Changed one file.')
+    expect(wrapper.find('[data-testid="chat-thread-scroll"]').exists()).toBe(false)
   })
 
   it('renders new file with green lines from after content', () => {

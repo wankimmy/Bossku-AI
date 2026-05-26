@@ -10,11 +10,21 @@ trait OrchestratorClarificationTrait
      * @param  list<array{question_id: string, option_id?: string|null, free_text?: string|null}>  $answers
      * @return array<string, mixed>
      */
-    public function continueRun(string $runId, array $answers, ?callable $emit = null): array
-    {
+    public function continueRun(
+        string $runId,
+        array $answers,
+        ?callable $emit = null,
+        string $reviewDecision = 'approve',
+        ?string $codeReviewComment = null,
+    ): array {
         $run = Run::query()->findOrFail($runId);
         if ($run->status !== 'awaiting_input') {
             throw new \InvalidArgumentException('Run is not awaiting user input (status: '.$run->status.').');
+        }
+
+        $reviewDecision = strtolower(trim($reviewDecision));
+        if (! in_array($reviewDecision, ['approve', 'request_changes'], true)) {
+            throw new \InvalidArgumentException('Invalid review_decision.');
         }
 
         /** @var array<string, mixed> $meta */
@@ -41,11 +51,23 @@ trait OrchestratorClarificationTrait
         $allAnswers = array_merge($priorAnswers, $answers);
         $answerBlock = $this->clarification->formatAnswersBlock($allAnswers, $questions);
 
+        if ($reviewDecision === 'request_changes') {
+            $comment = trim((string) $codeReviewComment);
+            if ($comment === '') {
+                throw new \InvalidArgumentException('code_review_comment is required when review_decision is request_changes.');
+            }
+            $answerBlock = trim($answerBlock."\n\n## Code review instructions\n".$comment);
+        }
+
         $meta['clarification_answers'] = $allAnswers;
         unset($meta['checkpoint']);
         $run->update(['status' => 'running', 'metadata' => $meta]);
 
         $this->emit($emit, $this->events->clarificationReceived($run, count($answers)));
+
+        if ($reviewDecision === 'request_changes' && in_array($stage, ['executor_escalation', 'executor_stuck', 'auditor_escalation'], true)) {
+            return $this->resumeFromCodeReviewRequest($run, $pipeline, $answerBlock, trim((string) $codeReviewComment), $emit);
+        }
 
         if ($stage === 'executor_escalation') {
             return $this->resumeFromExecutorEscalation($run, $pipeline, $answerBlock, $emit);
@@ -651,6 +673,101 @@ trait OrchestratorClarificationTrait
             $tRun,
             [$execResult],
             3,
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $pipeline
+     * @return array<string, mixed>
+     */
+    protected function resumeFromCodeReviewRequest(
+        Run $run,
+        array $pipeline,
+        string $answerBlock,
+        string $codeReviewComment,
+        ?callable $emit,
+    ): array {
+        /** @var array<string, mixed> $execResult */
+        $execResult = is_array($pipeline['exec_result'] ?? null) ? $pipeline['exec_result'] : [];
+        $userPrompt = (string) ($pipeline['user_prompt'] ?? $run->prompt);
+        $agentPrompt = trim((string) ($pipeline['agent_prompt'] ?? '')."\n\n".$answerBlock);
+        $pipeline['agent_prompt'] = $agentPrompt;
+
+        $reviewOutcome = $this->runExecutorRevisionForUserCodeReview(
+            $run,
+            $execResult,
+            $pipeline,
+            $answerBlock,
+            $emit,
+            $codeReviewComment,
+        );
+
+        if ($reviewOutcome['paused'] !== null) {
+            return $reviewOutcome['paused'];
+        }
+
+        $execResult = $reviewOutcome['execResult'];
+        $pipeline = $reviewOutcome['pipeline'];
+        $prompt = (string) ($pipeline['effective_prompt'] ?? $userPrompt);
+        /** @var array<string, mixed> $modelRoute */
+        $modelRoute = is_array($pipeline['model_route'] ?? null) ? $pipeline['model_route'] : [];
+        /** @var array<string, string> $modelsResolved */
+        $modelsResolved = is_array($pipeline['models_resolved'] ?? null) ? $pipeline['models_resolved'] : [];
+        /** @var array<string, mixed> $routerCtx */
+        $routerCtx = is_array($pipeline['router_ctx'] ?? null) ? $pipeline['router_ctx'] : [];
+        /** @var array<string, mixed> $plan */
+        $plan = is_array($pipeline['plan'] ?? null) ? $pipeline['plan'] : [];
+        /** @var list<array<string, mixed>> $memPayload */
+        $memPayload = is_array($pipeline['mem_payload'] ?? null) ? $pipeline['mem_payload'] : [];
+        $workflow = (string) ($pipeline['workflow'] ?? $modelRoute['workflow'] ?? '');
+        $tokenAcc = (int) ($pipeline['token_acc'] ?? 0);
+        $tRun = (float) ($pipeline['t_run'] ?? microtime(true));
+        $preflightReads = is_array($pipeline['preflight_reads'] ?? null) ? $pipeline['preflight_reads'] : [];
+        $execProfileKey = (string) ($pipeline['exec_profile_key'] ?? 'default');
+        $skillName = (string) ($pipeline['skill_name'] ?? 'cofounder');
+        /** @var array<string, mixed> $step */
+        $step = is_array($pipeline['step'] ?? null) ? $pipeline['step'] : [];
+        /** @var array<string, mixed> $skillRow */
+        $skillRow = is_array($pipeline['skill_row'] ?? null) ? $pipeline['skill_row'] : ['name' => $skillName, 'content' => ''];
+        $ruleLines = is_array($pipeline['rule_lines'] ?? null) ? $pipeline['rule_lines'] : [];
+        $pbExcerpt = (string) ($pipeline['playbook_excerpt'] ?? '');
+        $chkExcerpt = (string) ($pipeline['checklist_excerpt'] ?? '');
+        $conversation = is_array($pipeline['conversation'] ?? null) ? $pipeline['conversation'] : [];
+        $executorOutputs = is_array($pipeline['executor_outputs'] ?? null) ? $pipeline['executor_outputs'] : [$execResult];
+        $stepNum = (int) ($pipeline['step_num'] ?? 3);
+
+        if (! $this->executorApprovals->requireUserApproval()) {
+            $execResult = $this->applyExecutorCommands($run, $execResult, $emit);
+        } else {
+            $execResult = $this->recordApprovedCommandResults($run, $execResult, $emit);
+        }
+
+        return $this->runPostExecutorPhase(
+            $run,
+            $userPrompt,
+            $prompt,
+            $agentPrompt,
+            $conversation,
+            $modelRoute,
+            $modelsResolved,
+            $memPayload,
+            $routerCtx,
+            $plan,
+            $workflow,
+            $execResult,
+            $step,
+            $skillRow,
+            $skillName,
+            $ruleLines,
+            $pbExcerpt,
+            $chkExcerpt,
+            $preflightReads,
+            $execProfileKey,
+            $emit,
+            $tokenAcc,
+            $tRun,
+            $executorOutputs,
+            $stepNum,
         );
     }
 

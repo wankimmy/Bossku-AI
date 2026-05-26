@@ -73,17 +73,29 @@ class RunController extends Controller
             'answers.*.question_id' => 'required|string|max:64',
             'answers.*.option_id' => 'nullable|string|max:64',
             'answers.*.free_text' => 'nullable|string|max:20000',
+            'review_decision' => 'nullable|string|in:approve,request_changes',
+            'code_review_comment' => 'nullable|string|max:20000',
         ]);
 
         /** @var list<array{question_id: string, option_id?: string|null, free_text?: string|null}> $answers */
         $answers = $validated['answers'];
+        $reviewDecision = (string) ($validated['review_decision'] ?? 'approve');
+        $codeReviewComment = isset($validated['code_review_comment'])
+            ? (string) $validated['code_review_comment']
+            : null;
+
+        if ($reviewDecision === 'request_changes' && trim((string) $codeReviewComment) === '') {
+            return response()->json([
+                'message' => 'code_review_comment is required when review_decision is request_changes.',
+            ], 422);
+        }
 
         $misroute = $this->executorApprovalsMisrouteResponse($id);
         if ($misroute !== null) {
             return $misroute;
         }
 
-        return response()->stream(function () use ($orchestrator, $id, $answers) {
+        return response()->stream(function () use ($orchestrator, $id, $answers, $reviewDecision, $codeReviewComment) {
             try {
                 $orchestrator->continueRun($id, $answers, function (array $evt) {
                     echo 'data: '.json_encode($evt, JSON_THROW_ON_ERROR)."\n\n";
@@ -91,7 +103,7 @@ class RunController extends Controller
                         ob_flush();
                     }
                     flush();
-                });
+                }, $reviewDecision, $codeReviewComment);
             } catch (\Throwable $e) {
                 echo 'data: '.json_encode([
                     'type' => 'run_failed',

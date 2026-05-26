@@ -18,6 +18,14 @@ export type ClarificationAnswer = {
   free_text?: string
 }
 
+export type ClarificationReviewDecision = 'approve' | 'request_changes'
+
+export type ClarificationContinuePayload = {
+  answers: ClarificationAnswer[]
+  review_decision?: ClarificationReviewDecision
+  code_review_comment?: string
+}
+
 export type ClarificationProof = {
   from_agent?: string
   files_read?: unknown[]

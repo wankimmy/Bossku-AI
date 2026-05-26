@@ -1,4 +1,5 @@
 import { computed, ref } from 'vue'
+import { useApi } from '~/composables/useApi'
 import type { Approval } from '~/types/api'
 import { hydrateApprovalsFromEvent, type ApprovalSseEvent } from '../utils/approvalStream'
 
@@ -12,10 +13,17 @@ function onlyPending(approvals: Approval[]): Approval[] {
   return approvals.filter((a) => a.status === 'pending')
 }
 
+export type FetchPendingResult = {
+  ok: boolean
+  pending: Approval[]
+  error?: string
+}
+
 export function useRunApprovals() {
   const pending = ref<Approval[]>([])
   const stage = ref<string | null>(null)
   const loading = ref(false)
+  const fetchError = ref<string | null>(null)
   const ssePendingCount = ref(0)
 
   const current = computed(() => pending.value[0] ?? null)
@@ -44,9 +52,12 @@ export function useRunApprovals() {
     }
   }
 
-  async function fetchPending(runId: string) {
-    if (!runId) return
+  async function fetchPending(runId: string): Promise<FetchPendingResult> {
+    if (!runId) {
+      return { ok: false, pending: pending.value, error: 'Missing run id' }
+    }
     loading.value = true
+    fetchError.value = null
     try {
       const api = useApi()
       const data = await api.get<{
@@ -56,10 +67,14 @@ export function useRunApprovals() {
       stage.value = data.stage ?? null
       pending.value = onlyPending(Array.isArray(data.pending) ? data.pending : [])
       ssePendingCount.value = pending.value.length
+
+      return { ok: true, pending: pending.value }
     }
-    catch {
-      pending.value = []
-      ssePendingCount.value = 0
+    catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Failed to load approval queue'
+      fetchError.value = message
+
+      return { ok: false, pending: pending.value, error: message }
     }
     finally {
       loading.value = false
@@ -84,6 +99,7 @@ export function useRunApprovals() {
     awaitingApprovals,
     stage,
     loading,
+    fetchError,
     fetchPending,
     seedFromSseEvent,
     shiftQueue,

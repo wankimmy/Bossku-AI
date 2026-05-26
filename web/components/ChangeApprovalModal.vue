@@ -2,7 +2,12 @@
 import { computed, ref, watch } from 'vue'
 import { useApi } from '~/composables/useApi'
 import type { Approval } from '~/types/api'
-import { isAlreadyDecidedResponse, isIdempotentApprovalOutcome } from '~/utils/approvalDecision'
+import {
+  isAlreadyDecidedResponse,
+  isIdempotentApprovalOutcome,
+  runHasPendingFromDecisionResponse,
+  type ApprovalDecisionPayload,
+} from '~/utils/approvalDecision'
 import { assessFileChange } from '~/utils/approvalReview'
 import SideBySideDiffViewer from './SideBySideDiffViewer.vue'
 
@@ -14,8 +19,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  approve: [note: string]
-  reject: [note: string]
+  decided: [payload: ApprovalDecisionPayload]
 }>()
 
 const api = useApi()
@@ -47,7 +51,12 @@ const diffText = computed(() => {
 
 const commandText = computed(() => {
   if (!isTerminalCommand.value) return ''
-  return String(evidence.value.command ?? '')
+  const fromEvidence = String(evidence.value.command ?? '').trim()
+  if (fromEvidence !== '') return fromEvidence
+  const desc = String(props.approval?.description ?? '')
+  const match = desc.match(/^Run command:\s*(.+)$/i)
+
+  return match?.[1]?.trim() ?? desc
 })
 
 const showDiffViewer = computed(() =>
@@ -78,20 +87,28 @@ const fileReview = computed(() => {
 
 const approveBlocked = computed(() => fileReview.value.blocked)
 
+function emitDecided(res: unknown, noteText: string) {
+  emit('decided', {
+    runHasPending: runHasPendingFromDecisionResponse(res),
+    note: noteText,
+  })
+}
+
 async function doApprove() {
   if (!props.approval || loading.value || approveBlocked.value) return
   loading.value = true
+  const noteText = note.value
   try {
-    const res = await api.post(`/approvals/${props.approval.id}/approve`, { note: note.value || undefined })
+    const res = await api.post(`/approvals/${props.approval.id}/approve`, { note: noteText || undefined })
     if (isAlreadyDecidedResponse(res)) {
       // already granted — advance queue
     }
-    emit('approve', note.value)
+    emitDecided(res, noteText)
     note.value = ''
   }
   catch (err) {
     if (isIdempotentApprovalOutcome(err, 'approve')) {
-      emit('approve', note.value)
+      emitDecided(err, noteText)
       note.value = ''
       return
     }
@@ -102,20 +119,23 @@ async function doApprove() {
   }
 }
 
-async function doReject() {
-  if (!props.approval || loading.value) return
+const requestChangesDisabled = computed(() => loading.value || !note.value.trim())
+
+async function doRequestChanges() {
+  if (!props.approval || loading.value || !note.value.trim()) return
   loading.value = true
+  const noteText = note.value.trim()
   try {
-    const res = await api.post(`/approvals/${props.approval.id}/reject`, { note: note.value || undefined })
+    const res = await api.post(`/approvals/${props.approval.id}/reject`, { note: noteText })
     if (isAlreadyDecidedResponse(res)) {
       // already rejected — advance queue
     }
-    emit('reject', note.value)
+    emitDecided(res, noteText)
     note.value = ''
   }
   catch (err) {
     if (isIdempotentApprovalOutcome(err, 'reject')) {
-      emit('reject', note.value)
+      emitDecided(err, noteText)
       note.value = ''
       return
     }
@@ -193,25 +213,29 @@ const riskCls = (r?: string) => {
           <SideBySideDiffViewer
             v-if="showDiffViewer || isTerminalCommand"
             class="min-h-0 flex-1"
-            :path="String(evidence.path ?? '')"
-            :change-type="String(evidence.change_type ?? 'modified')"
+            :path="isTerminalCommand ? '' : String(evidence.path ?? '')"
+            :change-type="isTerminalCommand ? 'command' : String(evidence.change_type ?? 'modified')"
             :diff="diffText"
             :before="String(evidence.before ?? '')"
             :after="String(evidence.after ?? '')"
             :command-text="commandText"
-            :review-blocked="fileReview.blocked"
-            :review-block-reason="fileReview.reason"
+            :review-blocked="!isTerminalCommand && fileReview.blocked"
+            :review-block-reason="!isTerminalCommand ? fileReview.reason : null"
           />
 
           <div class="shrink-0">
             <label class="text-xs text-zinc-500 uppercase tracking-wide block mb-1">
-              Comment for executor (optional)
+              Code review instructions
             </label>
+            <p class="text-xs text-zinc-500 mb-1.5">
+              Optional for approve. Required for request changes — executor will revise and show updated diffs.
+            </p>
             <textarea
               v-model="note"
-              rows="2"
+              rows="3"
+              data-testid="code-review-instructions"
               class="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 outline-none focus:border-zinc-500"
-              placeholder="e.g. Use routes/api.php instead, or skip this delete…"
+              placeholder="e.g. Use a Form Request instead of inline validation; keep the existing route names…"
             />
           </div>
         </div>
@@ -229,10 +253,11 @@ const riskCls = (r?: string) => {
           <button
             type="button"
             class="flex-1 py-2.5 text-sm rounded-lg bg-red-900/70 text-red-300 border border-red-700 hover:bg-red-800/70 disabled:opacity-50"
-            :disabled="loading || submitting"
-            @click="doReject"
+            :disabled="requestChangesDisabled || submitting"
+            data-testid="request-changes-btn"
+            @click="doRequestChanges"
           >
-            Reject
+            Request changes
           </button>
         </div>
       </div>

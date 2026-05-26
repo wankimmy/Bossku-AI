@@ -9,7 +9,7 @@ const threeOptions = [
 ]
 
 describe('ClarificationPanel', () => {
-  it('renders three choice buttons, text input, and emits submit payload', async () => {
+  it('renders choice buttons and emits approve payload', async () => {
     const wrapper = mount(ClarificationPanel, {
       props: {
         runId: 'run-1',
@@ -27,34 +27,29 @@ describe('ClarificationPanel', () => {
     })
 
     expect(wrapper.text()).toContain('How deep should the audit go?')
-    expect(wrapper.text()).toContain('Full repo audit')
+    expect(wrapper.text()).toContain('Code review instructions')
 
     const choiceButtons = wrapper.findAll('button').filter(b =>
       threeOptions.some(o => b.text().includes(o.label)),
     )
     expect(choiceButtons).toHaveLength(3)
 
-    const input = wrapper.get('[data-testid="clarification-input"]')
-    expect(input.exists()).toBe(true)
-
     await choiceButtons[0]!.trigger('click')
-    expect((input.element as HTMLInputElement).value).toContain('Full repo audit')
 
-    const continueBtn = wrapper.get('[data-testid="clarification-continue"]')
-    await continueBtn.trigger('click')
+    const approveBtn = wrapper.get('[data-testid="clarification-approve"]')
+    await approveBtn.trigger('click')
 
     expect(wrapper.emitted('submit')).toBeTruthy()
-    const payload = wrapper.emitted('submit')?.[0]?.[0] as Array<{
-      question_id: string
-      option_id?: string
-      free_text?: string
-    }>
-    expect(payload?.[0]?.question_id).toBe('q1')
-    expect(payload?.[0]?.option_id).toBe('full')
-    expect(payload?.[0]?.free_text).toContain('Full repo audit')
+    const payload = wrapper.emitted('submit')?.[0]?.[0] as {
+      review_decision: string
+      answers: Array<{ question_id: string; option_id?: string; free_text?: string }>
+    }
+    expect(payload.review_decision).toBe('approve')
+    expect(payload.answers[0]?.question_id).toBe('q1')
+    expect(payload.answers[0]?.option_id).toBe('full')
   })
 
-  it('allows submit with typed answer only', async () => {
+  it('emits request_changes with code review comment', async () => {
     const wrapper = mount(ClarificationPanel, {
       props: {
         runId: 'run-1',
@@ -69,17 +64,19 @@ describe('ClarificationPanel', () => {
       },
     })
 
-    const input = wrapper.get('[data-testid="clarification-input"]')
-    await input.setValue('Only the API layer')
+    const requestBtn = wrapper.get('[data-testid="clarification-request-changes"]')
+    expect((requestBtn.element as HTMLButtonElement).disabled).toBe(true)
 
-    const continueBtn = wrapper.get('[data-testid="clarification-continue"]')
-    expect((continueBtn.element as HTMLButtonElement).disabled).toBe(false)
-    await continueBtn.trigger('click')
+    await wrapper.get('[data-testid="clarification-code-review"]').setValue('Use Form Request validation')
 
-    const payload = wrapper.emitted('submit')?.[0]?.[0] as Array<{
-      question_id: string
-      free_text?: string
-    }>
-    expect(payload?.[0]?.free_text).toBe('Only the API layer')
+    expect((requestBtn.element as HTMLButtonElement).disabled).toBe(false)
+    await requestBtn.trigger('click')
+
+    const payload = wrapper.emitted('submit')?.[0]?.[0] as {
+      review_decision: string
+      code_review_comment?: string
+    }
+    expect(payload.review_decision).toBe('request_changes')
+    expect(payload.code_review_comment).toBe('Use Form Request validation')
   })
 })

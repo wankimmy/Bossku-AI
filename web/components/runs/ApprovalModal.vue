@@ -50,11 +50,13 @@ async function doApprove() {
   finally { loading.value = false }
 }
 
-async function doReject() {
-  if (loading.value) return
+const requestChangesDisabled = computed(() => loading.value || !note.value.trim())
+
+async function doRequestChanges() {
+  if (loading.value || !note.value.trim()) return
   loading.value = true
   try {
-    await api.post(`/approvals/${props.approval.id}/reject`, { note: note.value || undefined })
+    await api.post(`/approvals/${props.approval.id}/reject`, { note: note.value.trim() })
     emit('reject')
     emit('close')
   }
@@ -130,12 +132,14 @@ const riskCls = (r?: string) => {
           </div>
 
           <div>
-            <label class="text-xs text-zinc-500 uppercase tracking-wide block mb-1">Decision Note (optional)</label>
+            <label class="text-xs text-zinc-500 uppercase tracking-wide block mb-1">Code review instructions</label>
+            <p class="text-xs text-zinc-500 mb-1">Required for request changes.</p>
             <textarea
               v-model="note"
-              rows="2"
+              rows="3"
+              data-testid="code-review-instructions"
               class="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 outline-none focus:border-zinc-500"
-              placeholder="Add a note..."
+              placeholder="What should the executor change?"
             />
           </div>
         </div>
@@ -154,10 +158,11 @@ const riskCls = (r?: string) => {
           <button
             type="button"
             class="flex-1 py-2 text-sm rounded bg-red-900/70 text-red-300 border border-red-700 hover:bg-red-800/70 disabled:opacity-50"
-            :disabled="loading"
-            @click="doReject"
+            :disabled="requestChangesDisabled"
+            data-testid="request-changes-btn"
+            @click="doRequestChanges"
           >
-            Reject
+            Request changes
           </button>
         </div>
       </div>

@@ -56,7 +56,7 @@ describe('ClarificationModal', () => {
     expect(wrapper.find('[data-testid="clarification-modal"]').exists()).toBe(false)
   })
 
-  it('emits submit when Continue is clicked after selecting an option', async () => {
+  it('emits submit when Approve & continue is clicked after selecting an option', async () => {
     const wrapper = mount(ClarificationModal, {
       props: {
         open: true,
@@ -69,12 +69,16 @@ describe('ClarificationModal', () => {
     expect(option).toBeDefined()
     await option!.trigger('click')
 
-    const continueBtn = wrapper.find('[data-testid="clarification-continue"]')
-    await continueBtn.trigger('click')
+    const approveBtn = wrapper.find('[data-testid="clarification-approve"]')
+    await approveBtn.trigger('click')
 
     expect(wrapper.emitted('submit')).toBeTruthy()
-    const payload = wrapper.emitted('submit')![0][0] as Array<{ question_id: string; option_id?: string }>
-    expect(payload[0].question_id).toBe('q1')
-    expect(payload[0].option_id).toBe('a')
+    const payload = wrapper.emitted('submit')![0][0] as {
+      review_decision: string
+      answers: Array<{ question_id: string; option_id?: string }>
+    }
+    expect(payload.review_decision).toBe('approve')
+    expect(payload.answers[0].question_id).toBe('q1')
+    expect(payload.answers[0].option_id).toBe('a')
   })
 })

@@ -28,23 +28,28 @@ const copied = ref(false)
 const leftScroll = ref<HTMLElement | null>(null)
 const rightScroll = ref<HTMLElement | null>(null)
 
-const displayPath = computed(() => props.path?.trim() || 'file')
+const displayPath = computed(() => {
+  if (isCommand.value) return 'command'
+  return props.path?.trim() || 'file'
+})
 
 const changeLabel = computed(() => {
   const t = props.changeType ?? 'modified'
+  if (t === 'command') return 'Command'
   if (t === 'created') return 'New file'
   if (t === 'deleted') return 'Deleted'
   return 'Modified'
 })
 
+const isCommand = computed(() => Boolean(props.commandText?.trim()))
+
 const changeBadgeClass = computed(() => {
   const t = props.changeType ?? 'modified'
+  if (t === 'command') return 'border-sky-700/50 bg-sky-950/30 text-sky-400'
   if (t === 'created') return 'border-emerald-700/50 bg-emerald-950/30 text-emerald-400'
   if (t === 'deleted') return 'border-rose-700/50 bg-rose-950/30 text-rose-400'
   return 'border-zinc-600 bg-zinc-800/80 text-zinc-400'
 })
-
-const isCommand = computed(() => Boolean(props.commandText?.trim()))
 
 const evidence = computed((): FileChangeEvidence => ({
   path: props.path,
@@ -54,9 +59,17 @@ const evidence = computed((): FileChangeEvidence => ({
   diff: props.diff,
 }))
 
-const assessment = computed(() =>
-  assessFileChange(evidence.value, props.reviewBlocked, props.reviewBlockReason),
-)
+const assessment = computed(() => {
+  if (isCommand.value) {
+    return {
+      blocked: false,
+      reason: null as string | null,
+      stats: { added: 0, removed: 0, unchanged: 0 },
+    }
+  }
+
+  return assessFileChange(evidence.value, props.reviewBlocked, props.reviewBlockReason)
+})
 
 const statsSummary = computed(() =>
   formatStatsSummary(
@@ -146,7 +159,7 @@ async function copyDiff() {
     </div>
 
     <div
-      v-if="assessment.blocked"
+      v-if="!isCommand && assessment.blocked"
       class="shrink-0 border-b border-amber-800/60 bg-amber-950/40 px-3 py-2 text-xs text-amber-200"
       data-testid="diff-review-warning"
     >

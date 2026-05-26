@@ -2,7 +2,13 @@ import type { FetchError } from 'ofetch'
 
 type ApprovalApiResponse = {
   already_decided?: boolean
+  run_has_pending?: boolean
   message?: string
+}
+
+export type ApprovalDecisionPayload = {
+  runHasPending: boolean
+  note: string
 }
 
 function extractMessage(err: unknown): string {
@@ -39,4 +45,18 @@ export function isIdempotentApprovalOutcome(err: unknown, action: 'approve' | 'r
 
 export function isAlreadyDecidedResponse(data: unknown): boolean {
   return Boolean(data && typeof data === 'object' && (data as ApprovalApiResponse).already_decided === true)
+}
+
+/** Parse approve/reject API body; default runHasPending true when unknown (do not resume early). */
+export function runHasPendingFromDecisionResponse(data: unknown): boolean {
+  if (!data || typeof data !== 'object') {
+    return true
+  }
+
+  const flag = (data as ApprovalApiResponse).run_has_pending
+  if (flag === false) {
+    return false
+  }
+
+  return true
 }

@@ -113,8 +113,10 @@ class ApprovalController extends Controller
             return response()->json(['message' => 'Approval is not pending.'], 422);
         }
 
-        $this->gates->decide($approval->id, 'rejected', 'user', $request->input('note'));
+        $note = trim((string) $request->input('note', ''));
+        $this->gates->decide($approval->id, 'rejected', 'user', $note !== '' ? $note : null);
         $approval = $approval->fresh() ?? $approval;
+        $this->executorApprovals->markApprovalRequestChanges($approval, $note !== '');
         $revert = $this->executorApprovals->revertRejectedFileWrite($approval);
 
         return response()->json([

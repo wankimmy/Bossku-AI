@@ -257,6 +257,14 @@ class RuntimeSettings
         return $this->getInt('max_revision_rounds', 1);
     }
 
+    public function maxApprovalReviewRounds(): int
+    {
+        return max(0, $this->getInt(
+            'max_approval_review_rounds',
+            (int) config('bossku.max_approval_review_rounds', 3),
+        ));
+    }
+
     public function memoryStorageEnabled(): bool
     {
         return $this->getBool('memory_storage_enabled', true);

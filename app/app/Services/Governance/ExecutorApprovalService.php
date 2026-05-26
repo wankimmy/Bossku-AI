@@ -27,6 +27,15 @@ class ExecutorApprovalService
         return (bool) config('bossku.require_user_approval_before_apply', true);
     }
 
+    public function requireUserApprovalForCommands(): bool
+    {
+        if (! $this->requireUserApproval()) {
+            return false;
+        }
+
+        return (bool) config('bossku.require_user_approval_for_commands', false);
+    }
+
     /**
      * @param  array<string, mixed>  $execResult
      * @return array{execResult: array<string, mixed>, pending_approval_ids: list<string>}
@@ -277,6 +286,7 @@ class ExecutorApprovalService
 
         $lines = ['User decisions on proposed changes:'];
         $rejectedFiles = [];
+        $reviewLines = [];
         foreach ($decided as $approval) {
             /** @var array<string, mixed> $evidence */
             $evidence = is_array($approval->evidence) ? $approval->evidence : [];
@@ -286,16 +296,30 @@ class ExecutorApprovalService
             );
             $note = trim((string) ($approval->decision_note ?? ''));
             $suffix = $note !== '' ? " — User note: {$note}" : '';
-            $lines[] = '- '.strtoupper((string) $approval->status).': '.$target.$suffix;
+            $statusLabel = strtoupper((string) $approval->status);
+            if ($approval->status === 'approved' && $note !== '') {
+                $statusLabel = 'APPROVED (with note)';
+            }
+            $lines[] = '- '.$statusLabel.': '.$target.$suffix;
 
             if ($approval->status === 'rejected' && $approval->operation_type === 'file_write') {
-                $rejectedFiles[] = $target;
+                if ($note !== '') {
+                    $reviewLines[] = '- '.$target.': '.$note;
+                } else {
+                    $rejectedFiles[] = $target;
+                }
             }
+        }
+
+        if ($reviewLines !== []) {
+            $lines[] = '';
+            $lines[] = 'Code review instructions (must address before re-proposing):';
+            $lines = array_merge($lines, $reviewLines);
         }
 
         if ($rejectedFiles !== []) {
             $lines[] = '';
-            $lines[] = 'REJECTED file changes — executor MUST revert these paths to their pre-change state before continuing:';
+            $lines[] = 'REJECTED file changes (no review note) — executor MUST revert these paths to their pre-change state before continuing:';
             foreach ($rejectedFiles as $path) {
                 $lines[] = '- '.$path.' (use `git restore '.$path.'` when available, or restore exact `before` snapshot from evidence)';
             }
@@ -303,6 +327,64 @@ class ExecutorApprovalService
         }
 
         return implode("\n", $lines);
+    }
+
+    /**
+     * @return array{instructions: string, items: list<array{path: string, change_type: string, before: string, user_note: string}>}
+     */
+    public function collectCodeReviewInstructions(string $runId): array
+    {
+        $items = [];
+        $blocks = [];
+
+        foreach ($this->rejectedFileWritesForRun($runId) as $approval) {
+            $note = trim((string) ($approval->decision_note ?? ''));
+            if ($note === '') {
+                continue;
+            }
+            /** @var array<string, mixed> $evidence */
+            $evidence = is_array($approval->evidence) ? $approval->evidence : [];
+            $path = StringCoercion::toString($evidence['path'] ?? null, '');
+            if ($path === '') {
+                continue;
+            }
+            $items[] = [
+                'path' => $path,
+                'change_type' => StringCoercion::toString($evidence['change_type'] ?? null, 'modified'),
+                'before' => (string) ($evidence['before'] ?? ''),
+                'user_note' => $note,
+            ];
+            $blocks[] = $path.': '.$note;
+        }
+
+        return [
+            'instructions' => implode("\n", $blocks),
+            'items' => $items,
+        ];
+    }
+
+    public function hasRejectedFileWritesWithReviewNotes(string $runId): bool
+    {
+        return $this->collectCodeReviewInstructions($runId)['items'] !== [];
+    }
+
+    public function hasRejectedFileWritesWithoutReviewNotes(string $runId): bool
+    {
+        foreach ($this->rejectedFileWritesForRun($runId) as $approval) {
+            if (trim((string) ($approval->decision_note ?? '')) === '') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function markApprovalRequestChanges(Approval $approval, bool $requestChanges): void
+    {
+        $meta = is_array($approval->metadata) ? $approval->metadata : [];
+        $meta['request_changes'] = $requestChanges;
+        $approval->metadata = $meta;
+        $approval->save();
     }
 
     /**

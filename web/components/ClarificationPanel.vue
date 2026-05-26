@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import type { ClarificationAnswer, ClarificationQuestion } from '~/types/clarification'
+import type { ClarificationAnswer, ClarificationQuestion, ClarificationReviewDecision } from '~/types/clarification'
 
 export type { ClarificationAnswer, ClarificationQuestion }
 export type { ClarificationOption } from '~/types/clarification'
@@ -17,11 +17,16 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  submit: [answers: ClarificationAnswer[]]
+  submit: [payload: {
+    answers: ClarificationAnswer[]
+    review_decision: ClarificationReviewDecision
+    code_review_comment?: string
+  }]
 }>()
 
 const selections = ref<Record<string, string>>({})
 const freeText = ref<Record<string, string>>({})
+const codeReviewComment = ref('')
 
 function selectOption(questionId: string, optionId: string, label: string) {
   selections.value = { ...selections.value, [questionId]: optionId }
@@ -30,7 +35,15 @@ function selectOption(questionId: string, optionId: string, label: string) {
   }
 }
 
-function canSubmit() {
+function buildAnswers(): ClarificationAnswer[] {
+  return props.questions.map(q => ({
+    question_id: q.id,
+    option_id: selections.value[q.id] || undefined,
+    free_text: (freeText.value[q.id] ?? '').trim() || undefined,
+  }))
+}
+
+function canApprove() {
   return props.questions.every((q) => {
     const hasOption = Boolean(selections.value[q.id])
     const hasText = Boolean((freeText.value[q.id] ?? '').trim())
@@ -38,13 +51,22 @@ function canSubmit() {
   })
 }
 
-function submit() {
-  const answers: ClarificationAnswer[] = props.questions.map(q => ({
-    question_id: q.id,
-    option_id: selections.value[q.id] || undefined,
-    free_text: (freeText.value[q.id] ?? '').trim() || undefined,
-  }))
-  emit('submit', answers)
+function submit(decision: ClarificationReviewDecision) {
+  const comment = codeReviewComment.value.trim()
+  if (decision === 'request_changes' && !comment) {
+    return
+  }
+
+  const answers = buildAnswers()
+  if (decision === 'approve' && !canApprove() && !comment) {
+    return
+  }
+
+  emit('submit', {
+    answers,
+    review_decision: decision,
+    code_review_comment: decision === 'request_changes' ? comment : (comment || undefined),
+  })
 }
 </script>
 
@@ -122,19 +144,43 @@ function submit() {
           class="mt-1.5 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600"
           placeholder="Type your answer…"
           data-testid="clarification-input"
-          @keydown.enter.exact.prevent="canSubmit() && !submitting && submit()"
+          @keydown.enter.exact.prevent="canApprove() && !submitting && submit('approve')"
         >
       </label>
     </article>
 
-    <button
-      type="button"
-      class="w-full rounded-lg bg-amber-700 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-40 hover:bg-amber-600"
-      data-testid="clarification-continue"
-      :disabled="submitting || !canSubmit()"
-      @click="submit"
-    >
-      {{ submitting ? 'Continuing run…' : 'Continue' }}
-    </button>
+    <div class="space-y-2 border-t border-zinc-700/80 pt-3">
+      <label class="block">
+        <span class="text-xs text-zinc-400">Code review instructions</span>
+        <span class="text-zinc-600 text-xs"> (required for request changes)</span>
+        <textarea
+          v-model="codeReviewComment"
+          rows="3"
+          data-testid="clarification-code-review"
+          class="mt-1.5 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600"
+          placeholder="Tell the executor what to change before continuing…"
+        />
+      </label>
+      <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <button
+          type="button"
+          class="rounded-lg bg-amber-700 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-40 hover:bg-amber-600"
+          data-testid="clarification-approve"
+          :disabled="submitting || (!canApprove() && !codeReviewComment.trim())"
+          @click="submit('approve')"
+        >
+          {{ submitting ? 'Continuing…' : 'Approve & continue' }}
+        </button>
+        <button
+          type="button"
+          class="rounded-lg bg-red-900/80 px-4 py-2.5 text-sm font-medium text-red-100 border border-red-700 disabled:opacity-40 hover:bg-red-800/80"
+          data-testid="clarification-request-changes"
+          :disabled="submitting || !codeReviewComment.trim()"
+          @click="submit('request_changes')"
+        >
+          {{ submitting ? 'Sending…' : 'Request changes' }}
+        </button>
+      </div>
+    </div>
   </component>
 </template>

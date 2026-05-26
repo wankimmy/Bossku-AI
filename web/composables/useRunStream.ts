@@ -197,7 +197,12 @@ export function useRunStream() {
     }
   }
 
-  async function continueRun(runId: string, answers: ClarificationAnswer[]) {
+  async function continueRun(
+    runId: string,
+    answers: ClarificationAnswer[],
+    reviewDecision: 'approve' | 'request_changes' = 'approve',
+    codeReviewComment?: string,
+  ) {
     stop()
     error.value = null
     running.value = true
@@ -212,7 +217,11 @@ export function useRunStream() {
           'Content-Type': 'application/json',
           Accept: 'text/event-stream',
         },
-        body: JSON.stringify({ answers }),
+        body: JSON.stringify({
+          answers,
+          review_decision: reviewDecision,
+          code_review_comment: codeReviewComment,
+        }),
         signal: abort.signal,
       })
 
