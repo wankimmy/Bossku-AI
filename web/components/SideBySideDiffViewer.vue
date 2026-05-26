@@ -6,6 +6,11 @@ import {
   splitCellClass,
   type SplitDiffRow,
 } from '../utils/diffDisplay'
+import {
+  assessFileChange,
+  formatStatsSummary,
+  type FileChangeEvidence,
+} from '../utils/approvalReview'
 
 const props = defineProps<{
   diff?: string
@@ -15,9 +20,13 @@ const props = defineProps<{
   before?: string
   /** Full-width command text (no split columns). */
   commandText?: string
+  reviewBlocked?: boolean
+  reviewBlockReason?: string | null
 }>()
 
 const copied = ref(false)
+const leftScroll = ref<HTMLElement | null>(null)
+const rightScroll = ref<HTMLElement | null>(null)
 
 const displayPath = computed(() => props.path?.trim() || 'file')
 
@@ -36,6 +45,26 @@ const changeBadgeClass = computed(() => {
 })
 
 const isCommand = computed(() => Boolean(props.commandText?.trim()))
+
+const evidence = computed((): FileChangeEvidence => ({
+  path: props.path,
+  change_type: props.changeType,
+  before: props.before,
+  after: props.after,
+  diff: props.diff,
+}))
+
+const assessment = computed(() =>
+  assessFileChange(evidence.value, props.reviewBlocked, props.reviewBlockReason),
+)
+
+const statsSummary = computed(() =>
+  formatStatsSummary(
+    assessment.value.stats,
+    String(props.before ?? ''),
+    String(props.after ?? ''),
+  ),
+)
 
 const splitRows = computed((): SplitDiffRow[] => {
   if (isCommand.value) {
@@ -63,6 +92,14 @@ const unifiedForCopy = computed(() =>
   || '',
 )
 
+function syncScroll(from: 'left' | 'right', event: Event) {
+  const source = event.target as HTMLElement
+  const target = from === 'left' ? rightScroll.value : leftScroll.value
+  if (target) {
+    target.scrollTop = source.scrollTop
+  }
+}
+
 async function copyDiff() {
   const text = unifiedForCopy.value
   if (!text || !navigator?.clipboard) return
@@ -77,25 +114,47 @@ async function copyDiff() {
     class="flex min-h-0 flex-1 flex-col rounded-lg border border-zinc-700/80 bg-zinc-950"
     data-testid="side-by-side-diff"
   >
-    <div class="flex shrink-0 items-center justify-between gap-2 border-b border-zinc-800 px-3 py-2">
-      <div class="flex min-w-0 items-center gap-2">
-        <span class="truncate font-mono text-xs text-zinc-300">{{ displayPath }}</span>
-        <span
-          class="shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide"
-          :class="changeBadgeClass"
+    <div class="flex shrink-0 flex-col gap-2 border-b border-zinc-800 px-3 py-2">
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex min-w-0 items-center gap-2">
+          <span class="truncate font-mono text-xs text-zinc-300">{{ displayPath }}</span>
+          <span
+            class="shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide"
+            :class="changeBadgeClass"
+          >
+            {{ changeLabel }}
+          </span>
+        </div>
+        <button
+          v-if="!isCommand"
+          type="button"
+          class="shrink-0 rounded border border-zinc-600 px-2 py-0.5 text-[11px] text-zinc-400 hover:border-zinc-500 hover:text-zinc-200 disabled:opacity-40"
+          :disabled="splitRows.length === 0"
+          @click="copyDiff"
         >
-          {{ changeLabel }}
-        </span>
+          {{ copied ? 'Copied' : 'Copy diff' }}
+        </button>
       </div>
-      <button
-        v-if="!isCommand"
-        type="button"
-        class="shrink-0 rounded border border-zinc-600 px-2 py-0.5 text-[11px] text-zinc-400 hover:border-zinc-500 hover:text-zinc-200 disabled:opacity-40"
-        :disabled="splitRows.length === 0"
-        @click="copyDiff"
-      >
-        {{ copied ? 'Copied' : 'Copy diff' }}
-      </button>
+      <p v-if="!isCommand && splitRows.length" class="text-[11px] text-zinc-500">
+        {{ statsSummary }}
+      </p>
+      <div v-if="!isCommand && splitRows.length" class="flex gap-3 text-[10px] text-zinc-500">
+        <span><span class="inline-block h-2 w-2 rounded-sm bg-rose-950/80 align-middle" /> Removed</span>
+        <span><span class="inline-block h-2 w-2 rounded-sm bg-emerald-950/80 align-middle" /> Added</span>
+        <span><span class="inline-block h-2 w-2 rounded-sm bg-zinc-800 align-middle" /> Unchanged</span>
+      </div>
+    </div>
+
+    <div
+      v-if="assessment.blocked"
+      class="shrink-0 border-b border-amber-800/60 bg-amber-950/40 px-3 py-2 text-xs text-amber-200"
+      data-testid="diff-review-warning"
+    >
+      <p class="font-semibold">Cannot apply safely</p>
+      <p class="mt-1">{{ assessment.reason }}</p>
+      <p class="mt-1 text-amber-200/80">
+        Approving would replace the entire file. Reject and re-run the executor with complete file contents or a valid diff.
+      </p>
     </div>
 
     <pre
@@ -111,7 +170,11 @@ async function copyDiff() {
         <div class="shrink-0 border-b border-zinc-800 bg-zinc-900/80 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
           Previous
         </div>
-        <div class="min-h-0 flex-1 overflow-auto">
+        <div
+          ref="leftScroll"
+          class="min-h-0 flex-1 overflow-auto"
+          @scroll="syncScroll('left', $event)"
+        >
           <div
             v-for="(row, i) in splitRows"
             :key="`l-${i}`"
@@ -132,7 +195,11 @@ async function copyDiff() {
         <div class="shrink-0 border-b border-zinc-800 bg-zinc-900/80 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
           Updated
         </div>
-        <div class="min-h-0 flex-1 overflow-auto">
+        <div
+          ref="rightScroll"
+          class="min-h-0 flex-1 overflow-auto"
+          @scroll="syncScroll('right', $event)"
+        >
           <div
             v-for="(row, i) in splitRows"
             :key="`r-${i}`"

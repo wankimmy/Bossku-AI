@@ -19,6 +19,7 @@ class ExecutorApprovalService
         private readonly FileWriteApplier $fileWrites,
         private readonly ProjectPathResolver $paths,
         private readonly ProjectCommandRunner $commands,
+        private readonly ProposedFileChangeGuard $fileChangeGuard,
     ) {}
 
     public function requireUserApproval(): bool
@@ -58,7 +59,21 @@ class ExecutorApprovalService
                 $before = is_file($resolved['absolute']) ? (string) file_get_contents($resolved['absolute']) : '';
                 $after = $changeType === 'deleted' ? '' : ($this->fileWrites->extractAfterContent($item, $path) ?? '');
                 if ($changeType !== 'deleted' && $after === '') {
-                    $enriched[] = $item;
+                    $enriched[] = array_merge($item, [
+                        'approval_skipped' => true,
+                        'approval_skip_reason' => 'Missing file content in executor output.',
+                    ]);
+
+                    continue;
+                }
+
+                $skipReason = $this->fileChangeGuard->validate($before, $after, $changeType, $resolved['relative']);
+                if ($skipReason !== null) {
+                    $enriched[] = array_merge($item, [
+                        'path' => $resolved['relative'],
+                        'approval_skipped' => true,
+                        'approval_skip_reason' => $skipReason,
+                    ]);
 
                     continue;
                 }
@@ -219,6 +234,15 @@ class ExecutorApprovalService
     {
         /** @var array<string, mixed> $evidence */
         $evidence = is_array($approval->evidence) ? $approval->evidence : [];
+        $reviewBlockReason = null;
+
+        if ($approval->operation_type === 'file_write') {
+            $before = (string) ($evidence['before'] ?? '');
+            $after = (string) ($evidence['after'] ?? '');
+            $changeType = (string) ($evidence['change_type'] ?? 'modified');
+            $path = (string) ($evidence['path'] ?? '');
+            $reviewBlockReason = $this->fileChangeGuard->validate($before, $after, $changeType, $path);
+        }
 
         return [
             'id' => $approval->id,
@@ -230,6 +254,8 @@ class ExecutorApprovalService
             'status' => $approval->status,
             'decision_note' => $approval->decision_note,
             'created_at' => $approval->created_at?->toIso8601String(),
+            'review_blocked' => $reviewBlockReason !== null,
+            'review_block_reason' => $reviewBlockReason,
         ];
     }
 
@@ -250,6 +276,7 @@ class ExecutorApprovalService
         }
 
         $lines = ['User decisions on proposed changes:'];
+        $rejectedFiles = [];
         foreach ($decided as $approval) {
             /** @var array<string, mixed> $evidence */
             $evidence = is_array($approval->evidence) ? $approval->evidence : [];
@@ -260,9 +287,112 @@ class ExecutorApprovalService
             $note = trim((string) ($approval->decision_note ?? ''));
             $suffix = $note !== '' ? " — User note: {$note}" : '';
             $lines[] = '- '.strtoupper((string) $approval->status).': '.$target.$suffix;
+
+            if ($approval->status === 'rejected' && $approval->operation_type === 'file_write') {
+                $rejectedFiles[] = $target;
+            }
+        }
+
+        if ($rejectedFiles !== []) {
+            $lines[] = '';
+            $lines[] = 'REJECTED file changes — executor MUST revert these paths to their pre-change state before continuing:';
+            foreach ($rejectedFiles as $path) {
+                $lines[] = '- '.$path.' (use `git restore '.$path.'` when available, or restore exact `before` snapshot from evidence)';
+            }
+            $lines[] = 'Do not re-apply rejected edits. Confirm each path matches the saved before content in patch_summary.';
         }
 
         return implode("\n", $lines);
+    }
+
+    /**
+     * @return list<Approval>
+     */
+    public function rejectedFileWritesForRun(string $runId): array
+    {
+        return Approval::query()
+            ->where('run_id', $runId)
+            ->where('operation_type', 'file_write')
+            ->where('status', 'rejected')
+            ->orderBy('created_at')
+            ->get()
+            ->all();
+    }
+
+    /**
+     * Best-effort restore of on-disk content when a file_write approval is rejected.
+     *
+     * @return array{reverted: bool, path: string, message: string}
+     */
+    public function revertRejectedFileWrite(Approval $approval): array
+    {
+        if ($approval->operation_type !== 'file_write') {
+            return ['reverted' => false, 'path' => '', 'message' => 'Not a file write approval.'];
+        }
+
+        /** @var array<string, mixed> $evidence */
+        $evidence = is_array($approval->evidence) ? $approval->evidence : [];
+        $path = StringCoercion::toString($evidence['path'] ?? null, '');
+        if ($path === '') {
+            return ['reverted' => false, 'path' => '', 'message' => 'Missing path in evidence.'];
+        }
+
+        $before = (string) ($evidence['before'] ?? '');
+        $after = (string) ($evidence['after'] ?? '');
+        $changeType = StringCoercion::toString($evidence['change_type'] ?? null, 'modified');
+
+        try {
+            $resolved = $this->paths->resolve($path);
+            $absolute = $resolved['absolute'];
+            $relative = $resolved['relative'];
+
+            if ($changeType === 'created') {
+                if (! is_file($absolute)) {
+                    return ['reverted' => false, 'path' => $relative, 'message' => 'File was not created.'];
+                }
+                $current = (string) file_get_contents($absolute);
+                if ($after !== '' && $current === $after) {
+                    unlink($absolute);
+
+                    return ['reverted' => true, 'path' => $relative, 'message' => 'Removed rejected new file.'];
+                }
+
+                return ['reverted' => false, 'path' => $relative, 'message' => 'File exists but does not match proposed content.'];
+            }
+
+            if ($changeType === 'deleted') {
+                if (is_file($absolute)) {
+                    return ['reverted' => false, 'path' => $relative, 'message' => 'File still present (delete was not applied).'];
+                }
+                if ($before === '') {
+                    return ['reverted' => false, 'path' => $relative, 'message' => 'No before snapshot to restore.'];
+                }
+                $this->fileWrites->applyPath($relative, $before, 'modified');
+
+                return ['reverted' => true, 'path' => $relative, 'message' => 'Restored file that would have been deleted.'];
+            }
+
+            if (! is_file($absolute)) {
+                if ($before === '') {
+                    return ['reverted' => false, 'path' => $relative, 'message' => 'File missing and no before snapshot.'];
+                }
+                $this->fileWrites->applyPath($relative, $before, 'modified');
+
+                return ['reverted' => true, 'path' => $relative, 'message' => 'Recreated file from before snapshot.'];
+            }
+
+            $current = (string) file_get_contents($absolute);
+            if ($current === $before) {
+                return ['reverted' => false, 'path' => $relative, 'message' => 'Already matches before snapshot.'];
+            }
+
+            $this->fileWrites->applyPath($relative, $before, 'modified');
+
+            return ['reverted' => true, 'path' => $relative, 'message' => 'Restored before snapshot on disk.'];
+        }
+        catch (\Throwable $e) {
+            return ['reverted' => false, 'path' => $path, 'message' => $e->getMessage()];
+        }
     }
 
     protected function riskForFileChange(string $relative, string $changeType, string $after): string

@@ -45,11 +45,7 @@ export function buildDisplayDiff(change: DiffDisplayInput): string | null {
     return lines.join('\n')
   }
 
-  if (after !== '') {
-    const lines = [`--- ${path}`, `+++ ${path}`, ...after.split(/\r\n|\n|\r/).map(line => `+${line}`)]
-
-    return lines.join('\n')
-  }
+  // Modified files: rely on buildSplitRowsFromBeforeAfter (no misleading +only unified diff).
 
   return null
 }

@@ -99,4 +99,29 @@ class ExecutorApprovalServiceTest extends TestCase
 
         $this->assertSame("after\n", File::get($this->repo.'/apply.txt'));
     }
+
+    #[Test]
+    public function it_skips_placeholder_file_proposals_without_creating_approval(): void
+    {
+        $before = implode("\n", array_map(fn ($i) => "<?php // line {$i}", range(1, 25)));
+        File::put($this->repo.'/ReceiptController.php', $before);
+        $runId = Run::query()->create(['prompt' => 'test', 'status' => 'running'])->id;
+
+        $service = app(ExecutorApprovalService::class);
+        $out = $service->proposeFileChanges($runId, [
+            'files_changed' => [[
+                'path' => 'ReceiptController.php',
+                'change_type' => 'modified',
+                'after' => 'Will be determined after reading the file',
+            ]],
+        ]);
+
+        $this->assertSame([], $out['pending_approval_ids']);
+        $this->assertDatabaseMissing('bossku_ai_approvals', [
+            'run_id' => $runId,
+            'operation_type' => 'file_write',
+        ]);
+        $this->assertTrue($out['execResult']['files_changed'][0]['approval_skipped'] ?? false);
+        $this->assertSame($before, File::get($this->repo.'/ReceiptController.php'));
+    }
 }

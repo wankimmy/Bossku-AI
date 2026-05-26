@@ -109,12 +109,24 @@ Git undo: put exact allowlisted lines in commands_run (e.g. "git restore path/to
 Project commands (user must approve each; run only in the active project root from workspace context): git status/diff/restore/checkout; docker compose / docker compose exec <service>; php artisan …; php vendor/bin/phpunit; composer test. Use the compose service name from runtime hints for this repo — not a name from another project. Put exact command strings in commands_run — do not invent test results; use tests_run only after commands actually run.
 Each file change and each command is shown to the user for approve/reject with an optional comment before it runs — list proposals in files_changed and commands_run; do not claim files are restored or deleted in patch_summary until the user could approve them.
 Use past tense in patch_summary only for work the user has already approved.
+
+File write rules (critical):
+- For modify/create, `after` MUST be the complete final file contents, OR provide a valid unified `diff` that applies cleanly to the current file.
+- NEVER put placeholders in `after` (e.g. TBD, "will be determined", "read file first", "to be filled", "..." only).
+- If you do not have the full file in context, read it via files_read first, or set needs_user_input — do NOT queue a file_write without real content.
+- Approving a bad `after` overwrites the entire file on disk.
+- When audit feedback includes rejected_approvals, revert each listed path (git restore or exact before snapshot). Do not re-apply rejected edits.
 SYS;
 
-        $fromRole = $auditFeedback !== null ? 'auditor' : 'orchestrator';
-        $handoffMessage = $auditFeedback !== null
-            ? 'Revision required from auditor feedback.'
-            : StringCoercion::toString($plan['handoff_message'] ?? null, 'Sending execution task to Executor.');
+        $isRejectedRevert = is_array($auditFeedback)
+            && (($auditFeedback['revision_type'] ?? '') === 'rejected_file_writes'
+                || isset($auditFeedback['rejected_approvals']));
+        $fromRole = $isRejectedRevert ? 'user' : ($auditFeedback !== null ? 'auditor' : 'orchestrator');
+        $handoffMessage = $isRejectedRevert
+            ? 'User rejected proposed file changes. Revert each rejected path to its before snapshot before continuing.'
+            : ($auditFeedback !== null
+                ? 'Revision required from auditor feedback.'
+                : StringCoercion::toString($plan['handoff_message'] ?? null, 'Sending execution task to Executor.'));
         $userContent = $this->personas->wrapHandoffUserContent('executor', $fromRole, $handoffMessage, $payload);
 
         $messages = [

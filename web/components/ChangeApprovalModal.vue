@@ -2,6 +2,8 @@
 import { computed, ref, watch } from 'vue'
 import { useApi } from '~/composables/useApi'
 import type { Approval } from '~/types/api'
+import { isAlreadyDecidedResponse, isIdempotentApprovalOutcome } from '~/utils/approvalDecision'
+import { assessFileChange } from '~/utils/approvalReview'
 import SideBySideDiffViewer from './SideBySideDiffViewer.vue'
 
 const props = defineProps<{
@@ -56,13 +58,44 @@ const showDiffViewer = computed(() =>
   ),
 )
 
+const fileReview = computed(() => {
+  if (!props.approval || isTerminalCommand.value) {
+    return { blocked: false, reason: null as string | null, stats: { added: 0, removed: 0, unchanged: 0 } }
+  }
+
+  return assessFileChange(
+    {
+      path: String(evidence.value.path ?? ''),
+      change_type: String(evidence.value.change_type ?? 'modified'),
+      before: String(evidence.value.before ?? ''),
+      after: String(evidence.value.after ?? ''),
+      diff: diffText.value,
+    },
+    props.approval.review_blocked,
+    props.approval.review_block_reason,
+  )
+})
+
+const approveBlocked = computed(() => fileReview.value.blocked)
+
 async function doApprove() {
-  if (!props.approval || loading.value) return
+  if (!props.approval || loading.value || approveBlocked.value) return
   loading.value = true
   try {
-    await api.post(`/approvals/${props.approval.id}/approve`, { note: note.value || undefined })
+    const res = await api.post(`/approvals/${props.approval.id}/approve`, { note: note.value || undefined })
+    if (isAlreadyDecidedResponse(res)) {
+      // already granted — advance queue
+    }
     emit('approve', note.value)
     note.value = ''
+  }
+  catch (err) {
+    if (isIdempotentApprovalOutcome(err, 'approve')) {
+      emit('approve', note.value)
+      note.value = ''
+      return
+    }
+    throw err
   }
   finally {
     loading.value = false
@@ -73,9 +106,20 @@ async function doReject() {
   if (!props.approval || loading.value) return
   loading.value = true
   try {
-    await api.post(`/approvals/${props.approval.id}/reject`, { note: note.value || undefined })
+    const res = await api.post(`/approvals/${props.approval.id}/reject`, { note: note.value || undefined })
+    if (isAlreadyDecidedResponse(res)) {
+      // already rejected — advance queue
+    }
     emit('reject', note.value)
     note.value = ''
+  }
+  catch (err) {
+    if (isIdempotentApprovalOutcome(err, 'reject')) {
+      emit('reject', note.value)
+      note.value = ''
+      return
+    }
+    throw err
   }
   finally {
     loading.value = false
@@ -155,6 +199,8 @@ const riskCls = (r?: string) => {
             :before="String(evidence.before ?? '')"
             :after="String(evidence.after ?? '')"
             :command-text="commandText"
+            :review-blocked="fileReview.blocked"
+            :review-block-reason="fileReview.reason"
           />
 
           <div class="shrink-0">
@@ -174,10 +220,11 @@ const riskCls = (r?: string) => {
           <button
             type="button"
             class="flex-1 py-2.5 text-sm rounded-lg bg-emerald-900/70 text-emerald-300 border border-emerald-700 hover:bg-emerald-800/70 disabled:opacity-50"
-            :disabled="loading || submitting"
+            :disabled="loading || submitting || approveBlocked"
+            :title="approveBlocked ? (fileReview.reason ?? 'Change blocked') : undefined"
             @click="doApprove"
           >
-            Approve & apply
+            {{ approveBlocked ? 'Approve blocked' : 'Approve & apply' }}
           </button>
           <button
             type="button"

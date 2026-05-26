@@ -4,6 +4,7 @@ namespace App\Services\Orchestrator;
 
 use App\Models\BosskuAi\Approval;
 use App\Models\BosskuAi\Run;
+use App\Support\StringCoercion;
 
 trait OrchestratorApprovalTrait
 {
@@ -93,6 +94,10 @@ trait OrchestratorApprovalTrait
             $this->emit($emit, $this->events->approvalFeedbackReceived($run, $feedback));
         }
 
+        foreach ($this->executorApprovals->rejectedFileWritesForRun($runId) as $rejectedApproval) {
+            $this->executorApprovals->revertRejectedFileWrite($rejectedApproval);
+        }
+
         return $this->resumeFromExecutorApprovals($run, $pipeline, $feedback, $emit);
     }
 
@@ -162,6 +167,13 @@ trait OrchestratorApprovalTrait
             $agentPrompt = trim((string) ($pipeline['agent_prompt'] ?? '')."\n\n".$feedback);
             $pipeline['agent_prompt'] = $agentPrompt;
             $execResult['user_approval_feedback'] = $feedback;
+        }
+
+        $revertOutcome = $this->runExecutorRevertForRejectedFiles($run, $execResult, $pipeline, $feedback, $emit);
+        $execResult = $revertOutcome['execResult'];
+        $pipeline = $revertOutcome['pipeline'];
+        if ($revertOutcome['paused'] !== null) {
+            return $revertOutcome['paused'];
         }
 
         $userPrompt = (string) ($pipeline['user_prompt'] ?? $run->prompt);
@@ -331,5 +343,145 @@ trait OrchestratorApprovalTrait
         }
 
         return $execResult;
+    }
+
+    /**
+     * @param  array<string, mixed>  $execResult
+     * @param  array<string, mixed>  $pipeline
+     * @return array{execResult: array<string, mixed>, pipeline: array<string, mixed>, paused: array<string, mixed>|null}
+     */
+    protected function runExecutorRevertForRejectedFiles(
+        Run $run,
+        array $execResult,
+        array $pipeline,
+        string $feedback,
+        ?callable $emit,
+    ): array {
+        $revertPayload = ExecutorEvidenceSupport::rejectedFilesPayloadForRevision(
+            $execResult,
+            $run->id,
+            $feedback,
+        );
+        if ($revertPayload === null) {
+            return ['execResult' => $execResult, 'pipeline' => $pipeline, 'paused' => null];
+        }
+
+        $userPrompt = (string) ($pipeline['user_prompt'] ?? $run->prompt);
+        $prompt = (string) ($pipeline['effective_prompt'] ?? $userPrompt);
+        $agentPrompt = (string) ($pipeline['agent_prompt'] ?? '');
+        /** @var array<string, mixed> $modelRoute */
+        $modelRoute = is_array($pipeline['model_route'] ?? null) ? $pipeline['model_route'] : [];
+        /** @var array<string, string> $modelsResolved */
+        $modelsResolved = is_array($pipeline['models_resolved'] ?? null) ? $pipeline['models_resolved'] : [];
+        /** @var array<string, mixed> $routerCtx */
+        $routerCtx = is_array($pipeline['router_ctx'] ?? null) ? $pipeline['router_ctx'] : [];
+        /** @var array<string, mixed> $plan */
+        $plan = is_array($pipeline['plan'] ?? null) ? $pipeline['plan'] : [];
+        /** @var list<array<string, mixed>> $memPayload */
+        $memPayload = is_array($pipeline['mem_payload'] ?? null) ? $pipeline['mem_payload'] : [];
+        $workflow = (string) ($pipeline['workflow'] ?? $modelRoute['workflow'] ?? '');
+        $tokenAcc = (int) ($pipeline['token_acc'] ?? 0);
+        $tRun = (float) ($pipeline['t_run'] ?? microtime(true));
+        $preflightReads = is_array($pipeline['preflight_reads'] ?? null) ? $pipeline['preflight_reads'] : [];
+        $execProfileKey = (string) ($pipeline['exec_profile_key'] ?? 'default');
+        $skillName = (string) ($pipeline['skill_name'] ?? 'cofounder');
+        /** @var array<string, mixed> $step */
+        $step = is_array($pipeline['step'] ?? null) ? $pipeline['step'] : [];
+        /** @var array<string, mixed> $skillRow */
+        $skillRow = is_array($pipeline['skill_row'] ?? null) ? $pipeline['skill_row'] : ['name' => $skillName, 'content' => ''];
+        $ruleLines = is_array($pipeline['rule_lines'] ?? null) ? $pipeline['rule_lines'] : [];
+        $pbExcerpt = (string) ($pipeline['playbook_excerpt'] ?? '');
+        $chkExcerpt = (string) ($pipeline['checklist_excerpt'] ?? '');
+        $conversation = is_array($pipeline['conversation'] ?? null) ? $pipeline['conversation'] : [];
+
+        $revisionStep = array_merge($step, [
+            'id' => 2,
+            'title' => 'Revert rejected file changes',
+            'task' => 'User rejected one or more proposed file writes. Revert each listed path to its before snapshot.',
+        ]);
+
+        $this->emit($emit, $this->basePayload($run, 'executor_revert_started', [
+            'status' => 'running',
+            'agent' => 'executor',
+            'summary' => 'Executor is reverting user-rejected file changes.',
+            'message' => 'Restore each rejected path to its pre-change state.',
+        ]));
+
+        $revisionResult = $this->executor->execute(
+            $revisionStep,
+            $skillRow,
+            $ruleLines,
+            $pbExcerpt,
+            $chkExcerpt,
+            null,
+            $plan,
+            $modelRoute,
+            $execProfileKey,
+            $this->projects->agentWorkspaceContext(),
+            $preflightReads,
+            $revertPayload,
+        );
+        $revisionResult = ExecutorEvidenceSupport::mergePreflightReads($revisionResult, $preflightReads);
+        $revisionResult = $this->ensureExecutorEvidence($run, $plan, $revisionResult, $userPrompt, $emit);
+        $modelsResolved['executor'] = (string) ($revisionResult['_executor_model'] ?? $modelsResolved['executor'] ?? '');
+
+        $revPipeline = $this->buildExecutorPipelineSnapshot(
+            $run,
+            $userPrompt,
+            $prompt,
+            $agentPrompt,
+            $conversation,
+            $modelRoute,
+            $modelsResolved,
+            $routerCtx,
+            $memPayload,
+            $plan,
+            $workflow,
+            $preflightReads,
+            $execProfileKey,
+            $skillName,
+            $revisionStep,
+            $skillRow,
+            $ruleLines,
+            $pbExcerpt,
+            $chkExcerpt,
+            $tokenAcc,
+            $tRun,
+            $revertPayload,
+        );
+        $revPipeline['exec_result'] = $revisionResult;
+
+        $revAfter = $this->applyOrPauseForExecutorApprovals($run, $revisionResult, $revPipeline, $emit);
+        if (($revAfter['awaiting_approvals'] ?? false) === true) {
+            return ['execResult' => $revisionResult, 'pipeline' => $revPipeline, 'paused' => $revAfter];
+        }
+
+        if (is_array($revAfter)) {
+            $revisionResult = $revAfter;
+        }
+
+        $issues = is_array($revisionResult['known_issues'] ?? null) ? $revisionResult['known_issues'] : [];
+        foreach ($this->executorApprovals->rejectedFileWritesForRun($run->id) as $approval) {
+            /** @var array<string, mixed> $evidence */
+            $evidence = is_array($approval->evidence) ? $approval->evidence : [];
+            $path = StringCoercion::toString($evidence['path'] ?? null, $approval->operation_description);
+            $issues[] = 'User rejected file change (revert required): '.$path;
+        }
+        $revisionResult['known_issues'] = array_values(array_unique($issues));
+
+        $revTok = $this->estimateTokens(json_encode($revisionResult) ?: '');
+        $this->emit($emit, $this->events->executorDone(
+            $run,
+            $revisionResult,
+            $modelsResolved['executor'] ?? '',
+            (int) ($revisionResult['latency_ms'] ?? 0),
+            $revTok,
+            'executor_revert_done',
+        ));
+
+        $pipeline['exec_result'] = $revisionResult;
+        $pipeline['models_resolved'] = $modelsResolved;
+
+        return ['execResult' => $revisionResult, 'pipeline' => $pipeline, 'paused' => null];
     }
 }

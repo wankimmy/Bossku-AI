@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import type { Approval } from '~/types/api'
+import { isIdempotentApprovalOutcome } from '~/utils/approvalDecision'
+import { assessFileChange } from '~/utils/approvalReview'
 import SideBySideDiffViewer from '../SideBySideDiffViewer.vue'
 
 const props = defineProps<{ approval: Approval }>()
@@ -10,22 +12,59 @@ const api = useApi()
 const loading = ref(false)
 const note = ref('')
 
+const fileReview = computed(() => {
+  if (props.approval.operation_type === 'terminal_command') {
+    return { blocked: false, reason: null as string | null }
+  }
+  const ev = props.approval.evidence ?? {}
+
+  return assessFileChange(
+    {
+      path: String(ev.path ?? ''),
+      change_type: String(ev.change_type ?? 'modified'),
+      before: String(ev.before ?? ''),
+      after: String(ev.after ?? ''),
+      diff: typeof ev.diff === 'string' ? ev.diff : '',
+    },
+    props.approval.review_blocked,
+    props.approval.review_block_reason,
+  )
+})
+
 async function doApprove() {
+  if (loading.value || fileReview.value.blocked) return
   loading.value = true
   try {
     await api.post(`/approvals/${props.approval.id}/approve`, { note: note.value || undefined })
     emit('approve')
     emit('close')
   }
+  catch (err) {
+    if (isIdempotentApprovalOutcome(err, 'approve')) {
+      emit('approve')
+      emit('close')
+      return
+    }
+    throw err
+  }
   finally { loading.value = false }
 }
 
 async function doReject() {
+  if (loading.value) return
   loading.value = true
   try {
     await api.post(`/approvals/${props.approval.id}/reject`, { note: note.value || undefined })
     emit('reject')
     emit('close')
+  }
+  catch (err) {
+    if (isIdempotentApprovalOutcome(err, 'reject')) {
+      emit('reject')
+      emit('close')
+      return
+    }
+    throw err
   }
   finally { loading.value = false }
 }
@@ -82,6 +121,8 @@ const riskCls = (r?: string) => {
             :before="String(approval.evidence?.before ?? '')"
             :after="String(approval.evidence?.after ?? '')"
             :command-text="approval.operation_type === 'terminal_command' ? String(approval.evidence?.command ?? '') : ''"
+            :review-blocked="fileReview.blocked"
+            :review-block-reason="fileReview.reason"
           />
           <div v-else-if="approval.evidence">
             <div class="text-xs text-zinc-500 uppercase tracking-wide mb-1">Evidence</div>
@@ -104,10 +145,11 @@ const riskCls = (r?: string) => {
           <button
             type="button"
             class="flex-1 py-2 text-sm rounded bg-emerald-900/70 text-emerald-300 border border-emerald-700 hover:bg-emerald-800/70 disabled:opacity-50"
-            :disabled="loading"
+            :disabled="loading || fileReview.blocked"
+            :title="fileReview.blocked ? (fileReview.reason ?? 'Change blocked') : undefined"
             @click="doApprove"
           >
-            Approve
+            {{ fileReview.blocked ? 'Approve blocked' : 'Approve' }}
           </button>
           <button
             type="button"

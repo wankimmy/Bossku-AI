@@ -219,6 +219,8 @@ export interface Approval {
   decision_note?: string
   created_at?: string
   decided_at?: string
+  review_blocked?: boolean
+  review_block_reason?: string | null
 }
 
 export interface UsageEvent {

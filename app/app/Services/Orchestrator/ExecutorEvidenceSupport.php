@@ -304,6 +304,60 @@ class ExecutorEvidenceSupport
      * @param  list<array<string, mixed>>  $preflightReads
      * @return array<string, mixed>
      */
+    /**
+     * @param  array<string, mixed>  $execResult
+     * @return array<string, mixed>|null
+     */
+    public static function rejectedFilesPayloadForRevision(
+        array $execResult,
+        string $runId,
+        string $userFeedback = '',
+    ): ?array {
+        $rejected = \App\Models\BosskuAi\Approval::query()
+            ->where('run_id', $runId)
+            ->where('operation_type', 'file_write')
+            ->where('status', 'rejected')
+            ->orderBy('created_at')
+            ->get();
+
+        if ($rejected->isEmpty()) {
+            return null;
+        }
+
+        $items = [];
+        foreach ($rejected as $approval) {
+            /** @var array<string, mixed> $evidence */
+            $evidence = is_array($approval->evidence) ? $approval->evidence : [];
+            $path = StringCoercion::toString($evidence['path'] ?? null, '');
+            if ($path === '') {
+                continue;
+            }
+            $items[] = [
+                'path' => $path,
+                'change_type' => StringCoercion::toString($evidence['change_type'] ?? null, 'modified'),
+                'before' => (string) ($evidence['before'] ?? ''),
+                'user_note' => trim((string) ($approval->decision_note ?? '')),
+            ];
+        }
+
+        if ($items === []) {
+            return null;
+        }
+
+        return [
+            'revision_type' => 'rejected_file_writes',
+            'rejected_approvals' => $items,
+            'user_approval_feedback' => $userFeedback,
+            'required_actions' => [
+                'Revert every rejected path to its exact before snapshot (or delete if change_type was created).',
+                'Prefer `git restore <path>` in commands_run when the repo is under git.',
+                'Do not re-apply the rejected after content.',
+                'List each reverted path in patch_summary after verification.',
+            ],
+            'executor_result' => self::executorPayloadForAudit($execResult, [], $runId),
+        ];
+    }
+
     public static function auditorPayloadForRevision(
         array $audit,
         array $execResult,

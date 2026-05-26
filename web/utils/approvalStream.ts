@@ -91,7 +91,7 @@ export function hydrateApprovalsFromEvent(evt: ApprovalSseEvent): {
     ? art.pending_count
     : (Array.isArray(art.approval_ids) ? art.approval_ids.length : (current ? 1 : 0))
 
-  const pending = current ? [current] : []
+  const pending = current && current.status === 'pending' ? [current] : []
 
   return {
     stage: 'executor_approvals',

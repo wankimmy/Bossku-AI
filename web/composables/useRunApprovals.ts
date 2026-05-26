@@ -8,6 +8,10 @@ export interface RunApprovalsState {
   stage: string | null
 }
 
+function onlyPending(approvals: Approval[]): Approval[] {
+  return approvals.filter((a) => a.status === 'pending')
+}
+
 export function useRunApprovals() {
   const pending = ref<Approval[]>([])
   const stage = ref<string | null>(null)
@@ -34,8 +38,9 @@ export function useRunApprovals() {
     if (!hydrated) return
     stage.value = hydrated.stage
     ssePendingCount.value = hydrated.pendingCount
-    if (hydrated.pending.length > 0) {
-      pending.value = hydrated.pending
+    const seeded = onlyPending(hydrated.pending)
+    if (seeded.length > 0) {
+      pending.value = seeded
     }
   }
 
@@ -49,7 +54,7 @@ export function useRunApprovals() {
         pending?: Approval[]
       }>(`/runs/${runId}/approvals`)
       stage.value = data.stage ?? null
-      pending.value = Array.isArray(data.pending) ? data.pending : []
+      pending.value = onlyPending(Array.isArray(data.pending) ? data.pending : [])
       ssePendingCount.value = pending.value.length
     }
     catch {

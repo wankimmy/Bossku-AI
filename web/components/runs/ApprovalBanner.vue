@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import type { Approval } from '~/types/api'
+import { isIdempotentApprovalOutcome } from '~/utils/approvalDecision'
+import { assessFileChange } from '~/utils/approvalReview'
 
 const props = defineProps<{ approval: Approval }>()
 const emit = defineEmits<{ approve: []; reject: [] }>()
@@ -8,20 +10,54 @@ const api = useApi()
 const loading = ref(false)
 const note = ref('')
 
+const fileReview = computed(() => {
+  if (props.approval.operation_type === 'terminal_command') {
+    return { blocked: false, reason: null as string | null }
+  }
+  const ev = props.approval.evidence ?? {}
+
+  return assessFileChange(
+    {
+      path: String(ev.path ?? ''),
+      change_type: String(ev.change_type ?? 'modified'),
+      before: String(ev.before ?? ''),
+      after: String(ev.after ?? ''),
+    },
+    props.approval.review_blocked,
+    props.approval.review_block_reason,
+  )
+})
+
 async function doApprove() {
+  if (loading.value || fileReview.value.blocked) return
   loading.value = true
   try {
     await api.post(`/approvals/${props.approval.id}/approve`, { note: note.value || undefined })
     emit('approve')
   }
+  catch (err) {
+    if (isIdempotentApprovalOutcome(err, 'approve')) {
+      emit('approve')
+      return
+    }
+    throw err
+  }
   finally { loading.value = false }
 }
 
 async function doReject() {
+  if (loading.value) return
   loading.value = true
   try {
     await api.post(`/approvals/${props.approval.id}/reject`, { note: note.value || undefined })
     emit('reject')
+  }
+  catch (err) {
+    if (isIdempotentApprovalOutcome(err, 'reject')) {
+      emit('reject')
+      return
+    }
+    throw err
   }
   finally { loading.value = false }
 }
@@ -37,14 +73,18 @@ async function doReject() {
           <span class="font-mono">{{ approval.operation_type }}</span>
         </p>
         <p v-if="approval.description" class="text-sm text-yellow-200/70 mt-1">{{ approval.description }}</p>
+        <p v-if="fileReview.blocked" class="mt-2 text-xs text-amber-300">
+          {{ fileReview.reason }}
+        </p>
         <div class="mt-3 flex flex-wrap gap-2">
           <button
             type="button"
             class="px-3 py-1.5 text-xs rounded bg-emerald-900/70 text-emerald-300 border border-emerald-700 hover:bg-emerald-800/70 disabled:opacity-50"
-            :disabled="loading"
+            :disabled="loading || fileReview.blocked"
+            :title="fileReview.blocked ? (fileReview.reason ?? 'Change blocked') : undefined"
             @click="doApprove"
           >
-            Approve
+            {{ fileReview.blocked ? 'Approve blocked' : 'Approve' }}
           </button>
           <button
             type="button"

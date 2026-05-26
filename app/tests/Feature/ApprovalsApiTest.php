@@ -84,6 +84,55 @@ class ApprovalsApiTest extends TestCase
     }
 
     #[Test]
+    public function second_approve_on_already_approved_returns_200(): void
+    {
+        $approval = $this->createApproval([
+            'operation_description' => 'run deploy script',
+            'risk_level' => 'high',
+            'status' => 'approved',
+            'decided_by' => 'user',
+            'decided_at' => now(),
+        ]);
+
+        $response = $this->postJson("/api/approvals/{$approval->id}/approve");
+
+        $response->assertStatus(200)
+            ->assertJsonPath('already_decided', true)
+            ->assertJsonPath('approval.status', 'approved');
+    }
+
+    #[Test]
+    public function approve_on_rejected_returns_422(): void
+    {
+        $approval = $this->createApproval([
+            'operation_description' => 'delete production data',
+            'risk_level' => 'critical',
+            'status' => 'rejected',
+            'decided_by' => 'user',
+            'decided_at' => now(),
+        ]);
+
+        $this->postJson("/api/approvals/{$approval->id}/approve")
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'Approval was rejected and cannot be approved.');
+    }
+
+    #[Test]
+    public function second_reject_on_already_rejected_returns_200(): void
+    {
+        $approval = $this->createApproval([
+            'status' => 'rejected',
+            'decided_by' => 'user',
+            'decided_at' => now(),
+        ]);
+
+        $this->postJson("/api/approvals/{$approval->id}/reject")
+            ->assertStatus(200)
+            ->assertJsonPath('already_decided', true)
+            ->assertJsonPath('approval.status', 'rejected');
+    }
+
+    #[Test]
     public function approvals_reject_sets_status_to_rejected(): void
     {
         $approval = $this->createApproval([

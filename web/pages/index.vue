@@ -364,12 +364,16 @@ const resolvedRunId = computed(() =>
 
 watch(
   () => events.value.filter((e: Record<string, unknown>) => e.type === 'approval_requested').length,
-  () => {
+  async () => {
     const approvalEvt = events.value.findLast(
       (e: Record<string, unknown>) => e.type === 'approval_requested',
     )
     if (approvalEvt) {
       runApprovals.seedFromSseEvent(approvalEvt)
+      const runId = resolvedRunId.value
+      if (runId) {
+        await runApprovals.fetchPending(runId)
+      }
     }
   },
 )
@@ -570,9 +574,13 @@ watch(showClarificationModal, (open) => {
   mobileTab.value = 'chat'
 })
 
-watch(showApprovalModal, (open) => {
+watch(showApprovalModal, async (open) => {
   if (!open) return
   mobileTab.value = 'chat'
+  const runId = resolvedRunId.value
+  if (runId) {
+    await runApprovals.fetchPending(runId)
+  }
 })
 
 onMounted(() => {

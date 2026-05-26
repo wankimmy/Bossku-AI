@@ -3,6 +3,7 @@
 namespace App\Services\Project;
 
 use App\Models\BosskuAi\Approval;
+use App\Services\Governance\ProposedFileChangeGuard;
 use Illuminate\Support\Facades\File;
 
 class FileWriteApplier
@@ -10,6 +11,7 @@ class FileWriteApplier
     public function __construct(
         private readonly ProjectPathResolver $paths,
         private readonly WorkspaceWriteGuard $writeGuard,
+        private readonly ProposedFileChangeGuard $fileChangeGuard,
     ) {}
 
     /**
@@ -57,6 +59,24 @@ class FileWriteApplier
 
         if ($path === '') {
             throw new \InvalidArgumentException('Missing file path in approval evidence.');
+        }
+
+        $before = (string) ($evidence['before'] ?? '');
+        if ($before === '' && $changeType !== 'created') {
+            try {
+                $resolved = $this->paths->resolve($path);
+                if (is_file($resolved['absolute'])) {
+                    $before = (string) file_get_contents($resolved['absolute']);
+                }
+            }
+            catch (\Throwable) {
+                // use empty before
+            }
+        }
+
+        $rejectReason = $this->fileChangeGuard->validate($before, $after, $changeType, $path);
+        if ($rejectReason !== null) {
+            throw new \RuntimeException('Refusing to apply file change: '.$rejectReason);
         }
 
         $written = $this->applyPath($path, $after, $changeType);
