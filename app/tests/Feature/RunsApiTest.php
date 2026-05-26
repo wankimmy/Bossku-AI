@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\BosskuAi\Run;
+use App\Models\BosskuAi\RunStreamEvent;
 use App\Services\Orchestrator\OrchestratorService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
@@ -70,6 +71,66 @@ class RunsApiTest extends TestCase
         $response->assertOk();
         $this->assertStringContainsString('text/event-stream', (string) $response->headers->get('Content-Type'));
         $this->assertStringContainsString('data:', $response->streamedContent());
+    }
+
+    #[Test]
+    public function runs_stream_events_endpoint_returns_persisted_events(): void
+    {
+        $runId = '00000000-0000-0000-0000-000000000088';
+
+        $this->mock(OrchestratorService::class, function ($mock) use ($runId) {
+            $mock->shouldReceive('run')
+                ->once()
+                ->andReturnUsing(function (string $prompt, ?callable $emit = null) use ($runId) {
+                    if ($emit !== null) {
+                        $emit(['type' => 'run_started', 'run_id' => $runId, 'status' => 'success']);
+                        $emit(['type' => 'run_completed', 'run_id' => $runId, 'status' => 'success', 'output' => 'Done.']);
+                    }
+
+                    return ['run_id' => $runId];
+                });
+        });
+
+        Run::factory()->create(['id' => $runId, 'status' => 'running']);
+
+        $this->get('/api/runs/stream?prompt=hello')->assertOk();
+
+        $this->getJson("/api/runs/{$runId}/stream-events?after_seq=0")
+            ->assertOk()
+            ->assertJsonPath('run_id', $runId)
+            ->assertJsonCount(2, 'events')
+            ->assertJsonPath('last_seq', 2);
+
+        $this->getJson("/api/runs/{$runId}/stream-events?after_seq=1")
+            ->assertOk()
+            ->assertJsonCount(1, 'events')
+            ->assertJsonPath('events.0.type', 'run_completed');
+    }
+
+    #[Test]
+    public function runs_stream_events_persist_without_live_client(): void
+    {
+        $runId = '00000000-0000-0000-0000-000000000077';
+
+        Run::factory()->create(['id' => $runId, 'status' => 'completed']);
+
+        RunStreamEvent::query()->create([
+            'run_id' => $runId,
+            'seq' => 1,
+            'payload' => ['type' => 'run_started', 'run_id' => $runId],
+            'created_at' => now(),
+        ]);
+        RunStreamEvent::query()->create([
+            'run_id' => $runId,
+            'seq' => 2,
+            'payload' => ['type' => 'run_completed', 'run_id' => $runId, 'output' => 'ok'],
+            'created_at' => now(),
+        ]);
+
+        $this->getJson("/api/runs/{$runId}/stream-events")
+            ->assertOk()
+            ->assertJsonPath('status', 'completed')
+            ->assertJsonPath('last_seq', 2);
     }
 
     #[Test]

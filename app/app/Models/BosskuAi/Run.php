@@ -64,6 +64,11 @@ class Run extends Model
         return $this->hasMany(Approval::class, 'run_id');
     }
 
+    public function streamEvents(): HasMany
+    {
+        return $this->hasMany(RunStreamEvent::class, 'run_id')->orderBy('seq');
+    }
+
     public function soulVersion(): BelongsTo
     {
         return $this->belongsTo(SoulVersion::class, 'soul_version_id');

@@ -14,6 +14,7 @@ export type LandingConversation = {
   createdAt: number
   turns: ChatTurn[]
   runEvents?: SseEvent[]
+  activeRunId?: string | null
 }
 
 export type StoredV2 = {
@@ -218,11 +219,26 @@ export function useLandingChat() {
     return turn
   }
 
-  function saveRunEvents(events: SseEvent[]) {
+  function saveRunEvents(events: SseEvent[], runId?: string | null) {
     const conv = activeConversation.value
     if (!conv) return
     conv.runEvents = [...events]
+    if (runId !== undefined) {
+      conv.activeRunId = runId
+    }
     touchConversation(conv.id)
+  }
+
+  function setActiveRunId(runId: string | null) {
+    const conv = activeConversation.value
+    if (!conv) return
+    conv.activeRunId = runId
+    touchConversation(conv.id)
+  }
+
+  function getActiveRunId(conversationId: string): string | null {
+    const conv = store.value.conversations.find(c => c.id === conversationId)
+    return conv?.activeRunId ?? null
   }
 
   function getRunEvents(conversationId: string): SseEvent[] {
@@ -298,6 +314,8 @@ export function useLandingChat() {
     addUserTurn,
     addAssistantTurn,
     saveRunEvents,
+    setActiveRunId,
+    getActiveRunId,
     getRunEvents,
     startNewConversation,
     selectConversation,

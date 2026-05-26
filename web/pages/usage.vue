@@ -1,27 +1,26 @@
 <script setup lang="ts">
 import type { UsageEvent, UsageSummary } from '~/types/api'
+import { normalizeUsageEvents, normalizeUsageSummary } from '~/utils/usageNormalize'
 
 definePageMeta({ layout: 'default' })
 
 const api = useApi()
 
-const { data: summaryData, pending: summaryPending } = await useAsyncData<UsageSummary>(
+const { data: summaryData, pending: summaryPending } = await useAsyncData(
   'usage-summary',
   () => api.get('/usage/summary'),
 )
 
-const { data: eventsData, pending: eventsPending } = await useAsyncData<UsageEvent[] | { data?: UsageEvent[] }>(
+const { data: eventsData, pending: eventsPending } = await useAsyncData(
   'usage-events',
   () => api.get('/usage'),
 )
 
-const events = computed<UsageEvent[]>(() => {
-  const d = eventsData.value
-  if (!d) return []
-  return Array.isArray(d) ? d : (d.data ?? [])
-})
+const events = computed<UsageEvent[]>(() => normalizeUsageEvents(eventsData.value))
 
-const summary = computed<UsageSummary | null>(() => summaryData.value ?? null)
+const summary = computed<UsageSummary | null>(() =>
+  normalizeUsageSummary(summaryData.value as Parameters<typeof normalizeUsageSummary>[0]),
+)
 </script>
 
 <template>

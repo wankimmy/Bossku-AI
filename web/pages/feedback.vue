@@ -1,18 +1,20 @@
 <script setup lang="ts">
 import type { FeedbackItem } from '~/types/api'
+import { paginatedItems, paginatedTotal } from '~/utils/paginatedResponse'
 
 definePageMeta({ layout: 'default' })
 
 const api = useApi()
 
-interface FeedbackResponse {
-  data: FeedbackItem[]
-  meta?: { total?: number; unprocessed?: number }
-}
+const { data, pending, refresh } = await useAsyncData('feedback', () => api.get('/feedback'))
 
-const { data, pending, refresh } = await useAsyncData<FeedbackResponse>('feedback', () => api.get('/feedback'))
+const items = computed(() => paginatedItems<FeedbackItem>(data.value))
 
-const items = computed(() => data.value?.data ?? [])
+const stats = computed(() => {
+  const total = paginatedTotal(data.value)
+  const unprocessed = items.value.filter(i => !i.processed).length
+  return { total, unprocessed }
+})
 
 const signalConfig: Record<string, { label: string; class: string }> = {
   positive: { label: 'Positive', class: 'bg-emerald-900/50 text-emerald-400' },
@@ -33,9 +35,9 @@ function formatDate(d?: string) {
         <h1 class="text-xl font-semibold">Feedback</h1>
         <p class="text-sm text-zinc-400">User and system feedback on runs, skills, and outputs.</p>
       </div>
-      <div v-if="data?.meta" class="flex gap-3 text-sm text-zinc-400">
-        <span>Total: <span class="text-zinc-200">{{ data.meta.total ?? items.length }}</span></span>
-        <span v-if="data.meta.unprocessed">Unprocessed: <span class="text-yellow-400">{{ data.meta.unprocessed }}</span></span>
+      <div class="flex gap-3 text-sm text-zinc-400">
+        <span>Total: <span class="text-zinc-200">{{ stats.total }}</span></span>
+        <span v-if="stats.unprocessed">Unprocessed: <span class="text-yellow-400">{{ stats.unprocessed }}</span></span>
       </div>
     </div>
 

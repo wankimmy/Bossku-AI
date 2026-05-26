@@ -53,6 +53,7 @@ Route::middleware('bossku.api')->group(function () {
 
     Route::get('/runs', [RunController::class, 'index']);
     Route::get('/runs/{id}', [RunController::class, 'show']);
+    Route::get('/runs/{id}/stream-events', [RunController::class, 'streamEvents']);
     Route::get('/runs/{id}/clarification', [RunController::class, 'clarification']);
     Route::get('/runs/{id}/approvals', [RunController::class, 'approvals']);
 

@@ -1,8 +1,15 @@
 import { apiUrl } from '~/composables/useApiBase'
 import type { ClarificationAnswer, ClarificationRequest } from '~/types/clarification'
+import {
+  clearActiveRunBinding,
+  loadActiveRunBinding,
+  saveActiveRunBinding,
+  updateActiveRunLastSeq,
+} from '~/utils/activeRunStorage'
 import { apiAuthHeaders } from '~/utils/apiAuthHeaders'
 import { isAwaitingApprovals } from '~/utils/approvalStream'
 import { buildClarificationRequest, isAwaitingClarification } from '~/utils/clarificationStream'
+import { isRunStatusTerminal, isTerminalStreamEvent } from '~/utils/runStreamTerminal'
 
 export type { ClarificationAnswer, ClarificationQuestion, ClarificationRequest } from '~/types/clarification'
 
@@ -10,6 +17,7 @@ export type SseEvent = Record<string, unknown> & {
   run_id?: string
   type?: string
   status?: string
+  seq?: number
 }
 
 export type ConversationTurn = {
@@ -17,12 +25,22 @@ export type ConversationTurn = {
   content: string
 }
 
-/** SSE event types that mean the run ended normally (do not show generic "interrupted"). */
+type StreamEventsResponse = {
+  run_id: string
+  status: string
+  events: SseEvent[]
+  last_seq: number
+}
+
 const TERMINAL_EVENT_TYPES = new Set([
   'run_completed',
   'run_failed',
   'planner_failed',
 ])
+
+let abort: AbortController | null = null
+let pollTimer: ReturnType<typeof setInterval> | null = null
+let pollInFlight = false
 
 async function consumeSseStream(
   reader: ReadableStreamDefaultReader<Uint8Array>,
@@ -58,13 +76,22 @@ async function consumeSseStream(
   }
 }
 
-/** Run via POST /api/runs/stream (SSE) — supports conversation history and clarification continue. */
+function stopPolling() {
+  if (pollTimer !== null) {
+    clearInterval(pollTimer)
+    pollTimer = null
+  }
+}
+
+/** App-global run stream — survives route changes; reconnects via polling after refresh. */
 export function useRunStream() {
-  const events = ref<SseEvent[]>([])
-  const running = ref(false)
-  const error = ref<string | null>(null)
-  const activeRunId = ref<string | null>(null)
-  let abort: AbortController | null = null
+  const events = useState<SseEvent[]>('bossku-run-stream-events', () => [])
+  const running = useState<boolean>('bossku-run-stream-running', () => false)
+  const polling = useState<boolean>('bossku-run-stream-polling', () => false)
+  const error = useState<string | null>('bossku-run-stream-error', () => null)
+  const activeRunId = useState<string | null>('bossku-run-stream-active-run-id', () => null)
+  const boundConvId = useState<string | null>('bossku-run-stream-bound-conv-id', () => null)
+  const lastPolledSeq = useState<number>('bossku-run-stream-last-seq', () => 0)
 
   const awaitingClarification = computed(() => isAwaitingClarification(events.value))
 
@@ -72,28 +99,187 @@ export function useRunStream() {
     buildClarificationRequest(events.value, activeRunId.value),
   )
 
+  function bindConversation(convId: string) {
+    boundConvId.value = convId
+    const binding = loadActiveRunBinding()
+    if (binding?.convId === convId && binding.runId) {
+      activeRunId.value = binding.runId
+      lastPolledSeq.value = binding.lastSeq
+    }
+  }
+
+  function persistBinding() {
+    const convId = boundConvId.value
+    const runId = activeRunId.value
+    if (!convId || !runId) return
+    saveActiveRunBinding({
+      convId,
+      runId,
+      lastSeq: lastPolledSeq.value,
+    })
+  }
+
+  function clearBinding() {
+    clearActiveRunBinding()
+    boundConvId.value = null
+  }
+
   function trackEvent(evt: SseEvent) {
-    if (evt.run_id) activeRunId.value = String(evt.run_id)
+    if (evt.run_id) {
+      activeRunId.value = String(evt.run_id)
+    }
+    if (typeof evt.seq === 'number') {
+      const seq = evt.seq
+      if (events.value.some(e => e.seq === seq)) {
+        return
+      }
+      lastPolledSeq.value = Math.max(lastPolledSeq.value, seq)
+      updateActiveRunLastSeq(lastPolledSeq.value)
+    }
     events.value.push(evt)
+    persistBinding()
+
+    if (isTerminalStreamEvent(evt)) {
+      running.value = false
+      stopPolling()
+      polling.value = false
+      clearBinding()
+    }
+  }
+
+  function mergePolledBatch(batch: SseEvent[], lastSeq: number) {
+    for (const evt of batch) {
+      trackEvent(evt)
+    }
+    if (lastSeq > lastPolledSeq.value) {
+      lastPolledSeq.value = lastSeq
+      updateActiveRunLastSeq(lastSeq)
+    }
+    persistBinding()
+  }
+
+  async function pollOnce(runId: string): Promise<boolean> {
+    if (pollInFlight) return false
+    pollInFlight = true
+    try {
+      const afterSeq = lastPolledSeq.value
+      const res = await $fetch<StreamEventsResponse>(
+        apiUrl(`/runs/${runId}/stream-events?after_seq=${afterSeq}`),
+        { headers: apiAuthHeaders() },
+      )
+      if (res.events.length > 0) {
+        mergePolledBatch(res.events, res.last_seq)
+      }
+      else if (res.last_seq > lastPolledSeq.value) {
+        lastPolledSeq.value = res.last_seq
+      }
+
+      const lastEvt = events.value.at(-1)
+      const terminalEvent = lastEvt !== undefined && isTerminalStreamEvent(lastEvt)
+      const terminalStatus = isRunStatusTerminal(res.status)
+      const paused = isAwaitingClarification(events.value) || isAwaitingApprovals(events.value)
+
+      if (terminalEvent || (terminalStatus && !paused)) {
+        running.value = false
+        polling.value = false
+        stopPolling()
+        clearBinding()
+        return true
+      }
+
+      if (paused) {
+        running.value = false
+        polling.value = false
+        stopPolling()
+        return true
+      }
+
+      return false
+    }
+    catch {
+      return false
+    }
+    finally {
+      pollInFlight = false
+    }
+  }
+
+  function attachPoll(runId: string, options?: { convId?: string; replaceEvents?: boolean }) {
+    stopPolling()
+    if (options?.convId) {
+      bindConversation(options.convId)
+    }
+    activeRunId.value = runId
+    if (options?.replaceEvents) {
+      events.value = []
+      lastPolledSeq.value = 0
+    }
+    const binding = loadActiveRunBinding()
+    if (binding?.runId === runId && binding.lastSeq > lastPolledSeq.value) {
+      lastPolledSeq.value = binding.lastSeq
+    }
+    polling.value = true
+    running.value = true
+    error.value = null
+    persistBinding()
+
+    void pollOnce(runId)
+    pollTimer = setInterval(() => {
+      void pollOnce(runId)
+    }, 2000)
   }
 
   function stop() {
     abort?.abort()
     abort = null
+    stopPolling()
     running.value = false
+    polling.value = false
+    clearBinding()
+  }
+
+  function handleStreamError(e: unknown, context: string) {
+    if (e instanceof DOMException && e.name === 'AbortError') {
+      if (!polling.value) {
+        running.value = false
+      }
+      return
+    }
+
+    const lastType = events.value.at(-1)?.type
+    const reachedTerminal = lastType !== undefined && TERMINAL_EVENT_TYPES.has(String(lastType))
+    const pausedForClarification = isAwaitingClarification(events.value)
+    const pausedForApprovals = isAwaitingApprovals(events.value)
+
+    if (!reachedTerminal && !pausedForClarification && !pausedForApprovals) {
+      const runId = activeRunId.value
+      if (runId) {
+        attachPoll(runId)
+        return
+      }
+      error.value = e instanceof Error ? e.message : `${context} was interrupted.`
+      running.value = false
+    }
   }
 
   async function start(
     prompt: string,
-    options?: { conversation?: ConversationTurn[]; appendEvents?: boolean },
+    options?: { conversation?: ConversationTurn[]; appendEvents?: boolean; convId?: string },
   ) {
-    stop()
+    if (options?.convId) {
+      bindConversation(options.convId)
+    }
+    abort?.abort()
+    abort = null
+    stopPolling()
     error.value = null
     if (!options?.appendEvents) {
       events.value = []
       activeRunId.value = null
+      lastPolledSeq.value = 0
     }
     running.value = true
+    polling.value = false
     abort = new AbortController()
 
     try {
@@ -124,43 +310,40 @@ export function useRunStream() {
       await consumeSseStream(reader, trackEvent)
     }
     catch (e: unknown) {
-      if (e instanceof DOMException && e.name === 'AbortError') {
-        running.value = false
-        return
+      if (events.value.length === 0 && !(e instanceof DOMException && e.name === 'AbortError')) {
+        error.value
+          = 'Stream failed to start: the API closed before any events (often HTTP 500). '
+            + 'Check `docker compose logs -f backend` — bootstrap/cache and storage must be writable. '
+            + 'Rebuild: `docker compose build backend && docker compose up -d backend`.'
       }
-
-      const lastType = events.value.at(-1)?.type
-      const reachedTerminal = lastType !== undefined && TERMINAL_EVENT_TYPES.has(String(lastType))
-      const pausedForClarification = isAwaitingClarification(events.value)
-      const pausedForApprovals = isAwaitingApprovals(events.value)
-
-      if (!reachedTerminal && !pausedForClarification && !pausedForApprovals) {
-        if (events.value.length === 0) {
-          error.value
-            = 'Stream failed to start: the API closed before any events (often HTTP 500). '
-              + 'Check `docker compose logs -f backend` — bootstrap/cache and storage must be writable. '
-              + 'Rebuild: `docker compose build backend && docker compose up -d backend`.'
-        }
-        else {
-          error.value
-            = e instanceof Error
-              ? e.message
-              : 'Connection to the run stream was interrupted mid-run. If Ollama or the API crashed, check `docker compose logs -f backend nginx`.'
-        }
-      }
+      handleStreamError(e, 'Stream')
     }
     finally {
-      running.value = false
       abort = null
+      if (!polling.value) {
+        const paused = isAwaitingClarification(events.value) || isAwaitingApprovals(events.value)
+        const lastEvt = events.value.at(-1)
+        const terminal = lastEvt !== undefined && isTerminalStreamEvent(lastEvt)
+        if (!terminal && !paused && activeRunId.value) {
+          attachPoll(activeRunId.value)
+        }
+        else if (!polling.value) {
+          running.value = false
+        }
+      }
     }
   }
 
   async function continueAfterApprovals(runId: string) {
-    stop()
+    abort?.abort()
+    abort = null
+    stopPolling()
     error.value = null
     running.value = true
+    polling.value = false
     activeRunId.value = runId
     abort = new AbortController()
+    persistBinding()
 
     try {
       const res = await fetch(apiUrl(`/runs/${runId}/continue-approvals/stream`), {
@@ -180,20 +363,21 @@ export function useRunStream() {
       await consumeSseStream(reader, trackEvent)
     }
     catch (e: unknown) {
-      if (e instanceof DOMException && e.name === 'AbortError') {
-        running.value = false
-        return
-      }
-      const lastType = events.value.at(-1)?.type
-      const reachedTerminal = lastType !== undefined && TERMINAL_EVENT_TYPES.has(String(lastType))
-      const paused = isAwaitingClarification(events.value) || isAwaitingApprovals(events.value)
-      if (!reachedTerminal && !paused) {
-        error.value = e instanceof Error ? e.message : 'Continue after approvals was interrupted.'
-      }
+      handleStreamError(e, 'Continue after approvals')
     }
     finally {
-      running.value = false
       abort = null
+      if (!polling.value) {
+        const paused = isAwaitingClarification(events.value) || isAwaitingApprovals(events.value)
+        const lastEvt = events.value.at(-1)
+        const terminal = lastEvt !== undefined && isTerminalStreamEvent(lastEvt)
+        if (!terminal && !paused) {
+          attachPoll(runId)
+        }
+        else {
+          running.value = false
+        }
+      }
     }
   }
 
@@ -203,11 +387,15 @@ export function useRunStream() {
     reviewDecision: 'approve' | 'request_changes' = 'approve',
     codeReviewComment?: string,
   ) {
-    stop()
+    abort?.abort()
+    abort = null
+    stopPolling()
     error.value = null
     running.value = true
+    polling.value = false
     activeRunId.value = runId
     abort = new AbortController()
+    persistBinding()
 
     try {
       const res = await fetch(apiUrl(`/runs/${runId}/continue/stream`), {
@@ -241,35 +429,36 @@ export function useRunStream() {
       await consumeSseStream(reader, trackEvent)
     }
     catch (e: unknown) {
-      if (e instanceof DOMException && e.name === 'AbortError') {
-        running.value = false
-        return
-      }
-
-      const lastType = events.value.at(-1)?.type
-      const reachedTerminal = lastType !== undefined && TERMINAL_EVENT_TYPES.has(String(lastType))
-      const pausedForClarification = isAwaitingClarification(events.value)
-      const pausedForApprovals = isAwaitingApprovals(events.value)
-
-      if (!reachedTerminal && !pausedForClarification && !pausedForApprovals) {
-        error.value = e instanceof Error ? e.message : 'Continue stream was interrupted.'
-      }
+      handleStreamError(e, 'Continue stream')
     }
     finally {
-      running.value = false
       abort = null
+      if (!polling.value) {
+        const paused = isAwaitingClarification(events.value) || isAwaitingApprovals(events.value)
+        const lastEvt = events.value.at(-1)
+        const terminal = lastEvt !== undefined && isTerminalStreamEvent(lastEvt)
+        if (!terminal && !paused) {
+          attachPoll(runId)
+        }
+        else {
+          running.value = false
+        }
+      }
     }
   }
-
-  onUnmounted(stop)
 
   return {
     events,
     running,
+    polling,
     error,
     activeRunId,
+    boundConvId,
+    lastPolledSeq,
     awaitingClarification,
     clarificationRequest,
+    bindConversation,
+    attachPoll,
     start,
     continueRun,
     continueAfterApprovals,

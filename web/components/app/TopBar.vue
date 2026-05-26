@@ -1,6 +1,6 @@
 <script setup lang="ts">
 const emit = defineEmits<{ menuToggle: [] }>()
-const { status: activeRunStatus } = useActiveRun()
+const { status: activeRunStatus, isActive, resumeUrl } = useActiveRun()
 const { collapsed: sidebarCollapsed, toggle: toggleSidebar } = useSidebarCollapsed()
 const { restartTour } = useOnboarding()
 const helpOpen = ref(false)
@@ -65,11 +65,18 @@ function takeTour() {
 
     <!-- Center: active run status -->
     <div class="flex-1 flex items-center justify-center">
-      <span
-        class="text-xs px-2 py-1 rounded-full"
-        :class="activeRunStatus ? 'bg-blue-900/50 text-blue-300' : 'bg-zinc-800 text-zinc-500'"
+      <NuxtLink
+        v-if="isActive && activeRunStatus"
+        :to="resumeUrl"
+        class="text-xs px-2 py-1 rounded-full bg-blue-900/50 text-blue-300 hover:bg-blue-800/50 hover:text-blue-200"
       >
-        {{ activeRunStatus ? `Run active: ${activeRunStatus}` : 'No active run' }}
+        Run active: {{ activeRunStatus }} — open chat
+      </NuxtLink>
+      <span
+        v-else
+        class="text-xs px-2 py-1 rounded-full bg-zinc-800 text-zinc-500"
+      >
+        No active run
       </span>
     </div>
 

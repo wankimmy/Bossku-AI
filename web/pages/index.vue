@@ -12,8 +12,12 @@ import {
   type SlashCommandItem,
   type SlashTrigger,
 } from '~/utils/slashCommands'
+import { shouldResumePolling } from '~/composables/useActiveRun'
 import type { ClarificationRequest } from '~/types/clarification'
 import type { Approval } from '~/types/api'
+import { loadActiveRunBinding } from '~/utils/activeRunStorage'
+import { apiUrl } from '~/composables/useApiBase'
+import { apiAuthHeaders } from '~/utils/apiAuthHeaders'
 
 definePageMeta({ layout: 'default' })
 
@@ -26,10 +30,14 @@ const skills = useSkills()
 const {
   events,
   running,
+  polling,
   error,
   awaitingClarification,
   clarificationRequest,
   activeRunId,
+  boundConvId,
+  bindConversation,
+  attachPoll,
   start,
   continueRun,
   continueAfterApprovals,
@@ -160,7 +168,7 @@ function recordAssistantReply(content: string) {
   if (lastRecordedRunId.value === recordKey) return
   lastRecordedRunId.value = recordKey
   chat.addAssistantTurn(text)
-  chat.saveRunEvents(events.value)
+  chat.saveRunEvents(events.value, activeRunId.value)
 }
 
 function assistantRecordKey(content: string) {
@@ -177,7 +185,7 @@ watch(
   () => [running.value, finalOutput.value, runError.value, awaitingClarification.value, awaitingApprovalsFromEvents.value, runApprovals.awaitingApprovals.value] as const,
   ([isRunning, output, err, awaitingClar, awaitingAppr, awaitingApprState]) => {
     if (isRunning) return
-    chat.saveRunEvents(events.value)
+    chat.saveRunEvents(events.value, activeRunId.value)
     if (awaitingClar || awaitingAppr || awaitingApprState) return
     if (output) {
       recordAssistantReply(output)
@@ -329,9 +337,11 @@ function applyRouteInsertPrefill() {
 watch(
   () => [chat.hydrated.value, route.query.insert, route.query.conv] as const,
   ([hydrated]) => {
-    if (!hydrated || running.value) return
+    if (!hydrated) return
     applyConversationFromRoute()
-    applyRouteInsertPrefill()
+    if (!running.value && !polling.value) {
+      applyRouteInsertPrefill()
+    }
   },
 )
 
@@ -455,7 +465,7 @@ async function onApprovalDecided(payload: { runHasPending: boolean }) {
   toast.info('Continuing run with your decisions…')
   try {
     await continueAfterApprovals(runId)
-    chat.saveRunEvents(events.value)
+    chat.saveRunEvents(events.value, activeRunId.value)
   }
   finally {
     continuingApprovals.value = false
@@ -483,7 +493,7 @@ async function submitClarification(payload: {
       payload.review_decision,
       payload.code_review_comment,
     )
-    chat.saveRunEvents(events.value)
+    chat.saveRunEvents(events.value, activeRunId.value)
   }
   finally {
     submittingClarification.value = false
@@ -507,7 +517,12 @@ function submit() {
   closeSlashMenu()
   lastRecordedRunId.value = null
   toast.info('Task started…')
-  start(userText, { conversation: prior })
+  const convId = chat.activeId.value
+  if (convId) {
+    bindConversation(convId)
+    chat.setActiveRunId(null)
+  }
+  start(userText, { conversation: prior, convId: convId ?? undefined })
 }
 
 function assistantOutputFromEvents(evts: Record<string, unknown>[]): string {
@@ -527,6 +542,47 @@ function backfillAssistantFromEvents(evts: Record<string, unknown>[]) {
   if (!already) chat.addAssistantTurn(text)
 }
 
+async function maybeResumeRunForConversation(convId: string) {
+  if (running.value || polling.value) return
+
+  const binding = loadActiveRunBinding()
+  const runId = chat.getActiveRunId(convId)
+    ?? (binding?.convId === convId ? binding.runId : null)
+  if (!runId) return
+
+  bindConversation(convId)
+
+  try {
+    const res = await $fetch<{
+      run_id: string
+      status: string
+      events: Record<string, unknown>[]
+      last_seq: number
+    }>(apiUrl(`/runs/${runId}/stream-events?after_seq=${binding?.lastSeq ?? 0}`), {
+      headers: apiAuthHeaders(),
+    })
+
+    if (res.events.length > 0) {
+      const existingSeqs = new Set(events.value.map(e => e.seq).filter(s => s !== undefined))
+      for (const evt of res.events) {
+        const seq = typeof evt.seq === 'number' ? evt.seq : undefined
+        if (seq !== undefined && existingSeqs.has(seq)) continue
+        events.value.push(evt as typeof events.value[0])
+      }
+    }
+
+    if (shouldResumePolling(res.status, events.value)) {
+      attachPoll(runId, { convId })
+    }
+    else {
+      chat.saveRunEvents(events.value, runId)
+    }
+  }
+  catch {
+    attachPoll(runId, { convId })
+  }
+}
+
 function applyConversationFromRoute() {
   closeSlashMenu()
   const raw = route.query.conv
@@ -539,7 +595,14 @@ function applyConversationFromRoute() {
       router.replace({ path: '/', query: {} })
       return
     }
-    events.value = chat.getRunEvents(convId)
+    bindConversation(convId)
+
+    const liveForThisConv = (running.value || polling.value) && boundConvId.value === convId
+    if (!liveForThisConv) {
+      events.value = chat.getRunEvents(convId)
+      void maybeResumeRunForConversation(convId)
+    }
+
     backfillAssistantFromEvents(events.value as Record<string, unknown>[])
     if (events.value.length > 0) focusAgentsPanel()
     const restoredOutput = assistantOutputFromEvents(events.value as Record<string, unknown>[])
@@ -547,7 +610,9 @@ function applyConversationFromRoute() {
     return
   }
   chat.clearActiveConversation()
-  events.value = []
+  if (!running.value && !polling.value) {
+    events.value = []
+  }
   lastRecordedRunId.value = null
   closeSlashMenu()
 }
@@ -574,7 +639,22 @@ function newSession() {
 }
 
 const hasActiveSession = computed(
-  () => Boolean(route.query.conv) || chat.turns.value.length > 0 || events.value.length > 0 || running.value,
+  () => Boolean(route.query.conv) || chat.turns.value.length > 0 || events.value.length > 0 || running.value || polling.value,
+)
+
+let saveEventsTimer: ReturnType<typeof setTimeout> | null = null
+watch(
+  () => [events.value.length, activeRunId.value, chat.activeId.value] as const,
+  () => {
+    if (!chat.activeId.value) return
+    if (saveEventsTimer) clearTimeout(saveEventsTimer)
+    saveEventsTimer = setTimeout(() => {
+      chat.saveRunEvents(events.value, activeRunId.value)
+      if (activeRunId.value) {
+        chat.setActiveRunId(activeRunId.value)
+      }
+    }, 1000)
+  },
 )
 
 watch(runError, (val) => {

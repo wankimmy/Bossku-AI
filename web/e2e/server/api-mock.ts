@@ -258,6 +258,23 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
     return
   }
 
+  const streamEventsMatch = pathname.match(/^\/api\/runs\/([^/]+)\/stream-events$/)
+  if (streamEventsMatch && method === 'GET') {
+    const runId = streamEventsMatch[1]
+    const afterSeq = Math.max(0, Number(url.searchParams.get('after_seq') ?? 0))
+    const events = [
+      { seq: 1, type: 'run_started', run_id: runId, status: 'success' },
+      { seq: 2, type: 'run_completed', run_id: runId, status: 'success', output: 'Mock poll completed.' },
+    ].filter(e => e.seq > afterSeq)
+    json(res, {
+      run_id: runId,
+      status: 'completed',
+      events,
+      last_seq: events.length > 0 ? events.at(-1)!.seq : afterSeq,
+    })
+    return
+  }
+
   if (pathname === '/api/project/list' && method === 'GET') {
     json(res, projectListResponse())
     return
@@ -654,12 +671,33 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
   }
 
   if (pathname === '/api/usage' && method === 'GET') {
-    json(res, { data: [], meta: { total: 0, current_page: 1 } })
+    json(res, {
+      data: [
+        {
+          id: 'usage_1',
+          model: 'llama3',
+          provider: 'ollama',
+          input_tokens: 1200,
+          output_tokens: 340,
+          cost_usd: 0.0025,
+          created_at: '2026-05-26T10:00:00.000000Z',
+        },
+      ],
+      total: 1,
+      current_page: 1,
+    })
     return
   }
 
   if (pathname === '/api/usage/summary' && method === 'GET') {
-    json(res, { total_input_tokens: 0, total_output_tokens: 0, total_cost_usd: 0, by_provider: [] })
+    json(res, {
+      total_input_tokens: 1200,
+      total_output_tokens: 340,
+      total_cost_usd: 0.0025,
+      breakdown: [
+        { provider: 'ollama', model: 'llama3', input_tokens: 1200, output_tokens: 340, cost_usd: 0.0025, call_count: 1 },
+      ],
+    })
     return
   }
 
@@ -685,7 +723,21 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
   }
 
   if (pathname === '/api/feedback' && method === 'GET') {
-    json(res, { data: [] })
+    json(res, {
+      data: [
+        {
+          id: 'fb_1',
+          target_type: 'run',
+          target_id: 'r_1',
+          signal: 'positive',
+          comment: 'Helpful answer',
+          processed: false,
+          created_at: '2026-05-26T10:00:00.000000Z',
+        },
+      ],
+      total: 1,
+      current_page: 1,
+    })
     return
   }
 
