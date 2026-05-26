@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const fixturesDir = join(__dirname, '../fixtures')
+const repoRoot = join(__dirname, '../../../..').replace(/\\/g, '/')
 
 function load<T>(name: string): T {
   const raw = readFileSync(join(fixturesDir, name), 'utf8')
@@ -28,8 +29,58 @@ const memoryList = load<{ data: Record<string, unknown>[] }>('memory-list.json')
 const memorySearchHit = load<unknown[]>('memory-search-hit.json')
 const defaultSettings = load<Record<string, string>>('settings-public.json')
 
+type MockProject = {
+  id: string
+  name: string
+  host_path: string
+  container_path: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+type MockProjectChange = Record<string, unknown>
+
+const workspaceMeta = {
+  workspace_mount: '/repo',
+  workspace_host_prefix: repoRoot,
+  default_repo_root: '/repo',
+}
+
+const initialProjects: MockProject[] = [
+  {
+    id: 'proj_1',
+    name: 'Bossku AI',
+    host_path: repoRoot,
+    container_path: '/repo',
+    is_active: true,
+    created_at: '2026-05-25T00:00:00.000000Z',
+    updated_at: '2026-05-25T00:00:00.000000Z',
+  },
+]
+
+const initialTree: Record<string, { name: string; path: string; type: 'dir' | 'file' }[]> = {
+  '': [
+    { name: 'app', path: 'app', type: 'dir' },
+    { name: 'README.md', path: 'README.md', type: 'file' },
+  ],
+  app: [
+    { name: 'main.php', path: 'app/main.php', type: 'file' },
+  ],
+}
+
+const initialFiles: Record<string, string> = {
+  'README.md': '# Bossku AI\n\nMock workspace used by E2E.',
+  'app/main.php': '<?php echo "Bossku AI";',
+}
+
 let settingsState: Record<string, string> = { ...defaultSettings }
 let lastSettingsPut: Record<string, unknown> | null = null
+let projectsState: MockProject[] = structuredClone(initialProjects)
+let activeProjectId: string | null = initialProjects[0]?.id ?? null
+let projectTreeState: Record<string, { name: string; path: string; type: 'dir' | 'file' }[]> = structuredClone(initialTree)
+let projectFilesState: Record<string, string> = structuredClone(initialFiles)
+let projectChangesState: MockProjectChange[] = []
 let knowledgeRecent = {
   data: [
     {
@@ -66,6 +117,33 @@ function readBody(req: IncomingMessage): Promise<string> {
   })
 }
 
+function resetProjectState() {
+  projectsState = structuredClone(initialProjects)
+  activeProjectId = initialProjects[0]?.id ?? null
+  projectTreeState = structuredClone(initialTree)
+  projectFilesState = structuredClone(initialFiles)
+  projectChangesState = []
+}
+
+function activeProject() {
+  return projectsState.find(project => project.id === activeProjectId) ?? null
+}
+
+function projectListResponse() {
+  return {
+    projects: projectsState,
+    active_project_id: activeProjectId,
+    workspace: workspaceMeta,
+  }
+}
+
+function projectUnderWorkspace(hostPath: string) {
+  const normalized = hostPath.replace(/\\/g, '/').replace(/\/+$/, '')
+  const prefix = workspaceMeta.workspace_host_prefix.replace(/\\/g, '/').replace(/\/+$/, '')
+  return normalized.toLowerCase() === prefix.toLowerCase()
+    || normalized.toLowerCase().startsWith(`${prefix.toLowerCase()}/`)
+}
+
 async function handle(req: IncomingMessage, res: ServerResponse) {
   const url = new URL(req.url ?? '/', `http://127.0.0.1`)
   const pathname = url.pathname.replace(/\/+$/, '') || '/'
@@ -80,6 +158,7 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
   if (pathname === '/api/__e2e/reset' && method === 'POST') {
     settingsState = { ...defaultSettings }
     lastSettingsPut = null
+    resetProjectState()
     knowledgeRecent = {
       data: [
         {
@@ -176,6 +255,182 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
 
   if (pathname === '/api/runs/r_1' && method === 'GET') {
     json(res, runDetailR1)
+    return
+  }
+
+  if (pathname === '/api/project/list' && method === 'GET') {
+    json(res, projectListResponse())
+    return
+  }
+
+  if (pathname === '/api/project' && method === 'GET') {
+    json(res, {
+      root: '/repo',
+      relative: '',
+      available: true,
+      error: null,
+      active_project: activeProject(),
+    })
+    return
+  }
+
+  if (pathname === '/api/project/tree' && method === 'GET') {
+    const path = (url.searchParams.get('path') ?? '').replace(/\\/g, '/')
+    json(res, {
+      path,
+      entries: projectTreeState[path] ?? [],
+      truncated: false,
+    })
+    return
+  }
+
+  if (pathname === '/api/project/search' && method === 'GET') {
+    const q = (url.searchParams.get('q') ?? '').toLowerCase().trim()
+    const matches = q
+      ? [
+          {
+            path: 'README.md',
+            line: 1,
+            preview: 'Mock workspace used by E2E.',
+          },
+        ].filter(hit => hit.preview.toLowerCase().includes(q) || hit.path.toLowerCase().includes(q))
+      : []
+    json(res, {
+      query: q,
+      matches,
+    })
+    return
+  }
+
+  if (pathname === '/api/project/file' && method === 'GET') {
+    const path = String(url.searchParams.get('path') ?? '')
+    json(res, {
+      path,
+      contents: projectFilesState[path] ?? '',
+    })
+    return
+  }
+
+  if (pathname === '/api/project/changes' && method === 'GET') {
+    json(res, projectChangesState)
+    return
+  }
+
+  if (pathname === '/api/project/changes' && method === 'POST') {
+    const body = JSON.parse(await readBody(req) || '{}') as Record<string, unknown>
+    const id = `chg_${projectChangesState.length + 1}`
+    const change = {
+      id,
+      run_id: String(body.run_id ?? 'run_mock'),
+      operation_type: 'replace',
+      operation_description: `Update ${String(body.path ?? 'file')}`,
+      risk_level: 'low',
+      status: 'pending',
+      evidence: {
+        path: String(body.path ?? 'README.md'),
+        before: projectFilesState[String(body.path ?? 'README.md')] ?? '',
+        after: String(body.new_contents ?? ''),
+      },
+      created_at: new Date().toISOString(),
+    }
+    projectChangesState = [change, ...projectChangesState]
+    json(res, change)
+    return
+  }
+
+  if (pathname.startsWith('/api/project/changes/') && pathname.endsWith('/approve') && method === 'POST') {
+    const id = pathname.split('/')[4]
+    projectChangesState = projectChangesState.map(item =>
+      item.id === id ? { ...item, status: 'approved' } : item,
+    )
+    json(res, { ok: true, id })
+    return
+  }
+
+  if (pathname.startsWith('/api/project/changes/') && pathname.endsWith('/apply') && method === 'POST') {
+    const id = pathname.split('/')[4]
+    const change = projectChangesState.find(item => item.id === id)
+    if (change?.evidence && typeof change.evidence === 'object') {
+      const evidence = change.evidence as { path?: string; after?: string }
+      if (evidence.path) {
+        projectFilesState[evidence.path] = String(evidence.after ?? '')
+      }
+    }
+    projectChangesState = projectChangesState.map(item =>
+      item.id === id ? { ...item, status: 'applied' } : item,
+    )
+    json(res, { ok: true, id })
+    return
+  }
+
+  if (pathname.startsWith('/api/project/changes/') && pathname.endsWith('/reject') && method === 'POST') {
+    const id = pathname.split('/')[4]
+    projectChangesState = projectChangesState.map(item =>
+      item.id === id ? { ...item, status: 'rejected' } : item,
+    )
+    json(res, { ok: true, id })
+    return
+  }
+
+  if (pathname === '/api/project/register' && method === 'POST') {
+    const body = JSON.parse(await readBody(req) || '{}') as Record<string, unknown>
+    const name = String(body.name ?? '').trim() || 'New project'
+    const hostPath = String(body.host_path ?? '').trim()
+    const created = !projectsState.some(project => project.host_path === hostPath)
+    const project: MockProject = created
+      ? {
+          id: `proj_${projectsState.length + 1}`,
+          name,
+          host_path: hostPath,
+          container_path: '/repo',
+          is_active: false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }
+      : {
+          ...projectsState.find(project => project.host_path === hostPath)!,
+          name,
+          updated_at: new Date().toISOString(),
+        }
+    projectsState = created
+      ? [project, ...projectsState]
+      : projectsState.map(item => item.host_path === hostPath ? project : item)
+    json(res, {
+      project,
+      created,
+      mounted: projectUnderWorkspace(hostPath),
+      under_workspace: projectUnderWorkspace(hostPath),
+      message: 'Mock register ok',
+    })
+    return
+  }
+
+  if (pathname.startsWith('/api/project/') && pathname.endsWith('/activate') && method === 'POST') {
+    const id = pathname.split('/')[3]
+    activeProjectId = id
+    projectsState = projectsState.map(project => ({
+      ...project,
+      is_active: project.id === id,
+      updated_at: new Date().toISOString(),
+    }))
+    const project = projectsState.find(item => item.id === id) ?? projectsState[0]
+    json(res, {
+      project,
+      repo_root: '/repo',
+      available: true,
+      error: null,
+      manifest_total: 2,
+    })
+    return
+  }
+
+  if (pathname.startsWith('/api/project/') && method === 'DELETE') {
+    const id = pathname.split('/')[3]
+    projectsState = projectsState.filter(project => project.id !== id)
+    if (activeProjectId === id) {
+      activeProjectId = projectsState.find(project => project.is_active)?.id ?? projectsState[0]?.id ?? null
+    }
+    json(res, { ok: true })
     return
   }
 

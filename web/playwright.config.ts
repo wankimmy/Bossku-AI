@@ -2,7 +2,9 @@ import { defineConfig, devices } from '@playwright/test'
 
 const mockPort = 8001
 const mockBase = `http://127.0.0.1:${mockPort}`
-const webPort = Number(process.env.E2E_WEB_PORT || 3000)
+// Default off 3000 to match the repo's 284xx port scheme (README) and avoid
+// reuseExistingServer silently binding to an unrelated app already on :3000.
+const webPort = Number(process.env.E2E_WEB_PORT || 28471)
 const webBase = `http://127.0.0.1:${webPort}`
 
 export default defineConfig({

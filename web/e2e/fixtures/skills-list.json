@@ -7,6 +7,14 @@
       "source_path": "skills/laravel/playbook/SKILL.md",
       "is_active": true,
       "links": []
+    },
+    {
+      "id": "sk_2",
+      "name": "Build fixer",
+      "description": "Resolve build errors and package issues.",
+      "source_path": "skills/build-fixer/SKILL.md",
+      "is_active": true,
+      "links": []
     }
   ],
   "current_page": 1,

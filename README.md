@@ -115,6 +115,14 @@ Windows:
 
 See [`docs/installation.md`](docs/installation.md) for full setup including pgvector, Redis queue, and Nuxt.
 
+### Chat slash commands
+
+In the landing chat, type `/` to open a typeahead menu of commands:
+
+- **`/project-understanding`** is pinned first — it maps an unfamiliar repo before deeper work (inspect, summarize, no edits).
+- **`/<skill>`** lists every active skill; selecting one inserts a ready-to-run prompt (e.g. `Use laravel for this task:`).
+- Keep typing to filter, use ↑/↓ to navigate, **Enter** to insert (it does **not** auto-run), and **Esc** to dismiss.
+
 ---
 
 ## Architecture

@@ -17,7 +17,7 @@
 - Strengthened risk detection and routing for tenant isolation/cross-organization data exposure.
 - Added 9 missing cofounder expert skills: SaaS billing ops, tenant isolation security, observability/SRE, QA automation, Malaysia PDPA privacy, cost optimization, customer success/support, prompt-injection defense, and eval-driven agent improvement.
 - Expanded expert coverage evals from 12 to 21 cases.
-- Updated version to v1.9.5 and skill count to 85.
+- Updated version to v1.9.5 and skill count to 86.
 
 ## v1.9.3 — Permanent vector memory + always-on model router
 

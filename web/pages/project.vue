@@ -8,10 +8,12 @@ const { search } = useProjectSearch()
 const changes = useProjectChanges()
 const registry = useProjects()
 const toast = useToast()
+const router = useRouter()
 
 const pathsPanelOpen = ref(true)
 const newProjectName = ref('')
 const newProjectHostPath = ref('')
+const hostPathInput = ref<HTMLInputElement | null>(null)
 const registerLoading = ref(false)
 const activateLoading = ref<string | null>(null)
 
@@ -82,11 +84,15 @@ async function loadRoot() {
 const hostPathWarning = computed(() => {
   const path = newProjectHostPath.value.trim()
   if (!path) return ''
+  const workspacePrefix = registry.workspace.value?.workspace_host_prefix?.trim() ?? ''
+  if (!workspacePrefix) return ''
   if (!registry.hostUnderWorkspace(path)) {
     return 'Outside the mounted workspace. Edit docker-compose.yml to add another bind mount, then run docker compose up -d.'
   }
   return ''
 })
+
+const activeProject = computed(() => registry.projects.value.find(project => project.is_active) ?? null)
 
 async function reloadProjectWorkspace() {
   expandedDirs.value = {}
@@ -104,6 +110,10 @@ async function reloadProjectWorkspace() {
   await loadTree('')
   await changes.refresh()
   mobileTab.value = 'tree'
+}
+
+function runProjectUnderstanding() {
+  router.push({ path: '/', query: { insert: 'project-understanding' } })
 }
 
 async function submitRegister() {
@@ -128,6 +138,11 @@ async function submitRegister() {
   finally {
     registerLoading.value = false
   }
+}
+
+function openFolderHelper() {
+  toast.info('Open Folder is deferred for the web app. Paste the Docker host path manually for now; a desktop shell can add a real folder picker later.')
+  hostPathInput.value?.focus()
 }
 
 async function activateProject(id: string) {
@@ -287,6 +302,32 @@ onMounted(() => {
       </p>
     </header>
 
+    <section
+      v-if="activeProject"
+      class="rounded-lg border border-emerald-900/60 bg-emerald-950/30 p-4"
+    >
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div class="space-y-1">
+          <p class="text-sm font-semibold text-emerald-200">
+            Active project ready
+          </p>
+          <p class="text-sm text-emerald-100/80">
+            Run <code class="rounded bg-zinc-950 px-1 text-emerald-300">/project-understanding</code> first so BosskuAI can map the repo structure, rules, skills, and workflow before deeper work.
+          </p>
+          <p class="text-xs text-emerald-200/70">
+            Current active repo: <code class="rounded bg-zinc-950 px-1 text-emerald-300">{{ activeProject.name }}</code>
+          </p>
+        </div>
+        <button
+          type="button"
+          class="rounded-md bg-emerald-700 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-600"
+          @click="runProjectUnderstanding"
+        >
+          Run /project-understanding
+        </button>
+      </div>
+    </section>
+
     <div
       v-if="registry.projects.length > 0 && !registry.activeProjectId"
       class="rounded-lg border border-amber-800/60 bg-amber-950/30 px-4 py-3 text-sm text-amber-200"
@@ -355,6 +396,7 @@ onMounted(() => {
             class="rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-sm"
           >
           <input
+            ref="hostPathInput"
             v-model="newProjectHostPath"
             type="text"
             placeholder="Host path (e.g. C:/dev/projects/my-app)"
@@ -363,13 +405,25 @@ onMounted(() => {
           <p v-if="hostPathWarning" class="sm:col-span-2 text-xs text-amber-400">
             {{ hostPathWarning }}
           </p>
-          <button
-            type="submit"
-            class="sm:col-span-2 rounded-md bg-emerald-700 px-3 py-2 text-sm text-white disabled:opacity-50"
-            :disabled="registerLoading || !!hostPathWarning"
-          >
-            Add path
-          </button>
+          <div class="sm:col-span-2 flex flex-wrap gap-2">
+            <button
+              type="submit"
+              class="rounded-md bg-emerald-700 px-3 py-2 text-sm text-white disabled:opacity-50"
+              :disabled="registerLoading || !!hostPathWarning"
+            >
+              Add path
+            </button>
+            <button
+              type="button"
+              class="rounded-md border border-zinc-700 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-800"
+              @click="openFolderHelper"
+            >
+              Open Folder
+            </button>
+          </div>
+          <p class="sm:col-span-2 text-xs text-zinc-500">
+            The web app still needs a typed Docker host path. A real folder picker belongs in a future desktop shell.
+          </p>
         </form>
       </div>
     </section>

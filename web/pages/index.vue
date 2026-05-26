@@ -1,7 +1,17 @@
 <script setup lang="ts">
 import { useLandingChat } from '~/composables/useLandingChat'
+import { useSkills } from '~/composables/useSkills'
 import { isAwaitingApprovals } from '~/utils/approvalStream'
 import { parseClarificationApiResponse } from '~/utils/clarificationFromApi'
+import {
+  buildProjectUnderstandingPrompt,
+  buildSlashCommandItems,
+  filterSlashCommandItems,
+  findSlashTrigger,
+  replaceSlashTrigger,
+  type SlashCommandItem,
+  type SlashTrigger,
+} from '~/utils/slashCommands'
 import type { ClarificationRequest } from '~/types/clarification'
 import type { Approval } from '~/types/api'
 
@@ -10,7 +20,9 @@ definePageMeta({ layout: 'default' })
 const route = useRoute()
 const router = useRouter()
 const prompt = ref('')
+const promptInput = ref<HTMLTextAreaElement | null>(null)
 const chat = useLandingChat()
+const skills = useSkills()
 const {
   events,
   running,
@@ -37,6 +49,8 @@ type ThreadTab = 'chat' | 'process'
 const rightPanelTab = ref<PanelTab>('agents')
 const mobileTab = ref<MobileTab>('chat')
 const threadTab = ref<ThreadTab>('chat')
+const slashTrigger = ref<SlashTrigger | null>(null)
+const slashActiveIndex = ref(0)
 
 const panelTabs: PanelTab[] = ['agents', 'plan', 'changes', 'audit', 'memory']
 const mobileTabs: MobileTab[] = ['chat', ...panelTabs]
@@ -56,6 +70,47 @@ function showRightPanel(tab: PanelTab) {
 function showMobilePanel(tab: PanelTab) {
   return mobileTab.value === tab
 }
+const slashItems = computed(() => buildSlashCommandItems(skills.data.value ?? []))
+const slashGroups = computed(() => filterSlashCommandItems(slashItems.value, slashTrigger.value?.query ?? ''))
+const slashVisibleItems = computed(() => [
+  ...slashGroups.value.essential,
+  ...slashGroups.value.skills,
+])
+const slashMenuGroups = computed(() => {
+  let index = 0
+  return [
+    ...(slashGroups.value.essential.length
+      ? [{
+          label: 'Essential',
+          items: slashGroups.value.essential.map(item => ({ item, index: index++ })),
+        }]
+      : []),
+    ...(slashGroups.value.skills.length
+      ? [{
+          label: 'Skills',
+          items: slashGroups.value.skills.map(item => ({ item, index: index++ })),
+        }]
+      : []),
+  ]
+})
+watch(
+  prompt,
+  (value) => {
+    const text = String(value ?? '')
+    if (text.startsWith('/')) {
+      slashTrigger.value = {
+        start: 0,
+        end: text.length,
+        query: text.slice(1),
+      }
+      slashActiveIndex.value = 0
+      return
+    }
+    if (!promptInput.value) return
+    syncSlashTriggerFromTextarea(promptInput.value)
+  },
+  { flush: 'post' },
+)
 const lastRecordedRunId = ref<string | null>(null)
 
 const artifacts = computed(() => useRunArtifacts(events.value as Record<string, unknown>[]))
@@ -147,6 +202,7 @@ async function syncRun() {
   chat.addUserTurn(userText)
   syncConvQuery()
   prompt.value = ''
+  closeSlashMenu()
   try {
     const res = await $fetch<{ final_output?: string }>(apiUrl('/runs'), {
       method: 'POST',
@@ -174,6 +230,111 @@ async function syncRun() {
   }
 }
 
+function closeSlashMenu() {
+  slashTrigger.value = null
+  slashActiveIndex.value = 0
+}
+
+function syncSlashTriggerFromTextarea(textarea: HTMLTextAreaElement | null) {
+  if (!textarea) {
+    closeSlashMenu()
+    return
+  }
+
+  const cursor = textarea.selectionStart ?? textarea.value.length
+  const trigger = findSlashTrigger(textarea.value, cursor)
+    ?? (textarea.value.startsWith('/') ? findSlashTrigger(textarea.value, textarea.value.length) : null)
+  slashTrigger.value = trigger
+  if (!trigger) {
+    slashActiveIndex.value = 0
+  }
+}
+
+function syncSlashTriggerFromEvent(event: Event) {
+  syncSlashTriggerFromTextarea(event.target instanceof HTMLTextAreaElement ? event.target : null)
+}
+
+function syncSlashTriggerFromSelection() {
+  syncSlashTriggerFromTextarea(promptInput.value)
+}
+
+function selectSlashItem(item: SlashCommandItem) {
+  if (!slashTrigger.value) return
+  const source = promptInput.value?.value ?? prompt.value
+  const replaced = replaceSlashTrigger(source, slashTrigger.value, item.insert)
+  prompt.value = replaced.value
+  closeSlashMenu()
+  nextTick(() => {
+    promptInput.value?.focus()
+    if (promptInput.value) {
+      promptInput.value.setSelectionRange(replaced.cursor, replaced.cursor)
+    }
+  })
+}
+
+function runSlashSelection() {
+  const item = slashVisibleItems.value[slashActiveIndex.value]
+  if (item) selectSlashItem(item)
+}
+
+function onPromptKeydown(event: KeyboardEvent) {
+  if (showSlashMenu.value) {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      slashActiveIndex.value = Math.min(slashActiveIndex.value + 1, Math.max(slashVisibleItems.value.length - 1, 0))
+      return
+    }
+    if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      slashActiveIndex.value = Math.max(slashActiveIndex.value - 1, 0)
+      return
+    }
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault()
+      runSlashSelection()
+      return
+    }
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      closeSlashMenu()
+      return
+    }
+  }
+
+  if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
+    event.preventDefault()
+    submit()
+  }
+}
+
+function clearInsertQuery() {
+  const nextQuery: Record<string, string> = {}
+  const conv = route.query.conv
+  if (typeof conv === 'string' && conv.trim()) {
+    nextQuery.conv = conv
+  }
+  router.replace({ path: '/', query: nextQuery })
+}
+
+function applyRouteInsertPrefill() {
+  const insert = route.query.insert
+  if (insert !== PROJECT_UNDERSTANDING_COMMAND) return
+  if (prompt.value.trim()) return
+  closeSlashMenu()
+  prompt.value = buildProjectUnderstandingPrompt()
+  nextTick(() => promptInput.value?.focus())
+  clearInsertQuery()
+}
+
+watch(
+  () => [chat.hydrated.value, route.query.insert, route.query.conv] as const,
+  ([hydrated]) => {
+    if (!hydrated || running.value) return
+    applyConversationFromRoute()
+    applyRouteInsertPrefill()
+  },
+)
+
 const effectiveClarificationRequest = computed((): ClarificationRequest | null =>
   clarificationRequest.value ?? apiClarificationRequest.value,
 )
@@ -186,6 +347,14 @@ const showClarificationModal = computed(
 
 const showApprovalModal = computed(
   () => runApprovals.awaitingApprovals.value && runApprovals.current.value !== null,
+)
+
+const showSlashMenu = computed(() =>
+  slashTrigger.value !== null
+  && !showClarificationModal.value
+  && !showApprovalModal.value
+  && !running.value
+  && !submittingClarification.value,
 )
 
 const resolvedRunId = computed(() =>
@@ -305,6 +474,7 @@ function submit() {
   chat.addUserTurn(userText)
   syncConvQuery()
   prompt.value = ''
+  closeSlashMenu()
   lastRecordedRunId.value = null
   toast.info('Task started…')
   start(userText, { conversation: prior })
@@ -328,6 +498,7 @@ function backfillAssistantFromEvents(evts: Record<string, unknown>[]) {
 }
 
 function applyConversationFromRoute() {
+  closeSlashMenu()
   const raw = route.query.conv
   const convId = typeof raw === 'string' ? raw : null
   if (convId) {
@@ -348,6 +519,7 @@ function applyConversationFromRoute() {
   chat.clearActiveConversation()
   events.value = []
   lastRecordedRunId.value = null
+  closeSlashMenu()
 }
 
 function syncConvQuery() {
@@ -364,6 +536,7 @@ function newSession() {
   events.value = []
   lastRecordedRunId.value = null
   prompt.value = ''
+  closeSlashMenu()
   mobileTab.value = 'chat'
   threadTab.value = 'chat'
   router.replace({ path: '/', query: {} })
@@ -402,25 +575,9 @@ watch(showApprovalModal, (open) => {
   mobileTab.value = 'chat'
 })
 
-watch(
-  () => route.query.conv,
-  () => {
-    if (!chat.hydrated.value || running.value) return
-    applyConversationFromRoute()
-  },
-)
-
 onMounted(() => {
   chat.hydrateFromStorage()
-  applyConversationFromRoute()
 })
-
-watch(
-  () => chat.hydrated.value,
-  (ready) => {
-    if (ready && !running.value) applyConversationFromRoute()
-  },
-)
 </script>
 
 <template>
@@ -488,19 +645,80 @@ watch(
           <textarea
             id="run-prompt"
             data-tour="chat-prompt"
+            ref="promptInput"
             v-model="prompt"
             class="mt-2 block min-h-[110px] w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 disabled:cursor-not-allowed disabled:opacity-60"
             :disabled="showClarificationModal"
+            role="combobox"
+            aria-controls="slash-menu"
+            :aria-expanded="showSlashMenu"
+            :aria-activedescendant="showSlashMenu ? `slash-opt-${slashActiveIndex}` : undefined"
             :placeholder="showClarificationModal
               ? 'Answer in the clarification popup to continue…'
-              : 'Describe the engineering task or ask a follow-up...'"
-            @keydown.enter.exact.prevent="submit"
+              : 'Describe the engineering task or type / for skills...'"
+            @input="syncSlashTriggerFromEvent"
+            @click="syncSlashTriggerFromSelection"
+            @keyup="syncSlashTriggerFromSelection"
+            @keydown="onPromptKeydown"
           />
+          <div
+            v-if="showSlashMenu"
+            id="slash-menu"
+            role="listbox"
+            aria-label="Slash commands"
+            class="mt-2 rounded-lg border border-zinc-800 bg-zinc-950/95 p-2 shadow-xl shadow-black/30"
+          >
+            <div class="flex items-center justify-between gap-2 px-1 pb-2 text-[11px] uppercase tracking-[0.25em] text-zinc-500">
+              <span>Slash commands</span>
+              <span v-if="slashTrigger?.query">/{{ slashTrigger?.query }}</span>
+            </div>
+            <div v-if="slashVisibleItems.length === 0" class="px-2 py-3 text-sm text-zinc-500">
+              No matching skills.
+            </div>
+            <div v-else class="space-y-3">
+              <div
+                v-for="group in slashMenuGroups"
+                :key="group.label"
+                class="space-y-1"
+              >
+                <p class="px-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                  {{ group.label }}
+                </p>
+                <button
+                  v-for="{ item, index } in group.items"
+                  :key="item.id"
+                  :id="`slash-opt-${index}`"
+                  type="button"
+                  role="option"
+                  :aria-selected="index === slashActiveIndex"
+                  class="flex w-full items-start justify-between gap-3 rounded-md px-2 py-2 text-left transition-colors"
+                  :class="index === slashActiveIndex
+                    ? 'bg-emerald-900/40 text-emerald-100'
+                    : 'text-zinc-300 hover:bg-zinc-900'"
+                  @click="selectSlashItem(item)"
+                  @mousemove="slashActiveIndex = index"
+                >
+                  <span class="min-w-0 flex-1">
+                    <span class="block font-medium">{{ item.label }}</span>
+                    <span class="mt-0.5 block text-xs text-zinc-500">
+                      {{ item.description }}
+                    </span>
+                  </span>
+                  <span class="shrink-0 rounded-full border border-zinc-800 px-2 py-0.5 text-[10px] uppercase tracking-wide text-zinc-500">
+                    {{ item.group }}
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+          <p class="mt-2 text-xs text-zinc-500">
+            Tip: type <code class="rounded bg-zinc-950 px-1 text-zinc-300">/project-understanding</code> first on a new repo, then continue with a narrower skill.
+          </p>
           <div class="mt-3 flex flex-wrap items-center gap-2">
             <button
               type="button"
               class="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-50 dark:bg-emerald-600 dark:hover:bg-emerald-700"
-              :disabled="running || submittingClarification || showClarificationModal || !prompt.trim()"
+              :disabled="running || submittingClarification || showClarificationModal || showSlashMenu || !prompt.trim()"
               @click="submit"
             >
               Run task
@@ -508,7 +726,7 @@ watch(
             <button
               type="button"
               class="rounded-lg border border-zinc-300 px-4 py-2 text-sm hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
-              :disabled="running || !prompt.trim()"
+              :disabled="running || showSlashMenu || !prompt.trim()"
               @click="syncRun"
             >
               Run sync API
@@ -641,7 +859,7 @@ watch(
       <button
         type="button"
         class="w-full rounded-lg bg-emerald-700 px-3 py-2 text-sm font-medium text-white disabled:opacity-40"
-        :disabled="running || !prompt.trim()"
+        :disabled="running || showSlashMenu || !prompt.trim()"
         @click="submit"
       >
         Run task
