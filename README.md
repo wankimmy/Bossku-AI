@@ -1,71 +1,70 @@
-# BosskuAI — Self-Learning Developer AI Orchestrator
+# BosskuAI
 
-![PHP 8.2](https://img.shields.io/badge/PHP-8.2-blue?logo=php)
-![Laravel 11](https://img.shields.io/badge/Laravel-11-red?logo=laravel)
-![Nuxt 3](https://img.shields.io/badge/Nuxt-3-green?logo=nuxt.js)
-![pgvector](https://img.shields.io/badge/pgvector-enabled-blueviolet?logo=postgresql)
-![Docker](https://img.shields.io/badge/Docker-compose-2496ED?logo=docker)
+BosskuAI is a local AI workspace for software teams. It helps an AI assistant understand a project, plan changes, make focused edits, review the result, and remember useful project knowledge.
 
-BosskuAI is a self-learning developer AI orchestrator that combines a multi-provider LLM abstraction layer, a skill-based execution engine, a self-improving brain, and interactive knowledge/skills graphs into a single IDE-feel developer tool.
+BosskuAI can run with local AI or cloud models. Common setups are local Ollama, Ollama Cloud, Anthropic Claude, and Codex/OpenAI models.
 
----
+## Choose Your Path
 
-## Features
+BosskuAI can be used in two ways.
 
-All 24 spec §16 capabilities are implemented:
+| Path | Use this when | What you run |
+|---|---|---|
+| Local web app | You want the BosskuAI dashboard, run history, memory, skills, and visual workflow | Docker Compose |
+| Repo toolkit | You want BosskuAI rules, skills, and helper files inside another project | `scripts/install.sh` or `scripts/install.ps1` |
 
-| # | Feature |
-|---|---|
-| 1 | **Multi-provider LLM abstraction** — Anthropic, OpenAI, Ollama, openai_compatible, custom adapters |
-| 2 | **Model routing** — per-role provider/model assignment with forceProvider → DB route → Ollama fallback |
-| 3 | **Governance & risk classification** — RiskClassifier with low/medium/high/critical levels, RiskRuleEngine |
-| 4 | **Approval gates** — hard stops for terminal commands, external HTTP, env_mod, deployment, secret rotation, high-cost steps |
-| 5 | **Skill candidates** — auto-generated SKILL.md drafts from patterns, approval workflow, risky category gating |
-| 6 | **Learning engine** — LearningEngine extracts patterns post-run, ≥3 occurrence threshold triggers candidate generation |
-| 7 | **Soul system** — soul.md guides AI behavior on every run, versioned, suggestions never auto-applied |
-| 8 | **Knowledge graph** — Cytoscape.js graph of skills, runs, memories, agents, files with typed edges |
-| 9 | **Skills graph** — focused skill relationship view with co-occurrence edges and SkillQualityBadge overlays |
-| 10 | **Brain page** — 7-tab observability dashboard (Overview, Memory Streams, Learning Inbox, Skill Candidates, Feedback Learnings, Brain Health, Conflicts) |
-| 11 | **Feedback system** — FeedbackLearningService converts thumbs/text feedback into learning events |
-| 12 | **Memory confidence scoring** — staleness decay, conflict detection, confirmation boosting |
-| 13 | **Cytoscape graphs** — interactive force-directed graphs with filters, export, and dark IDE styling |
-| 14 | **Dark IDE UI** — Nuxt 3 frontend with dark theme, live SSE streaming run timeline |
-| 15 | **`[BOSSKUAI]` marker** — mandatory response header identifying skill, agent, model role, memory usage |
-| 16 | **pgvector semantic memory** — PostgreSQL pgvector for cosine similarity memory retrieval |
-| 17 | **OrchestratorService pipeline** — Orchestrator → Planner → Executor → Auditor → FinalReviewer with SSE streaming |
-| 18 | **Step persistence** — all steps written before execution, resumable, queryable before a run starts |
-| 19 | **Usage & cost tracking** — UsageEvent ledger, per-call token accounting, ModelRegistry pricing, /usage page |
-| 20 | **Budget controls** — per-route budget limits with auto-deactivation and fallback |
-| 21 | **Skill quality scoring** — automated quality score updates after each run, weak skill detection |
-| 22 | **Conflict detection** — MemoryConflictDetector with conflict edges in graph and resolution workflow |
-| 23 | **Multi-agent deep-mode** — /audit (parallel fan-out), /decide (propose-critique), /implement (write-review) on Claude Code |
-| 24 | **Repo-local portability** — skills, soul, agents, and rules travel with your repo; Docker stack is optional |
+You can start with either path. The Docker app is easier to see. The repo toolkit is easier to add to an existing coding workflow.
 
----
+## Path 1: Run the Local Web App
 
-## Quick Start
+### Requirements
 
-### Docker Compose (recommended)
+- Docker Desktop
+- At least one model connection: local Ollama, Ollama Cloud, Anthropic, or Codex/OpenAI
+- Git
+
+### Start
 
 ```bash
-# 1. Clone and copy env
 git clone https://github.com/wankimmy/Bossku-AI bosskuAI
 cd bosskuAI
 cp app/.env.example app/.env
+```
 
-# 2. Set your LLM provider credentials in app/.env
-#    OLLAMA_BASE_URL=https://ollama.com        # or http://host.docker.internal:11434 for local
-#    OLLAMA_API_KEY=<your-ollama-cloud-key>    # from ollama.com/settings/keys
+On Windows PowerShell, copy the env file with:
 
-# 3. Optional: sibling repos under Project → Paths (required for repo audits)
-#    docker-compose mounts ../:/workspace — set BOSSKU_WORKSPACE_HOST_PREFIX in app/.env
-#    to that host folder (quoted if the path has spaces). Activate the project in the UI before auditing.
-#    Ollama role models are configured under Settings → Ollama & Models (not .env).
+```powershell
+Copy-Item app\.env.example app\.env
+```
 
-# 4. Start the stack
+Edit `app/.env` and set at least one model connection.
+
+Local Ollama from Docker:
+
+```env
+OLLAMA_BASE_URL=http://host.docker.internal:11434
+OLLAMA_API_KEY=
+```
+
+Ollama Cloud:
+
+```env
+OLLAMA_BASE_URL=https://ollama.com
+OLLAMA_API_KEY=your-ollama-cloud-key
+```
+
+Anthropic Claude:
+
+```env
+ANTHROPIC_API_KEY=your-anthropic-key
+```
+
+Codex/OpenAI is connected from Settings after the app is running. The default OAuth callback is `http://localhost:28480/api/oauth/codex/callback`.
+
+Start the stack:
+
+```bash
 docker compose up -d --build
-
-# 5. Bootstrap
 docker compose exec backend composer install --no-interaction
 docker compose exec backend php artisan key:generate
 docker compose exec backend php artisan migrate --force
@@ -73,162 +72,183 @@ docker compose exec backend php artisan db:seed
 docker compose exec backend php artisan bosskuai:import-knowledge --fresh
 ```
 
-- **UI**: http://localhost:28470 (browser API calls go to `/api/...` on this port; Nitro proxies to Laravel)
-- **API** (direct): http://localhost:28480 — for `curl`, OAuth callback, and debugging
+Open:
 
-Host ports are set in `docker-compose.yml` (defaults `28470` / `28480` / `28432` / `28379`) so they do not clash with other apps on `3000`, `8000`, `5432`, or `6379`. Override via repo-root `.env`: `BOSSKU_PORT_WEB`, `BOSSKU_PORT_API`, etc.
+- Web app: `http://localhost:28470`
+- API direct access: `http://localhost:28480`
 
-To call the API from another origin (split-host UI), set `NUXT_PUBLIC_API_BASE=http://localhost:28480` on the frontend service and ensure `CORS_ORIGINS` matches your UI origin in `app/.env`.
+### Connect Other Repos
 
-#### Frontend (production build only)
+Docker mounts the parent folder as `/workspace`, so sibling projects can be audited from the UI.
 
-Docker serves a **production Nuxt build** (`npm run build` + Nitro server), not `nuxt dev`. This avoids slow Vite/HMR on Windows bind mounts.
+If your repos are outside the default parent folder, set this in `app/.env`:
 
-- **First start** (or no `.output/` yet): the frontend container runs `npm run build` once — may take a few minutes.
-- **After you change UI code**:
+```env
+BOSSKU_WORKSPACE_HOST_PREFIX="C:\path\to\your\workspace"
+```
+
+Then open the web app, go to project paths, add the repo, and activate it before running audits or implementation tasks.
+
+### Frontend Notes
+
+The Docker frontend serves a production Nuxt build. After changing files in `web/`, rebuild it:
 
 ```bash
 docker compose exec -e NUXT_API_PROXY_TARGET=http://nginx/api/** -e NUXT_PUBLIC_API_BASE= frontend npm run build
 docker compose restart frontend
 ```
 
-Or build on the host, then restart:
+For hot reload outside Docker:
 
 ```bash
-cd web && npm install && npm run build
-docker compose restart frontend
+cd web
+npm install
+npm run dev
 ```
 
-Local hot-reload dev (optional, outside Docker): `cd web && npm run dev`
+## Path 2: Install BosskuAI Into Another Repo
 
-### Without Docker
+Use this when you want BosskuAI guidance inside an existing project without running the dashboard.
+
+Linux or macOS:
 
 ```bash
-./scripts/install.sh /your/project --profile core
+./scripts/install.sh /path/to/your/project --profile core
 ```
 
-Windows:
+Windows PowerShell:
 
 ```powershell
-.\scripts\install.ps1 C:\your\project -Profile core
+.\scripts\install.ps1 C:\path\to\your\project -Profile core
 ```
 
-See [`docs/installation.md`](docs/installation.md) for full setup including pgvector, Redis queue, and Nuxt.
+This copies the repo-local AI layer into your project:
 
-### Chat slash commands
+- `AGENTS.md`
+- `skill-index.json`
+- `ai-assistant/`
+- editor and assistant rule files where supported
+- helper scripts for checks and evals
 
-In the landing chat, type `/` to open a typeahead menu of commands:
+After installing, open the target repo in your AI coding tool and ask for BosskuAI mode.
 
-- **`/project-understanding`** is pinned first — it maps an unfamiliar repo before deeper work (inspect, summarize, no edits).
-- **`/<skill>`** lists every active skill; selecting one inserts a ready-to-run prompt (e.g. `Use laravel for this task:`).
-- Keep typing to filter, use ↑/↓ to navigate, **Enter** to insert (it does **not** auto-run), and **Esc** to dismiss.
+## First Useful Prompts
 
----
+Try these after setup:
 
-## Architecture
-
-BosskuAI routes each prompt to a **workflow** (see [`docs/orchestration.md`](docs/orchestration.md)). Simple edits use `orchestrator_executor` (plan + code + tests, no mandatory audit). Audits and high-risk changes add auditor, security, and/or final-reviewer stages.
-
-```
-User Prompt → routing (workflow + needs_* flags)
-  └─► OrchestratorService / PlannerService  (survey, plan, optional preflight)
-        └─► ExecutorService  (when needs_executor; edits + narrow tests)
-              └─► AuditorService  (only when needs_auditor + workflow includes auditor)
-                    └─► Security / FinalReviewer  (high risk or explicit audit)
+```text
+bossku, understand this repo and summarize the main architecture.
 ```
 
-After each run, the self-learning loop runs:
-
-```
-Run completes
-  └─► LearningEngine  (pattern extraction)
-        └─► FeedbackLearningService  (user feedback → learning events)
-              └─► SkillCandidateGenerator  (draft SKILL.md when pattern >= 3 occurrences)
-                    └─► Human approval on /brain
-                          └─► SkillIndexService  (activates skill for future runs)
+```text
+bossku, plan a safe fix for this bug before editing files.
 ```
 
-See [`docs/architecture.md`](docs/architecture.md) for the full architecture reference.
+```text
+bossku, review the current diff for correctness, security, and missing tests.
+```
 
----
+```text
+bossku, run a project understanding pass and tell me the risky areas.
+```
+
+In the web app chat, type `/` to see available slash commands. `/project-understanding` is the safest first command for an unfamiliar repo.
+
+## What BosskuAI Gives You
+
+- Project understanding before edits
+- Planner, executor, auditor, and final reviewer workflow
+- Repo-local skills and rules
+- Memory for durable project knowledge
+- Approval gates for risky work
+- Run history and step-by-step visibility in the web app
+- Optional knowledge and skill graphs
+- Local-first setup using your repos and your chosen AI models
+
+## Common Commands
+
+Backend through Docker:
+
+```bash
+docker compose exec backend php artisan migrate
+docker compose exec backend php artisan bosskuai:import-knowledge --fresh
+docker compose exec backend php artisan route:list
+docker compose exec backend php artisan test
+```
+
+Frontend:
+
+```bash
+cd web
+npm run test
+npm run build
+npm run e2e
+```
+
+Dashboard helper:
+
+```bash
+python scripts/dashboard.py
+```
+
+## Ports
+
+Default ports are chosen to avoid common local development conflicts.
+
+| Service | URL or port |
+|---|---|
+| Web app | `http://localhost:28470` |
+| API | `http://localhost:28480` |
+| Postgres | `28432` |
+| Redis | `28379` |
+
+Override them in the repo-root `.env` with `BOSSKU_PORT_WEB`, `BOSSKU_PORT_API`, `BOSSKU_PORT_POSTGRES`, and `BOSSKU_PORT_REDIS`.
+
+## Security
+
+Local development has no login by default.
+
+Before exposing BosskuAI outside your machine:
+
+1. Set `BOSSKU_API_AUTH_ENABLED=true` in `app/.env`.
+2. Set a long random `BOSSKU_API_TOKEN`.
+3. Set the same token for the frontend as `NUXT_PUBLIC_API_TOKEN`.
+4. Use the production compose overlay:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```
+
+See [`docs/production-deploy.md`](docs/production-deploy.md) for TLS, CORS, and deployment hardening.
 
 ## Documentation
 
-### Core Concepts
-- [`docs/what-is-bossku-ai.md`](docs/what-is-bossku-ai.md) — What BosskuAI is and is not
-- [`docs/quickstart.md`](docs/quickstart.md) — Get running in 5 minutes
-- [`docs/installation.md`](docs/installation.md) — Full installation guide
-- [`docs/architecture.md`](docs/architecture.md) — System architecture overview
+Start here:
 
-### Pipeline & Execution
-- [`docs/orchestration.md`](docs/orchestration.md) — OrchestratorService → FinalReviewerService pipeline
-- [`docs/skills.md`](docs/skills.md) — Skill system: SKILL.md format, matching, quality scoring
-- [`docs/approval-gates.md`](docs/approval-gates.md) — Which operations require human approval and how
-- [`docs/governance.md`](docs/governance.md) — RiskClassifier, risk levels, governance rule editor
+- [`docs/quickstart.md`](docs/quickstart.md) - shortest path to a first run
+- [`docs/installation.md`](docs/installation.md) - Docker and repo toolkit setup
+- [`docs/what-is-bossku-ai.md`](docs/what-is-bossku-ai.md) - plain explanation and boundaries
+- [`docs/examples.md`](docs/examples.md) - useful prompts
+- [`docs/faq.md`](docs/faq.md) - common questions
 
-### Self-Learning Brain
-- [`docs/self-learning.md`](docs/self-learning.md) — LearningEngine, feedback loop, pattern detection
-- [`docs/auto-skill-generation.md`](docs/auto-skill-generation.md) — Auto skill candidate pipeline
-- [`docs/brain.md`](docs/brain.md) — The /brain page: 7 tabs explained
-- [`docs/soul.md`](docs/soul.md) — Soul system: soul.md, versioning, suggestions
+Go deeper:
 
-### Memory & Knowledge
-- [`docs/memory.md`](docs/memory.md) — pgvector memory, confidence scoring, conflict detection
-- [`docs/knowledge-graph.md`](docs/knowledge-graph.md) — Knowledge graph: nodes, edges, Cytoscape view
-- [`docs/skills-graph.md`](docs/skills-graph.md) — Skills graph: quality overlays, co-occurrence edges
-
-### Providers & Cost
-- [`docs/providers.md`](docs/providers.md) — Supported LLM providers, API key storage, health checks
-- [`docs/model-routing.md`](docs/model-routing.md) — ModelRouter resolve order, route configuration
-- [`docs/usage-and-cost.md`](docs/usage-and-cost.md) — UsageEvent ledger, cost tracking, /usage page
-
-### Reference
-- [`docs/multi-agent-architecture.md`](docs/multi-agent-architecture.md) — /audit, /decide, /implement deep-mode flows
-- [`docs/examples.md`](docs/examples.md) — Example prompts and expected outputs
-- [`docs/faq.md`](docs/faq.md) — Frequently asked questions
-- [`docs/comparison.md`](docs/comparison.md) — BosskuAI vs LangChain, CrewAI, and others
-- [`docs/benchmarks.md`](docs/benchmarks.md) — Performance and quality benchmarks
-- [`docs/adversarial-routing.md`](docs/adversarial-routing.md) — Adversarial routing stress tests
-
----
-
-## Security (optional — OSS defaults stay open)
-
-Local development needs **no login and no API token**. When you expose Bossku to the internet:
-
-1. Set in `app/.env`: `BOSSKU_API_AUTH_ENABLED=true` and `BOSSKU_API_TOKEN=<long-random-secret>`
-2. Set the same token for the UI: `NUXT_PUBLIC_API_TOKEN` on the frontend service
-3. Deploy with the production compose overlay: `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d`
-4. See [docs/production-deploy.md](docs/production-deploy.md) for TLS, CORS, and hardening
-
-Run endpoints are rate-limited (`BOSSKU_RUNS_RATE_PER_MINUTE`, default 60). Audit events are logged as `bossku.run.*` (no prompt body).
-
----
-
-## Mandatory Response Indicator
-
-Every BosskuAI-compliant response starts with:
-
-```text
-[BOSSKUAI]
-Skill: <detected-skill>
-Agent: <orchestrator|executor|auditor|final-reviewer>
-Model Role: <planner|coder|reviewer|researcher>
-Memory Used: <yes|no>
-```
-
-This header is how you know the skill system, model routing, and memory layer are all active on a response.
-
----
+- [`docs/architecture.md`](docs/architecture.md) - system map
+- [`docs/orchestration.md`](docs/orchestration.md) - planner, executor, auditor, final reviewer
+- [`docs/skills.md`](docs/skills.md) - skill system
+- [`docs/memory.md`](docs/memory.md) - project memory
+- [`docs/providers.md`](docs/providers.md) - local AI, Anthropic, Codex/OpenAI, and provider setup
+- [`docs/model-routing.md`](docs/model-routing.md) - role-based model routing
 
 ## Troubleshooting
 
-- **Bootstrap 500**: rebuild backend — `docker compose build backend && docker compose up -d backend`
-- **Stream run shows no events**: check `docker compose logs -f backend` for permissions issues; validate with `curl -i http://localhost:28480/api/runs`
-- **No skills loaded**: `docker compose exec backend php artisan bosskuai:import-knowledge --fresh`
-- **Ollama unreachable**: verify `OLLAMA_BASE_URL` and `OLLAMA_API_KEY` in `app/.env`
-- **Planner JSON failed**: validate `OLLAMA_API_KEY`, `OLLAMA_BASE_URL`, and role model env vars
+- `Bootstrap 500`: rebuild backend with `docker compose build backend && docker compose up -d backend`.
+- Stream run has no events: check `docker compose logs -f backend`, then test `http://localhost:28480/api/runs`.
+- No skills loaded: run `docker compose exec backend php artisan bosskuai:import-knowledge --fresh`.
+- Local Ollama unreachable: check `OLLAMA_BASE_URL` in `app/.env` and confirm Ollama is running.
+- Cloud model fails: check the relevant key or connection in `app/.env` or Settings.
+- Planner JSON failed: check the selected model, key, base URL, and role model settings in the app.
 
----
+## License
 
-BosskuAI is a production-ready, self-learning developer AI orchestrator with a full multi-provider LLM abstraction, observable step-by-step execution, and a live knowledge graph — designed to get better with every run.
+See [`LICENSE`](LICENSE).

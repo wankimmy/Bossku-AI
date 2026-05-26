@@ -1,51 +1,57 @@
-# BosskuAI Web – Playwright smoke tests
+# BosskuAI Web E2E Tests
 
-End-to-end tests live under **`e2e/specs/`** and run against **Nuxt dev** plus a **tiny Node mock API** (no Laravel/Docker).
+These Playwright smoke tests cover the Nuxt web app. They use a small Node mock API, not Laravel or Docker.
 
-## Prerequisites
+## Setup
 
-- Node/npm as for the rest of `web/`
-- One-time browsers: **`npm run e2e:install`** (Chromium bundle for Playwright)
-
-## Commands
-
-From **`web/`**:
+From `web/`:
 
 ```bash
-npm run e2e:install    # once per machine (~300 MB Chromium)
-npm run e2e            # playwright test (starts mock + nuxi dev via playwright.config.ts)
+npm install
+npm run e2e:install
 ```
 
-Optional — run mock only (manual Nuxt debugging):
+## Run
+
+From `web/`:
+
+```bash
+npm run e2e
+```
+
+Playwright starts the mock API and Nuxt dev server through `playwright.config.ts`.
+
+## Manual Debugging
+
+Start only the mock API:
 
 ```bash
 npm run e2e:mock
-# then in another terminal, with NUXT_PUBLIC_API_BASE=http://127.0.0.1:8001
+```
+
+Then start Nuxt in another terminal with the mock API as the backend:
+
+PowerShell:
+
+```powershell
+$env:NUXT_PUBLIC_API_BASE="http://127.0.0.1:8001"
 npm run dev
 ```
 
-## Projects
+macOS or Linux:
 
-Configured in **`playwright.config.ts`**:
+```bash
+export NUXT_PUBLIC_API_BASE="http://127.0.0.1:8001"
+npm run dev
+```
 
-- **`chromium-desktop`** — 1280×800
-- **`mobile-pixel-7`** — device preset (touches header **Menu**, bottom nav patterns, overflow checks)
+## Test Projects
 
-Shared config uses **`workers: 1`** so the in-memory mock does not race on CRUD-ish routes.
+- `chromium-desktop` - desktop viewport
+- `mobile-pixel-7` - mobile viewport and touch behavior
 
-## Mock API
+## Fixtures
 
-Implementation: **`e2e/server/api-mock.ts`**  
-JSON bodies: **`e2e/fixtures/*.json`**
+Mock data lives in `e2e/fixtures/`. The mock server is `e2e/server/api-mock.ts`.
 
-Coverage mirrors **[`app/routes/api.php`](../../app/routes/api.php)** (runs, skills, rules, playbooks, checklists, memory, settings, SSE stream, knowledge import stub).
-
-Test-only endpoints:
-
-- **`POST /api/__e2e/reset`** — reset settings + last-PUT capture (used by settings spec)
-- **`GET /api/__e2e/last-settings-put`** — optional debugging (body of last `PUT /api/settings`)
-
-## Vitest vs Playwright
-
-- **`npm test`** — unit/component tests (**Vitest**), no browser
-- **`npm run e2e`** — browser smoke (**Playwright**)
+Use `npm test` for Vitest unit/component tests. Use `npm run e2e` for browser smoke tests.

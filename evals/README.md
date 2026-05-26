@@ -1,20 +1,18 @@
 # BosskuAI Evals
 
-These evals are local health checks for the workspace layer.
+These are local checks for BosskuAI maintainers. They are not product benchmarks and they do not prove model intelligence.
 
-They measure:
+The evals check:
 
-- prompt-surface size for always-loaded files
-- routing-fit on curated task prompts
-- retrieval relevance on curated memory queries
-- a small workflow proxy that compares baseline behavior against the BosskuAI layer
+- always-loaded prompt size
+- routing fit on sample tasks
+- memory retrieval fixtures
+- a small workflow proxy comparing baseline behavior with the BosskuAI layer
 
-They do not measure true model intelligence or guarantee answer quality.
-
-Run:
+Run from the repo root:
 
 ```bash
-python3 ./scripts/eval_workspace.py
+python -S scripts/eval_workspace.py
 ```
 
-The retrieval benchmark writes a local SQLite file under `evals/retrieval-fixtures/`. That database is ignored by git.
+The retrieval benchmark may write a local SQLite file under `evals/retrieval-fixtures/`. That generated database is ignored by git.

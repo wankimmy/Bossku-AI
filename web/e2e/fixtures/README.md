@@ -1,3 +1,3 @@
-# E2E fixtures
+# E2E Fixtures
 
-JSON payloads mirror Laravel API shapes used by the Nuxt app. The mock server in `../server/api-mock.ts` embeds the same data for a single source of truth at runtime; keep these files aligned if you duplicate fields for documentation.
+These JSON files support the Playwright mock API in `../server/api-mock.ts`. Keep fixture fields aligned with the Laravel API shapes used by the Nuxt app.
