@@ -616,10 +616,6 @@ watch(showApprovalModal, async (open) => {
     await runApprovals.fetchPending(runId)
   }
 })
-
-onMounted(() => {
-  chat.hydrateFromStorage()
-})
 </script>
 
 <template>

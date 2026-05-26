@@ -16,10 +16,15 @@ export type LandingConversation = {
   runEvents?: SseEvent[]
 }
 
-type StoredV2 = {
+export type StoredV2 = {
   version: 2
   activeId: string | null
   conversations: LandingConversation[]
+}
+
+/** SSR-safe default; localStorage is loaded only in hydrateFromStorage(). */
+export function createEmptyLandingChatStore(): StoredV2 {
+  return { version: 2, activeId: null, conversations: [] }
 }
 
 const STORAGE_KEY = 'bossku_landing_chat_v2'
@@ -40,7 +45,7 @@ function titleFromMessage(text: string): string {
 
 function loadStore(): StoredV2 {
   if (!import.meta.client) {
-    return { version: 2, activeId: null, conversations: [] }
+    return createEmptyLandingChatStore()
   }
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -137,7 +142,7 @@ export function turnsToConversation(turns: ChatTurn[]): { role: 'user' | 'assist
 }
 
 export function useLandingChat() {
-  const store = useState<StoredV2>('bossku-landing-chat-v2', () => loadStore())
+  const store = useState<StoredV2>('bossku-landing-chat-v2', createEmptyLandingChatStore)
   const hydrated = useState('bossku-landing-chat-hydrated', () => false)
 
   const conversationsSorted = computed(() =>
