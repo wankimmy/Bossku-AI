@@ -99,6 +99,9 @@ onUnmounted(() => {
     <!-- Toast notifications -->
     <AppToastContainer />
 
+    <!-- Run-command popup (shown when a command must be run manually) -->
+    <RunCommandPopup />
+
     <!-- First-time onboarding spotlight -->
     <OnboardingSpotlight />
   </div>

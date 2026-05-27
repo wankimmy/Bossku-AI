@@ -51,6 +51,7 @@ const apiClarificationRequest = ref<ClarificationRequest | null>(null)
 const apiClarificationLoading = ref(false)
 const apiClarificationFetchedFor = ref<string | null>(null)
 const toast = useToast()
+const runCommandPopup = useRunCommandPopup()
 import type { LandingTab } from '~/components/LandingConversationTabs.vue'
 
 const landingTab = ref<LandingTab>('chat')
@@ -203,6 +204,15 @@ async function syncRun() {
   }
   catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e)
+    const isNetworkError = msg.toLowerCase().includes('fetch') || msg.toLowerCase().includes('network') || msg.toLowerCase().includes('connect') || msg.toLowerCase().includes('econnrefused')
+    if (isNetworkError) {
+      runCommandPopup.show({
+        title: 'API server unreachable — run manually',
+        description: 'The BosskuAI backend is not running. Start it with Docker, or run the task directly via the CLI:',
+        command: `python3 ai-assistant/scripts/orchestrator.py run --task ${JSON.stringify(userText)} --tool cursor`,
+      })
+      return
+    }
     events.value.push({
       type: 'run_failed',
       agent: 'system',
@@ -640,7 +650,18 @@ watch(
 )
 
 watch(runError, (val) => {
-  if (val && !running.value) toast.error(val.length > 80 ? val.slice(0, 80) + '…' : val)
+  if (!val || running.value) return
+  const isNetworkError = val.toLowerCase().includes('fetch') || val.toLowerCase().includes('network') || val.toLowerCase().includes('connect') || val.toLowerCase().includes('econnrefused')
+  if (isNetworkError) {
+    const lastPrompt = chat.turns.value.findLast(t => t.role === 'user')?.content ?? ''
+    runCommandPopup.show({
+      title: 'API server unreachable — run manually',
+      description: 'The BosskuAI backend is not running. Start it with Docker, or run the task directly via the CLI:',
+      command: `python3 ai-assistant/scripts/orchestrator.py run --task ${JSON.stringify(lastPrompt)} --tool cursor`,
+    })
+    return
+  }
+  toast.error(val.length > 80 ? val.slice(0, 80) + '…' : val)
 })
 
 const conversationTabsRef = ref<{

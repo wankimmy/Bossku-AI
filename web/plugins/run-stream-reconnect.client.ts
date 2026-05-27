@@ -48,7 +48,7 @@ export default defineNuxtPlugin(() => {
       stream.attachPoll(binding.runId, { convId })
     }
     else {
-      chat.saveRunEvents(stream.events.value)
+      chat.saveRunEventsForConversation(convId, stream.events.value, binding.runId)
     }
   }).catch(() => {
     if (shouldResumePolling('running', stream.events.value)) {

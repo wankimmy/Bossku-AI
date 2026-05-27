@@ -184,6 +184,7 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
 
   if (pathname === '/api/runs/stream' && (method === 'GET' || method === 'POST')) {
     const prompt = url.searchParams.get('prompt') ?? ''
+    const runId = `run_mock_${Date.now()}`
     cors(res)
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
@@ -195,6 +196,12 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
     const sse = (obj: Record<string, unknown>) => {
       res.write(`data: ${JSON.stringify(obj)}\n\n`)
     }
+
+    sse({
+      type: 'run_started',
+      status: 'ok',
+      run_id: runId,
+    })
 
     sse({
       type: 'memory_loaded',
@@ -225,6 +232,7 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
     sse({
       type: 'run_completed',
       status: 'ok',
+      run_id: runId,
       output: `Mock stream done for: ${prompt.slice(0, 80)}`,
     })
 
@@ -262,6 +270,34 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
   if (streamEventsMatch && method === 'GET') {
     const runId = streamEventsMatch[1]
     const afterSeq = Math.max(0, Number(url.searchParams.get('after_seq') ?? 0))
+
+    if (runId === 'run_e2e_background') {
+      if (afterSeq < 1) {
+        json(res, {
+          run_id: runId,
+          status: 'running',
+          events: [{ seq: 1, type: 'run_started', run_id: runId, status: 'success' }],
+          last_seq: 1,
+        })
+        return
+      }
+      json(res, {
+        run_id: runId,
+        status: 'completed',
+        events: [
+          {
+            seq: 2,
+            type: 'run_completed',
+            run_id: runId,
+            status: 'success',
+            output: 'Mock poll completed.',
+          },
+        ],
+        last_seq: 2,
+      })
+      return
+    }
+
     const events = [
       { seq: 1, type: 'run_started', run_id: runId, status: 'success' },
       { seq: 2, type: 'run_completed', run_id: runId, status: 'success', output: 'Mock poll completed.' },

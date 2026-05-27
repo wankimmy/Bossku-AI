@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import type { LandingConversation } from '~/composables/useLandingChat'
+import { loadActiveRunBinding } from '~/utils/activeRunStorage'
+import { isTerminalStreamEvent } from '~/utils/runStreamTerminal'
 
 definePageMeta({ layout: 'default' })
 
 const chat = useLandingChat()
 const router = useRouter()
 const previewId = ref<string | null>(null)
+const { running, polling, boundConvId } = useRunStream()
 
 onMounted(() => {
   chat.hydrateFromStorage()
@@ -34,6 +37,25 @@ const previewConversation = computed((): LandingConversation | null => {
 const previewTurns = computed(() => {
   const turns = previewConversation.value?.turns ?? []
   return [...turns].sort((a, b) => a.createdAt - b.createdAt)
+})
+
+const inProgressConvIds = computed(() => {
+  const ids = new Set<string>()
+  const binding = loadActiveRunBinding()
+  if ((running.value || polling.value) && boundConvId.value) {
+    ids.add(boundConvId.value)
+  }
+  if (binding?.convId && (running.value || polling.value)) {
+    ids.add(binding.convId)
+  }
+  for (const conv of chat.conversations.value) {
+    const events = conv.runEvents ?? []
+    const last = events.at(-1)
+    if (last && !isTerminalStreamEvent(last)) {
+      ids.add(conv.id)
+    }
+  }
+  return [...ids]
 })
 
 function onSelect(id: string) {
@@ -78,6 +100,7 @@ function removeConversation(id: string) {
       <ConversationSidebar
         :conversations="chat.conversations.value"
         :active-id="previewId"
+        :in-progress-ids="inProgressConvIds"
         @select="onSelect"
         @new-conversation="newConversation"
         @delete="removeConversation"

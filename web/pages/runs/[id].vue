@@ -97,7 +97,6 @@ const signalEmoji = (s: string) => {
       </p>
     </div>
 
-    <!-- 10-tab bar -->
     <div class="flex gap-1 overflow-x-auto rounded-lg bg-zinc-900 p-1">
       <button
         v-for="item in tabs"

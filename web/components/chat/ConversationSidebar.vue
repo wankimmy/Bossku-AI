@@ -4,6 +4,7 @@ import type { LandingConversation } from '~/composables/useLandingChat'
 defineProps<{
   conversations: LandingConversation[]
   activeId: string | null
+  inProgressIds?: string[]
 }>()
 
 const emit = defineEmits<{
@@ -57,7 +58,15 @@ function formatWhen(ts: number) {
           @click="emit('select', conv.id)"
         >
           <span class="min-w-0 flex-1">
-            <span class="block truncate text-sm font-medium">{{ conv.title }}</span>
+            <span class="flex items-center gap-1.5">
+              <span class="truncate text-sm font-medium">{{ conv.title }}</span>
+              <span
+                v-if="inProgressIds?.includes(conv.id)"
+                class="shrink-0 rounded-full bg-blue-900/60 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-blue-300"
+              >
+                Running
+              </span>
+            </span>
             <span class="mt-0.5 block text-[10px] text-zinc-500">
               {{ conv.turns.length }} message{{ conv.turns.length === 1 ? '' : 's' }}
               · {{ formatWhen(conv.updatedAt) }}

@@ -222,6 +222,16 @@ export function useLandingChat() {
   function saveRunEvents(events: SseEvent[], runId?: string | null) {
     const conv = activeConversation.value
     if (!conv) return
+    saveRunEventsForConversation(conv.id, events, runId)
+  }
+
+  function saveRunEventsForConversation(
+    conversationId: string,
+    events: SseEvent[],
+    runId?: string | null,
+  ) {
+    const conv = store.value.conversations.find(c => c.id === conversationId)
+    if (!conv) return
     conv.runEvents = [...events]
     if (runId !== undefined) {
       conv.activeRunId = runId
@@ -314,6 +324,7 @@ export function useLandingChat() {
     addUserTurn,
     addAssistantTurn,
     saveRunEvents,
+    saveRunEventsForConversation,
     setActiveRunId,
     getActiveRunId,
     getRunEvents,
