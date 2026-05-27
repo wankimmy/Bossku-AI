@@ -114,7 +114,12 @@ watch(
 
 function resetOffice() {
   resetPixelOfficeAdapterState(adapterState)
-  ready.value = false
+  if (!ready.value) return
+  // Iframe is still loaded — re-send spawn messages so agents reset visually.
+  // Do NOT set ready = false; the iframe never re-fires webviewReady without a reload.
+  for (const msg of spawnCastMessages()) {
+    postToOffice(msg)
+  }
 }
 
 defineExpose({ resetOffice })
