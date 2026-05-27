@@ -16,6 +16,7 @@ BosskuAI is a local AI workspace that makes your AI coding assistant smarter and
 
 <img width="1892" height="911" alt="image" src="https://github.com/user-attachments/assets/ee209dc8-11ae-4f71-bb7b-f18303a64ff8" />
 
+<img width="1885" height="894" alt="image" src="https://github.com/user-attachments/assets/38f1d9c6-9a6d-4432-af85-4edd14e48701" />
 
 
 ## What you get
