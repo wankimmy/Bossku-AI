@@ -25,6 +25,30 @@ describe('ChangeApprovalModal', () => {
     },
   }
 
+  it('shows why and summary in agent banner', () => {
+    const wrapper = mount(ChangeApprovalModal, {
+      props: {
+        open: true,
+        approval: {
+          ...approval,
+          evidence: {
+            ...approval.evidence,
+            why: 'Security test coverage needed',
+            summary: 'Add upload validation tests',
+          },
+        },
+        pendingCount: 1,
+        askingAgent: 'executor',
+      },
+      global: {
+        stubs: { Teleport: true, PixelAgentPortrait: true },
+      },
+    })
+
+    expect(wrapper.text()).toContain('Security test coverage needed')
+    expect(wrapper.text()).toContain('Add upload validation tests')
+  })
+
   it('renders enlarged dialog with side-by-side diff', () => {
     const wrapper = mount(ChangeApprovalModal, {
       props: {
@@ -35,11 +59,15 @@ describe('ChangeApprovalModal', () => {
       global: {
         stubs: {
           Teleport: true,
+          PixelAgentPortrait: {
+            template: '<div data-testid="pixel-agent-portrait-stub" />',
+          },
         },
       },
     })
 
     expect(wrapper.find('[data-testid="change-approval-dialog"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="approval-agent-banner"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="side-by-side-diff"]').exists()).toBe(true)
     expect(wrapper.text()).toContain('Review before continuing')
     expect(wrapper.text()).toContain('Previous')

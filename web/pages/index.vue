@@ -2,6 +2,7 @@
 import { useLandingChat } from '~/composables/useLandingChat'
 import { useSkills } from '~/composables/useSkills'
 import { isAwaitingApprovals } from '~/utils/approvalStream'
+import { resolveAskingAgent } from '~/utils/resolveApprovalAskingAgent'
 import { parseClarificationApiResponse } from '~/utils/clarificationFromApi'
 import {
   buildProjectUnderstandingPrompt,
@@ -50,34 +51,11 @@ const apiClarificationRequest = ref<ClarificationRequest | null>(null)
 const apiClarificationLoading = ref(false)
 const apiClarificationFetchedFor = ref<string | null>(null)
 const toast = useToast()
-type PanelTab = 'agents' | 'plan' | 'changes' | 'audit' | 'memory'
-type MobileTab = 'chat' | PanelTab
-type ThreadTab = 'chat' | 'process'
+import type { LandingTab } from '~/components/LandingConversationTabs.vue'
 
-const rightPanelTab = ref<PanelTab>('agents')
-const mobileTab = ref<MobileTab>('chat')
-const threadTab = ref<ThreadTab>('chat')
+const landingTab = ref<LandingTab>('chat')
 const slashTrigger = ref<SlashTrigger | null>(null)
 const slashActiveIndex = ref(0)
-
-const panelTabs: PanelTab[] = ['agents', 'plan', 'changes', 'audit', 'memory']
-const mobileTabs: MobileTab[] = ['chat', ...panelTabs]
-
-function panelTabLabel(tab: PanelTab) {
-  if (tab === 'agents') return '🤖 Agents'
-  if (tab === 'plan') return '📋 Plan'
-  if (tab === 'changes') return '📁 Changes'
-  if (tab === 'audit') return '🔍 Audit'
-  return '🧠 Memory'
-}
-
-function showRightPanel(tab: PanelTab) {
-  return rightPanelTab.value === tab
-}
-
-function showMobilePanel(tab: PanelTab) {
-  return mobileTab.value === tab
-}
 const slashItems = computed(() => buildSlashCommandItems(skills.data.value ?? []))
 const slashGroups = computed(() => filterSlashCommandItems(slashItems.value, slashTrigger.value?.query ?? ''))
 const slashVisibleItems = computed(() => [
@@ -197,9 +175,7 @@ watch(
 )
 
 function focusAgentsPanel() {
-  rightPanelTab.value = 'agents'
-  mobileTab.value = 'agents'
-  threadTab.value = 'process'
+  landingTab.value = 'agents'
 }
 
 async function syncRun() {
@@ -357,6 +333,13 @@ const showClarificationModal = computed(
 
 const showApprovalModal = computed(
   () => runApprovals.awaitingApprovals.value && runApprovals.current.value !== null,
+)
+
+const approvalAskingAgent = computed(() =>
+  resolveAskingAgent(
+    runApprovals.current.value,
+    events.value as Record<string, unknown>[],
+  ),
 )
 
 const showSlashMenu = computed(() =>
@@ -632,8 +615,7 @@ function newSession() {
   lastRecordedRunId.value = null
   prompt.value = ''
   closeSlashMenu()
-  mobileTab.value = 'chat'
-  threadTab.value = 'chat'
+  landingTab.value = 'chat'
   router.replace({ path: '/', query: {} })
   toast.info('New session — previous messages hidden until you open them in Conversations.')
 }
@@ -664,33 +646,37 @@ watch(runError, (val) => {
 const conversationTabsRef = ref<{
   scrollChatToBottom: () => void
   scrollProcessToBottom: () => void
+  scrollActiveToBottom: () => void
 } | null>(null)
 
 function scrollThreadToBottom() {
   nextTick(() => {
-    if (threadTab.value === 'process') {
+    if (landingTab.value === 'process') {
       conversationTabsRef.value?.scrollProcessToBottom()
+      return
     }
-    else {
+    if (landingTab.value === 'chat') {
       conversationTabsRef.value?.scrollChatToBottom()
+      return
     }
+    conversationTabsRef.value?.scrollActiveToBottom()
   })
 }
 
 watch(
-  () => [chat.turns.value.length, events.value.length, artifacts.value.agentMessages.length, running.value, threadTab.value] as const,
+  () => [chat.turns.value.length, events.value.length, artifacts.value.agentMessages.length, running.value, landingTab.value] as const,
   () => scrollThreadToBottom(),
   { flush: 'post' },
 )
 
 watch(showClarificationModal, (open) => {
   if (!open) return
-  mobileTab.value = 'chat'
+  landingTab.value = 'chat'
 })
 
 watch(showApprovalModal, async (open) => {
   if (!open) return
-  mobileTab.value = 'chat'
+  landingTab.value = 'chat'
   const runId = resolvedRunId.value
   if (runId) {
     await runApprovals.fetchPending(runId)
@@ -707,21 +693,9 @@ watch(showApprovalModal, async (open) => {
       :routing="displayRouting"
     />
 
-    <div class="flex gap-1 rounded-lg bg-zinc-900 p-1 md:hidden overflow-x-auto">
-      <button
-        v-for="tab in mobileTabs"
-        :key="tab"
-        type="button"
-        class="shrink-0 rounded-md px-3 py-2 text-xs font-medium capitalize"
-        :class="mobileTab === tab ? 'bg-zinc-800 text-zinc-100 shadow' : 'text-zinc-500'"
-        @click="mobileTab = tab"
-      >
-        {{ tab }}
-      </button>
-    </div>
-
-    <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
-      <main :class="mobileTab !== 'chat' ? 'hidden md:block' : ''" class="space-y-4">
+    <main class="space-y-4">
+      <div class="flex flex-col gap-4 lg:flex-row lg:items-stretch">
+        <div class="min-w-0 flex-1 space-y-4">
         <section class="rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <label for="run-prompt" class="text-sm font-semibold">Message</label>
@@ -749,7 +723,7 @@ watch(showApprovalModal, async (open) => {
             </div>
           </div>
           <p v-if="hasActiveSession && chat.turns.value.length > 0" class="mt-1 text-xs text-zinc-500">
-            Chat shows user/AI turns. Agent Process shows the planner, executor, audit, proof, and handoffs for this conversation.
+            Chat shows user/AI turns. Agent Process shows the transcript; use Agents, Plan, Changes, Audit, and Memory tabs for run details.
             <button type="button" class="ml-1 text-emerald-500 hover:underline" @click="newSession">
               Start fresh
             </button>
@@ -864,94 +838,59 @@ watch(showApprovalModal, async (open) => {
           </div>
         </section>
 
-        <!-- Chat and agent process each have their own vertical scroll (see LandingConversationTabs). -->
         <section
           class="overflow-hidden rounded-lg border border-zinc-800/60 bg-zinc-950/40"
           aria-live="polite"
         >
           <LandingConversationTabs
             ref="conversationTabsRef"
-            v-model="threadTab"
+            v-model="landingTab"
             :turns="chat.displayTurns.value"
             :agent-messages="artifacts.agentMessages"
-            :handoff-nodes="artifacts.handoffNodes"
             :running="running"
-          />
+          >
+            <template #agents>
+              <LandingAgentsPanel
+                :events="events"
+                :running="running"
+                :handoff-nodes="artifacts.handoffNodes"
+              />
+            </template>
+            <template #plan>
+              <PlanChecklist :items="artifacts.checklist" />
+            </template>
+            <template #changes>
+              <ChangeTrackerPanel
+                :files-read="artifacts.filesRead"
+                :files-changed="artifacts.filesChanged"
+                :commands-run="artifacts.commandsRun"
+                :tests-run="artifacts.testsRun"
+              />
+            </template>
+            <template #audit>
+              <AuditFindingsPanel
+                :status="artifacts.finalResult.auditResult"
+                :findings="artifacts.auditFindings"
+              />
+            </template>
+            <template #memory>
+              <ContextDrawer title="Context used" :context-events="events as Record<string, unknown>[]" />
+            </template>
+          </LandingConversationTabs>
         </section>
 
         <FinalResultPanel v-if="artifacts.finalResult.raw" :result="artifacts.finalResult" />
-      </main>
-
-      <aside class="space-y-4">
-        <!-- Desktop: tab bar for right panel -->
-        <div class="hidden md:flex gap-1 rounded-lg bg-zinc-900 p-1">
-          <button
-            v-for="tab in panelTabs"
-            :key="tab"
-            type="button"
-            class="flex-1 rounded-md px-2 py-1.5 text-xs font-medium capitalize transition-colors"
-            :class="rightPanelTab === tab ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-500 hover:text-zinc-300'"
-            @click="rightPanelTab = tab"
-          >
-            {{ panelTabLabel(tab) }}
-          </button>
         </div>
 
-        <div
-          class="space-y-3"
-          :class="[
-            showRightPanel('agents') ? 'md:block' : 'md:hidden',
-            showMobilePanel('agents') ? 'max-md:block' : 'max-md:hidden',
-          ]"
-        >
-          <AgentHandoffFlow layout="vertical" :nodes="artifacts.handoffNodes" />
-          <div class="rounded-lg border border-zinc-800 bg-zinc-900 p-3">
-            <AgentActivityFeed :events="events as Record<string, unknown>[]" :running="running" />
-          </div>
-        </div>
-
-        <div
-          :class="[
-            showRightPanel('plan') ? 'md:block' : 'md:hidden',
-            showMobilePanel('plan') ? 'max-md:block' : 'max-md:hidden',
-          ]"
-        >
-          <PlanChecklist :items="artifacts.checklist" />
-        </div>
-        <div
-          :class="[
-            showRightPanel('changes') ? 'md:block' : 'md:hidden',
-            showMobilePanel('changes') ? 'max-md:block' : 'max-md:hidden',
-          ]"
-        >
-          <ChangeTrackerPanel
-            :files-read="artifacts.filesRead"
-            :files-changed="artifacts.filesChanged"
-            :commands-run="artifacts.commandsRun"
-            :tests-run="artifacts.testsRun"
+        <LandingPixelOfficeSidebar>
+          <PixelOfficePanel
+            :events="events"
+            :running="running"
+            :handoff-nodes="artifacts.handoffNodes"
           />
-        </div>
-        <div
-          :class="[
-            showRightPanel('audit') ? 'md:block' : 'md:hidden',
-            showMobilePanel('audit') ? 'max-md:block' : 'max-md:hidden',
-          ]"
-        >
-          <AuditFindingsPanel
-            :status="artifacts.finalResult.auditResult"
-            :findings="artifacts.auditFindings"
-          />
-        </div>
-        <div
-          :class="[
-            showRightPanel('memory') ? 'md:block' : 'md:hidden',
-            showMobilePanel('memory') ? 'max-md:block' : 'max-md:hidden',
-          ]"
-        >
-          <ContextDrawer title="Context used" :context-events="events as Record<string, unknown>[]" />
-        </div>
-      </aside>
-    </div>
+        </LandingPixelOfficeSidebar>
+      </div>
+    </main>
 
     <ClarificationModal
       v-if="effectiveClarificationRequest"
@@ -965,6 +904,7 @@ watch(showApprovalModal, async (open) => {
       :open="showApprovalModal"
       :approval="runApprovals.current.value"
       :pending-count="runApprovals.pendingCount.value"
+      :asking-agent="approvalAskingAgent"
       :submitting="continuingApprovals || running"
       @decided="onApprovalDecided"
     />

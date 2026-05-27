@@ -1,7 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-test('restores saved chat, agent process, and completed plan progress', async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== 'chromium-desktop', 'desktop-only right-panel smoke')
+test('restores saved chat, agent process, and completed plan progress', async ({ page }) => {
 
   await page.addInitScript(() => {
     localStorage.setItem('bossku_onboarding_v1', '1')
@@ -64,7 +63,7 @@ test('restores saved chat, agent process, and completed plan progress', async ({
   await expect(page.getByText('Agent transcript')).toBeVisible()
   await expect(page.getByText('Changed 1 file(s).')).toBeVisible()
 
-  await page.locator('aside').getByRole('button', { name: /Plan/i }).click()
+  await page.getByTestId('landing-conversation-tabs').getByRole('button', { name: /^Plan$/i }).click()
   const planItem = page.locator('summary').filter({ hasText: 'Implement seeded change' })
   await expect(planItem).toContainText('completed')
 })

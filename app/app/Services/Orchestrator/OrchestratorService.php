@@ -33,6 +33,7 @@ class OrchestratorService
 {
     use OrchestratorApprovalTrait;
     use OrchestratorClarificationTrait;
+    use OrchestratorUserLocalCommandsTrait;
 
     public function __construct(
         protected MemoryService $memory,
@@ -572,6 +573,14 @@ class OrchestratorService
             return $afterApprovals;
         }
         $execResult = $afterApprovals;
+
+        $localCmdPause = $this->maybePauseForUserLocalCommands($run, $execResult, $approvalPipeline, $emit);
+        if (is_array($localCmdPause) && ($localCmdPause['awaiting_clarification'] ?? false) === true) {
+            return $localCmdPause;
+        }
+        if (is_array($localCmdPause)) {
+            $execResult = $localCmdPause;
+        }
 
         $exTok = $this->estimateTokens(json_encode($execResult) ?: '');
         $this->logStep($run, 3, 'executor', $modelsResolved['executor'], 'ollama', $skillName, ($execResult['status'] ?? '') === 'failed' ? 'failed' : 'success', json_encode($step), json_encode($execResult), json_encode($execResult), null, null, null, (int) ($execResult['latency_ms'] ?? 0), $exTok, null, $this->events->metadata(
@@ -2418,7 +2427,11 @@ class OrchestratorService
             return '';
         }
 
-        $lines = ['## Commands to run locally', 'Docker is unavailable in this Bossku environment; run these on your machine:'];
+        $lines = [
+            '## Commands to run locally',
+            'Bossku runs in Docker and cannot execute these inside the backend container.',
+            'Run each command on your host, then start a new prompt and paste the full terminal output so the agent can analyze it and continue.',
+        ];
         foreach ($commands as $command) {
             $lines[] = '```bash'."\n".$command."\n".'```';
         }

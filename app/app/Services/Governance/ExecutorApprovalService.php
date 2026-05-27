@@ -104,6 +104,7 @@ class ExecutorApprovalService
                         'change_type' => $changeType,
                         'summary' => StringCoercion::toString($item['summary'] ?? null),
                         'why' => StringCoercion::toString($item['why'] ?? null),
+                        'asking_agent' => 'executor',
                     ],
                 );
 
@@ -152,6 +153,7 @@ class ExecutorApprovalService
                 [
                     'command' => $command,
                     'destructive' => $this->isDestructiveCommand($command),
+                    'asking_agent' => 'executor',
                 ],
             );
             $pending[] = $approval->id;

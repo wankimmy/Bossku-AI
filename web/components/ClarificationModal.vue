@@ -51,7 +51,7 @@ onUnmounted(() => {
             <span class="text-lg text-amber-400" aria-hidden="true">?</span>
             <div class="min-w-0 flex-1">
               <h2 id="clarification-modal-title" class="text-sm font-semibold text-zinc-100">
-                BosskuAI needs your input
+                {{ request.stage === 'user_local_commands' ? 'Run a command on your machine' : 'BosskuAI needs your input' }}
               </h2>
               <p v-if="request.stage" class="mt-0.5 text-xs text-zinc-500 capitalize">
                 {{ request.stage.replaceAll('_', ' ') }}

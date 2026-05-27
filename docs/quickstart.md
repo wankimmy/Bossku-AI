@@ -112,6 +112,70 @@ bossku, review the current diff and tell me what is risky.
 bossku, write a test plan for this feature.
 ```
 
+## Pixel Office furniture (full desks, couches, etc.)
+
+The landing page **Pixel office** sidebar uses a zep-style layout plus exported furniture sprites. Positions come from `realistic-office-layout.json`; PNGs come from the zep tileset export pipeline.
+
+**Docker (`docker compose up`):** The `frontend` service runs `fetch:zep-furniture` → `export:zep-furniture` → `sync:zep-assets` → `build:pixel-office:bundle` when furniture PNGs are missing (see `web/scripts/docker-web-start.sh`). First start may download the Pixel Agents VSIX from Open VSX once (`BOSSKU_AUTO_FETCH_FURNITURE_BUNDLE=1`). Ensure `zep-pixel-agents` is a sibling of `Bossku-AI` at `/workspace/zep-pixel-agents`, or set `ZEP_PIXEL_AGENTS_ROOT` in repo-root `.env`.
+
+**On your host (manual, same steps as Docker):**
+
+```bash
+cd web
+export ZEP_PIXEL_AGENTS_ROOT=../../zep-pixel-agents   # adjust path
+npm run export:zep-furniture   # once per tileset / zep metadata change
+npm run sync:zep-assets
+npm run build:pixel-office
+```
+
+Windows PowerShell:
+
+```powershell
+cd web
+$env:ZEP_PIXEL_AGENTS_ROOT = "..\..\zep-pixel-agents"
+npm run export:zep-furniture
+npm run sync:zep-assets
+npm run build:pixel-office
+```
+
+From the **frontend Docker container** (`WORKDIR` is `/app` = `web/`), use the same npm scripts (not only `pixel-office/`):
+
+```bash
+docker compose exec frontend sh -c 'ZEP_PIXEL_AGENTS_ROOT=/workspace/zep-pixel-agents npm run sync:zep-assets'
+```
+
+You need the [Office Interior Tileset (16x16)](https://donarg.itch.io/officetileset) in your zep clone (`npm run import-tileset` in `zep-pixel-agents`). Without it, furniture sprites are omitted but Docker still starts.
+
+**Crash loop fix:** `BOSSKU_PIXEL_OFFICE_GRACEFUL=1` (default) keeps the container running even when the tileset is not imported. Furniture fetch is still attempted via VSIX/vendor/zep. For a strict bake requiring full furniture, set `BOSSKU_PIXEL_OFFICE_STRICT=1` after importing the tileset.
+
+**Optional:** copy a pre-exported `furniture/` tree to `web/pixel-office/vendor/zep-furniture/` so Docker builds do not need zep.
+
+**Full furniture export:** After tileset import, set `BOSSKU_PIXEL_OFFICE_SKIP_ASSETS=0`, `BOSSKU_PIXEL_OFFICE_GRACEFUL=0`, recreate the frontend container.
+
+If furniture still missing after a good build, hard-refresh and clear `localStorage` key `bossku-pixel-layout-v3`.
+
+**Auto-fetch on Docker:** First startup may download the furniture bundle from Open VSX (`BOSSKU_AUTO_FETCH_FURNITURE_BUNDLE=1`). Cached under `web/pixel-office/vendor/zep-furniture/` when `BOSSKU_ZEP_FURNITURE_CACHE=1`. After the first successful bundle, clear `localStorage` key `bossku-pixel-layout-v3` once. Disable fetch with `BOSSKU_AUTO_FETCH_FURNITURE_BUNDLE=0`.
+
+### Layout editing (in the pixel office iframe)
+
+1. Expand **Pixel office** on the landing page.
+2. Click **Layout** in the bottom toolbar.
+3. Select furniture, then **R** (or the rotate button) to rotate any item.
+4. **Delete** or **Backspace** removes the selected item; **Erase** removes furniture under the cursor.
+5. Open **Tech** and place **Laptop** on a desk tile (snaps to the desk).
+6. Changes persist when you save in the editor (`localStorage` key `bossku-pixel-layout-v3`). Clear that key if an old sparse layout is cached.
+
+## Commands Bossku cannot run in Docker
+
+The Bossku **backend** container often cannot run `docker compose` on your host (no `/var/run/docker.sock`). When a run needs those commands, Bossku pauses and shows **Run a command on your machine**:
+
+1. Copy the command from the modal.
+2. Run it in PowerShell or Terminal on your PC (project root).
+3. Paste the **full stdout/stderr** into the text box.
+4. Click **Submit output & continue** — the agent merges your output and resumes (auditor, etc.).
+
+Example: `npm run build:pixel-office` inside `web/` when the frontend container cannot build the pixel office bundle (especially when zep furniture must be exported on the host first).
+
 ## Common Fixes
 
 - Web app does not open: run `docker compose ps` and check that `frontend`, `nginx`, `backend`, `postgres`, and `redis` are running.

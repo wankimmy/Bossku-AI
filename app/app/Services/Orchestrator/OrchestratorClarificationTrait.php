@@ -81,6 +81,10 @@ trait OrchestratorClarificationTrait
             return $this->resumeFromExecutorStuck($run, $pipeline, $answerBlock, $emit);
         }
 
+        if ($stage === 'user_local_commands') {
+            return $this->resumeFromUserLocalCommands($run, $pipeline, $allAnswers, $questions, $emit);
+        }
+
         $userPrompt = (string) ($pipeline['user_prompt'] ?? $run->prompt);
         /** @var list<array{role: string, content: string}> $conversation */
         $conversation = is_array($pipeline['conversation'] ?? null) ? $pipeline['conversation'] : [];

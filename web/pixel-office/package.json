@@ -1,0 +1,40 @@
+{
+  "name": "@bossku/pixel-office",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "generate-layout": "node scripts/generate-realistic-layout.mjs",
+    "fetch:zep-furniture": "node scripts/fetch-furniture-bundle.mjs",
+    "export:zep-furniture": "node scripts/export-zep-furniture.mjs",
+    "sync:zep-assets": "node scripts/sync-zep-assets.mjs",
+    "export-and-sync": "node scripts/export-zep-furniture.mjs && node scripts/sync-zep-assets.mjs",
+    "verify:assets": "node scripts/verify-pixel-office-assets.mjs",
+    "prebuild": "node scripts/generate-realistic-layout.mjs && node scripts/export-zep-furniture.mjs",
+    "postbuild": "node scripts/copy-public-assets.mjs && node scripts/verify-pixel-office-assets.mjs"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.17",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.5",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "eslint": "^9.39.1",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.4.24",
+    "globals": "^16.5.0",
+    "pngjs": "^7.0.0",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.46.4",
+    "vite": "^7.2.4"
+  }
+}

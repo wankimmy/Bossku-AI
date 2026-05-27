@@ -10,13 +10,19 @@ import {
 } from '~/utils/approvalDecision'
 import { assessFileChange } from '~/utils/approvalReview'
 import SideBySideDiffViewer from './SideBySideDiffViewer.vue'
+import PixelAgentPortrait from './PixelAgentPortrait.vue'
+import { themeForAgent } from '~/utils/agentTheme'
+import { normalizeAgentRole } from '~/utils/pixelAgentCharacter'
 
 const props = defineProps<{
   open: boolean
   approval: Approval | null
   pendingCount: number
   submitting?: boolean
+  askingAgent?: string
 }>()
+
+const agentTheme = computed(() => themeForAgent(normalizeAgentRole(props.askingAgent ?? 'executor')))
 
 const emit = defineEmits<{
   decided: [payload: ApprovalDecisionPayload]
@@ -172,44 +178,50 @@ const riskCls = (r?: string) => {
         data-testid="change-approval-dialog"
         @click.stop
       >
-        <div class="shrink-0 border-b border-zinc-700 px-5 py-3">
-          <div class="flex items-start gap-2">
-            <span class="text-lg" :class="isDelete ? 'text-red-400' : 'text-amber-400'" aria-hidden="true">
-              {{ isDelete ? '⚠' : '✎' }}
-            </span>
-            <div class="min-w-0 flex-1">
-              <h2 class="text-sm font-semibold text-zinc-100">
+        <div
+          class="shrink-0 border-b border-zinc-700 px-5 py-3"
+          data-testid="approval-agent-banner"
+        >
+          <div class="flex items-start gap-3">
+            <PixelAgentPortrait :agent-role="askingAgent ?? 'executor'" :scale="3" />
+            <div
+              class="relative min-w-0 flex-1 rounded-lg border px-3 py-2.5"
+              :class="isDelete ? 'border-red-500/40 bg-zinc-800/90' : 'border-amber-500/30 bg-zinc-800/90'"
+            >
+              <div
+                class="absolute -left-1.5 top-5 h-3 w-3 rotate-45 border-b border-l bg-zinc-800/90"
+                :class="isDelete ? 'border-red-500/40' : 'border-amber-500/30'"
+                aria-hidden="true"
+              />
+              <p class="text-[10px] uppercase tracking-wide" :class="agentTheme.text">
+                {{ agentTheme.icon }} {{ normalizeAgentRole(askingAgent ?? 'executor').replace(/-/g, ' ') }}
+              </p>
+              <h2 class="mt-0.5 text-sm font-semibold text-zinc-100">
                 Review before continuing
               </h2>
               <p class="mt-0.5 text-xs text-zinc-500">
                 {{ pendingCount }} item(s) waiting · executor is paused until you decide
               </p>
-              <p v-if="approval.description" class="mt-1.5 text-sm text-zinc-300 line-clamp-2">
+              <p v-if="approval.description" class="mt-1.5 text-sm text-zinc-300">
                 {{ approval.description }}
               </p>
               <p v-if="approval.risk_level" class="mt-1 text-xs">
                 Risk:
                 <span class="font-semibold" :class="riskCls(approval.risk_level)">{{ approval.risk_level }}</span>
               </p>
+              <div v-if="evidence.why" class="mt-2 text-sm text-zinc-400">
+                <span class="text-xs uppercase text-zinc-500">Why</span>
+                <p class="mt-0.5">{{ evidence.why }}</p>
+              </div>
+              <div v-if="evidence.summary" class="mt-2 text-sm text-zinc-400">
+                <span class="text-xs uppercase text-zinc-500">Summary</span>
+                <p class="mt-0.5">{{ evidence.summary }}</p>
+              </div>
             </div>
           </div>
         </div>
 
         <div class="flex min-h-0 flex-1 flex-col gap-3 px-5 py-3">
-          <div
-            v-if="evidence.why || evidence.summary"
-            class="shrink-0 space-y-2 text-sm text-zinc-400"
-          >
-            <div v-if="evidence.why">
-              <span class="text-xs uppercase text-zinc-500">Why</span>
-              <p class="mt-0.5">{{ evidence.why }}</p>
-            </div>
-            <div v-if="evidence.summary">
-              <span class="text-xs uppercase text-zinc-500">Summary</span>
-              <p class="mt-0.5">{{ evidence.summary }}</p>
-            </div>
-          </div>
-
           <SideBySideDiffViewer
             v-if="showDiffViewer || isTerminalCommand"
             class="min-h-0 flex-1"

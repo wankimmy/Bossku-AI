@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import type { ClarificationAnswer, ClarificationQuestion, ClarificationReviewDecision } from '~/types/clarification'
 
 export type { ClarificationAnswer, ClarificationQuestion }
@@ -15,6 +15,8 @@ const props = defineProps<{
   /** When true, render only question UI (for use inside ClarificationModal). */
   embedded?: boolean
 }>()
+
+const isLocalCommandsStage = computed(() => props.stage === 'user_local_commands')
 
 const emit = defineEmits<{
   submit: [payload: {
@@ -45,8 +47,11 @@ function buildAnswers(): ClarificationAnswer[] {
 
 function canApprove() {
   return props.questions.every((q) => {
-    const hasOption = Boolean(selections.value[q.id])
     const hasText = Boolean((freeText.value[q.id] ?? '').trim())
+    if (isLocalCommandsStage.value) {
+      return hasText
+    }
+    const hasOption = Boolean(selections.value[q.id])
     return hasOption || (q.allow_free_text !== false && hasText)
   })
 }
@@ -106,15 +111,27 @@ function submit(decision: ClarificationReviewDecision) {
         <p v-if="questions.length > 1" class="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mb-1">
           Question {{ qIdx + 1 }} of {{ questions.length }}
         </p>
-        <p class="text-sm font-medium text-zinc-100 leading-relaxed">
+        <p
+          v-if="!isLocalCommandsStage"
+          class="text-sm font-medium text-zinc-100 leading-relaxed whitespace-pre-wrap"
+        >
           {{ question.prompt }}
         </p>
+        <template v-else>
+          <p class="text-sm font-medium text-zinc-100 leading-relaxed">
+            Run this on your machine (Bossku in Docker cannot run it in the container):
+          </p>
+          <pre
+            class="mt-2 overflow-x-auto rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-xs text-emerald-200 font-mono select-all"
+          >{{ question.prompt.split('\n\n').slice(1).join('\n\n') || question.prompt }}</pre>
+        </template>
         <p v-if="question.why_it_matters" class="mt-1 text-xs text-zinc-500 leading-relaxed">
           {{ question.why_it_matters }}
         </p>
       </div>
 
       <div
+        v-if="!isLocalCommandsStage"
         class="grid grid-cols-1 gap-2"
         :class="question.options.length <= 2 ? 'sm:grid-cols-2' : 'sm:grid-cols-3'"
       >
@@ -135,10 +152,19 @@ function submit(decision: ClarificationReviewDecision) {
 
       <label v-if="question.allow_free_text !== false" class="block">
         <span class="text-xs text-zinc-400">
-          Your answer
-          <span class="text-zinc-600">(optional if you picked a choice above)</span>
+          {{ isLocalCommandsStage ? 'Paste terminal output' : 'Your answer' }}
+          <span v-if="!isLocalCommandsStage" class="text-zinc-600">(optional if you picked a choice above)</span>
         </span>
+        <textarea
+          v-if="isLocalCommandsStage"
+          v-model="freeText[question.id]"
+          rows="8"
+          class="mt-1.5 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm font-mono text-zinc-100 placeholder:text-zinc-600"
+          placeholder="Paste full stdout/stderr from your terminal here…"
+          data-testid="clarification-input"
+        />
         <input
+          v-else
           v-model="freeText[question.id]"
           type="text"
           class="mt-1.5 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600"
@@ -150,18 +176,20 @@ function submit(decision: ClarificationReviewDecision) {
     </article>
 
     <div class="space-y-2 border-t border-zinc-700/80 pt-3">
-      <label class="block">
-        <span class="text-xs text-zinc-400">Code review instructions</span>
-        <span class="text-zinc-600 text-xs"> (required for request changes)</span>
-        <textarea
-          v-model="codeReviewComment"
-          rows="3"
-          data-testid="clarification-code-review"
-          class="mt-1.5 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600"
-          placeholder="Tell the executor what to change before continuing…"
-        />
-      </label>
-      <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <template v-if="!isLocalCommandsStage">
+        <label class="block">
+          <span class="text-xs text-zinc-400">Code review instructions</span>
+          <span class="text-zinc-600 text-xs"> (required for request changes)</span>
+          <textarea
+            v-model="codeReviewComment"
+            rows="3"
+            data-testid="clarification-code-review"
+            class="mt-1.5 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600"
+            placeholder="Tell the executor what to change before continuing…"
+          />
+        </label>
+      </template>
+      <div class="grid grid-cols-1 gap-2" :class="isLocalCommandsStage ? '' : 'sm:grid-cols-2'">
         <button
           type="button"
           class="rounded-lg bg-amber-700 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-40 hover:bg-amber-600"
@@ -169,9 +197,10 @@ function submit(decision: ClarificationReviewDecision) {
           :disabled="submitting || (!canApprove() && !codeReviewComment.trim())"
           @click="submit('approve')"
         >
-          {{ submitting ? 'Continuing…' : 'Approve & continue' }}
+          {{ submitting ? 'Continuing…' : (isLocalCommandsStage ? 'Submit output & continue' : 'Approve & continue') }}
         </button>
         <button
+          v-if="!isLocalCommandsStage"
           type="button"
           class="rounded-lg bg-red-900/80 px-4 py-2.5 text-sm font-medium text-red-100 border border-red-700 disabled:opacity-40 hover:bg-red-800/80"
           data-testid="clarification-request-changes"

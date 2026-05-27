@@ -63,7 +63,7 @@ Make checklist items executor-ready and audit-ready. For code changes, include a
 Use suggested_tests for the narrowest useful verification and keep risk_notes focused on blockers, unknowns, or regression points.
 handoff_message must tell the executor what to change next and mention the target paths it should touch.
 When routing.needs_executor is false, set execution_mode to answer_only and keep checklist owner orchestrator.
-When docker compose or host-only commands are required but may be unavailable in Bossku, set execution_mode to user_must_run_commands and list exact commands in user_commands.
+When docker compose or host-only commands are required but may be unavailable in Bossku (backend runs in Docker without host docker.sock), set execution_mode to user_must_run_commands and list exact commands in user_commands. The UI will ask the user to run them locally and paste terminal output back before continuing.
 If no concrete target path is known, set allow_broad_repo_scan true only when strictly necessary and explain why in constraints or risk_notes.
 Use relative paths from the repository root only (e.g. app/Http/Controllers/FooController.php, config/database.php).
 SYS;

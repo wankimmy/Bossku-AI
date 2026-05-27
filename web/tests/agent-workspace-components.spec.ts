@@ -9,6 +9,7 @@ import FinalResultPanel from '../components/FinalResultPanel.vue'
 import RiskItemList from '../components/RiskItemList.vue'
 import FileDiffViewer from '../components/FileDiffViewer.vue'
 import LandingConversationTabs from '../components/LandingConversationTabs.vue'
+import LandingPixelOfficeSidebar from '../components/LandingPixelOfficeSidebar.vue'
 import TestResultPanel from '../components/TestResultPanel.vue'
 import UiEmptyState from '../components/ui/EmptyState.vue'
 
@@ -130,16 +131,11 @@ describe('agent workspace components', () => {
             summary: 'Changed one file.',
           },
         ],
-        handoffNodes: [
-          { agent: 'orchestrator', label: 'Orchestrator', status: 'completed' },
-          { agent: 'executor', label: 'Executor', status: 'completed' },
-        ],
       },
       global: {
         stubs: {
           NuxtLink: { template: '<a><slot /></a>' },
           ChatTurnBubble: { props: ['turn'], template: '<article>{{ turn.role }}: {{ turn.content }}</article>' },
-          AgentHandoffFlow: { props: ['nodes'], template: '<section>workflow {{ nodes.length }}</section>' },
           AgentMessageCard: { props: ['message'], template: '<article>{{ message.title }} {{ message.summary }}</article>' },
         },
       },
@@ -155,9 +151,42 @@ describe('agent workspace components', () => {
     await wrapper.vm.$nextTick()
 
     expect(wrapper.emitted('update:modelValue')?.[0]).toEqual(['process'])
-    expect(wrapper.get('[data-testid="agent-process-scroll"]').text()).toContain('workflow 2')
-    expect(wrapper.get('[data-testid="agent-process-scroll"]').text()).toContain('Changed one file.')
+    const processPane = wrapper.get('[data-testid="agent-process-scroll"]')
+    expect(processPane.text()).not.toContain('Agent workflow')
+    expect(processPane.text()).toContain('Changed one file.')
     expect(wrapper.find('[data-testid="chat-thread-scroll"]').exists()).toBe(false)
+  })
+
+  it('renders pixel office in resizable sidebar', async () => {
+    const wrapper = mount(LandingPixelOfficeSidebar, {
+      slots: {
+        default: '<section data-testid="office-slot">pixel room</section>',
+      },
+    })
+
+    expect(wrapper.get('[data-testid="pixel-office-sidebar"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="pixel-office-resize-handle"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="office-slot"]').text()).toContain('pixel room')
+  })
+
+  it('renders agents slot with workflow when agents tab is selected', async () => {
+    const wrapper = mount(LandingConversationTabs, {
+      props: {
+        modelValue: 'agents',
+        turns: [],
+        agentMessages: [],
+      },
+      slots: {
+        agents: '<section data-testid="agents-slot">workflow panel</section>',
+      },
+      global: {
+        stubs: {
+          NuxtLink: { template: '<a><slot /></a>' },
+        },
+      },
+    })
+
+    expect(wrapper.get('[data-testid="landing-panel-agents"]').text()).toContain('workflow panel')
   })
 
   it('renders new file with green lines from after content', () => {

@@ -1,0 +1,81 @@
+@font-face {
+  font-family: 'Pretendard';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/Pretendard-Regular.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Pretendard';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('./fonts/Pretendard-SemiBold.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Pretendard';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('./fonts/Pretendard-Bold.woff2') format('woff2');
+}
+
+:root {
+  --pixel-bg: #27262E;
+  --pixel-border: #5D5E69;
+  --pixel-border-light: #8C9097;
+  --pixel-accent: #6758FF;
+  --pixel-green: #15E4BF;
+  --pixel-shadow: 2px 2px 0px rgba(42, 39, 65, 0.40);
+
+  /* Button base */
+  --pixel-text: rgba(243, 245, 249, 0.9);
+  --pixel-text-dim: rgba(140, 144, 151, 0.85);
+  --pixel-btn-bg: rgba(255, 255, 255, 0.08);
+  --pixel-btn-hover-bg: rgba(255, 255, 255, 0.15);
+  --pixel-btn-disabled-opacity: 0.35;
+
+  /* Active/selected button state */
+  --pixel-active-bg: rgba(103, 88, 255, 0.25);
+
+  /* Agent button */
+  --pixel-agent-bg: rgba(21, 228, 191, 0.15);
+  --pixel-agent-hover-bg: rgba(21, 228, 191, 0.3);
+  --pixel-agent-border: #15E4BF;
+  --pixel-agent-text: rgba(116, 250, 218, 0.95);
+
+  /* Close button */
+  --pixel-close-text: rgba(255, 255, 255, 0.5);
+  --pixel-close-hover: #FF5353;
+
+  /* Hints & confirmations */
+  --pixel-hint-bg: #6758FF;
+  --pixel-reset-text: #ecc;
+  --pixel-danger-bg: #FF5353;
+
+  /* Vignette */
+  --pixel-vignette: radial-gradient(ellipse at center, transparent 50%, rgba(0, 0, 0, 0.6) 100%);
+
+  /* Status dot colors */
+  --pixel-status-permission: var(--vscode-charts-yellow, #cca700);
+  --pixel-status-active: var(--vscode-charts-blue, #6758FF);
+
+  /* ToolOverlay z-index layers */
+  --pixel-overlay-z: 100;
+  --pixel-overlay-selected-z: 110;
+  --pixel-controls-z: 50;
+}
+
+html, body, #root {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+}
+
+* {
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+}

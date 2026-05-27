@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import type { AgentMessage } from '../types/bossku'
 import { themeForAgent } from '../utils/agentTheme'
+import { renderMarkdown } from '~/utils/renderMarkdown'
 
 const props = defineProps<{ message: AgentMessage; isLast?: boolean; isRunning?: boolean }>()
 
@@ -17,6 +18,10 @@ const statusColor: Record<string, string> = {
 const mainText = computed(() =>
   props.message.summary
   || (props.message.status === 'failed' ? 'Run step failed.' : ''),
+)
+
+const renderedMainText = computed(() =>
+  mainText.value ? renderMarkdown(mainText.value) : '',
 )
 
 const showPlainDetail = computed(() =>
@@ -144,9 +149,7 @@ const blockers = computed((): string[] => {
           <span class="h-2 w-2 rounded-full bg-current animate-bounce [animation-delay:300ms]" />
         </div>
 
-        <p v-else-if="mainText && !message.router" class="whitespace-pre-wrap text-zinc-100">
-          {{ mainText }}
-        </p>
+        <div v-else-if="mainText && !message.router" class="agent-md" v-html="renderedMainText" />
         <p v-else-if="!message.router && !message.risks?.length" class="text-zinc-500 italic text-xs">
           Processing…
         </p>
@@ -233,3 +236,62 @@ const blockers = computed((): string[] => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.agent-md :deep(.md-h2) {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #f4f4f5;
+  margin: 0.6rem 0 0.15rem;
+  padding-bottom: 0.15rem;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.agent-md :deep(.md-h3) {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #e4e4e7;
+  margin: 0.5rem 0 0.1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.agent-md :deep(.md-p) {
+  margin: 0.2rem 0;
+  color: #d4d4d8;
+  line-height: 1.55;
+  font-size: 0.85rem;
+}
+.agent-md :deep(.md-ul) {
+  margin: 0.15rem 0 0.3rem 0;
+  padding-left: 1.1rem;
+  list-style: disc;
+}
+.agent-md :deep(.md-ul li) {
+  margin: 0.1rem 0;
+  color: #d4d4d8;
+  line-height: 1.45;
+  font-size: 0.85rem;
+}
+.agent-md :deep(.md-spacer) {
+  height: 0.25rem;
+}
+.agent-md :deep(.inline-code) {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 3px;
+  padding: 0.05em 0.3em;
+  font-family: ui-monospace, monospace;
+  font-size: 0.8em;
+  color: #93c5fd;
+}
+.agent-md :deep(strong) {
+  font-weight: 700;
+  color: #f4f4f5;
+}
+.agent-md :deep(.md-h2:first-child),
+.agent-md :deep(.md-h3:first-child),
+.agent-md :deep(.md-p:first-child) {
+  margin-top: 0;
+}
+</style>

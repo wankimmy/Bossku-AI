@@ -59,6 +59,7 @@ services:
     volumes:
       - ./web:/app
       - node_modules:/app/node_modules
+      - ../:/workspace:ro
     ports:
       - "${BOSSKU_PORT_WEB:-28470}:3000"
     environment:
@@ -70,43 +71,22 @@ services:
       NODE_ENV: production
       # Set BOSSKU_WEB_DEV=true in repo-root .env for hot-reload (nuxt dev) instead of production build.
       BOSSKU_WEB_DEV: ${BOSSKU_WEB_DEV:-false}
+      # Pixel office: auto export → sync → build on startup (see docker/node/web-start.sh)
+      ZEP_PIXEL_AGENTS_ROOT: ${ZEP_PIXEL_AGENTS_ROOT:-/workspace/zep-pixel-agents}
+      BOSSKU_AUTO_PIXEL_OFFICE: ${BOSSKU_AUTO_PIXEL_OFFICE:-true}
+      BOSSKU_PIXEL_OFFICE_SKIP_ASSETS: ${BOSSKU_PIXEL_OFFICE_SKIP_ASSETS:-0}
+      BOSSKU_PIXEL_OFFICE_GRACEFUL: ${BOSSKU_PIXEL_OFFICE_GRACEFUL:-1}
+      BOSSKU_PIXEL_OFFICE_STRICT: ${BOSSKU_PIXEL_OFFICE_STRICT:-0}
+      BOSSKU_AUTO_FETCH_FURNITURE_BUNDLE: ${BOSSKU_AUTO_FETCH_FURNITURE_BUNDLE:-1}
+      BOSSKU_ZEP_FURNITURE_CACHE: ${BOSSKU_ZEP_FURNITURE_CACHE:-1}
     depends_on:
       - nginx
     networks: [bossku]
-    # Production Nuxt (npm run build + node .output/server). Rebuild after UI edits — see README.
+    # Entry script lives in mounted web/scripts; sed strips CRLF if edited on Windows.
     command:
       - sh
-      - -ec
-      - |
-        if [ ! -f node_modules/@nuxtjs/tailwindcss/package.json ]; then
-          echo "[bossku-web] Installing dependencies (dev deps required for nuxt build)..."
-          NPM_CONFIG_PRODUCTION=false npm ci 2>/dev/null || NPM_CONFIG_PRODUCTION=false npm install
-        fi
-        if [ "$${BOSSKU_WEB_DEV:-false}" = "true" ]; then
-          echo "[bossku-web] Dev mode (nuxt dev) on http://0.0.0.0:$${PORT:-3000}"
-          exec npm run dev -- --host 0.0.0.0 --port "$${PORT:-3000}"
-        fi
-        stamp=".output/server/index.mjs"
-        needs_build=0
-        if [ ! -f "$$stamp" ]; then
-          needs_build=1
-        else
-          for path in pages components composables utils layouts middleware plugins assets app.vue nuxt.config.ts; do
-            if [ -e "$$path" ] && find "$$path" -type f -newer "$$stamp" 2>/dev/null | head -1 | grep -q .; then
-              needs_build=1
-              break
-            fi
-          done
-        fi
-        if [ "$$needs_build" = "1" ]; then
-          echo "[bossku-web] Building Nuxt (source changed or first start; may take a few minutes)..."
-          echo "[bossku-web] API proxy target: $${NUXT_API_PROXY_TARGET:-http://nginx/api/**}"
-          export NUXT_API_PROXY_TARGET="$${NUXT_API_PROXY_TARGET:-http://nginx/api/**}"
-          export NUXT_PUBLIC_API_BASE="$${NUXT_PUBLIC_API_BASE:-}"
-          NPM_CONFIG_PRODUCTION=false npm run build
-        fi
-        echo "[bossku-web] Serving production build on http://0.0.0.0:$${PORT:-3000}"
-        exec node .output/server/index.mjs
+      - -c
+      - "sed 's/\\r$//' /app/scripts/docker-web-start.sh | sh"
 
   postgres:
     image: pgvector/pgvector:pg16
