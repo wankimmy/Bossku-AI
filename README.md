@@ -2,6 +2,18 @@
 
 BosskuAI is a local AI workspace that makes your AI coding assistant smarter and safer. It adds a structured workflow on top of any AI tool — Claude Code, Cursor, or Codex — so the AI **plans before it edits**, **audits after it edits**, and **remembers what it learns** about your project.
 
+<img width="1895" height="921" alt="image" src="https://github.com/user-attachments/assets/10eb8908-f05e-426a-af68-e83162703f4a" />
+
+<img width="1906" height="919" alt="image" src="https://github.com/user-attachments/assets/da80b202-7ab5-4ce5-a504-89cb6bce146c" />
+
+<img width="1905" height="916" alt="image" src="https://github.com/user-attachments/assets/fb1a22c8-2d4c-41d3-829c-e43aa6b2b41f" />
+
+<img width="1898" height="914" alt="image" src="https://github.com/user-attachments/assets/6b09ffcc-d3b1-47a5-b793-38b79e476a45" />
+
+<img width="1895" height="886" alt="image" src="https://github.com/user-attachments/assets/70c11e7d-a35c-418c-a54e-dcf2220151bc" />
+
+
+
 ## What you get
 
 - **Orchestrated runs**: every task goes through planner → executor → auditor → memory, not just a single prompt
