@@ -305,10 +305,19 @@ class ProjectCommandRunner
 
     public function logDockerAvailability(): void
     {
-        if ((bool) config('bossku.allow_docker_compose_commands', true) && ! $this->dockerComposeEnabled()) {
-            Log::warning('bossku.docker_sock_unavailable', [
-                'hint' => 'Mount /var/run/docker.sock on the Bossku backend service to run docker compose commands.',
-            ]);
+        if (! (bool) config('bossku.allow_docker_compose_commands', true) || $this->dockerComposeEnabled()) {
+            return;
         }
+
+        // Throttle to one log entry per hour so it doesn't spam on every request/run step.
+        $key = 'bossku.docker_sock_warned';
+        if (cache()->has($key)) {
+            return;
+        }
+
+        cache()->put($key, true, now()->addHour());
+        Log::warning('bossku.docker_sock_unavailable', [
+            'hint' => 'Mount /var/run/docker.sock on the Bossku backend service to run docker compose commands.',
+        ]);
     }
 }
