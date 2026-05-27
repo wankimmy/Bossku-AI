@@ -260,16 +260,12 @@ class KnowledgeCaptureService
     protected function captureArticle(string $url, ?string $note): array
     {
         try {
-            $response = Http::timeout(10)
-                ->withOptions(['allow_redirects' => ['max' => 3]])
-                ->withHeaders(['User-Agent' => 'BosskuAI-KnowledgeImporter/1.0'])
-                ->get($url);
+            $body = $this->fetchPageBody($url);
 
-            if (! $response->successful()) {
+            if ($body === null) {
                 return $this->partialUrlCapture($url, $note, 'fetch_failed');
             }
 
-            $body = substr($response->body(), 0, self::MAX_BODY_CHARS);
             $parsed = $this->parseHtml($body);
             $text = trim((string) $parsed['text']);
             if ($text === '') {
@@ -292,6 +288,39 @@ class KnowledgeCaptureService
         } catch (\Throwable) {
             return $this->partialUrlCapture($url, $note, 'fetch_error');
         }
+    }
+
+    protected function fetchPageBody(string $url): ?string
+    {
+        $browserHeaders = [
+            'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36',
+            'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language' => 'en-US,en;q=0.9',
+        ];
+
+        try {
+            $response = Http::timeout(15)
+                ->withOptions(['allow_redirects' => ['max' => 5]])
+                ->withHeaders($browserHeaders)
+                ->get($url);
+
+            if ($response->successful()) {
+                return substr($response->body(), 0, self::MAX_BODY_CHARS);
+            }
+
+            // For bot-blocked responses, try Google's cached copy.
+            if (in_array($response->status(), [403, 429, 451, 503], true)) {
+                $cacheUrl = 'https://webcache.googleusercontent.com/search?q=cache:'.rawurlencode($url).'&hl=en';
+                $cached = Http::timeout(15)->withHeaders($browserHeaders)->get($cacheUrl);
+                if ($cached->successful()) {
+                    return substr($cached->body(), 0, self::MAX_BODY_CHARS);
+                }
+            }
+        } catch (\Throwable) {
+            // fall through to null
+        }
+
+        return null;
     }
 
     /** @return array<string,mixed> */

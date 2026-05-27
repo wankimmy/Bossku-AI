@@ -692,7 +692,9 @@ class KnowledgeImportService
 
         foreach ($chunks as $i => $chunk) {
             try {
-                $humanSummary = Str::limit($title.' [chunk '.($i + 1).'/'.$total.']', 200);
+                // Use actual chunk content as the summary so agents see what the chunk is about,
+                // not just a title+counter that gives no semantic signal.
+                $humanSummary = Str::limit($title.': '.strip_tags($chunk), 200);
                 $metadata = [
                     'source_url' => $url,
                     'title' => $title,
@@ -763,17 +765,25 @@ class KnowledgeImportService
     /** @return array{0: string, 1: string} [title, plain_text] */
     protected function fetchWebPage(string $url): array
     {
-        $response = Http::withHeaders([
-            'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36',
-            'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'Accept-Language' => 'en-US,en;q=0.9',
-        ])->timeout(30)->get($url);
-
-        if (! $response->successful()) {
-            throw new \RuntimeException('Failed to fetch URL: HTTP '.$response->status());
+        // Try Medium's internal JSON API first — bypasses Cloudflare entirely.
+        if ($this->isMediumUrl($url)) {
+            $result = $this->fetchMediumJson($url);
+            if ($result !== null) {
+                return $result;
+            }
         }
 
-        $html = $response->body();
+        $html = $this->fetchHtml($url);
+
+        if ($html === null) {
+            // Try Google's cache as a fallback for bot-blocked pages.
+            $cacheUrl = 'https://webcache.googleusercontent.com/search?q=cache:'.rawurlencode($url).'&hl=en';
+            $html = $this->fetchHtml($cacheUrl);
+        }
+
+        if ($html === null) {
+            throw new \RuntimeException('Failed to fetch URL — the page returned an error and no cached copy was available.');
+        }
 
         // Extract title
         $title = $url;
@@ -786,10 +796,93 @@ class KnowledgeImportService
         $text = $this->htmlToText($html);
 
         if (strlen($text) < 100) {
-            throw new \RuntimeException('Extracted text is too short (< 100 chars) — page may require JavaScript.');
+            throw new \RuntimeException('Extracted text is too short (< 100 chars) — page may require JavaScript or block server-side requests.');
         }
 
         return [trim($title), $text];
+    }
+
+    protected function isMediumUrl(string $url): bool
+    {
+        $host = strtolower((string) parse_url($url, PHP_URL_HOST));
+
+        return $host === 'medium.com' || str_ends_with($host, '.medium.com');
+    }
+
+    /** @return array{0: string, 1: string}|null */
+    protected function fetchMediumJson(string $url): ?array
+    {
+        try {
+            // Strip existing query params to avoid conflicts, then append format=json.
+            $base = strtok($url, '?');
+            $response = Http::withHeaders([
+                'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36',
+                'Accept' => 'application/json',
+                'Accept-Language' => 'en-US,en;q=0.9',
+            ])->timeout(20)->get($base.'?format=json');
+
+            if (! $response->successful()) {
+                return null;
+            }
+
+            // Medium prepends `])}while(1);</x>` to prevent JSON hijacking.
+            $body = $response->body();
+            $jsonStart = strpos($body, '{');
+            if ($jsonStart === false) {
+                return null;
+            }
+            $data = json_decode(substr($body, $jsonStart), true);
+            if (! is_array($data)) {
+                return null;
+            }
+
+            $post = data_get($data, 'payload.value') ?? data_get($data, 'data.post');
+            if (! is_array($post)) {
+                return null;
+            }
+
+            $title = (string) ($post['title'] ?? data_get($post, 'content.subtitle') ?? '');
+            if ($title === '') {
+                $title = (string) (data_get($data, 'payload.value.title') ?? $url);
+            }
+
+            // Extract paragraphs from the body model.
+            $paragraphs = data_get($post, 'content.bodyModel.paragraphs')
+                ?? data_get($post, 'previewContent.bodyModel.paragraphs')
+                ?? [];
+
+            $lines = [];
+            foreach ((array) $paragraphs as $p) {
+                $text = trim((string) ($p['text'] ?? ''));
+                if ($text !== '') {
+                    $lines[] = $text;
+                }
+            }
+
+            if (count($lines) < 3) {
+                return null;
+            }
+
+            return [trim($title), implode("\n\n", $lines)];
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    protected function fetchHtml(string $url): ?string
+    {
+        try {
+            $response = Http::withHeaders([
+                'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36',
+                'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language' => 'en-US,en;q=0.9',
+                'Cache-Control' => 'no-cache',
+            ])->timeout(30)->get($url);
+
+            return $response->successful() ? $response->body() : null;
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     protected function htmlToText(string $html): string

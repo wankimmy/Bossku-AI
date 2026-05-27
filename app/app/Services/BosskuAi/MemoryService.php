@@ -139,12 +139,6 @@ class MemoryService
 
     public function humanize(Memory $memory): Memory
     {
-        if (! $this->memoryOllamaEnabled()) {
-            $memory->human_summary = $memory->human_summary ?: Str::limit(strip_tags($memory->content), 200);
-
-            return tap($memory)->save();
-        }
-
         try {
             $model = $this->settings->memoryHumanizeLogicalModel();
             $out = $this->llmGateway->chat($model, [
@@ -155,7 +149,9 @@ class MemoryService
             $memory->human_summary = trim($out['text']);
             $memory->save();
         } catch (\Throwable) {
-            //
+            // Fall back to truncated content if LLM is unavailable
+            $memory->human_summary = $memory->human_summary ?: Str::limit(strip_tags($memory->content), 200);
+            $memory->save();
         }
 
         return $memory;
