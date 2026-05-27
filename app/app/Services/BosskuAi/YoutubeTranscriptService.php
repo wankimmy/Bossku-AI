@@ -51,6 +51,15 @@ class YoutubeTranscriptService
 
     public function fetchTranscript(string $videoId): string
     {
+        // Player-page scraping is the most reliable: it uses the same caption URLs
+        // that the YouTube web player uses, bypasses the deprecated timedtext API,
+        // and works for manually-uploaded as well as auto-generated captions.
+        $scraped = $this->fetchTranscriptFromPlayerPage($videoId);
+        if ($scraped !== '') {
+            return $scraped;
+        }
+
+        // Fall back to the older timedtext API for videos where scraping fails.
         $attempts = [
             ['lang' => 'en'],
             ['lang' => 'en', 'kind' => 'asr'],
@@ -70,9 +79,7 @@ class YoutubeTranscriptService
             }
         }
 
-        $scraped = $this->fetchTranscriptFromPlayerPage($videoId);
-
-        return $scraped !== '' ? $scraped : '';
+        return '';
     }
 
     public function parseTranscriptXml(string $xml): string
@@ -152,6 +159,8 @@ class YoutubeTranscriptService
             $response = Http::withHeaders([
                 'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36',
                 'Accept-Language' => 'en-US,en;q=0.9',
+                // Bypass YouTube GDPR consent wall on server IPs
+                'Cookie' => 'CONSENT=YES+1; SOCS=CAESEwgDEgk0NTU5OTkxNjUaAmVuIAEaBgiAo_CmBg==',
             ])->timeout(30)->get($watchUrl);
 
             if (! $response->successful()) {
@@ -159,24 +168,34 @@ class YoutubeTranscriptService
             }
 
             $html = $response->body();
-            $marker = 'ytInitialPlayerResponse';
-            $pos = strpos($html, $marker);
-            if ($pos === false) {
-                return '';
-            }
-            $bracePos = strpos($html, '{', $pos);
-            if ($bracePos === false) {
-                return '';
+
+            // Extract captionTracks directly from the HTML — faster and avoids
+            // parsing the full multi-MB ytInitialPlayerResponse object.
+            $captionTracks = $this->extractCaptionTracksFromHtml($html);
+
+            // If direct extraction failed, fall back to full JSON parsing.
+            if ($captionTracks === []) {
+                $marker = 'ytInitialPlayerResponse';
+                $pos = strpos($html, $marker);
+                if ($pos !== false) {
+                    $bracePos = strpos($html, '{', $pos);
+                    if ($bracePos !== false) {
+                        try {
+                            $json = $this->extractJsonAt($html, $bracePos);
+                            $data = json_decode($json, true, 1024, JSON_THROW_ON_ERROR);
+                            $captionTracks = data_get($data, 'captions.playerCaptionsTracklistRenderer.captionTracks', []);
+                        } catch (\Throwable) {
+                            $captionTracks = [];
+                        }
+                    }
+                }
             }
 
-            $json = $this->extractJsonAt($html, $bracePos);
-            $data = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
-
-            $captionTracks = data_get($data, 'captions.playerCaptionsTracklistRenderer.captionTracks', []);
             if (! is_array($captionTracks) || $captionTracks === []) {
                 return '';
             }
 
+            // Prefer manually-created English captions, then any English, then first track.
             $track = null;
             foreach ($captionTracks as $t) {
                 $lang = strtolower((string) ($t['languageCode'] ?? ''));
@@ -201,11 +220,20 @@ class YoutubeTranscriptService
                 return '';
             }
 
+            $sep = str_contains($captionUrl, '?') ? '&' : '?';
             $captionResponse = Http::withHeaders([
                 'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            ])->timeout(30)->get($captionUrl.'&fmt=json3');
+            ])->timeout(30)->get($captionUrl.$sep.'fmt=json3');
 
             if (! $captionResponse->successful()) {
+                // Fall back to XML format
+                $captionResponse = Http::withHeaders([
+                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                ])->timeout(30)->get($captionUrl);
+                if ($captionResponse->successful()) {
+                    return $this->parseTranscriptXml($captionResponse->body());
+                }
+
                 return '';
             }
 
@@ -218,7 +246,7 @@ class YoutubeTranscriptService
                 }
                 foreach ($event['segs'] as $seg) {
                     $txt = trim((string) ($seg['utf8'] ?? ''));
-                    if ($txt !== '' && $txt !== '\n') {
+                    if ($txt !== '' && $txt !== "\n") {
                         $segments[] = $txt;
                     }
                 }
@@ -231,6 +259,64 @@ class YoutubeTranscriptService
         } catch (\Throwable) {
             return '';
         }
+    }
+
+    /**
+     * Extract the captionTracks array directly from the YouTube watch page HTML,
+     * avoiding the need to parse the full multi-MB ytInitialPlayerResponse JSON.
+     *
+     * @return list<array<string, mixed>>
+     */
+    protected function extractCaptionTracksFromHtml(string $html): array
+    {
+        $marker = '"captionTracks":';
+        $pos = strpos($html, $marker);
+        if ($pos === false) {
+            return [];
+        }
+
+        $bracketPos = strpos($html, '[', $pos + strlen($marker));
+        if ($bracketPos === false) {
+            return [];
+        }
+
+        $depth = 0;
+        $inString = false;
+        $escape = false;
+        // 500 KB is more than enough for the captionTracks array
+        $limit = min(strlen($html), $bracketPos + 500_000);
+
+        for ($i = $bracketPos; $i < $limit; $i++) {
+            $ch = $html[$i];
+            if ($escape) {
+                $escape = false;
+                continue;
+            }
+            if ($ch === '\\' && $inString) {
+                $escape = true;
+                continue;
+            }
+            if ($ch === '"') {
+                $inString = ! $inString;
+                continue;
+            }
+            if ($inString) {
+                continue;
+            }
+            if ($ch === '[') {
+                $depth++;
+            } elseif ($ch === ']') {
+                $depth--;
+                if ($depth === 0) {
+                    $json = substr($html, $bracketPos, $i - $bracketPos + 1);
+                    $tracks = json_decode($json, true);
+
+                    return is_array($tracks) ? $tracks : [];
+                }
+            }
+        }
+
+        return [];
     }
 
     protected function extractJsonAt(string $source, int $startIndex): string
