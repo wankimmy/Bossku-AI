@@ -1,4 +1,4 @@
-# BosskuAI
+# BosskuAI 3.0
 
 BosskuAI is a local AI workspace that makes your AI coding assistant smarter and safer. It adds a structured workflow on top of any AI tool — Claude Code, Cursor, or Codex — so the AI **plans before it edits**, **audits after it edits**, and **remembers what it learns** about your project.
 
