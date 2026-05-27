@@ -16,7 +16,8 @@ class KnowledgeCaptureService
     private const MAX_MEMORY_FILE_BYTES = 1000000;
 
     public function __construct(
-        protected MemoryService $memoryService
+        protected MemoryService $memoryService,
+        protected YoutubeTranscriptService $youtubeTranscript,
     ) {}
 
     /**
@@ -183,7 +184,7 @@ class KnowledgeCaptureService
         return array_values(array_unique($base));
     }
 
-    protected function isAllowedUrl(string $url): bool
+    public function isAllowedUrl(string $url): bool
     {
         $parts = parse_url($url);
         $scheme = strtolower((string) ($parts['scheme'] ?? ''));
@@ -233,27 +234,11 @@ class KnowledgeCaptureService
     /** @return array<string,mixed> */
     protected function captureYoutube(string $url, ?string $note): array
     {
-        $videoId = $this->youtubeVideoId($url);
-        $title = 'YouTube video';
+        $videoId = $this->youtubeTranscript->extractVideoId($url);
+        $title = $videoId ? $this->youtubeTranscript->fetchTitle($url, $videoId) : 'YouTube video';
         $author = null;
 
-        if ($videoId) {
-            try {
-                $oembed = Http::timeout(8)->acceptJson()->get('https://www.youtube.com/oembed', [
-                    'url' => $url,
-                    'format' => 'json',
-                ]);
-                if ($oembed->successful()) {
-                    $json = $oembed->json();
-                    $title = trim((string) data_get($json, 'title')) ?: $title;
-                    $author = trim((string) data_get($json, 'author_name')) ?: null;
-                }
-            } catch (\Throwable) {
-                //
-            }
-        }
-
-        $transcript = $videoId ? $this->fetchYoutubeTranscript($videoId) : '';
+        $transcript = $videoId ? $this->youtubeTranscript->fetchTranscript($videoId) : '';
         $status = $transcript !== '' ? 'imported' : 'partial';
         $extractor = $transcript !== '' ? 'youtube_transcript' : 'youtube_metadata';
         $content = $transcript !== ''
@@ -269,59 +254,6 @@ class KnowledgeCaptureService
             'status' => $status,
             'note' => $note,
         ];
-    }
-
-    protected function youtubeVideoId(string $url): ?string
-    {
-        $host = strtolower((string) parse_url($url, PHP_URL_HOST));
-        $path = (string) parse_url($url, PHP_URL_PATH);
-        parse_str((string) parse_url($url, PHP_URL_QUERY), $query);
-
-        $id = null;
-        if ($host === 'youtu.be') {
-            $id = trim($path, '/');
-        } elseif (isset($query['v'])) {
-            $id = (string) $query['v'];
-        } elseif (preg_match('~/shorts/([A-Za-z0-9_-]{6,})~', $path, $m)) {
-            $id = $m[1];
-        }
-
-        return $id && preg_match('/^[A-Za-z0-9_-]{6,}$/', $id) ? $id : null;
-    }
-
-    protected function fetchYoutubeTranscript(string $videoId): string
-    {
-        try {
-            $response = Http::timeout(8)->get('https://video.google.com/timedtext', [
-                'lang' => 'en',
-                'v' => $videoId,
-            ]);
-            if (! $response->successful() || trim($response->body()) === '') {
-                return '';
-            }
-
-            return $this->parseTranscriptXml($response->body());
-        } catch (\Throwable) {
-            return '';
-        }
-    }
-
-    protected function parseTranscriptXml(string $xml): string
-    {
-        $doc = new DOMDocument();
-        if (! @$doc->loadXML($xml)) {
-            return '';
-        }
-
-        $lines = [];
-        foreach ($doc->getElementsByTagName('text') as $node) {
-            $text = html_entity_decode(trim($node->textContent), ENT_QUOTES | ENT_HTML5, 'UTF-8');
-            if ($text !== '') {
-                $lines[] = $text;
-            }
-        }
-
-        return trim(implode(' ', $lines));
     }
 
     /** @return array<string,mixed> */

@@ -15,7 +15,15 @@ class KnowledgeLearnUrlController extends Controller
         try {
             $result = $service->learnUrl($request->input('url'));
         } catch (\Throwable $e) {
-            return response()->json(['error' => $e->getMessage()], 422);
+            $message = $e->getMessage();
+            $code = str_contains(strtolower($message), 'caption')
+                ? 'youtube_no_captions'
+                : 'learn_url_failed';
+
+            return response()->json([
+                'error' => $message,
+                'code' => $code,
+            ], 422);
         }
 
         return response()->json($result);

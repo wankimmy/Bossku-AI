@@ -35,7 +35,19 @@ class KnowledgeImportService
     public function __construct(
         protected string $repoRoot,
         protected ?MemoryService $memoryService = null,
+        protected ?YoutubeTranscriptService $youtubeTranscript = null,
+        protected ?KnowledgeCaptureService $knowledgeCapture = null,
     ) {}
+
+    protected function youtube(): YoutubeTranscriptService
+    {
+        return $this->youtubeTranscript ??= app(YoutubeTranscriptService::class);
+    }
+
+    protected function capture(): KnowledgeCaptureService
+    {
+        return $this->knowledgeCapture ??= app(KnowledgeCaptureService::class);
+    }
 
     /**
      * @return array{skills: int, rules: int, playbooks: int, checklists: int, references: int, commands: int, skipped: int, errors: int, messages: list<string>}
@@ -644,15 +656,22 @@ class KnowledgeImportService
         $isYoutube = str_contains($url, 'youtube.com') || str_contains($url, 'youtu.be');
 
         if ($isYoutube) {
-            $videoId = $this->extractYouTubeId($url);
+            $videoId = $this->youtube()->extractVideoId($url);
             if ($videoId === null) {
                 throw new \RuntimeException('Could not extract YouTube video ID from: '.$url);
             }
-            [$title, $text] = $this->fetchYouTubeTranscript($videoId);
+            [$title, $text] = $this->fetchYouTubeTranscript($url, $videoId);
             $sourceType = 'youtube';
         } else {
+            if (! $this->capture()->isAllowedUrl($url)) {
+                throw new \RuntimeException('URL is not allowed.');
+            }
             [$title, $text] = $this->fetchWebPage($url);
             $sourceType = 'web';
+        }
+
+        if (trim($text) === '') {
+            throw new \RuntimeException('No readable content could be extracted from this URL.');
         }
 
         // Deduplication: remove existing chunks for this URL before re-indexing
@@ -712,6 +731,10 @@ class KnowledgeImportService
             }
         }
 
+        if ($total > 0 && $indexed === 0) {
+            throw new \RuntimeException('Failed to store any content chunks in memory.');
+        }
+
         return [
             'url' => $url,
             'title' => $title,
@@ -722,113 +745,16 @@ class KnowledgeImportService
         ];
     }
 
-    protected function extractYouTubeId(string $url): ?string
-    {
-        if (preg_match('/youtu\.be\/([a-zA-Z0-9_-]{11})/', $url, $m)) {
-            return $m[1];
-        }
-        if (preg_match('/[?&]v=([a-zA-Z0-9_-]{11})/', $url, $m)) {
-            return $m[1];
-        }
-
-        return null;
-    }
-
     /** @return array{0: string, 1: string} [title, transcript_text] */
-    protected function fetchYouTubeTranscript(string $videoId): array
+    protected function fetchYouTubeTranscript(string $url, string $videoId): array
     {
-        $watchUrl = 'https://www.youtube.com/watch?v='.$videoId;
-        $response = Http::withHeaders([
-            'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36',
-            'Accept-Language' => 'en-US,en;q=0.9',
-        ])->timeout(30)->get($watchUrl);
-
-        if (! $response->successful()) {
-            throw new \RuntimeException('Failed to fetch YouTube page: HTTP '.$response->status());
-        }
-
-        $html = $response->body();
-
-        // Extract title
-        $title = 'YouTube Video '.$videoId;
-        if (preg_match('/<title>([^<]+)<\/title>/i', $html, $m)) {
-            $title = html_entity_decode(preg_replace('/ - YouTube$/', '', $m[1]));
-        }
-
-        // Find ytInitialPlayerResponse JSON
-        $marker = 'ytInitialPlayerResponse';
-        $pos = strpos($html, $marker);
-        if ($pos === false) {
-            throw new \RuntimeException('ytInitialPlayerResponse not found on YouTube page — video may be age-restricted or unavailable.');
-        }
-        $bracePos = strpos($html, '{', $pos);
-        if ($bracePos === false) {
-            throw new \RuntimeException('Could not locate JSON start for ytInitialPlayerResponse.');
-        }
-
-        $json = $this->extractJsonAt($html, $bracePos);
-        $data = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
-
-        // Find caption tracks
-        $captionTracks = data_get($data, 'captions.playerCaptionsTracklistRenderer.captionTracks', []);
-        if (! is_array($captionTracks) || $captionTracks === []) {
-            throw new \RuntimeException('No caption tracks available for this video.');
-        }
-
-        // Prefer English manual captions, then English ASR, then first available
-        $track = null;
-        foreach ($captionTracks as $t) {
-            $lang = strtolower((string) ($t['languageCode'] ?? ''));
-            $kind = strtolower((string) ($t['kind'] ?? ''));
-            if ($lang === 'en' && $kind !== 'asr') {
-                $track = $t;
-                break;
-            }
-        }
-        if ($track === null) {
-            foreach ($captionTracks as $t) {
-                if (strtolower((string) ($t['languageCode'] ?? '')) === 'en') {
-                    $track = $t;
-                    break;
-                }
-            }
-        }
-        $track ??= $captionTracks[0];
-
-        $captionUrl = (string) ($track['baseUrl'] ?? '');
-        if ($captionUrl === '') {
-            throw new \RuntimeException('Caption track has no baseUrl.');
-        }
-
-        $captionResponse = Http::withHeaders([
-            'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        ])->timeout(30)->get($captionUrl.'&fmt=json3');
-
-        if (! $captionResponse->successful()) {
-            throw new \RuntimeException('Failed to fetch caption track: HTTP '.$captionResponse->status());
-        }
-
-        $captionData = $captionResponse->json();
-        $events = is_array($captionData['events'] ?? null) ? $captionData['events'] : [];
-        $segments = [];
-        foreach ($events as $event) {
-            if (! is_array($event['segs'] ?? null)) {
-                continue;
-            }
-            foreach ($event['segs'] as $seg) {
-                $txt = trim((string) ($seg['utf8'] ?? ''));
-                if ($txt !== '' && $txt !== '\n') {
-                    $segments[] = $txt;
-                }
-            }
-        }
-
-        $transcript = preg_replace('/\[(Music|Applause|Laughter|Inaudible)\]/i', '', implode(' ', $segments));
-        $transcript = preg_replace('/\s+/', ' ', $transcript ?? '');
-        $transcript = trim($transcript ?? '');
+        $title = $this->youtube()->fetchTitle($url, $videoId);
+        $transcript = $this->youtube()->fetchTranscript($videoId);
 
         if (strlen($transcript) < 100) {
-            throw new \RuntimeException('Transcript is too short or empty after extraction.');
+            throw new \RuntimeException(
+                'No captions available for this video (try a video with subtitles enabled).',
+            );
         }
 
         return [$title, $transcript];
@@ -881,47 +807,6 @@ class KnowledgeImportService
         $text = (string) preg_replace('/\n{3,}/', "\n\n", $text);
 
         return trim($text);
-    }
-
-    /**
-     * Extract a balanced-brace JSON object starting at $startIndex.
-     * Handles string escapes. 3 MB limit.
-     */
-    protected function extractJsonAt(string $source, int $startIndex): string
-    {
-        $depth = 0;
-        $inString = false;
-        $escape = false;
-        $len = min(strlen($source), $startIndex + 3_000_000);
-
-        for ($i = $startIndex; $i < $len; $i++) {
-            $ch = $source[$i];
-            if ($escape) {
-                $escape = false;
-                continue;
-            }
-            if ($ch === '\\' && $inString) {
-                $escape = true;
-                continue;
-            }
-            if ($ch === '"') {
-                $inString = ! $inString;
-                continue;
-            }
-            if ($inString) {
-                continue;
-            }
-            if ($ch === '{') {
-                $depth++;
-            } elseif ($ch === '}') {
-                $depth--;
-                if ($depth === 0) {
-                    return substr($source, $startIndex, $i - $startIndex + 1);
-                }
-            }
-        }
-
-        throw new \RuntimeException('Could not find closing brace for JSON extraction.');
     }
 
     /**

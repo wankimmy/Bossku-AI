@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { MemoryRecord } from '~/types/api'
+import { apiErrorMessage } from '~/utils/apiErrorMessage'
 
 type ImportItem = {
   source?: string
@@ -52,7 +53,7 @@ async function learnFromUrl() {
     await refresh()
   }
   catch (e) {
-    learnError.value = e instanceof Error ? e.message : 'Failed to learn from URL.'
+    learnError.value = apiErrorMessage(e, 'Failed to learn from URL.')
   }
   finally {
     learnLoading.value = false
