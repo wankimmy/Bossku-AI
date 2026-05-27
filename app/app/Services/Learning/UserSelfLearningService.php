@@ -50,7 +50,7 @@ class UserSelfLearningService
         $learnings = $this->extractUserLearnings($prompt, $conversation, $modelRoute, $plan, $execResult, $lastAudit, $isToolkit);
         $memory = $this->persistUserLearningMemory($run, $prompt, $learnings, $activeProject?->name, $isToolkit);
 
-        $extractions = $this->learningEngine->extractFromRun($run->fresh());
+        $extractions = $this->learningEngine->extractFromRun($run->fresh(), $execResult, $lastAudit);
         $this->learningEngine->saveEvents($run, $extractions);
 
         return [

@@ -16,11 +16,59 @@ type ImportResult = {
   items: ImportItem[]
 }
 
+type LearnUrlResult = {
+  url: string
+  title: string
+  chunks: number
+  indexed: number
+  type: 'youtube' | 'web'
+}
+
 type RecentResponse = {
   data?: MemoryRecord[]
 }
 
 const api = useApi()
+
+// ── Learn from URL (single URL — YouTube transcript or web page) ──
+const learnUrlInput = ref('')
+const learnLoading = ref(false)
+const learnError = ref('')
+const learnProgress = ref('')
+const learnResults = ref<LearnUrlResult[]>([])
+
+async function learnFromUrl() {
+  const url = learnUrlInput.value.trim()
+  if (!url) return
+  learnLoading.value = true
+  learnError.value = ''
+  learnProgress.value = (url.includes('youtube.com') || url.includes('youtu.be'))
+    ? 'Fetching YouTube transcript…'
+    : 'Fetching and reading page…'
+  try {
+    const result = await api.post('/knowledge/learn-url', { url }) as LearnUrlResult
+    learnResults.value.unshift(result)
+    learnUrlInput.value = ''
+    await refresh()
+  }
+  catch (e) {
+    learnError.value = e instanceof Error ? e.message : 'Failed to learn from URL.'
+  }
+  finally {
+    learnLoading.value = false
+    learnProgress.value = ''
+  }
+}
+
+function onLearnKeydown(e: KeyboardEvent) {
+  if (e.key === 'Enter') learnFromUrl()
+}
+
+function typeIcon(type: 'youtube' | 'web') {
+  return type === 'youtube' ? '▶' : '🔗'
+}
+
+// ── Batch URL import ──
 const urlInput = ref('')
 const tagsInput = ref('')
 const note = ref('')
@@ -97,6 +145,61 @@ function statusClass(status?: string) {
 
 <template>
   <div class="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)]">
+
+    <!-- ── Learn from URL (YouTube transcript / web article) ──────────── -->
+    <section class="min-w-0 space-y-4 rounded-2xl border border-emerald-500/20 bg-zinc-950/80 p-4 sm:p-5 lg:col-span-2">
+      <div>
+        <h2 class="text-lg font-semibold text-zinc-100">Learn from URL</h2>
+        <p class="text-sm text-zinc-500">
+          Paste a YouTube video link or any article / documentation URL. BosskuAI will fetch the content,
+          extract all readable text, chunk it, and store it in memory so every agent can retrieve and cite it.
+        </p>
+      </div>
+
+      <div class="flex gap-3">
+        <input
+          v-model="learnUrlInput"
+          type="url"
+          class="min-w-0 flex-1 rounded-xl border border-zinc-800 bg-zinc-900/70 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-emerald-400"
+          placeholder="https://youtube.com/watch?v=… or https://docs.example.com/guide"
+          :disabled="learnLoading"
+          @keydown="onLearnKeydown"
+        >
+        <button
+          type="button"
+          class="shrink-0 rounded-xl bg-emerald-500 px-5 py-2 text-sm font-semibold text-zinc-950 hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
+          :disabled="learnLoading || !learnUrlInput.trim()"
+          @click="learnFromUrl"
+        >
+          <span v-if="learnLoading" class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-zinc-900/30 border-t-zinc-900" />
+          <span v-else>Learn</span>
+        </button>
+      </div>
+
+      <p v-if="learnProgress" class="text-xs text-sky-300">{{ learnProgress }}</p>
+      <p v-if="learnError" class="rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">{{ learnError }}</p>
+
+      <ul v-if="learnResults.length" class="space-y-2">
+        <li
+          v-for="r in learnResults"
+          :key="r.url"
+          class="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-3"
+        >
+          <div class="flex items-center gap-2">
+            <span
+              class="rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase"
+              :class="r.type === 'youtube' ? 'bg-rose-500/15 text-rose-300' : 'bg-sky-500/15 text-sky-300'"
+            >
+              {{ typeIcon(r.type) }} {{ r.type }}
+            </span>
+            <span class="text-xs text-emerald-400">{{ r.chunks }} chunks indexed</span>
+          </div>
+          <p class="mt-1 text-sm font-medium text-zinc-100">{{ r.title }}</p>
+          <a :href="r.url" target="_blank" rel="noopener" class="mt-0.5 block truncate text-xs text-zinc-600 hover:text-zinc-400">{{ r.url }}</a>
+        </li>
+      </ul>
+    </section>
+
     <section class="min-w-0 space-y-4 rounded-2xl border border-zinc-800 bg-zinc-950/80 p-4 sm:p-5">
       <div class="flex items-center justify-between gap-2">
         <div>

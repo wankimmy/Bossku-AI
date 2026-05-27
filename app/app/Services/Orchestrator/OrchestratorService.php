@@ -386,7 +386,7 @@ class OrchestratorService
             //
         }
 
-        $plan = $this->planner->plan($agentPrompt, $memPayload, $routerCtx, $modelRoute);
+        $plan = $this->planner->plan($agentPrompt, $memPayload, $routerCtx, $modelRoute, $conversation);
         $planMs = (int) round((microtime(true) - $t0) * 1000);
         $planTokens = $this->estimateTokens(json_encode($plan) ?: '');
 
@@ -436,6 +436,17 @@ class OrchestratorService
         $modelsResolved['orchestrator'] = $orchModel;
 
         $this->emit($emit, $this->events->plannerDone($run, $plan, $orchModel, $planMs, $planTokens));
+
+        // Surface planner's clarification questions as events
+        $plannerQuestions = is_array($plan['planner_questions'] ?? null) ? $plan['planner_questions'] : [];
+        if ($plannerQuestions !== [] && $emit !== null) {
+            $this->emit($emit, $this->basePayload($run, 'clarification_suggested', [
+                'status' => 'info',
+                'agent' => 'planner',
+                'summary' => 'Planner has '.count($plannerQuestions).' question(s) for you.',
+                'questions' => $plannerQuestions,
+            ]));
+        }
 
         $execProfileKey = (string) ($plan['executor_profile'] ?? $modelRoute['executor_profile'] ?? 'default');
         $plan = $this->budgetGuard->narrowPlan($plan, $execProfileKey);
@@ -541,6 +552,9 @@ class OrchestratorService
             $execProfileKey,
             $this->projects->agentWorkspaceContext(),
             $preflightReads,
+            null,
+            $memPayload,
+            $conversation,
         );
         $execResult = ExecutorEvidenceSupport::mergePreflightReads($execResult, $preflightReads);
         $execResult = $this->ensureExecutorEvidence($run, $plan, $execResult, $userPrompt, $emit);
@@ -594,6 +608,17 @@ class OrchestratorService
         ));
         $tokenAcc += $exTok;
         $this->emit($emit, $this->events->executorDone($run, $execResult, $modelsResolved['executor'], (int) ($execResult['latency_ms'] ?? 0), $exTok));
+
+        // Surface executor questions for the user
+        $executorQuestions = is_array($execResult['executor_questions'] ?? null) ? $execResult['executor_questions'] : [];
+        if ($executorQuestions !== [] && $emit !== null) {
+            $this->emit($emit, $this->basePayload($run, 'executor_questions_surfaced', [
+                'status' => 'info',
+                'agent' => 'executor',
+                'summary' => 'Executor has '.count($executorQuestions).' question(s) for you before proceeding.',
+                'questions' => $executorQuestions,
+            ]));
+        }
 
         if (! empty($execResult['tool_request'] ?? null)) {
             $this->tools->invoke($run->id, null, $execResult['tool_request'], $emit);
@@ -780,6 +805,8 @@ class OrchestratorService
                     ($modelRoute['risk_level'] ?? '') === 'high',
                     $preflightReads,
                     $run->id,
+                    $memPayload,
+                    $conversation,
                 );
                 $auditMs = (int) round((microtime(true) - $tA) * 1000);
             }
@@ -797,6 +824,40 @@ class OrchestratorService
             ));
             $tokenAcc += $auditTok;
             $this->emit($emit, $this->events->auditorDone($run, $lastAudit, $modelsResolved['auditor'], $auditMs, $auditTok));
+
+            // Surface memory conflicts found by the auditor
+            $memConflicts = is_array($lastAudit['memory_conflicts'] ?? null) ? $lastAudit['memory_conflicts'] : [];
+            if ($memConflicts !== [] && $emit !== null) {
+                $this->emit($emit, $this->basePayload($run, 'memory_conflict_detected', [
+                    'status' => 'warning',
+                    'agent' => 'auditor',
+                    'summary' => 'Auditor detected '.count($memConflicts).' memory conflict(s) — executor repeated known past mistakes.',
+                    'conflicts' => $memConflicts,
+                ]));
+            }
+
+            // Surface auditor's high-stakes user questions
+            $auditorUserQuestions = is_array($lastAudit['user_questions'] ?? null) ? $lastAudit['user_questions'] : [];
+            if ($auditorUserQuestions !== [] && $emit !== null) {
+                $this->emit($emit, $this->basePayload($run, 'auditor_questions_surfaced', [
+                    'status' => 'warning',
+                    'agent' => 'auditor',
+                    'summary' => 'Auditor has '.count($auditorUserQuestions).' high-stakes question(s) requiring your decision.',
+                    'questions' => $auditorUserQuestions,
+                ]));
+            }
+
+            // Surface checklist verdict trail
+            $verdictTrail = is_array($lastAudit['verdict_trail'] ?? null) ? $lastAudit['verdict_trail'] : [];
+            if ($verdictTrail !== [] && $emit !== null) {
+                $disputed = array_filter($verdictTrail, fn ($v) => ($v['auditor_verdict'] ?? '') !== 'verified');
+                $this->emit($emit, $this->basePayload($run, 'checklist_verdict', [
+                    'status' => count($disputed) > 0 ? 'warning' : 'success',
+                    'agent' => 'auditor',
+                    'summary' => count($verdictTrail).' checklist item(s) reviewed; '.count($disputed).' disputed or unverifiable.',
+                    'verdict_trail' => $verdictTrail,
+                ]));
+            }
 
             if ($this->shouldPauseForAgentEscalation($run, $lastAudit, 'auditor_escalation')) {
                 $pipeline = $this->buildExecutorPipelineSnapshot(
@@ -903,6 +964,8 @@ class OrchestratorService
                     $this->projects->agentWorkspaceContext(),
                     $preflightReads,
                     $auditFeedback,
+                    $memPayload,
+                    $conversation,
                 );
                 $revisionResult = ExecutorEvidenceSupport::mergePreflightReads($revisionResult, $preflightReads);
                 $revisionResult = $this->ensureExecutorEvidence($run, $plan, $revisionResult, $userPrompt, $emit);

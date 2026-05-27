@@ -5,20 +5,94 @@ namespace App\Services\Learning;
 use App\Models\BosskuAi\FeedbackItem;
 use App\Models\BosskuAi\LearningEvent;
 use App\Models\BosskuAi\Run;
+use Illuminate\Support\Str;
 
 class LearningEngine
 {
-    public function extractFromRun(Run $run): array
+    /**
+     * @param  array<string, mixed>  $execResult
+     * @param  array<string, mixed>  $lastAudit
+     */
+    public function extractFromRun(Run $run, array $execResult = [], array $lastAudit = []): array
     {
         $extractions = [];
+        $meta = is_array($run->metadata) ? $run->metadata : [];
+        $plan = is_array($meta['plan'] ?? null) ? $meta['plan'] : [];
 
-        if ($run->status === 'completed' && (float) $run->audit_score > 0.7) {
-            $extractions[] = [
-                'type'       => 'pattern',
-                'content'    => 'Completed run with high audit score: ' . ($run->selected_skill_name ?? 'unknown skill'),
-                'confidence' => (float) $run->audit_score,
-                'evidence'   => ['run_id' => $run->getKey(), 'audit_score' => $run->audit_score],
-            ];
+        // Rich lesson from successful run
+        if ($run->status === 'completed') {
+            $planSummary = Str::limit((string) ($plan['summary'] ?? $plan['task_summary'] ?? ''), 800);
+            $execSummary = Str::limit((string) ($execResult['patch_summary'] ?? ''), 800);
+            $auditSummary = Str::limit((string) ($lastAudit['summary'] ?? ''), 600);
+            $filesChanged = is_array($execResult['files_changed'] ?? null)
+                ? implode(', ', array_slice(array_map(
+                    fn ($f) => is_array($f) ? ($f['path'] ?? '') : (string) $f,
+                    $execResult['files_changed']
+                ), 0, 10))
+                : '';
+            $knownIssues = is_array($execResult['known_issues'] ?? null)
+                ? implode('; ', array_slice($execResult['known_issues'], 0, 5))
+                : '';
+
+            $content = trim(implode("\n", array_filter([
+                'Task: '.$planSummary,
+                $execSummary !== '' ? 'Execution: '.$execSummary : '',
+                $auditSummary !== '' ? 'Audit: '.$auditSummary : '',
+                $filesChanged !== '' ? 'Files changed: '.$filesChanged : '',
+                $knownIssues !== '' ? 'Known issues: '.$knownIssues : '',
+                'Skill: '.($plan['selected_skill'] ?? $run->selected_skill_name ?? 'general'),
+                'Audit status: '.($lastAudit['status'] ?? 'not_run'),
+            ])));
+
+            if ($content !== '') {
+                $extractions[] = [
+                    'type'       => 'pattern',
+                    'content'    => $content,
+                    'confidence' => (float) ($run->audit_score > 0 ? $run->audit_score : 0.72),
+                    'importance' => 0.65,
+                    'evidence'   => [
+                        'run_id' => $run->getKey(),
+                        'audit_status' => $lastAudit['status'] ?? null,
+                        'files_changed_count' => count($execResult['files_changed'] ?? []),
+                    ],
+                ];
+            }
+        }
+
+        // Rich lesson from failed run
+        if (in_array($run->status, ['failed', 'partial'], true)) {
+            $planSummary = Str::limit((string) ($plan['summary'] ?? $plan['task_summary'] ?? $run->prompt ?? ''), 800);
+            $execSummary = Str::limit((string) ($execResult['patch_summary'] ?? ''), 800);
+            $auditSummary = Str::limit((string) ($lastAudit['summary'] ?? ''), 600);
+            $knownIssues = is_array($execResult['known_issues'] ?? null)
+                ? implode('; ', array_slice($execResult['known_issues'], 0, 5))
+                : '';
+            $auditFixes = is_array($lastAudit['required_fixes'] ?? null)
+                ? implode('; ', array_slice($lastAudit['required_fixes'], 0, 5))
+                : '';
+
+            $content = trim(implode("\n", array_filter([
+                'FAILED TASK: '.$planSummary,
+                $execSummary !== '' ? 'Execution attempted: '.$execSummary : '',
+                $auditSummary !== '' ? 'Audit findings: '.$auditSummary : '',
+                $knownIssues !== '' ? 'Known issues: '.$knownIssues : '',
+                $auditFixes !== '' ? 'Required fixes: '.$auditFixes : '',
+                'Status: '.$run->status,
+            ])));
+
+            if ($content !== '') {
+                $extractions[] = [
+                    'type'       => 'failure',
+                    'content'    => $content,
+                    'confidence' => 0.90,
+                    'importance' => 0.85,
+                    'evidence'   => [
+                        'run_id' => $run->getKey(),
+                        'status' => $run->status,
+                        'audit_status' => $lastAudit['status'] ?? null,
+                    ],
+                ];
+            }
         }
 
         $thumbsUp = FeedbackItem::where('target_type', 'run')
@@ -29,8 +103,9 @@ class LearningEngine
         if ($thumbsUp) {
             $extractions[] = [
                 'type'       => 'preference',
-                'content'    => 'User expressed positive preference for run approach: ' . ($run->selected_skill_name ?? 'unknown skill'),
+                'content'    => 'User expressed positive preference for run approach: '.($run->selected_skill_name ?? 'unknown skill'),
                 'confidence' => 0.7,
+                'importance' => 0.65,
                 'evidence'   => ['run_id' => $run->getKey(), 'signal' => 'thumbs_up'],
             ];
         }
@@ -51,4 +126,5 @@ class LearningEngine
             ]);
         }
     }
+
 }

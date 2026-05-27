@@ -108,6 +108,7 @@ Route::delete('/oauth/codex', [CodexOAuthController::class, 'disconnect']);
 
 // ── Knowledge import ──────────────────────────────────────────────────────────
 Route::post('/knowledge/import', KnowledgeImportApiController::class);
+Route::post('/knowledge/learn-url', \App\Http\Controllers\Api\KnowledgeLearnUrlController::class);
 Route::post('/knowledge/urls', [KnowledgeCaptureController::class, 'urls']);
 Route::post('/knowledge/import-memory', [KnowledgeCaptureController::class, 'importMemory']);
 Route::get('/knowledge/recent', [KnowledgeCaptureController::class, 'recent']);

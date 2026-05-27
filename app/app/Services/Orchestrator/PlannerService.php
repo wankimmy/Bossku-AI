@@ -29,7 +29,13 @@ class PlannerService
      * @param  array<string, mixed>  $modelRoute
      * @return array<string, mixed>
      */
-    public function plan(string $prompt, array $memoryContext, array $routerContext, array $modelRoute): array
+    /**
+     * @param  array<int, mixed>  $memoryContext
+     * @param  array<string, mixed>  $routerContext
+     * @param  array<string, mixed>  $modelRoute
+     * @param  list<array{role: string, content: string}>  $conversation
+     */
+    public function plan(string $prompt, array $memoryContext, array $routerContext, array $modelRoute, array $conversation = []): array
     {
         $orch = $this->modelConfig->orchestrator();
         $primary = (string) ($orch['primary'] ?? $this->settings->orchestratorModelForRouting());
@@ -38,14 +44,40 @@ class PlannerService
         $retry = (int) ($orch['retry_count'] ?? 1);
 
         $system = <<<'SYS'
-You are the BosskuAI orchestrator. Output ONLY valid JSON (no markdown) with keys:
+You are the BosskuAI Planner — Stage 1 of 3 in a three-stage pipeline (Planner → Executor → Auditor).
+
+PIPELINE CONTEXT:
+- You are Stage 1 (Planner). After you, the Executor (Stage 2) will implement your plan exactly — it cannot ask questions mid-execution. The Auditor (Stage 3) will adversarially verify the Executor's output against your plan and will reject work that deviates, invents paths, or ignores prior memory lessons.
+- Your plan is the single source of truth for the entire pipeline. Make it concrete, unambiguous, and honest.
+
+WHAT YOU MUST DO:
+1. READ the full conversation history — understand what has been tried, what failed, and what the user's actual intent is.
+2. READ all prior memory context — identify lessons from past runs that are directly relevant. Cite them by [Memory N] in memory_applied.
+3. IDENTIFY unknowns — if any assumption you'd make could cause the Executor to take the wrong action, surface it as a planner_question.
+4. ASSESS confidence — how sure are you about the target files and approach? Be explicit.
+5. PRODUCE a concrete, audit-ready plan — every checklist item must have a named owner (executor or auditor) and a concrete, verifiable completion criterion.
+
+HONESTY RULES (these are hard constraints):
+- NEVER invent file paths. Every path in target_file_list must be supported by repo_index evidence.
+- If you don't know the right file, say so in risk_notes and set allow_broad_repo_scan true.
+- If the user said "retry" or referenced a prior attempt, check conversation history for what was tried and what failed.
+- If prior memory shows a known failure pattern, explicitly note it in risk_notes and memory_applied.
+- Rate your confidence honestly. A plan with low confidence should have more planner_questions.
+
+CHECKLIST QUALITY:
+- Each checklist item must have: a specific file or artifact it targets, a concrete success criterion the Auditor can verify, and the correct owner (executor/auditor/final-reviewer).
+- Include at least one auditor-owned item for every code change, with explicit acceptance criteria.
+- Do not write vague items like "Fix the bug" — write "Modify app/Services/Foo.php: ensure method bar() returns early when $x is null (auditor verifies: no NPE in test case Y)".
+
+Output ONLY valid JSON (no markdown) with keys:
 task_summary (string),
-goal (string),
+goal (string — one sentence, the actual user intent),
 risk_level ("low"|"medium"|"high"),
 selected_skill (string),
+confidence (number 0.0–1.0 — how confident you are in this plan given available evidence),
 memory_strategy ("none"|"read_only"|"read_and_write"),
 expected_artifacts (string[]),
-checklist (array of {id: string, title: string, description: string, owner: string, status: "pending"|"running"|"completed"|"needs_revision"|"failed"|"skipped"}),
+checklist (array of {id: string, title: string, description: string, target: string, success_criterion: string, owner: string, status: "pending"}),
 summary (string, one line),
 target_file_list (array of {path: string, reason: string}),
 allow_broad_repo_scan (boolean),
@@ -53,19 +85,15 @@ executor_profile (one of: default, frontend_ui, backend, devops, high_risk),
 suggested_tests (string[]),
 risk_notes (string[]),
 constraints (string[]),
-handoff_message (string),
+handoff_message (string — tell the executor exactly what to do first, what files to touch, and what evidence to provide),
 execution_mode ("answer_only"|"delegate_executor"|"user_must_run_commands"),
-user_commands (string[], commands the user must run locally when automation is blocked).
-Write a compact plan, not a narrative. The goal should be one sentence and the summary should be one line.
-Use repo evidence to name only real relative paths. If a path is not supported by repo evidence, leave target_file_list empty rather than inventing one.
-Treat target_file_list as bounded and concrete: only the files the executor should touch.
-Make checklist items executor-ready and audit-ready. For code changes, include at least one executor step and one auditor acceptance step with concrete file evidence.
-Use suggested_tests for the narrowest useful verification and keep risk_notes focused on blockers, unknowns, or regression points.
-handoff_message must tell the executor what to change next and mention the target paths it should touch.
-When routing.needs_executor is false, set execution_mode to answer_only and keep checklist owner orchestrator.
-When docker compose or host-only commands are required but may be unavailable in Bossku (backend runs in Docker without host docker.sock), set execution_mode to user_must_run_commands and list exact commands in user_commands. The UI will ask the user to run them locally and paste terminal output back before continuing.
-If no concrete target path is known, set allow_broad_repo_scan true only when strictly necessary and explain why in constraints or risk_notes.
-Use relative paths from the repository root only (e.g. app/Http/Controllers/FooController.php, config/database.php).
+user_commands (string[]),
+planner_questions (array of {id: string, question: string, why: string} — surface to user when task is ambiguous; empty if confident),
+memory_applied (string[] — cite specific [Memory N] lessons and how they shaped this plan; empty if none relevant).
+
+Use relative paths from the repository root only. handoff_message must cite target paths and first action.
+When routing.needs_executor is false, set execution_mode to answer_only.
+When docker/host commands are needed, set execution_mode to user_must_run_commands and list them in user_commands.
 SYS;
         $system .= "\n\n".$this->projects->evidenceRuleForPrompt();
 
@@ -76,9 +104,14 @@ SYS;
             $repoIndex = 'Repo index unavailable: '.$e->getMessage();
         }
 
+        $formattedMemory = $this->buildMemoryBlock($memoryContext);
+        $conversationSummary = $this->buildConversationBlock($conversation);
+
         $user = json_encode([
             'prompt' => $prompt,
-            'memory' => $memoryContext,
+            'conversation_history' => $conversationSummary,
+            'conversation_turns' => count($conversation),
+            'prior_memory' => $formattedMemory,
             'skill_router' => Arr::except($routerContext, ['_scores']),
             'routing' => $modelRoute,
             'repo_index' => $repoIndex,
@@ -99,7 +132,7 @@ SYS;
               function (mixed $j): bool {
                   return is_array($j) && (isset($j['summary']) || isset($j['task_summary']));
               },
-              (int) ($orch['max_tokens'] ?? 8192)
+              (int) ($orch['max_tokens'] ?? 2048)
           );
           /** @var array<string, mixed> $decoded */
           $decoded = is_array($out['parsed']) ? $out['parsed'] : [];
@@ -189,6 +222,8 @@ SYS;
                 'id' => StringCoercion::toString($item['id'] ?? null, 'plan-'.($idx + 1)),
                 'title' => StringCoercion::toString($item['title'] ?? null, 'Plan item '.($idx + 1)),
                 'description' => StringCoercion::toString($item['description'] ?? null),
+                'target' => StringCoercion::toString($item['target'] ?? null),
+                'success_criterion' => StringCoercion::toString($item['success_criterion'] ?? $item['description'] ?? null),
                 'owner' => StringCoercion::toString($item['owner'] ?? null, 'executor'),
                 'status' => StringCoercion::toString($item['status'] ?? null, 'pending'),
             ],
@@ -206,7 +241,44 @@ SYS;
         $defaultMode = ($modelRoute['needs_executor'] ?? true) ? 'delegate_executor' : 'answer_only';
         $decoded['execution_mode'] = StringCoercion::toString($decoded['execution_mode'] ?? null, $defaultMode);
         $decoded['user_commands'] = is_array($decoded['user_commands'] ?? null) ? $decoded['user_commands'] : [];
+        $decoded['confidence'] = is_numeric($decoded['confidence'] ?? null)
+            ? min(1.0, max(0.0, (float) $decoded['confidence']))
+            : 0.7;
+        $decoded['planner_questions'] = is_array($decoded['planner_questions'] ?? null) ? $decoded['planner_questions'] : [];
+        $decoded['memory_applied'] = is_array($decoded['memory_applied'] ?? null) ? $decoded['memory_applied'] : [];
 
         return $decoded;
+    }
+
+    /** @param list<array<string,mixed>> $memories */
+    protected function buildMemoryBlock(array $memories): string
+    {
+        if ($memories === []) {
+            return '(no prior memory context)';
+        }
+        $lines = [];
+        foreach ($memories as $i => $m) {
+            $summary = is_array($m) ? ($m['summary'] ?? $m['human_summary'] ?? $m['content'] ?? '') : (string) $m;
+            $type = is_array($m) ? ($m['type'] ?? '') : '';
+            $lines[] = '[Memory '.($i + 1).']'.($type !== '' ? ' ['.$type.']' : '').' '.mb_substr((string) $summary, 0, 400);
+        }
+
+        return implode("\n", $lines);
+    }
+
+    /** @param list<array{role: string, content: string}> $conversation */
+    protected function buildConversationBlock(array $conversation): string
+    {
+        if ($conversation === []) {
+            return '(no prior conversation — this is the first turn)';
+        }
+        $lines = [];
+        foreach (array_slice($conversation, -10) as $i => $turn) {
+            $role = strtoupper((string) ($turn['role'] ?? 'user'));
+            $content = mb_substr((string) ($turn['content'] ?? ''), 0, 600);
+            $lines[] = "[Turn {$i}] {$role}: {$content}";
+        }
+
+        return implode("\n\n", $lines);
     }
 }

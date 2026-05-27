@@ -33,7 +33,9 @@ class MemoryService
         array $metadata = [],
         ?string $humanSummary = null,
         array $tags = [],
-        ?string $source = null
+        ?string $source = null,
+        float $importance = 0.65,
+        float $confidence = 0.72,
     ): Memory {
         $embedding = null;
         if ($this->memoryOllamaEnabled()) {
@@ -51,11 +53,11 @@ class MemoryService
             'type' => $type,
             'content' => $content,
             'human_summary' => $humanSummary,
-            'metadata' => $metadata,
+            'metadata' => array_merge($metadata, ['importance' => $importance]),
             'tags' => $tags,
             'source' => $source,
             'is_active' => true,
-            'confidence' => null,
+            'confidence' => $confidence,
         ]);
 
         if ($embedding && count($embedding) >= 64 && $this->databaseDriver() === 'pgsql') {

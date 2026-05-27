@@ -15,6 +15,7 @@ use App\Models\BosskuAi\MemoryRunLink;
 use App\Models\BosskuAi\ToolCall;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Symfony\Component\Yaml\Yaml;
@@ -627,5 +628,305 @@ class KnowledgeImportService
         $pieces = array_map('trim', explode('-', $slug));
 
         return array_values(array_unique(array_filter($pieces)));
+    }
+
+    // ── URL Learning ─────────────────────────────────────────────────────────
+
+    /**
+     * Fetch a YouTube video or web article, chunk it, and store in Memory.
+     *
+     * @return array{url: string, title: string, chunks: int, indexed: int, type: string}
+     */
+    public function learnUrl(string $url): array
+    {
+        $isYoutube = str_contains($url, 'youtube.com') || str_contains($url, 'youtu.be');
+
+        if ($isYoutube) {
+            $videoId = $this->extractYouTubeId($url);
+            if ($videoId === null) {
+                throw new \RuntimeException('Could not extract YouTube video ID from: '.$url);
+            }
+            [$title, $text] = $this->fetchYouTubeTranscript($videoId);
+            $sourceType = 'youtube';
+        } else {
+            [$title, $text] = $this->fetchWebPage($url);
+            $sourceType = 'web';
+        }
+
+        $chunks = $this->chunkText($text);
+        $indexed = 0;
+
+        foreach ($chunks as $i => $chunk) {
+            try {
+                Memory::query()->create([
+                    'type' => 'knowledge_chunk',
+                    'content' => $chunk,
+                    'human_summary' => Str::limit($title.' [chunk '.($i + 1).'/'.count($chunks).']', 200),
+                    'metadata' => [
+                        'source_url' => $url,
+                        'title' => $title,
+                        'chunk_index' => $i,
+                        'total_chunks' => count($chunks),
+                        'source_type' => $sourceType,
+                        'importance' => 0.70,
+                    ],
+                    'tags' => ['url_learning', $sourceType],
+                    'source' => $url,
+                    'is_active' => true,
+                    'confidence' => 0.75,
+                ]);
+                $indexed++;
+            } catch (\Throwable $e) {
+                Log::warning('learnUrl chunk store failed', ['url' => $url, 'chunk' => $i, 'error' => $e->getMessage()]);
+            }
+        }
+
+        return [
+            'url' => $url,
+            'title' => $title,
+            'chunks' => count($chunks),
+            'indexed' => $indexed,
+            'type' => $sourceType,
+        ];
+    }
+
+    protected function extractYouTubeId(string $url): ?string
+    {
+        if (preg_match('/youtu\.be\/([a-zA-Z0-9_-]{11})/', $url, $m)) {
+            return $m[1];
+        }
+        if (preg_match('/[?&]v=([a-zA-Z0-9_-]{11})/', $url, $m)) {
+            return $m[1];
+        }
+
+        return null;
+    }
+
+    /** @return array{0: string, 1: string} [title, transcript_text] */
+    protected function fetchYouTubeTranscript(string $videoId): array
+    {
+        $watchUrl = 'https://www.youtube.com/watch?v='.$videoId;
+        $response = Http::withHeaders([
+            'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36',
+            'Accept-Language' => 'en-US,en;q=0.9',
+        ])->timeout(30)->get($watchUrl);
+
+        if (! $response->successful()) {
+            throw new \RuntimeException('Failed to fetch YouTube page: HTTP '.$response->status());
+        }
+
+        $html = $response->body();
+
+        // Extract title
+        $title = 'YouTube Video '.$videoId;
+        if (preg_match('/<title>([^<]+)<\/title>/i', $html, $m)) {
+            $title = html_entity_decode(preg_replace('/ - YouTube$/', '', $m[1]));
+        }
+
+        // Find ytInitialPlayerResponse JSON
+        $marker = 'ytInitialPlayerResponse';
+        $pos = strpos($html, $marker);
+        if ($pos === false) {
+            throw new \RuntimeException('ytInitialPlayerResponse not found on YouTube page — video may be age-restricted or unavailable.');
+        }
+        $bracePos = strpos($html, '{', $pos);
+        if ($bracePos === false) {
+            throw new \RuntimeException('Could not locate JSON start for ytInitialPlayerResponse.');
+        }
+
+        $json = $this->extractJsonAt($html, $bracePos);
+        $data = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
+
+        // Find caption tracks
+        $captionTracks = data_get($data, 'captions.playerCaptionsTracklistRenderer.captionTracks', []);
+        if (! is_array($captionTracks) || $captionTracks === []) {
+            throw new \RuntimeException('No caption tracks available for this video.');
+        }
+
+        // Prefer English manual captions, then English ASR, then first available
+        $track = null;
+        foreach ($captionTracks as $t) {
+            $lang = strtolower((string) ($t['languageCode'] ?? ''));
+            $kind = strtolower((string) ($t['kind'] ?? ''));
+            if ($lang === 'en' && $kind !== 'asr') {
+                $track = $t;
+                break;
+            }
+        }
+        if ($track === null) {
+            foreach ($captionTracks as $t) {
+                if (strtolower((string) ($t['languageCode'] ?? '')) === 'en') {
+                    $track = $t;
+                    break;
+                }
+            }
+        }
+        $track ??= $captionTracks[0];
+
+        $captionUrl = (string) ($track['baseUrl'] ?? '');
+        if ($captionUrl === '') {
+            throw new \RuntimeException('Caption track has no baseUrl.');
+        }
+
+        $captionResponse = Http::withHeaders([
+            'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        ])->timeout(30)->get($captionUrl.'&fmt=json3');
+
+        if (! $captionResponse->successful()) {
+            throw new \RuntimeException('Failed to fetch caption track: HTTP '.$captionResponse->status());
+        }
+
+        $captionData = $captionResponse->json();
+        $events = is_array($captionData['events'] ?? null) ? $captionData['events'] : [];
+        $segments = [];
+        foreach ($events as $event) {
+            if (! is_array($event['segs'] ?? null)) {
+                continue;
+            }
+            foreach ($event['segs'] as $seg) {
+                $txt = trim((string) ($seg['utf8'] ?? ''));
+                if ($txt !== '' && $txt !== '\n') {
+                    $segments[] = $txt;
+                }
+            }
+        }
+
+        $transcript = preg_replace('/\[(Music|Applause|Laughter|Inaudible)\]/i', '', implode(' ', $segments));
+        $transcript = preg_replace('/\s+/', ' ', $transcript ?? '');
+        $transcript = trim($transcript ?? '');
+
+        if (strlen($transcript) < 100) {
+            throw new \RuntimeException('Transcript is too short or empty after extraction.');
+        }
+
+        return [$title, $transcript];
+    }
+
+    /** @return array{0: string, 1: string} [title, plain_text] */
+    protected function fetchWebPage(string $url): array
+    {
+        $response = Http::withHeaders([
+            'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36',
+            'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language' => 'en-US,en;q=0.9',
+        ])->timeout(30)->get($url);
+
+        if (! $response->successful()) {
+            throw new \RuntimeException('Failed to fetch URL: HTTP '.$response->status());
+        }
+
+        $html = $response->body();
+
+        // Extract title
+        $title = $url;
+        if (preg_match('/<meta[^>]+property=["\']og:title["\'][^>]+content=["\'](.*?)["\']/i', $html, $m)) {
+            $title = html_entity_decode($m[1]);
+        } elseif (preg_match('/<title>([^<]+)<\/title>/i', $html, $m)) {
+            $title = html_entity_decode($m[1]);
+        }
+
+        $text = $this->htmlToText($html);
+
+        if (strlen($text) < 100) {
+            throw new \RuntimeException('Extracted text is too short (< 100 chars) — page may require JavaScript.');
+        }
+
+        return [trim($title), $text];
+    }
+
+    protected function htmlToText(string $html): string
+    {
+        // Remove scripts, styles, nav, header, footer, etc.
+        $html = preg_replace('/<(script|style|nav|header|footer|aside|figure|form|button|svg|noscript)[^>]*>.*?<\/\1>/si', ' ', $html) ?? $html;
+        // Convert block elements to newlines
+        $html = preg_replace('/<\/(p|div|li|h[1-6]|br|tr|blockquote)>/i', "\n", $html) ?? $html;
+        // Strip remaining tags
+        $text = strip_tags($html);
+        // Decode entities
+        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        // Collapse whitespace
+        $text = (string) preg_replace('/[ \t]+/', ' ', $text);
+        $text = (string) preg_replace('/\n{3,}/', "\n\n", $text);
+
+        return trim($text);
+    }
+
+    /**
+     * Extract a balanced-brace JSON object starting at $startIndex.
+     * Handles string escapes. 3 MB limit.
+     */
+    protected function extractJsonAt(string $source, int $startIndex): string
+    {
+        $depth = 0;
+        $inString = false;
+        $escape = false;
+        $len = min(strlen($source), $startIndex + 3_000_000);
+
+        for ($i = $startIndex; $i < $len; $i++) {
+            $ch = $source[$i];
+            if ($escape) {
+                $escape = false;
+                continue;
+            }
+            if ($ch === '\\' && $inString) {
+                $escape = true;
+                continue;
+            }
+            if ($ch === '"') {
+                $inString = ! $inString;
+                continue;
+            }
+            if ($inString) {
+                continue;
+            }
+            if ($ch === '{') {
+                $depth++;
+            } elseif ($ch === '}') {
+                $depth--;
+                if ($depth === 0) {
+                    return substr($source, $startIndex, $i - $startIndex + 1);
+                }
+            }
+        }
+
+        throw new \RuntimeException('Could not find closing brace for JSON extraction.');
+    }
+
+    /**
+     * Chunk text into overlapping segments with sentence-boundary awareness.
+     *
+     * @return list<string>
+     */
+    protected function chunkText(string $text, int $chunkSize = 1400, int $overlap = 250, int $maxChunks = 60): array
+    {
+        $chunks = [];
+        $start = 0;
+        $len = strlen($text);
+
+        while ($start < $len && count($chunks) < $maxChunks) {
+            $end = min($start + $chunkSize, $len);
+
+            // Try to break at sentence boundary (last '. ' in final quarter of chunk)
+            if ($end < $len) {
+                $quarter = (int) ($chunkSize * 0.75);
+                $searchFrom = $start + $quarter;
+                $lastDot = strrpos(substr($text, $searchFrom, $end - $searchFrom), '. ');
+                if ($lastDot !== false) {
+                    $end = $searchFrom + $lastDot + 2;
+                }
+            }
+
+            $chunk = trim(substr($text, $start, $end - $start));
+            if ($chunk !== '') {
+                $chunks[] = $chunk;
+            }
+
+            $start = $end - $overlap;
+            if ($start >= $len) {
+                break;
+            }
+        }
+
+        return $chunks;
     }
 }

@@ -37,14 +37,52 @@ class AuditorService
         bool $highRiskContext,
         array $preflightReads = [],
         ?string $runId = null,
+        array $memoryContext = [],
+        array $conversation = [],
     ): array {
         $cfg = $this->modelConfig->auditor();
         $primary = (string) ($cfg['primary'] ?? 'deepseek-v4-pro');
         $models = array_merge([$primary], is_array($cfg['fallback'] ?? null) ? $cfg['fallback'] : []);
         $retry = (int) ($cfg['retry_count'] ?? 1);
 
-        $system = <<<'SYS'
-You are the BosskuAI auditor. Output ONLY valid JSON with keys:
+        $memBlock = $this->buildMemoryBlock($memoryContext);
+        $conversationBlock = $this->buildConversationBlock($conversation);
+        $plannerQuestions = is_array($planner['planner_questions'] ?? null) && $planner['planner_questions'] !== []
+            ? 'The Planner surfaced these unresolved questions: '.json_encode($planner['planner_questions'])
+            : '';
+
+        $system = <<<SYS
+You are the BosskuAI Auditor — Stage 3 of 3 in a three-stage pipeline (Planner → Executor → Auditor).
+
+PIPELINE CONTEXT:
+- The Planner (Stage 1) produced a concrete plan with a checklist, confidence score, and risk notes.
+- The Executor (Stage 2) implemented the plan and provided a checklist_status with per-item completion reports.
+- Your job is to adversarially verify BOTH: (a) individual code quality, AND (b) whether the Executor actually completed every checklist item it claimed.
+
+Your role: Be skeptical. Demand evidence. Catch mistakes, not validate them. Surface memory conflicts and checklist deviations.
+
+CRITICAL RULES:
+- Every finding MUST cite file:line evidence from executor files_read, files_changed, read_previews, or tool_evidence. No speculative findings.
+- Compare Executor output against prior memory context — if the Executor repeated a known past mistake, flag it as a memory conflict.
+- If the Executor claimed to change files but provided no after/diff evidence, flag status=needs_revision.
+- Set needs_user_input ONLY for high-risk concerns (security, data loss, irreversible architecture) the user has not already approved — not for routine fixes.
+- Use needs_revision when the Executor should make another focused pass without user approval.
+- {$plannerQuestions}
+
+PER-CHECKLIST VERIFICATION (mandatory — you MUST do this):
+1. For each item in `plan_checklist`, find the matching entry in `executor_checklist_status` (match by `id`).
+2. If executor says "completed", verify there is concrete evidence in files_changed or files_read that supports the claim. If no evidence, your verdict is "disputed".
+3. If executor says "partial" or "failed", investigate why and whether a revision would fix it.
+4. If no matching entry in executor_checklist_status, verdict is "unverifiable".
+5. Record your per-item verdict in `verdict_trail` — one entry per checklist item.
+
+CONVERSATION HISTORY (use to understand prior attempts and user intent):
+{$conversationBlock}
+
+Prior memory context (lessons from past runs — check if Executor ignored or repeated known issues):
+{$memBlock}
+
+Output ONLY valid JSON with keys:
 status ("pass"|"pass_with_notes"|"needs_revision"|"failed"),
 summary (string),
 findings (array of {id: string, severity: "low"|"medium"|"high"|"critical", category: "functionality"|"correctness"|"design"|"maintainability"|"performance"|"security"|"tests", title: string, description: string, suggested_fix: string, status: "open"|"fixed"|"accepted_risk"}),
@@ -56,11 +94,11 @@ requires_final_reviewer (boolean),
 final_output (string, user-facing summary when status is pass or pass_with_notes),
 needs_user_input (boolean),
 questions (array of {id: string, prompt: string, options?: array of {id: string, label: string}}),
-blockers (string[]).
-Use needs_revision only when executor should make another focused pass without user approval.
-Set needs_user_input true ONLY for high-risk concerns (security, data loss, irreversible architecture) the user has not already approved — not for routine fixes.
-Every finding MUST cite file:line evidence from executor files_read, files_changed, read_previews, or tool_evidence — no speculative findings.
-Do not report specific file paths or vulnerabilities unless executor tool results include file_read_safe or file_search for those files.
+blockers (string[]),
+memory_conflicts (string[] — list any cases where Executor repeated a known past mistake from memory context; empty if none),
+verdict_trail (array of {id: string, plan_title: string, executor_status: string, auditor_verdict: "verified"|"disputed"|"unverifiable", evidence: string, notes: string} — one entry per plan checklist item),
+user_questions (array of {id: string, question: string, risk: "low"|"medium"|"high"|"critical", why: string} — ONLY for irreversible or high-stakes decisions requiring explicit user approval; empty for routine findings).
+
 If executor.status is "failed" but read_previews are present, review that evidence only — do not invent code changes or request a re-run for JSON/schema errors alone.
 SYS;
         $system .= "\n\n".$this->projects->evidenceRuleForPrompt();
@@ -73,12 +111,20 @@ SYS;
             'skill_router' => $router,
             'model_route' => $modelRoute,
             'plan_summary' => $planner['summary'] ?? null,
+            'plan_confidence' => $planner['confidence'] ?? null,
+            'plan_checklist' => $planner['checklist'] ?? [],
+            'planner_questions' => $planner['planner_questions'] ?? [],
+            'memory_applied_by_planner' => $planner['memory_applied'] ?? [],
             'target_files' => $planner['target_file_list'] ?? [],
             'step' => $step,
             'executor' => $executorPayload,
+            'executor_checklist_status' => $executorResult['checklist_status'] ?? [],
+            'executor_memory_lessons_applied' => $executorResult['memory_lessons_applied'] ?? [],
             'rules' => $ruleLines,
             'checklist_excerpt' => $checklistExcerpt,
             'high_risk_context' => $highRiskContext,
+            'memory_context_count' => count($memoryContext),
+            'conversation_turns' => count($conversation),
         ], JSON_THROW_ON_ERROR);
 
         $handoffMessage = StringCoercion::toString($executorResult['handoff_message'] ?? null, 'Sending changes to Auditor.');
@@ -98,7 +144,7 @@ SYS;
             function (mixed $j): bool {
                 return is_array($j) && isset($j['status'], $j['summary']);
             },
-            (int) ($cfg['max_tokens'] ?? 10000)
+            (int) ($cfg['max_tokens'] ?? 6000)
         );
 
         /** @var array<string, mixed> $parsed */
@@ -171,6 +217,40 @@ SYS;
             'needs_user_input' => (bool) ($parsed['needs_user_input'] ?? false),
             'questions' => is_array($parsed['questions'] ?? null) ? $parsed['questions'] : [],
             'blockers' => is_array($parsed['blockers'] ?? null) ? $parsed['blockers'] : [],
+            'memory_conflicts' => is_array($parsed['memory_conflicts'] ?? null) ? $parsed['memory_conflicts'] : [],
+            'verdict_trail' => is_array($parsed['verdict_trail'] ?? null) ? $parsed['verdict_trail'] : [],
+            'user_questions' => is_array($parsed['user_questions'] ?? null) ? $parsed['user_questions'] : [],
         ];
+    }
+
+    /** @param list<array{role: string, content: string}> $conversation */
+    protected function buildConversationBlock(array $conversation): string
+    {
+        if ($conversation === []) {
+            return '(no prior conversation — this is the first turn)';
+        }
+        $lines = [];
+        foreach (array_slice($conversation, -10) as $i => $turn) {
+            $role = strtoupper((string) ($turn['role'] ?? 'user'));
+            $content = mb_substr((string) ($turn['content'] ?? ''), 0, 500);
+            $lines[] = "[Turn {$i}] {$role}: {$content}";
+        }
+
+        return implode("\n\n", $lines);
+    }
+
+    /** @param list<array<string,mixed>> $memories */
+    protected function buildMemoryBlock(array $memories): string
+    {
+        if ($memories === []) {
+            return '(no prior memory retrieved)';
+        }
+        $lines = [];
+        foreach ($memories as $i => $m) {
+            $summary = is_array($m) ? ($m['summary'] ?? $m['content'] ?? '') : (string) $m;
+            $lines[] = '[Memory '.($i + 1).'] '.$summary;
+        }
+
+        return implode("\n", $lines);
     }
 }

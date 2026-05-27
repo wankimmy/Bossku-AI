@@ -35,7 +35,9 @@ class ExecutorService
         string $executorProfileKey,
         string $workspaceContext = '',
         array $preflightReads = [],
-        ?array $auditFeedback = null
+        ?array $auditFeedback = null,
+        array $memoryContext = [],
+        array $conversation = [],
     ): array {
         $skillName = (string) ($step['skill'] ?? $skillRow['name'] ?? 'unknown');
         $task = (string) ($step['task'] ?? '');
@@ -47,9 +49,26 @@ class ExecutorService
         $rulesBlock = implode("\n", array_map(fn ($r) => '- '.$r, $ruleLines));
         $execRules = implode("\n", array_map(fn ($r) => '- '.$r, $this->modelConfig->executorRules()));
 
+        $memBlock = $this->buildMemoryBlock($memoryContext);
+        $conversationBlock = $this->buildConversationBlock($conversation);
+        $plannerQuestions = is_array($plan['planner_questions'] ?? null) && $plan['planner_questions'] !== []
+            ? "\nUNRESOLVED PLANNER QUESTIONS (address these if relevant to your work):\n".implode("\n", array_map(
+                fn ($q) => '- '.(is_array($q) ? ($q['question'] ?? json_encode($q)) : (string) $q),
+                $plan['planner_questions']
+            ))
+            : '';
+        $planConfidence = is_numeric($plan['confidence'] ?? null) ? (float) $plan['confidence'] : null;
+        $confidenceNote = $planConfidence !== null && $planConfidence < 0.65
+            ? "\nWARNING: Planner confidence is low ({$planConfidence}). Be extra careful — read the files before editing them."
+            : '';
+
         $payload = <<<Markdown
 [BOSSKUAI]
 Skill: {$skillName}
+Planner confidence: {$planConfidence}
+
+Conversation history (most recent turns):
+{$conversationBlock}
 
 Orchestrator plan (JSON):
 {$this->jsonEncode($plan)}
@@ -74,6 +93,10 @@ Audit feedback for revision:
 
 Workspace (mandatory — use relative paths only):
 {$workspaceContext}
+{$confidenceNote}
+{$plannerQuestions}
+Prior memory context (lessons from past runs — you MUST apply these):
+{$memBlock}
 
 Preflight file_read_safe results:
 {$this->jsonEncode(
@@ -92,31 +115,41 @@ You may only read/edit files listed in target_file_list unless allow_broad_repo_
 Markdown;
 
         $system = <<<'SYS'
-You are the BosskuAI executor. Follow the skill and rules. Output JSON only (no markdown fences).
+You are the BosskuAI Executor — Stage 2 of 3 in a three-stage pipeline (Planner → Executor → Auditor).
 
-Required JSON keys:
+PIPELINE CONTEXT:
+- The Planner (Stage 1) has already analysed the task and produced a concrete plan with a checklist. Your job is to implement it exactly.
+- The Auditor (Stage 3) will adversarially verify your output against the plan. It will reject work that: invents file paths, claims changes without evidence, ignores prior memory lessons, or leaves checklist items unaddressed.
+- You have access to conversation history — use it to understand prior attempts, failures, and user intent.
+
+WHAT YOU MUST DO:
+1. READ the conversation history — if the user said "retry" or referenced a prior attempt, understand what was tried and what failed.
+2. READ memory context — identify which [Memory N] lessons apply to this task and explicitly apply them.
+3. IMPLEMENT the plan checklist items exactly — update each item's status in checklist_status.
+4. CITE evidence in handoff_message — "Files read: [path], Files changed: [path] ([summary]), Commands run: [cmd]".
+5. If you have questions for the user BEFORE proceeding with a destructive or irreversible action, surface them in executor_questions.
+
+HONESTY RULES (hard constraints):
+- NEVER invent file paths. Only work on files in target_file_list or preflight reads.
+- Do NOT claim a file was changed unless you provide the complete `after` contents or a valid `diff`.
+- Do NOT set needs_user_input for routine partial work — only for hard blockers, permission errors, destructive actions, or genuinely ambiguous targets.
+- If a prior memory lesson says "X failed before", explain in patch_summary what you did differently this time.
+
+Output JSON only (no markdown fences). Required keys:
 status ("success"|"partial"|"failed"),
 files_read (array of {path, reason}),
 files_changed (array of {path, change_type, summary, why, after?, diff?}),
-commands_run, tests_run, tests_result, patch_summary, known_issues,
-needs_user_input, blockers, suggested_options, needs_audit, handoff_message.
+commands_run, tests_run, tests_result, patch_summary,
+known_issues, needs_user_input, blockers, suggested_options, needs_audit,
+handoff_message (MUST cite: files read, files changed with paths, commands run),
+executor_questions (array of {id: string, question: string, why: string} — questions for the user before proceeding with high-stakes actions; empty if no blockers),
+memory_lessons_applied (string[] — cite which [Memory N] lessons you applied and how; empty if none relevant),
+checklist_status (array of {id: string, status: "completed"|"partial"|"failed"|"skipped", notes: string} — one entry per plan checklist item).
 
-If you cannot proceed without a user decision (hard blocker or high-risk/destructive choice), set needs_user_input to true, list blockers, and provide 2-4 suggested_options.
-handoff_message MUST cite proof: "Files read: ...", "Files changed: path (summary)", "Commands: ..." — use paths from evidence only.
-Do not set needs_user_input for routine partial work; only blockers, permission errors, ambiguous targets, or destructive actions needing consent.
-
-Git undo: put exact allowlisted lines in commands_run (e.g. "git restore path/to/file.php"), one command per entry.
-Project commands (run automatically in the active project root from workspace context; do not put commands in files_changed): git status/diff/restore/checkout; docker compose / docker compose exec <service>; php artisan …; php vendor/bin/phpunit; composer test. Use the compose service name from runtime hints for this repo — not a name from another project. Put exact command strings in commands_run — do not invent test results; use tests_run only after commands actually run.
-Each file change is shown to the user for approve/reject with an optional comment before it is written — list proposals in files_changed; do not claim files are restored or deleted in patch_summary until the user could approve them.
-Use past tense in patch_summary only for work the user has already approved.
-
-File write rules (critical):
-- For modify/create, `after` MUST be the complete final file contents, OR provide a valid unified `diff` that applies cleanly to the current file.
-- NEVER put placeholders in `after` (e.g. TBD, "will be determined", "read file first", "to be filled", "..." only).
-- If you do not have the full file in context, read it via files_read first, or set needs_user_input — do NOT queue a file_write without real content.
-- Approving a bad `after` overwrites the entire file on disk.
-- When audit feedback includes rejected_approvals, revert each listed path (git restore or exact before snapshot). Do not re-apply rejected edits.
-- When audit feedback revision_type is user_code_review, apply code_review_instructions and re-propose files for user approval.
+File write rules:
+- For modify/create, `after` MUST be complete final file contents OR a valid unified `diff`.
+- NEVER put placeholders in `after`.
+- If you do not have the full file, read it via files_read first or set needs_user_input.
 SYS;
 
         $isRejectedRevert = is_array($auditFeedback)
@@ -148,7 +181,7 @@ SYS;
                 $retry,
                 'executor',
                 fn (mixed $j): bool => is_array($j) && ExecutorResponseParser::validateForFallback($j),
-                (int) ($profile['max_tokens'] ?? 12000)
+                (int) ($profile['max_tokens'] ?? 8192)
             );
         } catch (\Throwable $e) {
             return $this->normalizeResult([
@@ -162,6 +195,9 @@ SYS;
                 'patch_summary' => '',
                 'known_issues' => [$e->getMessage()],
                 'needs_audit' => true,
+                'executor_questions' => [],
+                'memory_lessons_applied' => [],
+                'checklist_status' => [],
                 '_executor_model' => $primary,
                 'latency_ms' => (int) round((microtime(true) - $t0) * 1000),
             ], $preflightReads);
@@ -187,6 +223,9 @@ SYS;
             'suggested_options' => is_array($parsed['suggested_options'] ?? null) ? $parsed['suggested_options'] : [],
             'needs_audit' => (bool) ($parsed['needs_audit'] ?? true),
             'handoff_message' => StringCoercion::toString($parsed['handoff_message'] ?? null, 'Sending changes to Auditor.'),
+            'executor_questions' => is_array($parsed['executor_questions'] ?? null) ? $parsed['executor_questions'] : [],
+            'memory_lessons_applied' => is_array($parsed['memory_lessons_applied'] ?? null) ? $parsed['memory_lessons_applied'] : [],
+            'checklist_status' => is_array($parsed['checklist_status'] ?? null) ? $parsed['checklist_status'] : [],
             '_executor_model' => $out['model_used'],
             '_executor_model_resolved' => $out['model_resolved'] ?? '',
             '_executor_fallback' => $out['fallback_used'],
@@ -260,11 +299,46 @@ SYS;
             ]];
         }
 
+        $result['executor_questions'] = is_array($result['executor_questions'] ?? null) ? $result['executor_questions'] : [];
+        $result['memory_lessons_applied'] = is_array($result['memory_lessons_applied'] ?? null) ? $result['memory_lessons_applied'] : [];
+        $result['checklist_status'] = is_array($result['checklist_status'] ?? null) ? $result['checklist_status'] : [];
+
         if ($preflightReads !== [] && ExecutorEvidenceSupport::countFilesRead($result) === 0) {
             return ExecutorEvidenceSupport::mergePreflightReads($result, $preflightReads);
         }
 
         return $result;
+    }
+
+    /** @param list<array{role: string, content: string}> $conversation */
+    protected function buildConversationBlock(array $conversation): string
+    {
+        if ($conversation === []) {
+            return '(no prior conversation — this is the first turn)';
+        }
+        $lines = [];
+        foreach (array_slice($conversation, -10) as $i => $turn) {
+            $role = strtoupper((string) ($turn['role'] ?? 'user'));
+            $content = mb_substr((string) ($turn['content'] ?? ''), 0, 600);
+            $lines[] = "[Turn {$i}] {$role}: {$content}";
+        }
+
+        return implode("\n\n", $lines);
+    }
+
+    /** @param list<array<string,mixed>> $memories */
+    protected function buildMemoryBlock(array $memories): string
+    {
+        if ($memories === []) {
+            return '(no prior memory retrieved)';
+        }
+        $lines = [];
+        foreach ($memories as $i => $m) {
+            $summary = is_array($m) ? ($m['summary'] ?? $m['content'] ?? '') : (string) $m;
+            $lines[] = '[Memory '.($i + 1).'] '.$summary;
+        }
+
+        return implode("\n", $lines);
     }
 
     /** @param array<string, mixed> $data */
