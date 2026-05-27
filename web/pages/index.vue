@@ -724,8 +724,9 @@ watch(isLocalCommandsClarification, (isLocal) => {
   landingTab.value = 'chat'
   runCommandPopup.show({
     title: 'Run this on your machine',
-    description: 'BosskuAI runs in Docker and cannot execute this command. Run it on your host machine, then click Done — the run will continue automatically.',
+    description: 'BosskuAI runs in Docker and cannot execute this command. Run it on your host machine, then paste the output below so the AI can continue.',
     command: localCommandsToRun.value,
+    requireOutput: true,
   })
 })
 
@@ -734,8 +735,9 @@ watch(() => runCommandPopup.state.open, (open) => {
   localClarificationPending.value = false
   const req = effectiveClarificationRequest.value
   if (!req || req.stage !== 'user_local_commands') return
+  const output = runCommandPopup.state.output ?? ''
   void submitClarification({
-    answers: req.questions.map(q => ({ question_id: q.id, option_id: 'pasted', free_text: '' })),
+    answers: req.questions.map(q => ({ question_id: q.id, option_id: 'pasted', free_text: output })),
     review_decision: 'approve',
   })
 })

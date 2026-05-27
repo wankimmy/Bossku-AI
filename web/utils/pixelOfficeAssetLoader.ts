@@ -71,11 +71,28 @@ async function loadImage(url: string): Promise<HTMLImageElement> {
 
 async function assetUrlExists(url: string): Promise<boolean> {
   try {
-    const res = await fetch(url, { method: 'GET', cache: 'force-cache' })
-    return res.ok
+    const res = await fetch(url, { method: 'HEAD', cache: 'force-cache' })
+    if (res.ok) return true
+    if (res.status === 405) {
+      const getRes = await fetch(url, { method: 'GET', cache: 'force-cache' })
+      return getRes.ok
+    }
+    return false
   } catch {
     return false
   }
+}
+
+function furnitureAssetUrlCandidates(base: string, file: string): string[] {
+  const normalized = file.startsWith('assets/') ? file.slice('assets/'.length) : file
+  const withoutFurniturePrefix = normalized.replace(/^furniture\//, '')
+  return [
+    ...new Set([
+      `${base}/${normalized}`,
+      `${base}/furniture/${normalized}`,
+      `${base}/furniture/${withoutFurniturePrefix}`,
+    ]),
+  ]
 }
 
 async function firstExistingAssetUrl(candidates: string[]): Promise<string | null> {
@@ -245,6 +262,27 @@ async function loadWallTiles(base: string): Promise<string[][][] | null> {
   }
 }
 
+async function furnitureSpritesReachable(base: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${base}/furniture/furniture-catalog.json`)
+    if (!res.ok) return false
+    const catalog = normalizeFurnitureCatalog(await res.json())
+    const sample = catalog[0]
+    if (!sample) return false
+    let file = sample.furniturePath ?? sample.file
+    if (!file) file = `furniture/${sample.id}.png`
+    if (!file.startsWith('assets/') && !file.startsWith('furniture/')) {
+      file = `furniture/${file}`
+    }
+    if (file.startsWith('assets/')) {
+      file = file.slice('assets/'.length)
+    }
+    return (await firstExistingAssetUrl(furnitureAssetUrlCandidates(base, file))) != null
+  } catch {
+    return false
+  }
+}
+
 async function loadFurnitureAssets(base: string): Promise<{
   catalog: FurnitureCatalogEntry[]
   sprites: Record<string, string[][]>
@@ -255,6 +293,12 @@ async function loadFurnitureAssets(base: string): Promise<{
     const catalogData = await res.json()
     const catalog = normalizeFurnitureCatalog(catalogData)
     if (catalog.length === 0) return null
+    if (!(await furnitureSpritesReachable(base))) {
+      console.warn(
+        '[pixel-office] furniture-catalog.json found but PNG sprites are missing. Run npm run build:pixel-office from web/.',
+      )
+      return null
+    }
     const sprites: Record<string, string[][]> = {}
 
     await Promise.all(
@@ -267,10 +311,7 @@ async function loadFurnitureAssets(base: string): Promise<{
           if (file.startsWith('assets/')) {
             file = file.slice('assets/'.length)
           }
-          const url = await firstExistingAssetUrl([
-            `${base}/${file}`,
-            `${base}/furniture/${file}`,
-          ])
+          const url = await firstExistingAssetUrl(furnitureAssetUrlCandidates(base, file))
           if (!url) return
           sprites[asset.id] = await pngUrlToSpriteData(url, asset.width, asset.height)
         } catch {

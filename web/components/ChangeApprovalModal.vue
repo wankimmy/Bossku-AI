@@ -31,9 +31,11 @@ const emit = defineEmits<{
 const api = useApi()
 const note = ref('')
 const loading = ref(false)
+const applyError = ref<string | null>(null)
 
 watch(() => props.approval?.id, () => {
   note.value = ''
+  applyError.value = null
 })
 
 const evidence = computed(() => props.approval?.evidence ?? {})
@@ -103,6 +105,7 @@ function emitDecided(res: unknown, noteText: string) {
 async function doApprove() {
   if (!props.approval || loading.value || approveBlocked.value) return
   loading.value = true
+  applyError.value = null
   const noteText = note.value
   try {
     const res = await api.post(`/approvals/${props.approval.id}/approve`, { note: noteText || undefined })
@@ -114,6 +117,12 @@ async function doApprove() {
   }
   catch (err) {
     if (isIdempotentApprovalOutcome(err, 'approve')) {
+      const msg = err && typeof err === 'object' && 'data' in err
+        ? String((err as { data?: { message?: string } }).data?.message ?? '')
+        : ''
+      if (msg.toLowerCase().includes('apply failed')) {
+        applyError.value = msg.replace(/^approved but apply failed:\s*/i, '')
+      }
       emitDecided(err, noteText)
       note.value = ''
       return
@@ -250,6 +259,10 @@ const riskCls = (r?: string) => {
               placeholder="e.g. Use a Form Request instead of inline validation; keep the existing route names…"
             />
           </div>
+        </div>
+
+        <div v-if="applyError" class="shrink-0 mx-5 mb-0 px-3 py-2 rounded-lg bg-red-900/40 border border-red-700/60 text-xs text-red-300 font-mono">
+          Apply failed: {{ applyError }}
         </div>
 
         <div class="shrink-0 flex gap-3 px-5 py-3 border-t border-zinc-700">

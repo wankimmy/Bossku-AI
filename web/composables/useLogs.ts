@@ -1,29 +1,60 @@
 import type { LogEntry } from '~/types/api'
+import { apiUrl } from '~/composables/useApiBase'
+import { apiAuthHeaders } from '~/utils/apiAuthHeaders'
 
-export function useLogs(filters?: { level?: Ref<string>; search?: Ref<string>; runId?: Ref<string> }) {
-  const api = useApi()
-  const level = filters?.level ?? ref('')
-  const search = filters?.search ?? ref('')
-  const runId = filters?.runId ?? ref('')
+const MAX_ENTRIES = 200
 
-  // logs ref is used by BottomLogDrawer for the stub
-  const logs = ref<LogEntry[]>([])
+export function useLogs() {
+  // useState so entries persist while AppShell stays mounted across route changes
+  const logs = useState<LogEntry[]>('bossku-logs', () => [])
+  let abort: AbortController | null = null
 
-  const asyncData = useAsyncData<{ data: LogEntry[]; total?: number }>(
-    'logs',
-    () => api.get('/logs', {
-      level: level.value || undefined,
-      search: search.value || undefined,
-      run_id: runId.value || undefined,
-    }),
-    { watch: [level, search, runId] },
-  )
+  async function connect() {
+    if (!import.meta.client) return
+    abort?.abort()
+    abort = new AbortController()
 
-  watch(asyncData.data, (val) => {
-    if (val) {
-      logs.value = Array.isArray(val) ? val : (val.data ?? [])
+    try {
+      const res = await fetch(apiUrl('/logs/stream'), {
+        headers: apiAuthHeaders(),
+        signal: abort.signal,
+      })
+
+      if (!res.ok || !res.body) {
+        setTimeout(connect, 5_000)
+        return
+      }
+
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() ?? ''
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          try {
+            const entry = JSON.parse(line.slice(6)) as LogEntry
+            logs.value = [...logs.value.slice(-(MAX_ENTRIES - 1)), entry]
+          }
+          catch { /* ignore malformed events */ }
+        }
+      }
     }
-  })
+    catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') return
+    }
 
-  return { ...asyncData, logs }
+    // Reconnect 2s after stream ends (server sends 60s streams then closes)
+    setTimeout(connect, 2_000)
+  }
+
+  onMounted(() => { void connect() })
+  onUnmounted(() => { abort?.abort() })
+
+  return { logs }
 }

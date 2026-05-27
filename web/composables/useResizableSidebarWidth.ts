@@ -52,8 +52,11 @@ function persistWidth(width: number) {
   }
 }
 
+/** SSR/hydration-safe initial width (no window); real width applied in onMounted. */
+const SSR_SAFE_OFFICE_SIDEBAR_WIDTH = 640
+
 export function useResizableSidebarWidth() {
-  const width = ref(defaultOfficeSidebarWidth())
+  const width = ref(SSR_SAFE_OFFICE_SIDEBAR_WIDTH)
   const isResizing = ref(false)
   const hydrated = ref(false)
 

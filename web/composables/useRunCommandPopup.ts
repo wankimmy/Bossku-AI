@@ -2,6 +2,7 @@ export interface RunCommandOptions {
   title?: string
   description?: string
   command: string
+  requireOutput?: boolean
 }
 
 const state = reactive({
@@ -9,6 +10,8 @@ const state = reactive({
   title: 'Run this command manually',
   description: '',
   command: '',
+  requireOutput: false,
+  output: '',
 })
 
 export function useRunCommandPopup() {
@@ -16,6 +19,8 @@ export function useRunCommandPopup() {
     state.title = opts.title ?? 'Run this command manually'
     state.description = opts.description ?? ''
     state.command = opts.command
+    state.requireOutput = opts.requireOutput ?? false
+    state.output = ''
     state.open = true
   }
 
@@ -23,5 +28,9 @@ export function useRunCommandPopup() {
     state.open = false
   }
 
-  return { state: readonly(state), show, close }
+  function setOutput(value: string) {
+    state.output = value
+  }
+
+  return { state: readonly(state), show, close, setOutput }
 }

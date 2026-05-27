@@ -4,6 +4,7 @@ namespace App\Services\Orchestrator;
 
 use App\Models\BosskuAi\Run;
 use App\Support\StringCoercion;
+use App\Services\Orchestrator\ExecutorEvidenceSupport;
 
 trait OrchestratorUserLocalCommandsTrait
 {
@@ -366,9 +367,48 @@ trait OrchestratorUserLocalCommandsTrait
 
         $this->projectCommands->logDockerAvailability();
 
+        // Re-run the executor with the user's command outputs in context.
+        // The original executor run was interrupted before it could write files (it was waiting for
+        // docker/host commands to succeed). Now that those outputs are available, the executor needs
+        // to complete its work (e.g. write config files, apply changes) rather than jump to auditor
+        // with the stale partial exec result.
+        $step['task'] = $agentPrompt;
+
+        $this->emit($emit, $this->basePayload($run, 'executor_step_started', [
+            'status' => 'running',
+            'agent' => 'executor',
+            'summary' => 'Executor is applying the plan.',
+        ]));
+
+        $execResult = $this->executor->execute(
+            $step,
+            $skillRow,
+            $ruleLines,
+            $pbExcerpt,
+            $chkExcerpt,
+            null,
+            $plan,
+            $modelRoute,
+            $execProfileKey,
+            $this->projects->agentWorkspaceContext(),
+            $preflightReads,
+            null,
+        );
+        $execResult = ExecutorEvidenceSupport::mergePreflightReads($execResult, $preflightReads);
+        $execResult = $this->ensureExecutorEvidence($run, $plan, $execResult, $userPrompt, $emit);
+        $modelsResolved['executor'] = (string) ($execResult['_executor_model'] ?? $modelsResolved['executor'] ?? '');
+
+        $retryPipeline = $pipeline;
+        $retryPipeline['exec_result'] = $execResult;
+        $retryAfter = $this->applyOrPauseForExecutorApprovals($run, $execResult, $retryPipeline, $emit);
+        if (($retryAfter['awaiting_approvals'] ?? false) === true) {
+            return $retryAfter;
+        }
+        $execResult = $retryAfter;
+
         $exTok = $this->estimateTokens(json_encode($execResult) ?: '');
         $tokenAcc += $exTok;
-        $this->emit($emit, $this->events->executorDone($run, $execResult, $modelsResolved['executor'] ?? '', (int) ($execResult['latency_ms'] ?? 0), $exTok));
+        $this->emit($emit, $this->events->executorDone($run, $execResult, $modelsResolved['executor'] ?? '', (int) ($execResult['latency_ms'] ?? 0), $exTok, 'executor_revision_done'));
 
         return $this->runPostExecutorPhase(
             $run,

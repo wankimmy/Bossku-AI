@@ -65,6 +65,17 @@ class ExecutorApprovalService
 
             try {
                 $resolved = $this->paths->resolve($path);
+
+                if (is_dir($resolved['absolute']) && $changeType !== 'deleted') {
+                    $enriched[] = array_merge($item, [
+                        'path' => $resolved['relative'],
+                        'approval_skipped' => true,
+                        'approval_skip_reason' => 'Target path is a directory, not a file: '.$resolved['relative'],
+                    ]);
+
+                    continue;
+                }
+
                 $before = is_file($resolved['absolute']) ? (string) file_get_contents($resolved['absolute']) : '';
                 $after = $changeType === 'deleted' ? '' : ($this->fileWrites->extractAfterContent($item, $path) ?? '');
                 if ($changeType !== 'deleted' && $after === '') {

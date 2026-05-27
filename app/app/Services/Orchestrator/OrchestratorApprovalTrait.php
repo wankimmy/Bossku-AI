@@ -98,9 +98,9 @@ trait OrchestratorApprovalTrait
         $run->update(['status' => 'running', 'metadata' => $meta]);
 
         $feedback = $this->executorApprovals->formatDecisionFeedback($runId);
-        if ($feedback !== '') {
-            $this->emit($emit, $this->events->approvalFeedbackReceived($run, $feedback));
-        }
+        // Always emit this event — the frontend uses it to clear the "awaiting approvals" state.
+        // Without it, isAwaitingApprovals() stays true and blocks the clarification modal / error display.
+        $this->emit($emit, $this->events->approvalFeedbackReceived($run, $feedback));
 
         foreach ($this->executorApprovals->rejectedFileWritesForRun($runId) as $rejectedApproval) {
             $this->executorApprovals->revertRejectedFileWrite($rejectedApproval);

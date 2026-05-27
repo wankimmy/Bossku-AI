@@ -7,25 +7,22 @@
  *   BOSSKU_AUTO_FETCH_FURNITURE_BUNDLE=0 — skip fetch
  *   BOSSKU_ZEP_FURNITURE_CACHE=0 — do not write vendor/ cache (default: cache on)
  */
-import {
-  cpSync,
-  createWriteStream,
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-  statSync,
-} from 'node:fs'
+import { cpSync, createWriteStream, existsSync, mkdirSync, readdirSync, rmSync, statSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { pipeline } from 'node:stream/promises'
 import { Readable } from 'node:stream'
+import {
+  catalogPath,
+  dirHasPngSprites,
+  hasValidFurnitureBundle,
+  installFurnitureBundle,
+  parseCatalogAssets,
+} from './zep-furniture-bundle.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const destFurniture = join(__dirname, '../public/assets/furniture')
 const vendorFurniture = join(__dirname, '../vendor/zep-furniture')
-const catalogName = 'furniture-catalog.json'
 const tmpDir = join(__dirname, '../.tmp-furniture-fetch')
 
 const EXTENSION_CANDIDATES = [
@@ -33,10 +30,6 @@ const EXTENSION_CANDIDATES = [
   { publisher: 'pablodelucca', name: 'pixel-agents' },
   { publisher: 'ZepAgents', name: 'zep-agents' },
 ]
-
-function catalogPath(dir) {
-  return join(dir, catalogName)
-}
 
 function shouldFetch() {
   if (process.env.BOSSKU_AUTO_FETCH_FURNITURE_BUNDLE === '0') return false
@@ -46,40 +39,6 @@ function shouldFetch() {
 function shouldCacheVendor() {
   if (process.env.BOSSKU_ZEP_FURNITURE_CACHE === '0') return false
   return true
-}
-
-function parseCatalogAssets(catalogFile) {
-  try {
-    const data = JSON.parse(readFileSync(catalogFile, 'utf-8'))
-    if (Array.isArray(data)) return data
-    if (data?.assets && Array.isArray(data.assets)) return data.assets
-  } catch {
-    // skip invalid json
-  }
-  return []
-}
-
-function dirHasPngSprites(dir) {
-  if (!existsSync(dir)) return false
-  for (const name of readdirSync(dir)) {
-    const p = join(dir, name)
-    try {
-      if (statSync(p).isDirectory()) {
-        if (dirHasPngSprites(p)) return true
-      } else if (name.endsWith('.png')) {
-        return true
-      }
-    } catch {
-      // skip
-    }
-  }
-  return false
-}
-
-function hasValidBundle(dir) {
-  if (!existsSync(catalogPath(dir))) return false
-  if (!dirHasPngSprites(dir)) return false
-  return parseCatalogAssets(catalogPath(dir)).length > 0
 }
 
 function scoreCatalogDir(dir) {
@@ -122,7 +81,7 @@ function resolveFurnitureExportDir(catalogDir) {
   for (let i = 0; i < 6; i++) {
     const parent = dirname(dir)
     if (parent === dir) break
-    if (hasValidBundle(parent)) return parent
+    if (hasValidFurnitureBundle(parent)) return parent
     dir = parent
   }
   return catalogDir
@@ -154,19 +113,13 @@ async function extractVsix(vsixPath, outDir) {
   zip.extractAllTo(outDir, true)
 }
 
-function copyFurnitureTree(src, dest) {
-  if (existsSync(dest)) rmSync(dest, { recursive: true })
-  mkdirSync(dirname(dest), { recursive: true })
-  cpSync(src, dest, { recursive: true })
-}
-
 export async function fetchFurnitureBundle() {
   if (!shouldFetch()) {
     console.log('[fetch-furniture-bundle] Skipped (BOSSKU_AUTO_FETCH_FURNITURE_BUNDLE=0).')
     return false
   }
 
-  if (hasValidBundle(destFurniture)) {
+  if (hasValidFurnitureBundle(destFurniture)) {
     const count = parseCatalogAssets(catalogPath(destFurniture)).length
     console.log(`[fetch-furniture-bundle] Valid bundle at public/assets/furniture (${count} assets, PNGs present).`)
     return true
@@ -177,9 +130,9 @@ export async function fetchFurnitureBundle() {
     rmSync(destFurniture, { recursive: true, force: true })
   }
 
-  if (hasValidBundle(vendorFurniture)) {
+  if (hasValidFurnitureBundle(vendorFurniture)) {
     console.log('[fetch-furniture-bundle] Using vendor cache.')
-    copyFurnitureTree(vendorFurniture, destFurniture)
+    installFurnitureBundle(vendorFurniture, destFurniture)
     return true
   }
 
@@ -221,10 +174,11 @@ export async function fetchFurnitureBundle() {
       console.log(`[fetch-furniture-bundle] Extracted furniture catalog (${count} assets) from ${publisher}.${name}.`)
 
       if (shouldCacheVendor()) {
-        mkdirSync(vendorFurniture, { recursive: true })
-        copyFurnitureTree(exportDir, vendorFurniture)
+        mkdirSync(dirname(vendorFurniture), { recursive: true })
+        if (existsSync(vendorFurniture)) rmSync(vendorFurniture, { recursive: true, force: true })
+        cpSync(exportDir, vendorFurniture, { recursive: true })
       }
-      copyFurnitureTree(exportDir, destFurniture)
+      installFurnitureBundle(exportDir, destFurniture)
 
       if (existsSync(tmpDir)) rmSync(tmpDir, { recursive: true })
       return true

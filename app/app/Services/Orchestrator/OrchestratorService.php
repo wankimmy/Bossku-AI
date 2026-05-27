@@ -640,7 +640,7 @@ class OrchestratorService
                 $execResult['needs_user_input'] = true;
                 $execResult['blockers'] = array_values(array_merge(
                     is_array($execResult['blockers'] ?? null) ? $execResult['blockers'] : [],
-                    array_map(fn ($q) => (string) ($q['question'] ?? ''), $executorQuestions)
+                    array_map(fn ($q) => StringCoercion::toString(is_array($q['question'] ?? null) ? implode(' ', $q['question']) : ($q['question'] ?? null), ''), $executorQuestions)
                 ));
             }
         }

@@ -29,6 +29,10 @@ class FileWriteApplier
             return ['path' => $resolved['absolute'], 'relative' => $resolved['relative']];
         }
 
+        if (is_dir($resolved['absolute'])) {
+            throw new \RuntimeException('Cannot write file — target path is a directory: '.$resolved['relative']);
+        }
+
         $this->writeGuard->ensureWritable($resolved['absolute'], $this->paths->repoRoot());
 
         if (file_put_contents($resolved['absolute'], $after) === false) {

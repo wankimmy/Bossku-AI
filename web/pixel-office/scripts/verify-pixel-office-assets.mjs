@@ -57,14 +57,15 @@ function main() {
   }
 
   const catalog = JSON.parse(readFileSync(catalogPath, 'utf-8'))
-  const catalogIds = new Set((catalog.assets || []).map(a => a.id))
+  const catalogEntries = Array.isArray(catalog) ? catalog : (catalog.assets || [])
+  const catalogIds = new Set(catalogEntries.map(a => a.id))
   const furnitureDir = dirname(catalogPath)
   const pngCount = countPngs(furnitureDir)
 
   const layoutIds = loadLayoutAssetIds()
   const missing = layoutIds.filter(id => !catalogIds.has(id))
 
-  console.log(`[verify-pixel-office-assets] Catalog: ${catalog.assets?.length ?? 0} entries, ${pngCount} PNGs`)
+  console.log(`[verify-pixel-office-assets] Catalog: ${catalogEntries.length} entries, ${pngCount} PNGs`)
 
   if (pngCount < 10) {
     console.error('[verify-pixel-office-assets] Too few furniture PNGs (expected dozens after export).')

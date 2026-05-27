@@ -7,6 +7,7 @@ use App\Models\BosskuAi\Approval;
 use App\Services\Governance\ApprovalGateService;
 use App\Services\Governance\ExecutorApprovalService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class ApprovalController extends Controller
 {
@@ -71,11 +72,21 @@ class ApprovalController extends Controller
             $this->executorApprovals->applyApproved($approval);
         }
         catch (\Throwable $e) {
+            Log::error('bossku.approval.apply_failed', [
+                'approval_id' => $approval->id,
+                'run_id' => $approval->run_id,
+                'operation_type' => $approval->operation_type,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile().':'.$e->getLine(),
+            ]);
             $this->gates->decide($approval->id, 'rejected', 'system', 'Apply failed: '.$e->getMessage());
 
             return response()->json([
                 'message' => 'Approved but apply failed: '.$e->getMessage(),
                 'approval' => $this->executorApprovals->serializeApproval($approval->fresh() ?? $approval),
+                'run_has_pending' => $approval->run_id
+                    ? $this->executorApprovals->hasPendingForRun((string) $approval->run_id)
+                    : false,
             ], 500);
         }
 

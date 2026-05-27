@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\KnowledgeCaptureController;
 use App\Http\Controllers\Api\KnowledgeImportApiController;
 use App\Http\Controllers\Api\LearningController;
 use App\Http\Controllers\Api\LogsController;
+use App\Http\Controllers\Api\LogsStreamController;
 use App\Http\Controllers\Api\MemoryApiController;
 use App\Http\Controllers\Api\ModelRoutingController;
 use App\Http\Controllers\Api\OllamaHealthController;
@@ -177,6 +178,7 @@ Route::get('/usage/summary', [UsageController::class, 'summary']);
 
 // ── Logs ──────────────────────────────────────────────────────────────────────
 Route::get('/logs', [LogsController::class, 'index']);
+Route::get('/logs/stream', [LogsStreamController::class, 'stream']);
 
 // ── LLM Providers ────────────────────────────────────────────────────────────
 Route::get('/providers', [ProviderController::class, 'index']);

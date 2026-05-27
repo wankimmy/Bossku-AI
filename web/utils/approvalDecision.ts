@@ -40,6 +40,12 @@ export function isIdempotentApprovalOutcome(err: unknown, action: 'approve' | 'r
     }
   }
 
+  // Approval was recorded but apply failed on the server — status was set to rejected.
+  // We can still advance the queue so the run can continue and the orchestrator handles the failure.
+  if (action === 'approve' && status === 500 && message.includes('approved but apply failed')) {
+    return true
+  }
+
   return false
 }
 
@@ -53,7 +59,12 @@ export function runHasPendingFromDecisionResponse(data: unknown): boolean {
     return true
   }
 
-  const flag = (data as ApprovalApiResponse).run_has_pending
+  // FetchError: parsed response body lives in .data, not on the error object itself
+  const body = ('status' in data && 'data' in data && data.data && typeof data.data === 'object')
+    ? (data as { data: unknown }).data
+    : data
+
+  const flag = (body as ApprovalApiResponse).run_has_pending
   if (flag === false) {
     return false
   }

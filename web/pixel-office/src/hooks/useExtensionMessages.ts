@@ -4,7 +4,7 @@ import type { OfficeLayout, ToolActivity } from '../office/types.js'
 import { extractToolName } from '../office/toolUtils.js'
 import { migrateLayoutColors } from '../office/layout/layoutSerializer.js'
 import { buildDynamicCatalog } from '../office/layout/furnitureCatalog.js'
-import { loadFurnitureFromPublic } from '../utils/loadFurnitureFromPublic.js'
+import { furnitureSpritesReachable, loadFurnitureFromPublic } from '../utils/loadFurnitureFromPublic.js'
 import { setFloorSprites } from '../office/floorTiles.js'
 import { setWallSprites } from '../office/wallTiles.js'
 import { setCharacterTemplates } from '../office/sprites/spriteData.js'
@@ -362,7 +362,9 @@ export function useExtensionMessages(
 
     const fallbackTimer = window.setTimeout(() => {
       if (furnitureLoadedRef.current) return
-      void loadFurnitureFromPublic().then((assets) => {
+      void (async () => {
+        if (!(await furnitureSpritesReachable())) return
+        const assets = await loadFurnitureFromPublic()
         if (!assets || furnitureLoadedRef.current) return
         furnitureLoadedRef.current = true
         console.log(`📦 Webview fallback: loaded ${assets.catalog.length} furniture assets from public URL`)
@@ -371,7 +373,7 @@ export function useExtensionMessages(
           catalog: assets.catalog as FurnitureAsset[],
           sprites: assets.sprites,
         })
-      })
+      })()
     }, 1000)
 
     return () => {
