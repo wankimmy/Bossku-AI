@@ -169,7 +169,8 @@ class OrchestratorService
 
         if ($this->settings->memoryStorageEnabled()) {
             $t0 = microtime(true);
-            $memories = $this->memory->search($agentPrompt, $this->settings->maxMemoryResults());
+            $skillTag = is_string($modelRoute['skill'] ?? null) && $modelRoute['skill'] !== '' ? [$modelRoute['skill']] : [];
+            $memories = $this->memory->search($agentPrompt, $this->settings->maxMemoryResults(), $skillTag);
             $memPayload = $memories->map(fn (Memory $m) => [
                 'id' => $m->id,
                 'summary' => $m->human_summary ?: Str::limit($m->content, 200),
@@ -437,15 +438,25 @@ class OrchestratorService
 
         $this->emit($emit, $this->events->plannerDone($run, $plan, $orchModel, $planMs, $planTokens));
 
-        // Surface planner's clarification questions as events
+        // Surface planner's clarification questions as events and persist to run
         $plannerQuestions = is_array($plan['planner_questions'] ?? null) ? $plan['planner_questions'] : [];
-        if ($plannerQuestions !== [] && $emit !== null) {
-            $this->emit($emit, $this->basePayload($run, 'clarification_suggested', [
-                'status' => 'info',
-                'agent' => 'planner',
-                'summary' => 'Planner has '.count($plannerQuestions).' question(s) for you.',
-                'questions' => $plannerQuestions,
-            ]));
+        $planConfidence = is_numeric($plan['confidence'] ?? null) ? (float) $plan['confidence'] : 1.0;
+        if ($plannerQuestions !== []) {
+            $isLowConfidence = $planConfidence < 0.50;
+            $run->update(['metadata' => array_merge($run->metadata ?? [], [
+                'open_questions' => $plannerQuestions,
+                'low_confidence_plan' => $isLowConfidence,
+            ])]);
+            if ($emit !== null) {
+                $this->emit($emit, $this->basePayload($run, 'clarification_suggested', [
+                    'status' => $isLowConfidence ? 'warning' : 'info',
+                    'agent' => 'planner',
+                    'summary' => $isLowConfidence
+                        ? 'Low-confidence plan ('.round($planConfidence * 100).'%) — '.count($plannerQuestions).' unresolved question(s). Results may be unreliable without clarification.'
+                        : 'Planner has '.count($plannerQuestions).' question(s) for you.',
+                    'questions' => $plannerQuestions,
+                ]));
+            }
         }
 
         $execProfileKey = (string) ($plan['executor_profile'] ?? $modelRoute['executor_profile'] ?? 'default');
@@ -609,15 +620,29 @@ class OrchestratorService
         $tokenAcc += $exTok;
         $this->emit($emit, $this->events->executorDone($run, $execResult, $modelsResolved['executor'], (int) ($execResult['latency_ms'] ?? 0), $exTok));
 
-        // Surface executor questions for the user
+        // Surface executor questions — persist to run and pause if needs_user_input not already set
         $executorQuestions = is_array($execResult['executor_questions'] ?? null) ? $execResult['executor_questions'] : [];
-        if ($executorQuestions !== [] && $emit !== null) {
-            $this->emit($emit, $this->basePayload($run, 'executor_questions_surfaced', [
-                'status' => 'info',
-                'agent' => 'executor',
-                'summary' => 'Executor has '.count($executorQuestions).' question(s) for you before proceeding.',
-                'questions' => $executorQuestions,
-            ]));
+        if ($executorQuestions !== []) {
+            $existingOpenQuestions = is_array($run->metadata['open_questions'] ?? null) ? $run->metadata['open_questions'] : [];
+            $run->update(['metadata' => array_merge($run->metadata ?? [], [
+                'open_questions' => array_values(array_merge($existingOpenQuestions, $executorQuestions)),
+            ])]);
+            if ($emit !== null) {
+                $this->emit($emit, $this->basePayload($run, 'executor_questions_surfaced', [
+                    'status' => 'warning',
+                    'agent' => 'executor',
+                    'summary' => 'Executor has '.count($executorQuestions).' question(s) for you before proceeding.',
+                    'questions' => $executorQuestions,
+                ]));
+            }
+            // Force needs_user_input so the existing stuck-check pauses the pipeline
+            if (($execResult['needs_user_input'] ?? false) !== true) {
+                $execResult['needs_user_input'] = true;
+                $execResult['blockers'] = array_values(array_merge(
+                    is_array($execResult['blockers'] ?? null) ? $execResult['blockers'] : [],
+                    array_map(fn ($q) => (string) ($q['question'] ?? ''), $executorQuestions)
+                ));
+            }
         }
 
         if (! empty($execResult['tool_request'] ?? null)) {
@@ -836,15 +861,21 @@ class OrchestratorService
                 ]));
             }
 
-            // Surface auditor's high-stakes user questions
+            // Surface auditor's high-stakes user questions and persist them
             $auditorUserQuestions = is_array($lastAudit['user_questions'] ?? null) ? $lastAudit['user_questions'] : [];
-            if ($auditorUserQuestions !== [] && $emit !== null) {
-                $this->emit($emit, $this->basePayload($run, 'auditor_questions_surfaced', [
-                    'status' => 'warning',
-                    'agent' => 'auditor',
-                    'summary' => 'Auditor has '.count($auditorUserQuestions).' high-stakes question(s) requiring your decision.',
-                    'questions' => $auditorUserQuestions,
-                ]));
+            if ($auditorUserQuestions !== []) {
+                $existingOpenQuestions = is_array($run->metadata['open_questions'] ?? null) ? $run->metadata['open_questions'] : [];
+                $run->update(['metadata' => array_merge($run->metadata ?? [], [
+                    'open_questions' => array_values(array_merge($existingOpenQuestions, $auditorUserQuestions)),
+                ])]);
+                if ($emit !== null) {
+                    $this->emit($emit, $this->basePayload($run, 'auditor_questions_surfaced', [
+                        'status' => 'warning',
+                        'agent' => 'auditor',
+                        'summary' => 'Auditor has '.count($auditorUserQuestions).' high-stakes question(s) requiring your decision.',
+                        'questions' => $auditorUserQuestions,
+                    ]));
+                }
             }
 
             // Surface checklist verdict trail
@@ -1093,7 +1124,7 @@ class OrchestratorService
                 'summary' => 'Final Reviewer is closing the run.',
             ]));
             $tF = microtime(true);
-            $lastFinal = $this->finalReviewer->review($agentPrompt, $modelRoute, $lastAudit, $lastSecurity, $execResult);
+            $lastFinal = $this->finalReviewer->review($agentPrompt, $modelRoute, $lastAudit, $lastSecurity, $execResult, $plan, $memPayload, $conversation);
             $fMs = (int) round((microtime(true) - $tF) * 1000);
             $fTok = $this->estimateTokens(json_encode($lastFinal) ?: '');
             $this->logStep($run, $stepNum + 200, 'final_reviewer', $modelsResolved['final_reviewer'] ?? null, 'ollama', $skillName, 'success', null, null, json_encode($lastFinal), null, null, null, $fMs, $fTok, null, $this->events->metadata(
@@ -1108,7 +1139,7 @@ class OrchestratorService
             $tokenAcc += $fTok;
             $this->emit($emit, $this->events->finalReviewerDone($run, $lastFinal, $modelsResolved['final_reviewer'] ?? null, $fMs, $fTok));
         }
-        $finalOutput = $this->composeUserOutput($lastAudit, $execResult, $lastFinal, $lastSecurity, $modelRoute, $modelsResolved, $memPayload);
+        $finalOutput = $this->composeUserOutput($lastAudit, $execResult, $lastFinal, $lastSecurity, $modelRoute, $modelsResolved, $memPayload, $userPrompt, $plan);
 
         return $this->completeRun(
             $run,
@@ -1238,6 +1269,7 @@ class OrchestratorService
      * @param array<string, mixed> $modelRoute
      * @param array<string, string> $modelsResolved
      * @param array<int, array<string, mixed>> $memPayload
+     * @param array<string, mixed> $plan
      */
     protected function composeUserOutput(
         array $lastAudit,
@@ -1247,6 +1279,8 @@ class OrchestratorService
         array $modelRoute,
         array $modelsResolved,
         array $memPayload,
+        string $userPrompt = '',
+        array $plan = [],
     ): string {
         $commandOutcome = $this->summarizeCommandExecution($execResult);
         $status = (($execResult['status'] ?? '') === 'failed' || ($lastAudit['status'] ?? '') === 'failed')
@@ -1287,6 +1321,7 @@ class OrchestratorService
             ));
         }
 
+        $planGoal = StringCoercion::toString($plan['goal'] ?? $plan['task_summary'] ?? null, '');
         $nextPrompt = $this->buildNextPrompt(
             $files,
             $commandOutcome,
@@ -1294,6 +1329,8 @@ class OrchestratorService
             $proposedCommands,
             $nextStep,
             $lastFinal,
+            $userPrompt,
+            $planGoal,
         );
 
         $lines = [
@@ -1355,7 +1392,10 @@ class OrchestratorService
         array $proposedCommandLines,
         string $nextStep,
         ?array $lastFinal,
+        string $userPrompt = '',
+        string $planGoal = '',
     ): string {
+        // Required actions from Final Reviewer take precedence (REVISE/REJECT fix instructions).
         if ($lastFinal !== null) {
             $actions = is_array($lastFinal['required_actions'] ?? null) ? $lastFinal['required_actions'] : [];
             foreach ($actions as $action) {
@@ -1364,6 +1404,20 @@ class OrchestratorService
                     return $line;
                 }
             }
+        }
+
+        // Derive a short goal hint so fallback prompts reference what the user was doing.
+        $decision = strtoupper(trim(StringCoercion::toString($lastFinal['decision'] ?? null, '')));
+        $goalHint = $planGoal !== '' ? $planGoal : Str::limit(trim($userPrompt), 100);
+
+        // Final Reviewer approved (MERGE) with no required actions — task is done.
+        // Suggest a goal-aware verification step rather than a generic message.
+        if ($decision === 'MERGE' && $goalHint !== '') {
+            if ($executedCommandLines !== []) {
+                return 'The "'.$goalHint.'" implementation is complete. Run any remaining tests and confirm the feature works end-to-end before closing.';
+            }
+
+            return 'The "'.$goalHint.'" changes look complete. Run the project test suite, review each changed file, and confirm the outcome matches the intent before merging.';
         }
 
         if (($commandOutcome['git_restore_failed'] ?? false) === true) {
@@ -1392,12 +1446,13 @@ class OrchestratorService
                 .'. Confirm each file matches the intended outcome, then run the project test suite and report pass/fail with any errors.';
         }
 
+        $goalClause = $goalHint !== '' ? ' for the "'.$goalHint.'" task' : '';
         $normalized = strtolower(trim($nextStep));
         if (str_contains($normalized, 'test suite') || str_contains($normalized, 'run the relevant test')) {
-            return 'Run the project\'s test suite for the active repo and report pass/fail with any errors.';
+            return 'Run the project\'s test suite'.$goalClause.' and report pass/fail with any errors.';
         }
         if (str_contains($normalized, 'review the changed files')) {
-            return 'Review each changed file in the active project, note anything unexpected, and run the appropriate checks before merge.';
+            return 'Review each changed file'.$goalClause.', note anything unexpected, and run the appropriate checks before merge.';
         }
         if (str_contains($normalized, 'commands were proposed but not executed')) {
             return 'Run the proposed project commands from the run summary in the active project root and report stdout/stderr.';
@@ -1406,7 +1461,12 @@ class OrchestratorService
             return $nextStep;
         }
 
-        return $nextStep !== '' ? $nextStep : 'Continue the task in the active project and report results.';
+        if ($nextStep !== '') {
+            return $nextStep;
+        }
+        $continueSuffix = $goalHint !== '' ? ' to complete: '.$goalHint : '';
+
+        return 'Continue the task in the active project'.$continueSuffix.' and report results.';
     }
 
     /**

@@ -9,6 +9,10 @@ use Illuminate\Support\Str;
 
 class LearningEngine
 {
+    public function __construct(
+        protected LearningEventProcessor $processor,
+    ) {}
+
     /**
      * @param  array<string, mixed>  $execResult
      * @param  array<string, mixed>  $lastAudit
@@ -116,7 +120,7 @@ class LearningEngine
     public function saveEvents(Run $run, array $extractions): void
     {
         foreach ($extractions as $extraction) {
-            LearningEvent::create([
+            $event = LearningEvent::create([
                 'run_id'     => $run->getKey(),
                 'type'       => $extraction['type'],
                 'content'    => $extraction['content'],
@@ -124,6 +128,8 @@ class LearningEngine
                 'evidence'   => $extraction['evidence'],
                 'status'     => 'pending',
             ]);
+
+            $this->processor->dispatchForEvent($event);
         }
     }
 

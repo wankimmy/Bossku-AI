@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Symfony\Component\Yaml\Yaml;
+use App\Services\BosskuAi\MemoryService;
 
 class KnowledgeImportService
 {
@@ -32,7 +33,8 @@ class KnowledgeImportService
     protected array $checklistByBasename = [];
 
     public function __construct(
-        protected string $repoRoot
+        protected string $repoRoot,
+        protected ?MemoryService $memoryService = null,
     ) {}
 
     /**
@@ -653,28 +655,57 @@ class KnowledgeImportService
             $sourceType = 'web';
         }
 
+        // Deduplication: remove existing chunks for this URL before re-indexing
+        $existing = Memory::query()
+            ->where('source', $url)
+            ->where('type', 'knowledge_chunk')
+            ->count();
+        if ($existing > 0) {
+            Memory::query()
+                ->where('source', $url)
+                ->where('type', 'knowledge_chunk')
+                ->delete();
+        }
+
         $chunks = $this->chunkText($text);
         $indexed = 0;
+        $total = count($chunks);
 
         foreach ($chunks as $i => $chunk) {
             try {
-                Memory::query()->create([
-                    'type' => 'knowledge_chunk',
-                    'content' => $chunk,
-                    'human_summary' => Str::limit($title.' [chunk '.($i + 1).'/'.count($chunks).']', 200),
-                    'metadata' => [
-                        'source_url' => $url,
-                        'title' => $title,
-                        'chunk_index' => $i,
-                        'total_chunks' => count($chunks),
-                        'source_type' => $sourceType,
-                        'importance' => 0.70,
-                    ],
-                    'tags' => ['url_learning', $sourceType],
-                    'source' => $url,
-                    'is_active' => true,
-                    'confidence' => 0.75,
-                ]);
+                $humanSummary = Str::limit($title.' [chunk '.($i + 1).'/'.$total.']', 200);
+                $metadata = [
+                    'source_url' => $url,
+                    'title' => $title,
+                    'chunk_index' => $i,
+                    'total_chunks' => $total,
+                    'source_type' => $sourceType,
+                ];
+
+                if ($this->memoryService !== null) {
+                    // Use MemoryService so embeddings are generated for vector search
+                    $this->memoryService->store(
+                        $chunk,
+                        'knowledge_chunk',
+                        $metadata,
+                        $humanSummary,
+                        ['url_learning', $sourceType],
+                        $url,
+                        0.70,
+                        0.75,
+                    );
+                } else {
+                    Memory::query()->create([
+                        'type' => 'knowledge_chunk',
+                        'content' => $chunk,
+                        'human_summary' => $humanSummary,
+                        'metadata' => array_merge($metadata, ['importance' => 0.70]),
+                        'tags' => ['url_learning', $sourceType],
+                        'source' => $url,
+                        'is_active' => true,
+                        'confidence' => 0.75,
+                    ]);
+                }
                 $indexed++;
             } catch (\Throwable $e) {
                 Log::warning('learnUrl chunk store failed', ['url' => $url, 'chunk' => $i, 'error' => $e->getMessage()]);
@@ -684,9 +715,10 @@ class KnowledgeImportService
         return [
             'url' => $url,
             'title' => $title,
-            'chunks' => count($chunks),
+            'chunks' => $total,
             'indexed' => $indexed,
             'type' => $sourceType,
+            'deduplicated' => $existing > 0,
         ];
     }
 

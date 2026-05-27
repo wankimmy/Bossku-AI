@@ -100,7 +100,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(KnowledgeImportService::class, function ($app) {
             $repo = (string) config('bossku.repo_root');
 
-            return new KnowledgeImportService($repo);
+            return new KnowledgeImportService($repo, $app->make(MemoryService::class));
         });
     }
 

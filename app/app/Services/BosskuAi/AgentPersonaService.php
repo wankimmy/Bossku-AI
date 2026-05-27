@@ -161,32 +161,53 @@ class AgentPersonaService
     }
 
     /**
-     * Create missing pipeline persona rows (idempotent; does not overwrite saved edits).
+     * Create missing pipeline persona rows, and upgrade stub-content rows when a real .md file is now available.
+     * Never overwrites content that was manually edited by the user (i.e. no longer matches a known stub).
      */
     public function ensurePipelinePersonas(): void
     {
         $names = self::defaultDisplayNames();
         $stubs = AgentPersonaBuiltinPrompts::previews();
-        $created = false;
+        $changed = false;
 
         foreach (self::PIPELINE_ROLES as $role) {
-            if (AgentPersona::query()->where('role', $role)->exists()) {
+            $existing = AgentPersona::query()->where('role', $role)->first();
+
+            if ($existing === null) {
+                $fromMd = $this->defaultContentFromAgentsMd($role);
+                $content = $fromMd ?? ($stubs[$role] ?? 'BosskuAI '.$role.' agent.');
+
+                AgentPersona::query()->create([
+                    'role' => $role,
+                    'display_name' => $names[$role] ?? ucfirst(str_replace('_', ' ', $role)),
+                    'content' => $content,
+                    'enabled' => true,
+                ]);
+                $changed = true;
                 continue;
             }
 
+            // Upgrade rows that still carry default content (either a builtin stub, or the old
+            // conflicting final-reviewer format). Rows with user edits are left untouched.
             $fromMd = $this->defaultContentFromAgentsMd($role);
-            $content = $fromMd ?? ($stubs[$role] ?? 'BosskuAI '.$role.' agent.');
+            $currentContent = trim((string) $existing->content);
+            $knownStubs = array_map('trim', array_merge(
+                array_values($stubs),
+                ['BosskuAI '.$role.' agent.'],
+            ));
 
-            AgentPersona::query()->create([
-                'role' => $role,
-                'display_name' => $names[$role] ?? ucfirst(str_replace('_', ' ', $role)),
-                'content' => $content,
-                'enabled' => true,
-            ]);
-            $created = true;
+            $isStub = in_array($currentContent, $knownStubs, true);
+            // Detect the old final-reviewer.md format that described the wrong output contract.
+            $isOldFinalReviewerFormat = $role === 'final_reviewer'
+                && str_contains($currentContent, 'Status: Completed / Partially Completed / Blocked');
+
+            if ($fromMd !== null && ($isStub || $isOldFinalReviewerFormat)) {
+                $existing->update(['content' => $fromMd]);
+                $changed = true;
+            }
         }
 
-        if ($created) {
+        if ($changed) {
             $this->clearCache();
         }
     }
@@ -221,6 +242,9 @@ class AgentPersonaService
             'auditor' => 'auditor.md',
             'security_auditor' => 'security-reviewer.md',
             'final_reviewer' => 'final-reviewer.md',
+            'writer' => 'writer.md',
+            'direct_answer' => 'direct-answer.md',
+            'clarification' => 'clarification.md',
         ];
         $file = $map[$role] ?? null;
         if ($file === null) {

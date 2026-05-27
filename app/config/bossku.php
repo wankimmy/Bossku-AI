@@ -84,4 +84,11 @@ return [
      * Pre-execution clarification: smart (default), always (every run), or off.
      */
     'orchestrator_clarification_mode' => env('BOSSKU_ORCHESTRATOR_CLARIFICATION_MODE', 'smart'),
+
+    /** Auto-promote high-confidence learning events to searchable memory. */
+    'learning_auto_promote_enabled' => env('BOSSKU_LEARNING_AUTO_PROMOTE_ENABLED', true),
+    'learning_auto_promote_min_confidence' => (float) env('BOSSKU_LEARNING_AUTO_PROMOTE_MIN_CONFIDENCE', 0.85),
+    /** @var list<string> */
+    'learning_auto_promote_types' => ['pattern', 'preference'],
+    'learning_batch_size' => (int) env('BOSSKU_LEARNING_BATCH_SIZE', 50),
 ];

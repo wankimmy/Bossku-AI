@@ -3,7 +3,9 @@
 namespace App\Services\BosskuAi;
 
 /**
- * Built-in system prompt excerpts for UI reference (not sent to LLM from here).
+ * Fallback persona content used when no agents/*.md file exists for a role.
+ * These strings ARE stored in the database and injected into LLM system prompts
+ * via AgentPersonaService::appendToSystem(). Keep them accurate.
  */
 class AgentPersonaBuiltinPrompts
 {

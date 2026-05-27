@@ -68,9 +68,10 @@ class MemoryService
     }
 
     /**
+     * @param  list<string>  $contextTags  Optional tags (e.g. skill name) used to boost relevant memories to the top.
      * @return Collection<int, Memory>
      */
-    public function search(string $query, ?int $topK = null): Collection
+    public function search(string $query, ?int $topK = null, array $contextTags = []): Collection
     {
         $limit = $topK ?? $this->settings->maxMemoryResults();
 
@@ -82,14 +83,41 @@ class MemoryService
                 $physical = $this->settings->ollamaEmbeddingPhysicalModel();
                 $vec = $this->normalizeEmbedding($this->ollama->embed($query, $physical));
                 if (count($vec) >= 64) {
-                    return $this->vectorSearch($vec, $limit);
+                    $results = $this->vectorSearch($vec, $limit);
+
+                    return $contextTags !== []
+                        ? $this->boostByTags($results, $contextTags)
+                        : $results;
                 }
             } catch (\Throwable) {
                 //
             }
         }
 
-        return $this->textSearchFallback($query, $limit);
+        $results = $this->textSearchFallback($query, $limit);
+
+        return $contextTags !== []
+            ? $this->boostByTags($results, $contextTags)
+            : $results;
+    }
+
+    /**
+     * Re-rank a memory collection so entries whose tags overlap with $contextTags sort first.
+     * Memories with matching tags are moved to the front while preserving relative order within each group.
+     *
+     * @param  Collection<int, Memory>  $memories
+     * @param  list<string>  $contextTags
+     * @return Collection<int, Memory>
+     */
+    protected function boostByTags(Collection $memories, array $contextTags): Collection
+    {
+        $normalised = array_map('strtolower', $contextTags);
+
+        return $memories->sortByDesc(function (Memory $m) use ($normalised): int {
+            $memTags = array_map('strtolower', is_array($m->tags) ? $m->tags : []);
+
+            return count(array_intersect($normalised, $memTags)) > 0 ? 1 : 0;
+        })->values();
     }
 
     /** @return Collection<int, Memory> */
@@ -103,6 +131,7 @@ class MemoryService
                 $q->where('content', $op, '%'.$query.'%')
                     ->orWhere('human_summary', $op, '%'.$query.'%');
             })
+            ->orderByDesc('confidence')
             ->orderByDesc('updated_at')
             ->limit($limit)
             ->get();
@@ -205,7 +234,12 @@ class MemoryService
         $literal = '['.implode(',', array_map(fn (float $f) => sprintf('%.8f', $f), $slice)).']';
         /** @var list<object{id:string, similarity:float}> $rows */
         $rows = DB::select(
-            'SELECT id, (1 - (embedding <=> ?::vector))::float AS similarity FROM bossku_ai_memories WHERE is_active = TRUE AND embedding IS NOT NULL ORDER BY embedding <=> ?::vector ASC LIMIT '.$limit,
+            'SELECT id, (1 - (embedding <=> ?::vector))::float AS similarity
+             FROM bossku_ai_memories
+             WHERE is_active = TRUE AND embedding IS NOT NULL
+               AND (1 - (embedding <=> ?::vector)) > 0.35
+             ORDER BY (1 - (embedding <=> ?::vector)) * 0.65 + COALESCE(confidence, 0.72) * 0.35 DESC
+             LIMIT '.$limit,
             [$literal, $literal]
         );
         if ($rows === []) {

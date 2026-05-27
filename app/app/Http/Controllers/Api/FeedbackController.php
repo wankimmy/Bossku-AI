@@ -4,10 +4,18 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\BosskuAi\FeedbackItem;
+use App\Services\Feedback\FeedbackService;
+use App\Services\Learning\FeedbackLearningService;
+use App\Services\Learning\LearningEventProcessor;
 use Illuminate\Http\Request;
 
 class FeedbackController extends Controller
 {
+    public function __construct(
+        protected FeedbackService $feedbackService,
+        protected FeedbackLearningService $feedbackLearning,
+        protected LearningEventProcessor $learningProcessor,
+    ) {}
     public function index(Request $request)
     {
         $query = FeedbackItem::query()->orderByDesc('created_at');
@@ -37,9 +45,16 @@ class FeedbackController extends Controller
             'comment'     => 'nullable|string',
         ]);
 
-        $item = FeedbackItem::create($data);
+        $item = FeedbackItem::create(array_merge($data, ['processed' => false]));
 
-        return response()->json($item, 201);
+        $learningEvent = $this->feedbackLearning->convertFeedbackToLearning($item);
+        if ($learningEvent !== null) {
+            $this->learningProcessor->dispatchForEvent($learningEvent);
+        }
+
+        $this->feedbackService->process($item->fresh());
+
+        return response()->json($item->fresh(), 201);
     }
 
     public function summary(string $targetType, string $targetId)

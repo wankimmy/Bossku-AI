@@ -51,8 +51,20 @@ class AuditorService
             ? 'The Planner surfaced these unresolved questions: '.json_encode($planner['planner_questions'])
             : '';
 
+        // Deterministic pre-check: find checklist items the executor never reported on
+        $planChecklist = is_array($planner['checklist'] ?? null) ? $planner['checklist'] : [];
+        $execChecklistStatus = is_array($executorResult['checklist_status'] ?? null) ? $executorResult['checklist_status'] : [];
+        $reportedIds = array_column($execChecklistStatus, 'id');
+        $missingItems = array_values(array_filter($planChecklist, fn ($item) => ! in_array($item['id'] ?? '', $reportedIds, true)));
+        $missingNote = $missingItems !== []
+            ? "\nDETERMINISTIC FINDING: The following ".count($missingItems).' checklist item(s) were NEVER reported in executor_checklist_status: '
+                .implode(', ', array_map(fn ($item) => '['.$item['id'].'] '.$item['title'], $missingItems))
+                .'. Mark these as "unverifiable" in verdict_trail and flag status=needs_revision unless the executor evidence clearly covers them.'
+            : '';
+
         $system = <<<SYS
 You are the BosskuAI Auditor — Stage 3 of 3 in a three-stage pipeline (Planner → Executor → Auditor).
+{$missingNote}
 
 PIPELINE CONTEXT:
 - The Planner (Stage 1) produced a concrete plan with a checklist, confidence score, and risk notes.
@@ -125,6 +137,7 @@ SYS;
             'high_risk_context' => $highRiskContext,
             'memory_context_count' => count($memoryContext),
             'conversation_turns' => count($conversation),
+            'missing_checklist_items' => array_column($missingItems, 'id'),
         ], JSON_THROW_ON_ERROR);
 
         $handoffMessage = StringCoercion::toString($executorResult['handoff_message'] ?? null, 'Sending changes to Auditor.');
@@ -229,11 +242,15 @@ SYS;
         if ($conversation === []) {
             return '(no prior conversation — this is the first turn)';
         }
+        $total = count($conversation);
+        $recent = array_slice($conversation, -10);
+        $offset = max(0, $total - 10);
         $lines = [];
-        foreach (array_slice($conversation, -10) as $i => $turn) {
-            $role = strtoupper((string) ($turn['role'] ?? 'user'));
-            $content = mb_substr((string) ($turn['content'] ?? ''), 0, 500);
-            $lines[] = "[Turn {$i}] {$role}: {$content}";
+        foreach ($recent as $idx => $turn) {
+            $role = strtolower((string) ($turn['role'] ?? 'user'));
+            $cap = $role === 'assistant' ? 1200 : 800;
+            $content = mb_substr((string) ($turn['content'] ?? ''), 0, $cap);
+            $lines[] = '[Turn '.($offset + $idx).'] '.strtoupper($role).': '.$content;
         }
 
         return implode("\n\n", $lines);

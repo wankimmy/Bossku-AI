@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -16,6 +17,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'bossku.api' => \App\Http\Middleware\BosskuApiAuth::class,
             'secure.headers' => \App\Http\Middleware\SecureHeaders::class,
         ]);
+    })
+    ->withSchedule(function (Schedule $schedule) {
+        $schedule->command('bossku:process-learning-events')->everyMinute();
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

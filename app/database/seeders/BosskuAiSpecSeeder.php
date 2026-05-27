@@ -183,7 +183,8 @@ class BosskuAiSpecSeeder extends Seeder
         // ── Knowledge graph (idempotent — import/restart may already have nodes) ─
         $skillNodes = [];
         foreach ($skills as $skill) {
-            $skillNodes[$skill->name] = GraphNode::updateOrCreate(
+            // firstOrCreate — do not overwrite quality_score/usage_count that have accumulated at runtime.
+            $skillNodes[$skill->name] = GraphNode::firstOrCreate(
                 [
                     'source_type' => 'skill',
                     'source_id' => $skill->id,

@@ -19,22 +19,31 @@ class LearningApiTest extends TestCase
     }
 
     /** @test */
-    public function learning_accept_sets_status_to_accepted(): void
+    public function learning_accept_promotes_to_memory_and_applies(): void
     {
         $event = LearningEvent::create([
-            'type'    => 'pattern',
-            'content' => 'Always validate inputs.',
-            'status'  => 'pending',
+            'type'       => 'correction',
+            'content'    => 'Always validate inputs.',
+            'confidence' => 0.9,
+            'status'     => 'pending',
         ]);
 
         $response = $this->postJson("/api/learning/{$event->id}/accept");
 
         $response->assertStatus(200)
-            ->assertJsonPath('event.status', 'accepted');
+            ->assertJsonPath('event.status', 'applied')
+            ->assertJsonStructure(['memory_id']);
 
+        $memoryId = $response->json('memory_id');
+        $this->assertNotNull($memoryId);
+        $this->assertDatabaseHas('bossku_ai_memories', [
+            'id'     => $memoryId,
+            'type'   => 'learned_correction',
+            'source' => 'learning_event',
+        ]);
         $this->assertDatabaseHas('bossku_ai_learning_events', [
             'id'     => $event->id,
-            'status' => 'accepted',
+            'status' => 'applied',
         ]);
     }
 

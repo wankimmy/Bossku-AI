@@ -58,9 +58,13 @@ class ExecutorService
             ))
             : '';
         $planConfidence = is_numeric($plan['confidence'] ?? null) ? (float) $plan['confidence'] : null;
-        $confidenceNote = $planConfidence !== null && $planConfidence < 0.65
-            ? "\nWARNING: Planner confidence is low ({$planConfidence}). Be extra careful — read the files before editing them."
-            : '';
+        if ($planConfidence !== null && $planConfidence < 0.50) {
+            $confidenceNote = "\nCRITICAL WARNING: Planner confidence is very low ({$planConfidence}). The plan may be incomplete or based on incorrect assumptions. Read every target file before making any changes. If you cannot find the files described in the plan, STOP and report back rather than guessing.";
+        } elseif ($planConfidence !== null && $planConfidence < 0.65) {
+            $confidenceNote = "\nWARNING: Planner confidence is low ({$planConfidence}). Be extra careful — read the files before editing them.";
+        } else {
+            $confidenceNote = '';
+        }
 
         $payload = <<<Markdown
 [BOSSKUAI]
@@ -316,11 +320,15 @@ SYS;
         if ($conversation === []) {
             return '(no prior conversation — this is the first turn)';
         }
+        $total = count($conversation);
+        $recent = array_slice($conversation, -10);
+        $offset = max(0, $total - 10);
         $lines = [];
-        foreach (array_slice($conversation, -10) as $i => $turn) {
-            $role = strtoupper((string) ($turn['role'] ?? 'user'));
-            $content = mb_substr((string) ($turn['content'] ?? ''), 0, 600);
-            $lines[] = "[Turn {$i}] {$role}: {$content}";
+        foreach ($recent as $idx => $turn) {
+            $role = strtolower((string) ($turn['role'] ?? 'user'));
+            $cap = $role === 'assistant' ? 1200 : 800;
+            $content = mb_substr((string) ($turn['content'] ?? ''), 0, $cap);
+            $lines[] = '[Turn '.($offset + $idx).'] '.strtoupper($role).': '.$content;
         }
 
         return implode("\n\n", $lines);

@@ -13,17 +13,20 @@ class FeedbackLearningService
             return null;
         }
 
-        if ($item->signal === 'thumbs_down' && filled($item->comment)) {
+        if ($item->signal === 'thumbs_down') {
             return LearningEvent::create([
                 'run_id'     => null,
                 'type'       => 'correction',
-                'content'    => $item->comment,
-                'confidence' => 0.9,
+                'content'    => filled($item->comment)
+                    ? $item->comment
+                    : 'User rejected this output on ' . $item->target_type . ':' . $item->target_id . ' (no comment provided).',
+                'confidence' => filled($item->comment) ? 0.9 : 0.5,
                 'evidence'   => [
                     'feedback_item_id' => $item->getKey(),
                     'target_type'      => $item->target_type,
                     'target_id'        => $item->target_id,
                     'signal'           => $item->signal,
+                    'has_comment'      => filled($item->comment),
                 ],
                 'status' => 'pending',
             ]);

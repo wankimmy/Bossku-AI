@@ -275,6 +275,49 @@ class RuntimeSettings
         return $this->getBool('memory_ollama_enabled', (bool) config('bossku.memory_ollama_enabled', true));
     }
 
+    public function learningAutoPromoteEnabled(): bool
+    {
+        return $this->getBool(
+            'learning_auto_promote_enabled',
+            (bool) config('bossku.learning_auto_promote_enabled', true),
+        );
+    }
+
+    public function learningAutoPromoteMinConfidence(): float
+    {
+        $raw = Setting::getValue('learning_auto_promote_min_confidence');
+        if ($raw !== null && $raw !== '') {
+            return (float) $raw;
+        }
+
+        return (float) config('bossku.learning_auto_promote_min_confidence', 0.85);
+    }
+
+    /** @return list<string> */
+    public function learningAutoPromoteTypes(): array
+    {
+        $raw = Setting::getValue('learning_auto_promote_types');
+        if ($raw !== null && $raw !== '') {
+            $decoded = json_decode($raw, true);
+            if (is_array($decoded)) {
+                return array_values(array_filter(array_map('strval', $decoded)));
+            }
+        }
+
+        /** @var list<string> $defaults */
+        $defaults = config('bossku.learning_auto_promote_types', ['pattern', 'preference']);
+
+        return $defaults;
+    }
+
+    public function learningBatchSize(): int
+    {
+        return max(1, $this->getInt(
+            'learning_batch_size',
+            (int) config('bossku.learning_batch_size', 50),
+        ));
+    }
+
     public function routingLlmEnabled(): bool
     {
         return $this->getBool('routing_llm_enabled', (bool) config('bossku_models.defaults.router_llm_enabled', true));
