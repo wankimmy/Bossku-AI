@@ -231,6 +231,14 @@ trait OrchestratorApprovalTrait
 
         $this->projectCommands->logDockerAvailability();
 
+        $localCmdPause = $this->maybePauseForUserLocalCommands($run, $execResult, $pipeline, $emit);
+        if (is_array($localCmdPause) && ($localCmdPause['awaiting_clarification'] ?? false) === true) {
+            return $localCmdPause;
+        }
+        if (is_array($localCmdPause)) {
+            $execResult = $localCmdPause;
+        }
+
         $exTok = $this->estimateTokens(json_encode($execResult) ?: '');
         $tokenAcc += $exTok;
         $this->emit($emit, $this->events->executorDone($run, $execResult, $modelsResolved['executor'] ?? '', (int) ($execResult['latency_ms'] ?? 0), $exTok));

@@ -338,8 +338,28 @@ const effectiveClarificationRequest = computed((): ClarificationRequest | null =
 const showClarificationModal = computed(
   () => effectiveClarificationRequest.value !== null
     && !runApprovals.awaitingApprovals.value
-    && !awaitingApprovalsFromEvents.value,
+    && !awaitingApprovalsFromEvents.value
+    && effectiveClarificationRequest.value?.stage !== 'user_local_commands',
 )
+
+const isLocalCommandsClarification = computed(
+  () => effectiveClarificationRequest.value !== null
+    && !runApprovals.awaitingApprovals.value
+    && !awaitingApprovalsFromEvents.value
+    && effectiveClarificationRequest.value?.stage === 'user_local_commands',
+)
+
+const localCommandsToRun = computed((): string => {
+  const req = effectiveClarificationRequest.value
+  if (!req || req.stage !== 'user_local_commands') return ''
+  return req.questions
+    .map((q) => {
+      const parts = q.prompt.split('\n\n')
+      return (parts.length > 1 ? parts[parts.length - 1] : q.prompt).trim()
+    })
+    .filter(Boolean)
+    .join('\n')
+})
 
 const showApprovalModal = computed(
   () => runApprovals.awaitingApprovals.value && runApprovals.current.value !== null,
@@ -356,6 +376,7 @@ const showSlashMenu = computed(() =>
   slashTrigger.value !== null
   && !showClarificationModal.value
   && !showApprovalModal.value
+  && !isLocalCommandsClarification.value
   && !running.value
   && !submittingClarification.value,
 )
@@ -497,7 +518,7 @@ function submit() {
   const userText = prompt.value.trim()
   if (running.value || submittingClarification.value) return
 
-  if (showClarificationModal.value || showApprovalModal.value) {
+  if (showClarificationModal.value || showApprovalModal.value || isLocalCommandsClarification.value) {
     return
   }
 
@@ -693,6 +714,30 @@ watch(
 watch(showClarificationModal, (open) => {
   if (!open) return
   landingTab.value = 'chat'
+})
+
+const localClarificationPending = ref(false)
+
+watch(isLocalCommandsClarification, (isLocal) => {
+  if (!isLocal || !localCommandsToRun.value) return
+  localClarificationPending.value = true
+  landingTab.value = 'chat'
+  runCommandPopup.show({
+    title: 'Run this on your machine',
+    description: 'BosskuAI runs in Docker and cannot execute this command. Run it on your host machine, then click Done — the run will continue automatically.',
+    command: localCommandsToRun.value,
+  })
+})
+
+watch(() => runCommandPopup.state.open, (open) => {
+  if (open || !localClarificationPending.value) return
+  localClarificationPending.value = false
+  const req = effectiveClarificationRequest.value
+  if (!req || req.stage !== 'user_local_commands') return
+  void submitClarification({
+    answers: req.questions.map(q => ({ question_id: q.id, option_id: 'pasted', free_text: '' })),
+    review_decision: 'approve',
+  })
 })
 
 watch(showApprovalModal, async (open) => {
