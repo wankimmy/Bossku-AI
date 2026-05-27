@@ -14,7 +14,7 @@ const { data, pending } = await useFetch(() => apiUrl(`/skills/${route.params.id
       <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
         {{ data.description }}
       </p>
-      <p class="mt-2 font-mono text-xs text-zinc-500">
+      <p class="mt-2 break-all font-mono text-xs text-zinc-500">
         {{ data.source_path }}
       </p>
     </div>

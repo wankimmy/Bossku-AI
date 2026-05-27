@@ -29,7 +29,7 @@ const { data, pending } = await useFetch(() => uri.value, { server: false })
     <ul v-else class="divide-y divide-zinc-200 rounded-xl border dark:divide-zinc-800 dark:border-zinc-800">
       <li v-for="s in data.data" :key="s.id">
         <NuxtLink class="flex flex-wrap items-start justify-between gap-2 px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-900/60" :to="`/skills/${s.id}`">
-          <div>
+          <div class="min-w-0">
             <p class="font-medium">
               {{ s.name }}
             </p>
@@ -37,7 +37,7 @@ const { data, pending } = await useFetch(() => uri.value, { server: false })
               {{ s.description }}
             </p>
           </div>
-          <span class="rounded border px-2 py-0.5 text-xs">{{ s.source_path }}</span>
+          <span class="max-w-full break-all rounded border px-2 py-0.5 text-xs">{{ s.source_path }}</span>
         </NuxtLink>
       </li>
     </ul>

@@ -27,4 +27,11 @@ for (const name of readdirSync(src)) {
   copyRecursive(join(src, name), join(dest, name))
 }
 
+const nestedFurniture = join(dest, 'furniture', 'furniture')
+if (existsSync(nestedFurniture)) {
+  for (const name of readdirSync(nestedFurniture)) {
+    copyRecursive(join(nestedFurniture, name), join(dest, 'furniture', name))
+  }
+}
+
 console.log(`[copy-public-assets] Merged ${src} -> ${dest}`)

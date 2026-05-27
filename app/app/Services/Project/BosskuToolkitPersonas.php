@@ -10,7 +10,7 @@ class BosskuToolkitPersonas
     public static function sharedPreamble(): string
     {
         return <<<'TXT'
-SELF-IMPROVEMENT MODE: active repo is Bossku-AI.
+SELF-IMPROVEMENT MODE: active repo is Bossku-AI orchestrator codebase.
 Keep prompts lean, preserve routing/contracts, and prefer the smallest change that solves the request.
 Read targeted evidence before editing. Ask only when the missing answer would change scope, target files, risk, or verification.
 TXT;

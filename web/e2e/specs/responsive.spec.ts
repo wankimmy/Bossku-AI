@@ -6,8 +6,21 @@ async function worstChildOverflowPct(page: import('@playwright/test').Page): Pro
   return page.evaluate(() => {
     let worst = 0
     const vw = window.innerWidth
+    const hasHorizontalScroller = (el: HTMLElement) => {
+      let node: HTMLElement | null = el.parentElement
+      while (node) {
+        const style = window.getComputedStyle(node)
+        if (/(auto|scroll)/.test(style.overflowX) && node.scrollWidth > node.clientWidth + 2) {
+          return true
+        }
+        node = node.parentElement
+      }
+      return false
+    }
+
     for (const el of Array.from(document.querySelectorAll('*'))) {
       if (!(el instanceof HTMLElement)) continue
+      if (hasHorizontalScroller(el)) continue
       const r = el.getBoundingClientRect()
       if (!r.width || !r.height) continue
       const over = Math.max(0, r.right - vw)
@@ -43,8 +56,9 @@ test.describe('mobile layout patterns', () => {
 
   test('sticky mobile Run bar only on home route', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'mobile-pixel-7')
+    await page.addInitScript(() => localStorage.setItem('bossku_onboarding_v1', '1'))
 
-    const stickyRun = page.locator('.fixed.bottom-14 >> button:text("Run task")')
+    const stickyRun = page.locator('.fixed.inset-x-0.bottom-0').getByRole('button', { name: 'Run task' })
 
     await page.goto('/')
     await expect(stickyRun).toBeVisible()

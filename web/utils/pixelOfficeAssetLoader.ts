@@ -69,6 +69,22 @@ async function loadImage(url: string): Promise<HTMLImageElement> {
   })
 }
 
+async function assetUrlExists(url: string): Promise<boolean> {
+  try {
+    const res = await fetch(url, { method: 'GET', cache: 'force-cache' })
+    return res.ok
+  } catch {
+    return false
+  }
+}
+
+async function firstExistingAssetUrl(candidates: string[]): Promise<string | null> {
+  for (const url of candidates) {
+    if (await assetUrlExists(url)) return url
+  }
+  return null
+}
+
 async function pngUrlToSpriteData(url: string, width: number, height: number): Promise<string[][]> {
   const img = await loadImage(url)
   const canvas = document.createElement('canvas')
@@ -161,6 +177,18 @@ async function canvasToSprite(canvas: HTMLCanvasElement, width: number, height: 
 
 async function loadFloorTiles(base: string): Promise<string[][][] | null> {
   try {
+    const splitUrls = await Promise.all(
+      Array.from({ length: FLOOR_PATTERN_COUNT }, (_, idx) => firstExistingAssetUrl([
+        `${base}/furniture/floors/floor_${idx}.png`,
+        `${base}/floors/floor_${idx}.png`,
+      ])),
+    )
+    if (splitUrls.every(Boolean)) {
+      return Promise.all(
+        splitUrls.map(url => pngUrlToSpriteData(url!, FLOOR_TILE_SIZE, FLOOR_TILE_SIZE)),
+      )
+    }
+
     const img = await loadImage(`${base}/floors.png`)
     const sprites: string[][][] = []
     for (let t = 0; t < FLOOR_PATTERN_COUNT; t++) {
@@ -239,7 +267,11 @@ async function loadFurnitureAssets(base: string): Promise<{
           if (file.startsWith('assets/')) {
             file = file.slice('assets/'.length)
           }
-          const url = `${base}/${file}`
+          const url = await firstExistingAssetUrl([
+            `${base}/${file}`,
+            `${base}/furniture/${file}`,
+          ])
+          if (!url) return
           sprites[asset.id] = await pngUrlToSpriteData(url, asset.width, asset.height)
         } catch {
           // skip missing asset file

@@ -8,7 +8,7 @@ test.describe('slash commands', () => {
 
     await page.goto('/', { waitUntil: 'load' })
     await page.waitForLoadState('networkidle')
-    const prompt = page.getByLabel('Message')
+    const prompt = page.getByRole('combobox', { name: 'Message' })
 
     await prompt.fill('/')
     await expect(page.getByRole('option', { name: '/project-understanding' })).toBeVisible()

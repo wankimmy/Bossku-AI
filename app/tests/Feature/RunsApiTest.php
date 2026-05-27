@@ -93,7 +93,9 @@ class RunsApiTest extends TestCase
 
         Run::factory()->create(['id' => $runId, 'status' => 'running']);
 
-        $this->get('/api/runs/stream?prompt=hello')->assertOk();
+        $response = $this->get('/api/runs/stream?prompt=hello');
+        $response->assertOk();
+        $response->streamedContent();
 
         $this->getJson("/api/runs/{$runId}/stream-events?after_seq=0")
             ->assertOk()

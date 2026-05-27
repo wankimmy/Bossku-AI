@@ -20,7 +20,7 @@ function statusClass(status: string) {
 </script>
 
 <template>
-  <section class="rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
+  <section class="min-w-0 max-w-full overflow-hidden rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
     <h2 class="mb-3 text-sm font-semibold">
       Agent workflow
     </h2>
@@ -28,7 +28,7 @@ function statusClass(status: string) {
       class="pb-1"
       :class="layout === 'vertical'
         ? 'flex flex-col gap-1'
-        : 'flex gap-2 overflow-x-auto'"
+        : 'flex max-w-full gap-2 overflow-x-auto'"
       aria-label="Agent handoff flow"
     >
       <li

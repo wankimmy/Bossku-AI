@@ -42,6 +42,22 @@ async function loadImage(url: string): Promise<HTMLImageElement> {
   })
 }
 
+async function assetUrlExists(url: string): Promise<boolean> {
+  try {
+    const res = await fetch(url, { method: 'GET', cache: 'force-cache' })
+    return res.ok
+  } catch {
+    return false
+  }
+}
+
+async function firstExistingAssetUrl(candidates: string[]): Promise<string | null> {
+  for (const url of candidates) {
+    if (await assetUrlExists(url)) return url
+  }
+  return null
+}
+
 async function pngUrlToSprite(url: string, width: number, height: number): Promise<SpriteData> {
   const img = await loadImage(url)
   const canvas = document.createElement('canvas')
@@ -89,7 +105,11 @@ export async function loadFurnitureFromPublic(): Promise<LoadedAssetData | null>
           if (file.startsWith('assets/')) {
             file = file.slice('assets/'.length)
           }
-          const url = `${ASSET_BASE}/${file}`
+          const url = await firstExistingAssetUrl([
+            `${ASSET_BASE}/${file}`,
+            `${ASSET_BASE}/furniture/${file}`,
+          ])
+          if (!url) return
           sprites[asset.id] = await pngUrlToSprite(url, asset.width, asset.height)
         } catch {
           // skip missing sprite

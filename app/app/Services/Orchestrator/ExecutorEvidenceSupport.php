@@ -4,6 +4,7 @@ namespace App\Services\Orchestrator;
 
 use App\Models\BosskuAi\ToolCall;
 use App\Support\StringCoercion;
+use Illuminate\Support\Str;
 
 /**
  * Shared helpers for executor file-read evidence (auditor / security auditor).
@@ -85,6 +86,9 @@ class ExecutorEvidenceSupport
     public static function toolEvidenceForRun(?string $runId): array
     {
         if ($runId === null || $runId === '') {
+            return [];
+        }
+        if (! Str::isUuid($runId)) {
             return [];
         }
 

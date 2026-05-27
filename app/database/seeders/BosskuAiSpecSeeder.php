@@ -16,9 +16,8 @@ class BosskuAiSpecSeeder extends Seeder
     public function run(): void
     {
         // ── Soul version ──────────────────────────────────────────────────────
-        $repoSoulPath = rtrim((string) config('bossku.repo_root'), '/\\').'/bossku/soul.md';
-        $soulPath = is_file($repoSoulPath) ? $repoSoulPath : base_path('bossku/soul.md');
-        $soulContent = file_exists($soulPath)
+        $soulPath = $this->resolveSoulPath();
+        $soulContent = $soulPath !== null && file_exists($soulPath)
             ? file_get_contents($soulPath)
             : "# BosskuAI Soul v1.0.0\n\n## Identity\nBosskuAI is a self-learning developer AI orchestrator.\n";
 
@@ -224,5 +223,26 @@ class BosskuAiSpecSeeder extends Seeder
         );
 
         $this->command?->info('BosskuAI spec seeder: soul, providers, 5 skills, 3 candidates, 7 plugins, skill graph nodes (no demo runs, feedback, or model routes).');
+    }
+
+    protected function resolveSoulPath(): ?string
+    {
+        $roots = [
+            (string) config('bossku.repo_root'),
+            (string) getenv('BOSSKU_REPO_PATH'),
+            dirname((string) base_path()),
+            (string) realpath(base_path('..')),
+        ];
+
+        foreach (array_unique(array_filter($roots)) as $root) {
+            $candidate = rtrim($root, '/\\').'/bossku/soul.md';
+            if (is_file($candidate)) {
+                return $candidate;
+            }
+        }
+
+        $local = base_path('bossku/soul.md');
+
+        return is_file($local) ? $local : null;
     }
 }

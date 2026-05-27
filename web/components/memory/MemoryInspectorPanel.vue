@@ -27,8 +27,8 @@ const { data, pending, refresh } = await useFetch(apiUrl('/memory'), { server: f
       <h2 class="text-lg font-semibold">
         Memory inspector
       </h2>
-      <form class="flex gap-2" @submit.prevent="search">
-        <input v-model="q" class="flex-1 rounded-lg border px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900" placeholder="Semantic search">
+      <form class="flex flex-col gap-2 sm:flex-row" @submit.prevent="search">
+        <input v-model="q" class="min-w-0 flex-1 rounded-lg border px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900" placeholder="Semantic search">
         <button type="submit" class="rounded-lg bg-zinc-900 px-4 py-2 text-sm text-white dark:bg-zinc-100 dark:text-zinc-900" :disabled="searching">
           Search
         </button>

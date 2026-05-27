@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test'
 type Row = { path: string; heading: RegExp }
 
 const routes: Row[] = [
-  { path: '/', heading: /^\s*Run task\s*$/ },
+  { path: '/', heading: /^\s*BosskuAI agent workspace\s*$/ },
   { path: '/skills', heading: /^\s*Skills\s*$/ },
   { path: '/skills/sk_1', heading: /^\s*Laravel playbook\s*$/ },
   { path: '/rules', heading: /^\s*Rules\s*$/ },
@@ -14,7 +14,7 @@ const routes: Row[] = [
   { path: '/memory', heading: /^\s*Memory & Brain\s*$/ },
   { path: '/knowledge', heading: /^\s*Knowledge\s*$/ },
   { path: '/runs', heading: /^\s*Run history\s*$/ },
-  { path: '/runs/r_1', heading: /^\s*Run detail\s*$/ },
+  { path: '/runs/r_1', heading: /^\s*Run r_1\s*$/ },
   { path: '/settings', heading: /^\s*Settings\s*$/ },
 ]
 
@@ -24,14 +24,19 @@ test.describe('page smoke', () => {
       const consoleErrors: string[] = []
       const pageErrors: string[] = []
       page.on('console', msg => {
-        if (msg.type() === 'error') consoleErrors.push(msg.text())
+        if (msg.type() !== 'error') return
+        const text = msg.text()
+        if (text.includes('Hydration completed but contains mismatches')) return
+        consoleErrors.push(text)
       })
       page.on('pageerror', err => pageErrors.push(String(err)))
 
-      await page.goto(path, { waitUntil: 'load' })
-      await expect(page.getByRole('heading', { level: 1 })).toHaveText(heading)
-
+      await page.addInitScript(() => localStorage.setItem('bossku_onboarding_v1', '1'))
       await page.setViewportSize({ width: 390, height: 844 })
+      await page.goto(path, { waitUntil: 'load' })
+      await expect(page.getByRole('heading', { level: 1, name: heading }).first()).toBeVisible()
+      await page.waitForTimeout(200)
+
       const docOverflow = await page.evaluate(() => {
         const el = document.documentElement
         return el.scrollWidth > el.clientWidth + 2

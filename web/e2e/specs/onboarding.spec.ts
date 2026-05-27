@@ -11,7 +11,7 @@ test.describe('onboarding spotlight', () => {
     await page.goto('/', { waitUntil: 'networkidle' })
     const dialog = page.getByRole('dialog', { name: /Welcome to BosskuAI/i })
     await expect(dialog).toBeVisible({ timeout: 5000 })
-    await expect(page.getByText('Step 1 of')).toBeVisible()
+    await expect(dialog.getByText('1/8')).toBeVisible()
     await page.getByRole('button', { name: 'Skip tour' }).click()
     await expect(dialog).toBeHidden({ timeout: 3000 })
     await expect(page.getByRole('dialog')).toHaveCount(0)
