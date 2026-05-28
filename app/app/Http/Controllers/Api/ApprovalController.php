@@ -15,6 +15,22 @@ class ApprovalController extends Controller
         private readonly ApprovalGateService $gates,
         private readonly ExecutorApprovalService $executorApprovals,
     ) {}
+
+    private function findApproval(string $id): ?Approval
+    {
+        return Approval::query()->find($id);
+    }
+
+    /**
+     * @return \Illuminate\Http\JsonResponse|null
+     */
+    private function approvalNotFoundResponse(string $id)
+    {
+        return response()->json([
+            'message' => 'Approval not found. It may have already been decided or removed—refresh the approval queue and try again.',
+            'approval_id' => $id,
+        ], 404);
+    }
     public function index(Request $request)
     {
         $query = Approval::query()->orderByDesc('created_at');
@@ -28,14 +44,20 @@ class ApprovalController extends Controller
 
     public function show(string $id)
     {
-        $approval = Approval::findOrFail($id);
+        $approval = $this->findApproval($id);
+        if ($approval === null) {
+            return $this->approvalNotFoundResponse($id);
+        }
 
         return response()->json($this->executorApprovals->serializeApproval($approval));
     }
 
     public function approve(string $id, Request $request)
     {
-        $approval = Approval::findOrFail($id);
+        $approval = $this->findApproval($id);
+        if ($approval === null) {
+            return $this->approvalNotFoundResponse($id);
+        }
 
         if (in_array($approval->status, ['approved', 'auto_approved'], true)) {
             $approval = $approval->fresh() ?? $approval;
@@ -101,7 +123,10 @@ class ApprovalController extends Controller
 
     public function reject(string $id, Request $request)
     {
-        $approval = Approval::findOrFail($id);
+        $approval = $this->findApproval($id);
+        if ($approval === null) {
+            return $this->approvalNotFoundResponse($id);
+        }
 
         if ($approval->status === 'rejected') {
             $approval = $approval->fresh() ?? $approval;

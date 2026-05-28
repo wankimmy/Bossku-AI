@@ -2,6 +2,7 @@
 
 namespace App\Services\Orchestrator;
 
+use App\Support\LlmTelemetry;
 use App\Support\StringCoercion;
 use App\Services\BosskuAi\AgentPersonaService;
 use App\Services\BosskuAi\ModelFallbackService;
@@ -96,16 +97,17 @@ SYS;
             function (mixed $j): bool {
                 return is_array($j) && isset($j['status'], $j['summary']);
             },
-            (int) ($cfg['max_tokens'] ?? 12000)
+            (int) ($cfg['max_tokens'] ?? 12000),
+            $runId,
         );
 
         /** @var array<string, mixed> $parsed */
         $parsed = is_array($out['parsed']) ? $out['parsed'] : [];
 
-        return array_merge($parsed, [
+        return LlmTelemetry::mergeAgentResult(array_merge($parsed, [
             '_model_used' => $out['model_used'],
             '_model_resolved' => $out['model_resolved'] ?? '',
             '_fallback_used' => $out['fallback_used'],
-        ]);
+        ]), $out);
     }
 }

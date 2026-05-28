@@ -25,10 +25,15 @@ class ModelFallbackService
         int $retryCount,
         string $role,
         ?callable $isValidJson = null,
-        ?int $maxTokensAnthropic = null
+        ?int $maxTokensAnthropic = null,
+        ?string $runId = null,
+        ?string $runStepId = null,
+        array $metadata = [],
     ): array {
         $lastError = null;
         $models = array_values(array_filter($models));
+        /** @var list<array{model: string, error: string}> $failedAttempts */
+        $failedAttempts = [];
 
         if ($this->personas->shouldApplyPersona($role)) {
             $messages = $this->personas->applyToMessages($role, $messages);
@@ -38,7 +43,25 @@ class ModelFallbackService
             for ($attempt = 0; $attempt <= $retryCount; $attempt++) {
                 $responseText = '';
                 try {
-                    $out = $this->gateway->chat($model, $messages, $temperature, $maxTokensAnthropic);
+                    $callMetadata = array_merge($metadata, [
+                        'fallback_model_index' => $idx,
+                        'fallback_attempt' => $attempt,
+                    ]);
+                    if ($failedAttempts !== []) {
+                        $callMetadata['prior_failures'] = $failedAttempts;
+                    }
+
+                    $out = $this->gateway->chat(
+                        $model,
+                        $messages,
+                        $temperature,
+                        $maxTokensAnthropic,
+                        null,
+                        $role,
+                        $runId,
+                        $runStepId,
+                        $callMetadata,
+                    );
                     $text = trim($out['text']);
                     $responseText = $text;
                     $modelResolved = (string) ($out['model_resolved'] ?? trim($model));
@@ -81,6 +104,7 @@ class ModelFallbackService
                     ];
                 } catch (\Throwable $e) {
                     $lastError = $e->getMessage();
+                    $failedAttempts[] = ['model' => $model, 'error' => $lastError];
                     try {
                         $resolvedPreview = $this->gateway->resolveAlias($model);
                         $previewProvider = $this->gateway->resolveProvider($model);

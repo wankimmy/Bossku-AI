@@ -39,9 +39,9 @@ class RunStreamEventService
     /**
      * @return array{run_id: string, status: string, events: list<array<string, mixed>>, last_seq: int}
      */
-    public function eventsSince(string $runId, int $afterSeq = 0): array
+    public function eventsSince(Run $run, int $afterSeq = 0): array
     {
-        $run = Run::query()->findOrFail($runId);
+        $runId = $run->id;
 
         $rows = RunStreamEvent::query()
             ->where('run_id', $runId)

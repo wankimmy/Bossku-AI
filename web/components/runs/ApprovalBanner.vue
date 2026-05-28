@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import type { Approval } from '~/types/api'
-import { isIdempotentApprovalOutcome } from '~/utils/approvalDecision'
+import { isApprovalNotFoundError, isIdempotentApprovalOutcome } from '~/utils/approvalDecision'
 import { assessFileChange } from '~/utils/approvalReview'
 
 const props = defineProps<{ approval: Approval }>()
-const emit = defineEmits<{ approve: []; reject: [] }>()
+const emit = defineEmits<{ approve: []; reject: []; stale: [] }>()
 
 const api = useApi()
 const loading = ref(false)
@@ -42,6 +42,10 @@ async function doApprove() {
       emit('approve')
       return
     }
+    if (isApprovalNotFoundError(err)) {
+      emit('stale')
+      return
+    }
     throw err
   }
   finally { loading.value = false }
@@ -57,6 +61,10 @@ async function doRequestChanges() {
   catch (err) {
     if (isIdempotentApprovalOutcome(err, 'reject')) {
       emit('reject')
+      return
+    }
+    if (isApprovalNotFoundError(err)) {
+      emit('stale')
       return
     }
     throw err

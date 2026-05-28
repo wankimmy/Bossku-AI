@@ -50,7 +50,23 @@ describe('approval stream handling', () => {
     expect(isAwaitingApprovals(events)).toBe(false)
   })
 
-  it('hydrates current approval from SSE artifacts', () => {
+  it('rejects current_approval when id equals run_id', () => {
+    const seeded = hydrateApprovalsFromEvent({
+      type: 'approval_requested',
+      artifacts: {
+        pending_count: 0,
+        current_approval: {
+          id: 'run-abc',
+          run_id: 'run-abc',
+          operation_type: 'file_write',
+          status: 'pending',
+        },
+      },
+    })
+    expect(seeded?.pendingCount).toBe(0)
+  })
+
+  it('hydrates approval pause metadata without seeding actionable queue rows', () => {
     const seeded = hydrateApprovalsFromEvent({
       type: 'approval_requested',
       artifacts: {
@@ -66,6 +82,6 @@ describe('approval stream handling', () => {
     })
     expect(seeded?.stage).toBe('executor_approvals')
     expect(seeded?.pendingCount).toBe(3)
-    expect(seeded?.pending[0]?.id).toBe('ap-1')
+    expect(seeded).not.toHaveProperty('pending')
   })
 })

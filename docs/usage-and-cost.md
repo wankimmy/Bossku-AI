@@ -4,7 +4,7 @@ BosskuAI tracks every LLM call's token usage and estimates cost in real time. Th
 
 ## UsageEvent Ledger
 
-Every model call produces a `UsageEvent` record persisted to the `usage_events` table. Each event captures:
+Every call through `LlmGateway::chat()` (direct Ollama and provider-routed paths) creates a `UsageEvent` in `bossku_ai_usage_events`. Each event captures:
 
 | Field | Description |
 |---|---|
@@ -47,9 +47,7 @@ When a model is not found in the registry (e.g. a newly added Ollama model), cos
 
 ## Cost Estimation Before Execution
 
-`PlannerService` estimates the cost of the full execution plan before any executor steps run. It counts approximate tokens for each planned step (based on step description length and historical averages for that step type) and surfaces the estimate in the run plan view.
-
-This estimate is shown to the user as: "Estimated cost: $0.042 — $0.089". Runs with estimated cost above the `high_cost_threshold_usd` config value are flagged and require approval gate confirmation.
+Pre-run dollar estimates in the planner UI are **not** implemented. Use summed `UsageEvent` rows on `/usage` after a run completes. Experimental DB route `monthly_budget_usd` caps are enforced in `ModelRouter` by summing current-month usage for that role.
 
 ## The /usage Page
 

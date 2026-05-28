@@ -83,6 +83,10 @@ Runs after all executor steps complete. It reviews the accumulated diffs and out
 
 Findings are stored as structured audit items on the run record and surfaced in the run detail view.
 
+### Post-run evaluation (deterministic, not an LLM agent)
+
+After the pipeline completes, `PostMemoryEvaluationService` scores the run with a **deterministic rubric** (weighted checks on output, memory, and audit signals). It does not call an LLM and has no `evaluator_model` setting. Run-step type `post_memory_eval` is logged with provider `system`.
+
 ### FinalReviewerService
 
 The last gate. It answers three questions:

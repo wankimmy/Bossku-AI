@@ -3,34 +3,52 @@
 namespace App\Console\Commands;
 
 use App\Models\BosskuAi\LlmProvider;
+use App\Services\Llm\ModelRouter;
 use Illuminate\Console\Command;
 
 class ProviderHealthCheckCommand extends Command
 {
     protected $signature = 'bosskuai:provider-health';
 
-    protected $description = 'Run health checks against all active LLM providers and update their status.';
+    protected $description = 'Run health checks against registered LLM providers and update DB provider status.';
 
-    public function handle(): int
+    public function handle(ModelRouter $router): int
     {
         $providers = LlmProvider::where('is_active', true)->get();
 
         if ($providers->isEmpty()) {
             $this->warn('No active providers found.');
+
             return self::SUCCESS;
         }
 
+        $registered = $router->registeredProviders();
         $rows = [];
 
         foreach ($providers as $provider) {
-            $binding = "llm.provider.{$provider->slug}";
+            $normalized = $router->normalizeProviderSlug((string) $provider->slug);
+            $instance = $registered[$normalized] ?? null;
+
+            if ($instance === null) {
+                $provider->health_status = 'down';
+                $provider->last_health_check_at = now();
+                $provider->save();
+
+                $rows[] = [
+                    $provider->name,
+                    $provider->slug,
+                    'down',
+                    '—',
+                    "No runtime provider registered for slug '{$provider->slug}' (normalized: {$normalized}).",
+                ];
+
+                continue;
+            }
 
             try {
-                /** @var \App\Services\Llm\Contracts\LlmProviderInterface $instance */
-                $instance = app()->make($binding);
-                $health   = $instance->healthCheck();
+                $health = $instance->healthCheck();
 
-                $provider->health_status       = $health->status;
+                $provider->health_status = $health->status;
                 $provider->last_health_check_at = now();
                 $provider->save();
 
@@ -42,7 +60,7 @@ class ProviderHealthCheckCommand extends Command
                     $health->error ?? '—',
                 ];
             } catch (\Throwable $e) {
-                $provider->health_status       = 'down';
+                $provider->health_status = 'down';
                 $provider->last_health_check_at = now();
                 $provider->save();
 

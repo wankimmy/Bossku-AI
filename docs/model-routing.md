@@ -1,5 +1,7 @@
 # Model Routing
 
+> **Primary path today:** per-role models in **Settings → Models** (`RuntimeSettings` + `ModelFallbackService`). The **DB model routes** UI at `/settings/model-routing` is **experimental**: it applies when an active route exists for the agent role and the provider slug is registered at runtime (`ollama`, `anthropic`, `codex`). Slugs like `ollama-cloud` are normalized to `ollama`.
+
 BosskuAI supports multiple LLM providers and can route different agent roles to different models. Model routing lets you use a powerful (expensive) model for planning and a faster (cheaper) model for auditing, or route everything through a local Ollama instance for cost control.
 
 ## Role-to-Provider Mapping
@@ -78,7 +80,7 @@ BosskuAI applies fallback in this order when a route fails:
 3. **Model not found**: skip to next active route immediately
 4. **All routes exhausted**: fall back to Ollama if available, else fail the run
 
-Fallback events are logged to `model_routing_events` and surfaced in the run detail under "Model usage" so you can see which provider actually handled each step.
+Fallback attempts are recorded in `UsageEvent` metadata when a call succeeds after model-level retries. A dedicated `model_routing_events` table is not implemented yet.
 
 ## Budget Configuration
 

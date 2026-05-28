@@ -3,6 +3,7 @@
 namespace App\Services\Orchestrator;
 
 use App\Services\BosskuAi\LlmErrorFormatter;
+use App\Support\LlmTelemetry;
 use App\Support\StringCoercion;
 use App\Services\BosskuAi\ModelFallbackService;
 use App\Services\BosskuAi\ModelRoutingConfig;
@@ -35,7 +36,14 @@ class PlannerService
      * @param  array<string, mixed>  $modelRoute
      * @param  list<array{role: string, content: string}>  $conversation
      */
-    public function plan(string $prompt, array $memoryContext, array $routerContext, array $modelRoute, array $conversation = []): array
+    public function plan(
+        string $prompt,
+        array $memoryContext,
+        array $routerContext,
+        array $modelRoute,
+        array $conversation = [],
+        ?string $runId = null,
+    ): array
     {
         $orch = $this->modelConfig->orchestrator();
         $primary = (string) ($orch['primary'] ?? $this->settings->orchestratorModelForRouting());
@@ -135,7 +143,8 @@ SYS;
               function (mixed $j): bool {
                   return is_array($j) && (isset($j['summary']) || isset($j['task_summary']));
               },
-              (int) ($orch['max_tokens'] ?? 2048)
+              (int) ($orch['max_tokens'] ?? 2048),
+              $runId,
           );
           /** @var array<string, mixed> $decoded */
           $decoded = is_array($out['parsed']) ? $out['parsed'] : [];
@@ -144,7 +153,7 @@ SYS;
           $decoded['_planner_model_resolved'] = $out['model_resolved'] ?? '';
           $decoded['_planner_fallback'] = $out['fallback_used'];
 
-          return $decoded;
+          return LlmTelemetry::mergeAgentResult($decoded, $out);
       } catch (\Throwable $e) {
           $message = LlmErrorFormatter::humanize($e->getMessage());
 

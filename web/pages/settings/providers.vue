@@ -47,8 +47,13 @@ async function testProvider(id: string) {
 async function syncModels(id: string) {
   syncingId.value = id
   try {
-    await api.post(`/providers/${id}/sync-models`)
-    toast.success('Models synced successfully.')
+    const res = await api.post<{ not_implemented?: boolean; message?: string }>(`/providers/${id}/sync-models`)
+    if (res?.not_implemented) {
+      toast.info(res.message ?? 'Model sync is not implemented yet.')
+    }
+    else {
+      toast.success('Models synced successfully.')
+    }
   }
   catch {
     toast.error('Failed to sync models.')
@@ -98,6 +103,13 @@ async function addProvider() {
 
 <template>
   <div class="space-y-6">
+    <div class="rounded-lg border border-zinc-700 bg-zinc-900/80 px-4 py-3 text-sm text-zinc-400">
+      <strong class="text-zinc-300">Reference registry.</strong>
+      Test connection runs a real probe when the slug maps to a registered runtime provider (`ollama`, `anthropic`, `codex`).
+      Sync models is not implemented yet — use <NuxtLink to="/settings/models" class="underline text-zinc-300">Settings → Models</NuxtLink> for model pickers.
+      Run <code class="text-xs bg-zinc-800 px-1 rounded">php artisan bosskuai:provider-health</code> to refresh health status.
+    </div>
+
     <div class="flex items-center justify-between">
       <div>
         <h1 class="text-xl font-bold text-zinc-100">LLM Providers</h1>

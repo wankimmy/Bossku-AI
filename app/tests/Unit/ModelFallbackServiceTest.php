@@ -54,4 +54,52 @@ class ModelFallbackServiceTest extends TestCase
         $this->assertSame('fallback-winner:cloud', $out['model_resolved']);
         $this->assertTrue($out['fallback_used']);
     }
+
+    #[Test]
+    public function chat_with_fallbacks_forwards_role_run_id_to_gateway(): void
+    {
+        $messages = [
+            ['role' => 'system', 'content' => 'sys'],
+            ['role' => 'user', 'content' => 'hi'],
+        ];
+
+        $gateway = $this->createMock(LlmGateway::class);
+        $gateway->expects($this->once())
+            ->method('chat')
+            ->with(
+                'primary-model',
+                $messages,
+                0.2,
+                null,
+                null,
+                'orchestrator',
+                'run-abc',
+                null,
+                $this->anything(),
+            )
+            ->willReturn([
+                'text' => 'ok',
+                'provider' => 'ollama',
+                'input_tokens' => 1,
+                'output_tokens' => 1,
+                'model_logical' => 'primary-model',
+                'model_resolved' => 'primary-model:cloud',
+            ]);
+
+        /** @var LlmGateway $gateway */
+        $svc = new ModelFallbackService($gateway, app(AgentPersonaService::class));
+        $out = $svc->chatWithFallbacks(
+            ['primary-model'],
+            $messages,
+            0.2,
+            0,
+            'orchestrator',
+            null,
+            null,
+            'run-abc',
+        );
+
+        $this->assertSame('ok', $out['text']);
+        $this->assertSame('ollama', $out['provider_used']);
+    }
 }

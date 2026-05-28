@@ -53,6 +53,17 @@ export function isAlreadyDecidedResponse(data: unknown): boolean {
   return Boolean(data && typeof data === 'object' && (data as ApprovalApiResponse).already_decided === true)
 }
 
+/** True when approve/reject targeted an approval row that no longer exists in the API. */
+export function isApprovalNotFoundError(err: unknown): boolean {
+  if (!err || typeof err !== 'object') {
+    return false
+  }
+
+  const status = 'status' in err ? Number((err as { status?: number }).status) : 0
+
+  return status === 404
+}
+
 /** Parse approve/reject API body; default runHasPending true when unknown (do not resume early). */
 export function runHasPendingFromDecisionResponse(data: unknown): boolean {
   if (!data || typeof data !== 'object') {

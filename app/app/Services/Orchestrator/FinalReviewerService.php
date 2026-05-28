@@ -2,6 +2,7 @@
 
 namespace App\Services\Orchestrator;
 
+use App\Support\LlmTelemetry;
 use App\Support\StringCoercion;
 use App\Services\BosskuAi\AgentPersonaService;
 use App\Services\BosskuAi\ModelFallbackService;
@@ -34,6 +35,7 @@ class FinalReviewerService
         array $plan = [],
         array $memoryContext = [],
         array $conversation = [],
+        ?string $runId = null,
     ): array {
         $cfg = $this->config->finalReviewer();
         $primary = (string) ($cfg['primary'] ?? 'deepseek-v4-pro');
@@ -125,13 +127,14 @@ SYS;
             function (mixed $j): bool {
                 return is_array($j) && isset($j['decision'], $j['reason']);
             },
-            (int) ($cfg['max_tokens'] ?? 2048)
+            (int) ($cfg['max_tokens'] ?? 2048),
+            $runId,
         );
 
         /** @var array<string, mixed> $parsed */
         $parsed = is_array($out['parsed']) ? $out['parsed'] : [];
 
-        return array_merge([
+        return LlmTelemetry::mergeAgentResult(array_merge([
             'decision' => StringCoercion::toString($parsed['decision'] ?? null, 'REVISE'),
             'reason' => StringCoercion::toString($parsed['reason'] ?? null, 'Final review completed.'),
             'required_actions' => is_array($parsed['required_actions'] ?? null) ? $parsed['required_actions'] : [],
@@ -140,7 +143,7 @@ SYS;
         ], [
             '_model_used' => $out['model_used'],
             '_model_resolved' => $out['model_resolved'] ?? '',
-        ]);
+        ]), $out);
     }
 
     /** @param list<array{role: string, content: string}> $conversation */

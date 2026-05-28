@@ -46,10 +46,7 @@ export function useRunApprovals() {
     if (!hydrated) return
     stage.value = hydrated.stage
     ssePendingCount.value = hydrated.pendingCount
-    const seeded = onlyPending(hydrated.pending)
-    if (seeded.length > 0) {
-      pending.value = seeded
-    }
+    // Pending rows must come from the API so approval IDs always match the database.
   }
 
   async function fetchPending(runId: string): Promise<FetchPendingResult> {
@@ -73,8 +70,10 @@ export function useRunApprovals() {
     catch (e: unknown) {
       const message = e instanceof Error ? e.message : 'Failed to load approval queue'
       fetchError.value = message
+      pending.value = []
+      ssePendingCount.value = 0
 
-      return { ok: false, pending: pending.value, error: message }
+      return { ok: false, pending: [], error: message }
     }
     finally {
       loading.value = false

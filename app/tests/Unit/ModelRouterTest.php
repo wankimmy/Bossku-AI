@@ -10,11 +10,14 @@ use App\Services\Llm\DTO\ProviderHealthStatus;
 use App\Services\Llm\ModelRegistry;
 use App\Services\Llm\ModelRouter;
 use App\Services\Llm\UsageTracker;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 class ModelRouterTest extends TestCase
 {
+    use RefreshDatabase;
+
     private function makeProvider(string $slug): LlmProviderInterface
     {
         return new class ($slug) implements LlmProviderInterface {
@@ -132,5 +135,53 @@ class ModelRouterTest extends TestCase
         $result = $router->resolve($request);
 
         $this->assertSame('ollama', $result['provider']->getSlug());
+    }
+
+    #[Test]
+    public function normalize_slug_maps_ollama_cloud_to_ollama(): void
+    {
+        $router = $this->makeRouter();
+
+        $this->assertSame('ollama', $router->normalizeProviderSlug('ollama-cloud'));
+        $this->assertSame('ollama', $router->normalizeProviderSlug('ollama-local'));
+    }
+
+    #[Test]
+    public function resolve_uses_fallback_model_when_primary_provider_unregistered(): void
+    {
+        $router = $this->makeRouter();
+        $ollama = $this->makeProvider('ollama');
+        $router->registerProvider($ollama);
+
+        $primary = \App\Models\BosskuAi\LlmProvider::create([
+            'name' => 'Ghost',
+            'slug' => 'not-registered-slug',
+            'type' => 'custom',
+            'is_active' => true,
+        ]);
+        $fallback = \App\Models\BosskuAi\LlmProvider::create([
+            'name' => 'Ollama Cloud',
+            'slug' => 'ollama-cloud',
+            'type' => 'ollama',
+            'is_active' => true,
+        ]);
+
+        \App\Models\BosskuAi\ModelRoute::create([
+            'role' => 'executor',
+            'primary_provider_id' => $primary->id,
+            'primary_model' => 'primary-model',
+            'fallback_provider_id' => $fallback->id,
+            'fallback_model' => 'fallback-model:cloud',
+            'is_active' => true,
+        ]);
+
+        $result = $router->resolve(new LlmRequest(
+            model: 'request-model',
+            messages: [['role' => 'user', 'content' => 'hi']],
+            role: 'executor',
+        ));
+
+        $this->assertSame('ollama', $result['provider']->getSlug());
+        $this->assertSame('fallback-model:cloud', $result['model']);
     }
 }

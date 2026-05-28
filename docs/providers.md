@@ -66,27 +66,19 @@ To rotate a key: edit the provider in `/settings/providers`, paste the new key, 
 
 ## Health Checks
 
-`ProviderHealthService` runs a health check for each configured provider every 5 minutes. A health check sends a minimal chat completion request (single token response) and measures:
+Run manually:
 
-- **Latency** (ms)
-- **HTTP status** (200 = healthy, anything else = degraded/down)
-- **Error message** if the call failed
+```bash
+php artisan bosskuai:provider-health
+```
 
-Health status is visible as a colored indicator on the `/settings/providers` page and in the model routing UI. `ModelRouter` skips providers with status `down` when resolving routes.
+The command probes **registered runtime providers** (`ollama`, `anthropic`, `codex` from `AppServiceProvider`) using each provider's `healthCheck()` method. DB provider rows whose slug does not map to a registered provider (for example `ollama-cloud` without normalization) are marked **down** with an explanatory message.
 
-Health check results are stored in `provider_health_logs` for the last 24 hours, giving you a rough uptime history.
+**Not implemented yet:** automatic 5-minute cron, `provider_health_logs` table, or skipping unhealthy providers inside `ModelRouter::resolve()` (health status on the DB row is updated by the command but not consulted during routing).
 
 ## Model Syncing
 
-For Anthropic, OpenAI, and most `openai_compatible` providers, BosskuAI can sync the available model list:
-
-1. On the provider detail page, click **Sync Models**
-2. The system calls the provider's models endpoint and updates the `provider_models` table
-3. The synced models appear in the model route selector dropdown
-
-For Ollama, model sync calls `GET /api/tags` and lists all pulled models. Pull new models in Ollama separately (`ollama pull <model>`), then sync in BosskuAI.
-
-For `custom` providers, the model list is entered manually.
+**Sync Models** on `/settings/providers` returns `not_implemented: true` until automatic catalog sync is built. Use **Settings → Models** and `GET /api/settings/inference-catalog` for model pickers today.
 
 ## The `openai_compatible` Type
 

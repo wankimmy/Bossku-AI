@@ -74,6 +74,7 @@ class AppServiceProvider extends ServiceProvider
                 $app->make(RuntimeSettings::class),
                 $app->make(ModelRouter::class),
                 $app->make(CodexOAuthService::class),
+                $app->make(UsageTracker::class),
             );
         });
         $this->app->singleton(ModelRoutingConfig::class);

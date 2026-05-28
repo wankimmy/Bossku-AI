@@ -12,7 +12,7 @@ class WriterService
         protected ModelFallbackService $fallback
     ) {}
 
-    public function write(string $userPrompt, array $routeContext): string
+    public function write(string $userPrompt, array $routeContext, ?string $runId = null): string
     {
         $cfg = $this->config->writer();
         $primary = (string) ($cfg['primary'] ?? 'gpt-4o');
@@ -29,7 +29,9 @@ class WriterService
             (float) ($cfg['temperature'] ?? 0.3),
             $retry,
             'writer',
-            null
+            null,
+            null,
+            $runId,
         );
 
         return $out['text'];

@@ -17,6 +17,20 @@ class RunController extends Controller
     public function __construct(
         private readonly RunStreamEventService $streamEventLog,
     ) {}
+
+    private function findRun(string $id): ?Run
+    {
+        return Run::query()->find($id);
+    }
+
+    private function runNotFoundResponse(string $id): JsonResponse
+    {
+        return response()->json([
+            'message' => 'Run not found. It may have been removed or never created—start a new task and try again.',
+            'run_id' => $id,
+        ], 404);
+    }
+
     public function index()
     {
         return Run::query()
@@ -25,16 +39,28 @@ class RunController extends Controller
             ->paginate(30);
     }
 
-    public function show(string $id)
+    public function show(string $id): JsonResponse
     {
-        return Run::query()->with('steps')->findOrFail($id);
+        $run = $this->findRun($id);
+        if ($run === null) {
+            return $this->runNotFoundResponse($id);
+        }
+
+        $run->load('steps');
+
+        return response()->json($run);
     }
 
     public function streamEvents(Request $request, string $id): JsonResponse
     {
+        $run = $this->findRun($id);
+        if ($run === null) {
+            return $this->runNotFoundResponse($id);
+        }
+
         $afterSeq = max(0, (int) $request->query('after_seq', 0));
 
-        return response()->json($this->streamEventLog->eventsSince($id, $afterSeq));
+        return response()->json($this->streamEventLog->eventsSince($run, $afterSeq));
     }
 
     public function clarification(string $id, OrchestratorService $orchestrator)

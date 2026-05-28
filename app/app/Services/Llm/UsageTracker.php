@@ -21,6 +21,11 @@ class UsageTracker
             ? $response->costUsd
             : ModelRegistry::estimateCost($response->modelResolved, $inputTokens, $outputTokens);
 
+        $metadata = array_merge($request->metadata, [
+            'model_logical' => $response->modelLogical,
+            'pricing_known' => ModelRegistry::hasKnownPricing($response->modelResolved),
+        ]);
+
         $event = UsageEvent::create([
             'run_id'        => $request->runId,
             'run_step_id'   => $request->runStepId,
@@ -31,7 +36,7 @@ class UsageTracker
             'output_tokens' => $outputTokens,
             'cost_usd'      => $costUsd,
             'call_type'     => 'complete',
-            'metadata'      => $request->metadata,
+            'metadata'      => $metadata,
         ]);
 
         return $event;

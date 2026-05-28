@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\BosskuAi\LlmProvider;
+use App\Services\Llm\ModelRouter;
+use App\Services\Llm\OllamaClient;
 use Illuminate\Http\Request;
 
 class ProviderController extends Controller
@@ -79,21 +81,56 @@ class ProviderController extends Controller
         return response()->json(['message' => 'Provider deleted.']);
     }
 
-    public function testConnection(string $id)
+    public function testConnection(string $id, ModelRouter $router, OllamaClient $ollama)
     {
         $provider = LlmProvider::findOrFail($id);
+        $normalized = $router->normalizeProviderSlug((string) $provider->slug);
+        $instance = $router->registeredProviders()[$normalized] ?? null;
 
-        if ($provider->type === 'ollama') {
-            return response()->json(['status' => 'healthy', 'latency_ms' => 0]);
+        if ($instance === null) {
+            return response()->json([
+                'status' => 'unavailable',
+                'message' => "Provider slug '{$provider->slug}' is not registered at runtime. Registered slugs: "
+                    .implode(', ', array_keys($router->registeredProviders())),
+            ], 422);
         }
 
-        return response()->json(['status' => 'unknown']);
+        if ($normalized === 'ollama') {
+            try {
+                $out = $ollama->chatWithUsage('kimi-k2.6:cloud', [
+                    ['role' => 'user', 'content' => 'Reply with exactly: ok'],
+                ], 0.0);
+
+                return response()->json([
+                    'status' => 'healthy',
+                    'latency_ms' => 0,
+                    'preview' => mb_substr(trim($out['text']), 0, 80),
+                ]);
+            } catch (\Throwable $e) {
+                return response()->json([
+                    'status' => 'down',
+                    'message' => $e->getMessage(),
+                ], 503);
+            }
+        }
+
+        $health = $instance->healthCheck();
+
+        return response()->json([
+            'status' => $health->status,
+            'latency_ms' => $health->latencyMs,
+            'error' => $health->error,
+        ]);
     }
 
     public function syncModels(string $id)
     {
         LlmProvider::findOrFail($id);
 
-        return response()->json(['synced' => 0]);
+        return response()->json([
+            'synced' => 0,
+            'not_implemented' => true,
+            'message' => 'Automatic model sync is not implemented yet. Configure models in Settings → Models.',
+        ]);
     }
 }

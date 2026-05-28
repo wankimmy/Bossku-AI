@@ -2,6 +2,7 @@
 
 namespace App\Services\Orchestrator;
 
+use App\Support\LlmTelemetry;
 use App\Support\StringCoercion;
 use App\Services\BosskuAi\AgentPersonaService;
 use App\Services\BosskuAi\ModelFallbackService;
@@ -157,7 +158,8 @@ SYS;
             function (mixed $j): bool {
                 return is_array($j) && isset($j['status'], $j['summary']);
             },
-            (int) ($cfg['max_tokens'] ?? 6000)
+            (int) ($cfg['max_tokens'] ?? 6000),
+            $runId,
         );
 
         /** @var array<string, mixed> $parsed */
@@ -167,11 +169,11 @@ SYS;
         $parsed = $this->normalizeAudit($parsed, $highRiskContext, $modelRoute);
         $legacyPass = in_array(($parsed['status'] ?? ''), ['pass', 'pass_with_notes'], true);
 
-        return array_merge($parsed, [
+        return LlmTelemetry::mergeAgentResult(array_merge($parsed, [
             '_legacy_pass' => $legacyPass,
             '_auditor_model' => $out['model_used'],
             '_auditor_model_resolved' => $out['model_resolved'] ?? '',
-        ]);
+        ]), $out);
     }
 
     protected function fullAuditInstructions(array $modelRoute): string

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { runHasPendingFromDecisionResponse } from '../utils/approvalDecision'
+import { isApprovalNotFoundError, runHasPendingFromDecisionResponse } from '../utils/approvalDecision'
 
 describe('runHasPendingFromDecisionResponse', () => {
   it('returns true when response is missing', () => {
@@ -16,5 +16,15 @@ describe('runHasPendingFromDecisionResponse', () => {
 
   it('returns true when run_has_pending is omitted', () => {
     expect(runHasPendingFromDecisionResponse({ message: 'ok' })).toBe(true)
+  })
+})
+
+describe('isApprovalNotFoundError', () => {
+  it('detects 404 fetch errors', () => {
+    expect(isApprovalNotFoundError({ status: 404, data: { message: 'Approval not found.' } })).toBe(true)
+  })
+
+  it('ignores other status codes', () => {
+    expect(isApprovalNotFoundError({ status: 422 })).toBe(false)
   })
 })

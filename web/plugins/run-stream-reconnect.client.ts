@@ -2,6 +2,7 @@ import { loadActiveRunBinding } from '~/utils/activeRunStorage'
 import { shouldResumePolling } from '~/composables/useActiveRun'
 import { apiUrl } from '~/composables/useApiBase'
 import { apiAuthHeaders } from '~/utils/apiAuthHeaders'
+import { streamResumeErrorAction } from '~/utils/runStreamErrors'
 
 export default defineNuxtPlugin(() => {
   if (!import.meta.client) return
@@ -50,7 +51,11 @@ export default defineNuxtPlugin(() => {
     else {
       chat.saveRunEventsForConversation(convId, stream.events.value, binding.runId)
     }
-  }).catch(() => {
+  }).catch((err: unknown) => {
+    if (streamResumeErrorAction(err) === 'abandon') {
+      stream.abandonStaleRun()
+      return
+    }
     if (shouldResumePolling('running', stream.events.value)) {
       stream.attachPoll(binding.runId, { convId })
     }

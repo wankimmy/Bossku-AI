@@ -27,6 +27,7 @@ class ClarificationService
         array $modelRoute,
         string $stage,
         array $context = [],
+        ?string $runId = null,
     ): array {
         if ($this->settings->orchestratorClarificationMode() === 'off') {
             return $this->emptyProceed();
@@ -40,7 +41,7 @@ class ClarificationService
         }
 
         try {
-            $parsed = $this->callLlm($userPrompt, $conversation, $modelRoute, $stage, $context);
+            $parsed = $this->callLlm($userPrompt, $conversation, $modelRoute, $stage, $context, $runId);
         } catch (\Throwable) {
             $parsed = $this->fallbackQuestions($userPrompt, $stage, $context);
         }
@@ -199,6 +200,7 @@ class ClarificationService
         array $modelRoute,
         string $stage,
         array $context,
+        ?string $runId = null,
     ): array {
         $primary = $this->settings->routerModel();
         $fallbacks = [$this->settings->reasoningModel()];
@@ -253,6 +255,7 @@ SYS;
             'clarification',
             fn (mixed $j): bool => is_array($j) && isset($j['questions']),
             4096,
+            $runId,
         );
 
         return is_array($out['parsed']) ? $out['parsed'] : [];

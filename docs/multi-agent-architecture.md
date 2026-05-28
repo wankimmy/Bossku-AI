@@ -1,5 +1,7 @@
 # Multi-Agent Architecture (Claude Code, Codex, Cursor)
 
+> **BosskuAI web app:** The Laravel dashboard run pipeline (planner → executor → auditor, etc.) is documented in [`orchestration.md`](orchestration.md). This file focuses on toolkit/IDE patterns (Claude Code slash commands, Codex, Cursor rules).
+
 ## TL;DR
 
 BosskuAI runs as **single-call routing** by default on every surface. On Claude Code only, three opt-in commands (`/audit`, `/decide`, `/implement`) run **multi-agent flows** for high-stakes work. On Codex and Cursor, these commands are documented here as patterns the user can apply manually but are not natively dispatched.

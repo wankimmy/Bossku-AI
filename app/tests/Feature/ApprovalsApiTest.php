@@ -133,6 +133,25 @@ class ApprovalsApiTest extends TestCase
     }
 
     #[Test]
+    public function approve_unknown_id_returns_json_404(): void
+    {
+        $missingId = '00000000-0000-4000-8000-000000000000';
+
+        $this->getJson("/api/approvals/{$missingId}")
+            ->assertStatus(404)
+            ->assertJsonPath('approval_id', $missingId)
+            ->assertJsonPath('message', 'Approval not found. It may have already been decided or removed—refresh the approval queue and try again.');
+
+        $this->postJson("/api/approvals/{$missingId}/approve")
+            ->assertStatus(404)
+            ->assertJsonPath('approval_id', $missingId);
+
+        $this->postJson("/api/approvals/{$missingId}/reject", ['note' => 'nope'])
+            ->assertStatus(404)
+            ->assertJsonPath('approval_id', $missingId);
+    }
+
+    #[Test]
     public function approvals_reject_sets_status_to_rejected(): void
     {
         $approval = $this->createApproval([

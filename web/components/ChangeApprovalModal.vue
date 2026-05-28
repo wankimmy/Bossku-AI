@@ -4,6 +4,7 @@ import { useApi } from '~/composables/useApi'
 import type { Approval } from '~/types/api'
 import {
   isAlreadyDecidedResponse,
+  isApprovalNotFoundError,
   isIdempotentApprovalOutcome,
   runHasPendingFromDecisionResponse,
   type ApprovalDecisionPayload,
@@ -26,6 +27,7 @@ const agentTheme = computed(() => themeForAgent(normalizeAgentRole(props.askingA
 
 const emit = defineEmits<{
   decided: [payload: ApprovalDecisionPayload]
+  stale: []
 }>()
 
 const api = useApi()
@@ -116,6 +118,11 @@ async function doApprove() {
     note.value = ''
   }
   catch (err) {
+    if (isApprovalNotFoundError(err)) {
+      applyError.value = 'This approval is no longer available. Refreshing the queue…'
+      emit('stale')
+      return
+    }
     if (isIdempotentApprovalOutcome(err, 'approve')) {
       const msg = err && typeof err === 'object' && 'data' in err
         ? String((err as { data?: { message?: string } }).data?.message ?? '')
@@ -149,6 +156,11 @@ async function doRequestChanges() {
     note.value = ''
   }
   catch (err) {
+    if (isApprovalNotFoundError(err)) {
+      applyError.value = 'This approval is no longer available. Refreshing the queue…'
+      emit('stale')
+      return
+    }
     if (isIdempotentApprovalOutcome(err, 'reject')) {
       emitDecided(err, noteText)
       note.value = ''

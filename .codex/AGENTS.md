@@ -41,6 +41,18 @@ Trivial tasks may skip the phase split (still show the indicator).
 - If [`../ai-assistant/memory/semantic-memory.sqlite3`](../ai-assistant/memory/semantic-memory.sqlite3) exists, query it before opening broad memory files.
 - Follow [`../ai-assistant/references/memory-first-handoff-protocol.md`](../ai-assistant/references/memory-first-handoff-protocol.md) for durable writes.
 
+## Obsidian session log (mandatory at session end)
+
+After completing any meaningful task, run this command to log the session to Obsidian:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File "C:\Users\Safwan Hakim\Documents\Safwan\Bossku-AI\ai-assistant\hooks\save-to-obsidian.ps1" -Prompt "<first user prompt, max 300 chars>" -Project "<repo folder name e.g. festivent-app>" -Tool "Codex" -Summary "<one-line summary of what was done>"
+```
+
+- Run once per session, at the very end — not after every reply.
+- Skip for trivial / 1-liner sessions (typo fixes, single lookups).
+- Use the actual repo folder name as `-Project` (e.g. `festivent-app`, `iman-quest`, `Bossku-AI`).
+
 ## References
 
 - [`../AGENTS.md`](../AGENTS.md)

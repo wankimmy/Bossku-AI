@@ -13,7 +13,7 @@ class DirectAnswerService
         protected ModelFallbackService $fallback
     ) {}
 
-    public function answer(string $userPrompt, array $routeContext): string
+    public function answer(string $userPrompt, array $routeContext, ?string $runId = null): string
     {
         $cfg = $this->config->directAnswer();
         $primary = (string) ($cfg['primary'] ?? 'gpt-4o-mini');
@@ -31,7 +31,9 @@ class DirectAnswerService
                 (float) ($cfg['temperature'] ?? 0.2),
                 $retry,
                 'direct_answer',
-                null
+                null,
+                null,
+                $runId,
             );
 
             return $out['text'];

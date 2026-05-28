@@ -55,8 +55,11 @@ export function isAwaitingApprovals(events: ApprovalSseEvent[]): boolean {
 function parseApprovalFromUnknown(raw: unknown): Approval | null {
   if (raw === null || typeof raw !== 'object') return null
   const o = raw as Record<string, unknown>
-  const id = String(o.id ?? '')
-  if (!id) return null
+  const id = String(o.id ?? o.approval_id ?? '').trim()
+  const runId = o.run_id != null ? String(o.run_id) : ''
+  if (id === '' || (runId !== '' && id === runId)) {
+    return null
+  }
   return {
     id,
     run_id: o.run_id != null ? String(o.run_id) : undefined,
@@ -72,17 +75,19 @@ function parseApprovalFromUnknown(raw: unknown): Approval | null {
   }
 }
 
-/** Seed pending queue from approval_requested SSE artifacts. */
+/**
+ * Read approval pause metadata from approval_requested SSE artifacts.
+ * Does not return actionable queue items — callers must load pending rows from GET /runs/{id}/approvals.
+ */
 export function hydrateApprovalsFromEvent(evt: ApprovalSseEvent): {
   stage: string
-  pending: Approval[]
   pendingCount: number
 } | null {
   if (!isApprovalPauseEvent(evt)) return null
 
   const artifacts = evt.artifacts
   if (artifacts === null || typeof artifacts !== 'object') {
-    return { stage: 'executor_approvals', pending: [], pendingCount: 0 }
+    return { stage: 'executor_approvals', pendingCount: 0 }
   }
 
   const art = artifacts as Record<string, unknown>
@@ -91,12 +96,9 @@ export function hydrateApprovalsFromEvent(evt: ApprovalSseEvent): {
     ? art.pending_count
     : (Array.isArray(art.approval_ids) ? art.approval_ids.length : (current ? 1 : 0))
 
-  const pending = current && current.status === 'pending' ? [current] : []
-
   return {
     stage: 'executor_approvals',
-    pending,
-    pendingCount: Math.max(pendingCount, pending.length),
+    pendingCount: Math.max(pendingCount, current && current.status === 'pending' ? 1 : 0),
   }
 }
 

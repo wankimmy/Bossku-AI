@@ -136,6 +136,21 @@ class RunsApiTest extends TestCase
     }
 
     #[Test]
+    public function stream_events_unknown_run_returns_json_404(): void
+    {
+        $missingId = '00000000-0000-4000-8000-000000000000';
+
+        $this->getJson("/api/runs/{$missingId}")
+            ->assertStatus(404)
+            ->assertJsonPath('run_id', $missingId)
+            ->assertJsonPath('message', 'Run not found. It may have been removed or never created—start a new task and try again.');
+
+        $this->getJson("/api/runs/{$missingId}/stream-events?after_seq=0")
+            ->assertStatus(404)
+            ->assertJsonPath('run_id', $missingId);
+    }
+
+    #[Test]
     public function runs_require_token_when_auth_enabled(): void
     {
         config([

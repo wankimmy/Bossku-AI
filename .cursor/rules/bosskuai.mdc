@@ -30,3 +30,15 @@ See [`agents/skill-detector.md`](mdc:agents/skill-detector.md) for skill detecti
 - Ask clarification questions before broad multi-file changes when scope is unclear.
 - Read [`ai-assistant/memory/active-continuation.md`](mdc:ai-assistant/memory/active-continuation.md) first when it contains live work.
 - If [`semantic-memory.sqlite3`](mdc:ai-assistant/memory/semantic-memory.sqlite3) exists, query it before opening broad memory files.
+
+## Obsidian session log (mandatory at session end)
+
+After completing any meaningful task, run this in the terminal to log the session to Obsidian:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File "C:\Users\Safwan Hakim\Documents\Safwan\Bossku-AI\ai-assistant\hooks\save-to-obsidian.ps1" -Prompt "<first user prompt, max 300 chars>" -Project "<repo folder name e.g. festivent-app>" -Tool "Cursor" -Summary "<one-line summary of what was done>"
+```
+
+- Run once per session, at the very end — not after every reply.
+- Skip for trivial / 1-liner sessions (typo fixes, single lookups).
+- Use the actual repo folder name as `-Project` (e.g. `festivent-app`, `iman-quest`, `Bossku-AI`).

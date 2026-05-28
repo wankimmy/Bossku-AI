@@ -8,6 +8,7 @@ use App\Models\BosskuAi\Run;
 use App\Models\BosskuAi\RunStep;
 use App\Models\BosskuAi\Skill;
 use App\Services\BosskuAi\AgentPersonaService;
+use App\Support\LlmTelemetry;
 use App\Support\StringCoercion;
 use App\Services\BosskuAi\BosskuResponseIndicator;
 use App\Services\BosskuAi\ContextBudgetGuard;
@@ -209,7 +210,7 @@ class OrchestratorService
         }
 
         if ($this->shouldRequireClarification($run, $userPrompt, $modelRoute)) {
-            $clarification = $this->clarification->ask($userPrompt, $conversation, $modelRoute, 'pre_execution', []);
+            $clarification = $this->clarification->ask($userPrompt, $conversation, $modelRoute, 'pre_execution', [], $run->id);
             if ($clarification['questions'] !== [] && ! $clarification['ready_to_proceed']) {
                 return $this->pauseForClarification(
                     $run,
@@ -284,7 +285,7 @@ class OrchestratorService
                 $tokenAcc,
                 $tRun,
                 'direct_answer',
-                fn () => $this->directAnswer->answer($prompt, $modelRoute)
+                fn () => $this->directAnswer->answer($prompt, $modelRoute, $run->id)
             );
         }
 
@@ -299,7 +300,7 @@ class OrchestratorService
                 $tokenAcc,
                 $tRun,
                 'writer_only',
-                fn () => $this->writer->write($prompt, $modelRoute)
+                fn () => $this->writer->write($prompt, $modelRoute, $run->id)
             );
         }
 
@@ -387,7 +388,7 @@ class OrchestratorService
             //
         }
 
-        $plan = $this->planner->plan($agentPrompt, $memPayload, $routerCtx, $modelRoute, $conversation);
+        $plan = $this->planner->plan($agentPrompt, $memPayload, $routerCtx, $modelRoute, $conversation, $run->id);
         $planMs = (int) round((microtime(true) - $t0) * 1000);
         $planTokens = $this->estimateTokens(json_encode($plan) ?: '');
 
@@ -423,7 +424,7 @@ class OrchestratorService
         }
 
         $orchModel = (string) ($plan['_planner_model'] ?? $modelsResolved['orchestrator'] ?? $this->settings->plannerModel());
-        $this->logStep($run, 2, 'planner', $orchModel, null, null, 'success', $prompt, json_encode(['router' => $routerCtx, 'route' => $modelRoute]), json_encode($plan), null, null, null, $planMs, $planTokens, null, $this->events->metadata(
+        $this->logStep($run, 2, 'planner', $orchModel, LlmTelemetry::resolveStepProvider($plan), null, 'success', $prompt, json_encode(['router' => $routerCtx, 'route' => $modelRoute]), json_encode($plan), null, null, null, $planMs, $planTokens, null, $this->events->metadata(
             'orchestrator',
             'reasoning',
             'Planner created '.count($plan['checklist'] ?? []).'-step execution checklist.',
@@ -566,6 +567,7 @@ class OrchestratorService
             null,
             $memPayload,
             $conversation,
+            $run->id,
         );
         $execResult = ExecutorEvidenceSupport::mergePreflightReads($execResult, $preflightReads);
         $execResult = $this->ensureExecutorEvidence($run, $plan, $execResult, $userPrompt, $emit);
@@ -608,7 +610,7 @@ class OrchestratorService
         }
 
         $exTok = $this->estimateTokens(json_encode($execResult) ?: '');
-        $this->logStep($run, 3, 'executor', $modelsResolved['executor'], 'ollama', $skillName, ($execResult['status'] ?? '') === 'failed' ? 'failed' : 'success', json_encode($step), json_encode($execResult), json_encode($execResult), null, null, null, (int) ($execResult['latency_ms'] ?? 0), $exTok, null, $this->events->metadata(
+        $this->logStep($run, 3, 'executor', $modelsResolved['executor'], LlmTelemetry::resolveStepProvider($execResult), $skillName, ($execResult['status'] ?? '') === 'failed' ? 'failed' : 'success', json_encode($step), json_encode($execResult), json_encode($execResult), null, null, null, (int) ($execResult['latency_ms'] ?? 0), $exTok, null, $this->events->metadata(
             'executor',
             'coding',
             'Executor completed the requested changes.',
@@ -838,7 +840,7 @@ class OrchestratorService
             $auditTok = $this->estimateTokens(json_encode($lastAudit) ?: '');
             $modelsResolved['auditor'] = (string) ($lastAudit['_auditor_model'] ?? $modelsResolved['auditor'] ?? '');
             $pass = ($lastAudit['_legacy_pass'] ?? false) === true;
-            $this->logStep($run, $stepNum + 100, 'auditor', $modelsResolved['auditor'], 'ollama', $skillName, $pass ? 'success' : (($lastAudit['status'] ?? '') === 'needs_revision' ? 'needs_revision' : 'failed'), json_encode($step), json_encode($execResult), json_encode($lastAudit), null, null, null, $auditMs, $auditTok, null, $this->events->metadata(
+            $this->logStep($run, $stepNum + 100, 'auditor', $modelsResolved['auditor'], LlmTelemetry::resolveStepProvider($lastAudit), $skillName, $pass ? 'success' : (($lastAudit['status'] ?? '') === 'needs_revision' ? 'needs_revision' : 'failed'), json_encode($step), json_encode($execResult), json_encode($lastAudit), null, null, null, $auditMs, $auditTok, null, $this->events->metadata(
                 'auditor',
                 'review',
                 StringCoercion::toString($lastAudit['summary'] ?? null, 'Audit completed.'),
@@ -997,6 +999,7 @@ class OrchestratorService
                     $auditFeedback,
                     $memPayload,
                     $conversation,
+                    $run->id,
                 );
                 $revisionResult = ExecutorEvidenceSupport::mergePreflightReads($revisionResult, $preflightReads);
                 $revisionResult = $this->ensureExecutorEvidence($run, $plan, $revisionResult, $userPrompt, $emit);
@@ -1033,7 +1036,7 @@ class OrchestratorService
                 }
                 $revisionResult = $revAfter;
                 $revTok = $this->estimateTokens(json_encode($revisionResult) ?: '');
-                $this->logStep($run, 4, 'executor_revision', $modelsResolved['executor'], 'ollama', $skillName, ($revisionResult['status'] ?? '') === 'failed' ? 'failed' : 'success', json_encode($revisionStep), json_encode(['audit' => $lastAudit, 'previous_executor' => $execResult]), json_encode($revisionResult), null, null, null, (int) ($revisionResult['latency_ms'] ?? 0), $revTok, null, $this->events->metadata(
+                $this->logStep($run, 4, 'executor_revision', $modelsResolved['executor'], LlmTelemetry::resolveStepProvider($revisionResult), $skillName, ($revisionResult['status'] ?? '') === 'failed' ? 'failed' : 'success', json_encode($revisionStep), json_encode(['audit' => $lastAudit, 'previous_executor' => $execResult]), json_encode($revisionResult), null, null, null, (int) ($revisionResult['latency_ms'] ?? 0), $revTok, null, $this->events->metadata(
                     'executor',
                     'coding',
                     'Executor applied audit follow-up fixes.',
@@ -1102,7 +1105,7 @@ class OrchestratorService
             }
             $sMs = (int) round((microtime(true) - $tS) * 1000);
             $sTok = $this->estimateTokens(json_encode($lastSecurity) ?: '');
-            $this->logStep($run, $stepNum + 150, 'security_auditor', $modelsResolved['security_auditor'] ?? null, null, $skillName, 'success', null, null, json_encode($lastSecurity), null, null, null, $sMs, $sTok, null, null);
+            $this->logStep($run, $stepNum + 150, 'security_auditor', $modelsResolved['security_auditor'] ?? null, LlmTelemetry::resolveStepProvider($lastSecurity), $skillName, 'success', null, null, json_encode($lastSecurity), null, null, null, $sMs, $sTok, null, null);
             $tokenAcc += $sTok;
             $this->emit($emit, $this->basePayload($run, 'security_auditor_done', [
                 'status' => 'success',
@@ -1124,10 +1127,10 @@ class OrchestratorService
                 'summary' => 'Final Reviewer is closing the run.',
             ]));
             $tF = microtime(true);
-            $lastFinal = $this->finalReviewer->review($agentPrompt, $modelRoute, $lastAudit, $lastSecurity, $execResult, $plan, $memPayload, $conversation);
+            $lastFinal = $this->finalReviewer->review($agentPrompt, $modelRoute, $lastAudit, $lastSecurity, $execResult, $plan, $memPayload, $conversation, $run->id);
             $fMs = (int) round((microtime(true) - $tF) * 1000);
             $fTok = $this->estimateTokens(json_encode($lastFinal) ?: '');
-            $this->logStep($run, $stepNum + 200, 'final_reviewer', $modelsResolved['final_reviewer'] ?? null, 'ollama', $skillName, 'success', null, null, json_encode($lastFinal), null, null, null, $fMs, $fTok, null, $this->events->metadata(
+            $this->logStep($run, $stepNum + 200, 'final_reviewer', $modelsResolved['final_reviewer'] ?? null, LlmTelemetry::resolveStepProvider($lastFinal), $skillName, 'success', null, null, json_encode($lastFinal), null, null, null, $fMs, $fTok, null, $this->events->metadata(
                 'final-reviewer',
                 'reasoning',
                 StringCoercion::toString($lastFinal['reason'] ?? null, 'Final review completed.'),
@@ -1890,7 +1893,7 @@ class OrchestratorService
         $run->update([
             'metadata' => array_merge($run->metadata ?? [], ['post_memory_eval' => $evaluation]),
         ]);
-        $this->logStep($run, 10000, 'post_memory_eval', $modelsResolved['evaluator'] ?? null, 'ollama', null, 'success', null, null, json_encode($evaluation), null, null, null, $evalMs, $evalTok, null, $this->events->metadata(
+        $this->logStep($run, 10000, 'post_memory_eval', null, 'system', null, 'success', null, null, json_encode($evaluation), null, null, null, $evalMs, $evalTok, null, $this->events->metadata(
             'evaluator',
             'review',
             StringCoercion::toString($evaluation['summary'] ?? null, 'Post-memory evaluation completed.'),

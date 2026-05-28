@@ -19,6 +19,7 @@ import type { Approval } from '~/types/api'
 import { loadActiveRunBinding } from '~/utils/activeRunStorage'
 import { apiUrl } from '~/composables/useApiBase'
 import { apiAuthHeaders } from '~/utils/apiAuthHeaders'
+import { streamResumeErrorAction } from '~/utils/runStreamErrors'
 
 definePageMeta({ layout: 'default' })
 
@@ -39,6 +40,7 @@ const {
   boundConvId,
   bindConversation,
   attachPoll,
+  abandonStaleRun,
   start,
   continueRun,
   continueAfterApprovals,
@@ -452,6 +454,20 @@ watchEffect(async () => {
   }
 })
 
+async function onApprovalStale() {
+  const runId = resolvedRunId.value
+  if (!runId) return
+
+  const refresh = await runApprovals.fetchPending(runId)
+  if (refresh.pending.length > 0) {
+    toast.info('Approval queue refreshed.')
+    return
+  }
+
+  runApprovals.clear()
+  toast.warning('That approval is no longer available. The queue was refreshed.')
+}
+
 async function onApprovalDecided(payload: { runHasPending: boolean }) {
   const runId = resolvedRunId.value
   if (!runId) return
@@ -592,7 +608,12 @@ async function maybeResumeRunForConversation(convId: string) {
       chat.saveRunEvents(events.value, runId)
     }
   }
-  catch {
+  catch (err: unknown) {
+    if (streamResumeErrorAction(err) === 'abandon') {
+      abandonStaleRun()
+      toast.warning('That run no longer exists. Start a new task to continue.')
+      return
+    }
     attachPoll(runId, { convId })
   }
 }
@@ -975,6 +996,7 @@ watch(showApprovalModal, async (open) => {
       :asking-agent="approvalAskingAgent"
       :submitting="continuingApprovals || running"
       @decided="onApprovalDecided"
+      @stale="onApprovalStale"
     />
 
     <div

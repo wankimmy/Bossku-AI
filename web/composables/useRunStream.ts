@@ -9,6 +9,7 @@ import {
 import { apiAuthHeaders } from '~/utils/apiAuthHeaders'
 import { isAwaitingApprovals } from '~/utils/approvalStream'
 import { buildClarificationRequest, isAwaitingClarification } from '~/utils/clarificationStream'
+import { isRunNotFoundError } from '~/utils/runStreamErrors'
 import { isRunStatusTerminal, isTerminalStreamEvent } from '~/utils/runStreamTerminal'
 
 export type { ClarificationAnswer, ClarificationQuestion, ClarificationRequest } from '~/types/clarification'
@@ -124,6 +125,15 @@ export function useRunStream() {
     boundConvId.value = null
   }
 
+  /** Stop polling and drop stale run binding after the API reports the run is gone. */
+  function abandonStaleRun() {
+    stopPolling()
+    running.value = false
+    polling.value = false
+    activeRunId.value = null
+    clearBinding()
+  }
+
   function trackEvent(evt: SseEvent) {
     if (evt.run_id) {
       activeRunId.value = String(evt.run_id)
@@ -196,7 +206,12 @@ export function useRunStream() {
 
       return false
     }
-    catch {
+    catch (e: unknown) {
+      if (isRunNotFoundError(e)) {
+        abandonStaleRun()
+        return true
+      }
+
       return false
     }
     finally {
@@ -252,6 +267,11 @@ export function useRunStream() {
     const pausedForApprovals = isAwaitingApprovals(events.value)
 
     if (!reachedTerminal && !pausedForClarification && !pausedForApprovals) {
+      if (isRunNotFoundError(e)) {
+        abandonStaleRun()
+        return
+      }
+
       const runId = activeRunId.value
       if (runId) {
         attachPoll(runId)
@@ -459,6 +479,7 @@ export function useRunStream() {
     clarificationRequest,
     bindConversation,
     attachPoll,
+    abandonStaleRun,
     start,
     continueRun,
     continueAfterApprovals,

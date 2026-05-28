@@ -5,6 +5,7 @@ namespace App\Services\Orchestrator;
 use App\Services\BosskuAi\AgentPersonaService;
 use App\Services\BosskuAi\ModelFallbackService;
 use App\Services\BosskuAi\ModelRoutingConfig;
+use App\Support\LlmTelemetry;
 use App\Support\StringCoercion;
 
 class ExecutorService
@@ -38,6 +39,7 @@ class ExecutorService
         ?array $auditFeedback = null,
         array $memoryContext = [],
         array $conversation = [],
+        ?string $runId = null,
     ): array {
         $skillName = (string) ($step['skill'] ?? $skillRow['name'] ?? 'unknown');
         $task = (string) ($step['task'] ?? '');
@@ -185,7 +187,8 @@ SYS;
                 $retry,
                 'executor',
                 fn (mixed $j): bool => is_array($j) && ExecutorResponseParser::validateForFallback($j),
-                (int) ($profile['max_tokens'] ?? 8192)
+                (int) ($profile['max_tokens'] ?? 8192),
+                $runId,
             );
         } catch (\Throwable $e) {
             return $this->normalizeResult([
@@ -211,7 +214,7 @@ SYS;
         /** @var array<string, mixed> $parsed */
         $parsed = is_array($out['parsed']) ? ExecutorResponseParser::normalize($out['parsed']) : [];
 
-        return $this->normalizeResult([
+        return LlmTelemetry::mergeAgentResult($this->normalizeResult([
             'step_id' => $step['id'] ?? null,
             'status' => StringCoercion::toString($parsed['status'] ?? null, 'success'),
             'files_read' => is_array($parsed['files_read'] ?? null) ? $parsed['files_read'] : [],
@@ -234,7 +237,7 @@ SYS;
             '_executor_model_resolved' => $out['model_resolved'] ?? '',
             '_executor_fallback' => $out['fallback_used'],
             'latency_ms' => $latency,
-        ], $preflightReads);
+        ], $preflightReads), $out);
     }
 
     /**

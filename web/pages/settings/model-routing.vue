@@ -129,6 +129,12 @@ async function deleteRoute(id: string) {
 
 <template>
   <div class="space-y-6">
+    <div class="rounded-lg border border-amber-700/50 bg-amber-950/30 px-4 py-3 text-sm text-amber-200/90">
+      <strong class="text-amber-300">Experimental.</strong>
+      Per-role DB routes apply only when a matching active route exists and the provider slug is registered at runtime.
+      Primary model selection for agents is <NuxtLink to="/settings/models" class="underline">Settings → Models</NuxtLink>.
+    </div>
+
     <div class="flex items-center justify-between">
       <div>
         <h1 class="text-xl font-bold text-zinc-100">Model Routing</h1>

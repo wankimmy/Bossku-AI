@@ -46,7 +46,7 @@ describe('useRunApprovals', () => {
     expect(state.pendingCount.value).toBe(2)
   })
 
-  it('fetchPending preserves queue on error', async () => {
+  it('fetchPending clears queue on error to avoid stale approval ids', async () => {
     const state = useRunApprovals()
     state.pending.value = [
       { id: 'a1', operation_type: 'file_write', status: 'pending' },
@@ -57,8 +57,8 @@ describe('useRunApprovals', () => {
     const result = await state.fetchPending('run-1')
 
     expect(result.ok).toBe(false)
-    expect(result.pending).toHaveLength(2)
-    expect(state.pending.value).toHaveLength(2)
+    expect(result.pending).toHaveLength(0)
+    expect(state.pending.value).toHaveLength(0)
     expect(state.fetchError.value).toBe('network')
   })
 
