@@ -15,7 +15,14 @@ class MemoryApiController extends Controller
 
     public function index(Request $request)
     {
-        $q = Memory::query()->orderByDesc('updated_at');
+        $allowedColumns = ['updated_at', 'confidence', 'usage_count', 'created_at'];
+        $sortColumn = in_array($request->query('sort_by'), $allowedColumns, true)
+            ? $request->query('sort_by')
+            : 'updated_at';
+        $sortDir = $request->query('sort') === 'asc' ? 'asc' : 'desc';
+
+        $q = Memory::query()->orderBy($sortColumn, $sortDir);
+
         if ($request->has('active')) {
             $q->where('is_active', $request->boolean('active'));
         }
