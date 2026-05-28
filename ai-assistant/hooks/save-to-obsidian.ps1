@@ -57,14 +57,8 @@ if (-not (Test-Path $sessionFile)) {
     Set-Content $sessionFile $header -Encoding UTF8
 }
 
-# Build entry
-$lines = New-Object System.Collections.Generic.List[string]
-$lines.Add("")
-$lines.Add("## $time | $Tool | $projectLink")
-$lines.Add("**Prompt:** $Prompt")
-if ($Summary) { $lines.Add("**Summary:** $Summary") }
-$lines.Add("")
-$lines.Add("---")
-
-Add-Content $sessionFile $lines -Encoding UTF8
+# Build entry and append
+$summaryLine = if ($Summary) { "`n**Summary:** $Summary" } else { "" }
+$entry = "`n## $time | $Tool | $projectLink`n**Prompt:** $Prompt$summaryLine`n`n---"
+$entry | Out-File -FilePath $sessionFile -Append -Encoding UTF8
 exit 0

@@ -4,11 +4,12 @@
  *
  * Usage: ZEP_PIXEL_AGENTS_ROOT=../zep-pixel-agents node scripts/sync-zep-assets.mjs
  */
-import { copyFileSync, cpSync, existsSync, mkdirSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { findExistingFurnitureDir, findZepRoot, getZepRootCandidates } from './zep-root.mjs'
 import { hasValidFurnitureBundle, installFurnitureBundle } from './zep-furniture-bundle.mjs'
+import { copyZepTilesetAssets, ensureFloorsPng } from './zep-tileset-copy.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const destRoot = join(__dirname, '../public/assets')
@@ -16,19 +17,6 @@ const vendorFurniture = join(__dirname, '../vendor/zep-furniture')
 const catalogDest = join(destRoot, 'furniture', 'furniture-catalog.json')
 
 const copied = { floors: false, walls: false, characters: false, furniture: false }
-
-function safeCopyFile(src, dest) {
-  if (!existsSync(src)) return false
-  mkdirSync(dirname(dest), { recursive: true })
-  copyFileSync(src, dest)
-  return true
-}
-
-function safeCopyDir(src, dest) {
-  if (!existsSync(src)) return false
-  cpSync(src, dest, { recursive: true, force: true })
-  return true
-}
 
 function isStrict() {
   return process.env.BOSSKU_PIXEL_OFFICE_STRICT === '1'
@@ -47,6 +35,12 @@ function gracefulAllowed() {
 
 function hasPartialAssets() {
   return copied.floors || copied.walls || copied.characters
+}
+
+function mergeTilesetCopied(tileset) {
+  copied.floors = copied.floors || tileset.floors
+  copied.walls = copied.walls || tileset.walls
+  copied.characters = copied.characters || tileset.characters
 }
 
 async function ensureFurnitureCatalog() {
@@ -68,39 +62,13 @@ await ensureFurnitureCatalog()
 if (root) {
   console.log(`[sync-zep-assets] Using zep root: ${root}`)
   mkdirSync(destRoot, { recursive: true })
-
-  const filePairs = [
-    ['floors', join(root, 'assets', 'floors.png'), join(destRoot, 'floors.png')],
-    ['floors', join(root, 'webview-ui', 'public', 'assets', 'floors.png'), join(destRoot, 'floors.png')],
-    ['walls', join(root, 'assets', 'walls.png'), join(destRoot, 'walls.png')],
-    ['walls', join(root, 'webview-ui', 'public', 'assets', 'walls.png'), join(destRoot, 'walls.png')],
-  ]
-
-  for (const [kind, src, dest] of filePairs) {
-    if (safeCopyFile(src, dest)) {
-      copied[kind] = true
-      console.log(`  copied ${dest}`)
-    }
-  }
-
-  const charSources = [
-    join(root, 'assets', 'characters'),
-    join(root, 'webview-ui', 'public', 'assets', 'characters'),
-  ]
-  for (const src of charSources) {
-    if (safeCopyDir(src, join(destRoot, 'characters'))) {
-      copied.characters = true
-      console.log('  copied characters/')
-      break
-    }
-  }
+  mergeTilesetCopied(copyZepTilesetAssets(root, destRoot, { log: msg => console.log(msg) }))
 
   const furnDir = findExistingFurnitureDir(root)
   if (furnDir && hasValidFurnitureBundle(furnDir) && !existsSync(catalogDest)) {
-    if (safeCopyDir(furnDir, join(destRoot, 'furniture'))) {
-      copied.furniture = true
-      console.log('  copied furniture/ from zep')
-    }
+    cpSync(furnDir, join(destRoot, 'furniture'), { recursive: true, force: true })
+    copied.furniture = true
+    console.log('  copied furniture/ from zep')
   } else if (furnDir && !hasValidFurnitureBundle(furnDir)) {
     console.warn('[sync-zep-assets] zep furniture catalog has no PNG sprites; skipping furniture copy.')
   }
@@ -136,6 +104,11 @@ if (!existsSync(catalogDest)) {
   console.error('[sync-zep-assets] Missing furniture/furniture-catalog.json after sync.')
   console.error('  Run: npm run export:zep-furniture')
   process.exit(1)
+}
+
+if (!copied.floors) {
+  ensureFloorsPng(destRoot, { log: msg => console.log(msg) })
+  copied.floors = true
 }
 
 console.log('[sync-zep-assets] Done.')

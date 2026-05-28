@@ -20,6 +20,25 @@ export type SlashTrigger = {
 
 const SLASH_SPLIT_RE = /[\s\n\r\t]/u
 
+/** Human-readable slash token for a skill (not the database UUID). */
+export function skillSlashName(skill: Skill): string {
+  const name = String(skill.name ?? '').trim()
+  if (name) return name
+  return String(skill.id ?? '').trim()
+}
+
+function skillSlashDescription(skill: Skill, slashName: string): string {
+  const description = String(skill.description ?? '').trim()
+  if (description && description.toLowerCase() !== slashName.toLowerCase()) {
+    return description
+  }
+  const category = String(skill.category ?? '').trim()
+  if (category && category.toLowerCase() !== slashName.toLowerCase()) {
+    return category
+  }
+  return ''
+}
+
 export function buildProjectUnderstandingPrompt() {
   return [
     'You are BosskuAI project-understanding.',
@@ -52,12 +71,14 @@ export function buildSlashCommandItems(skills: Skill[]): SlashCommandItem[] {
   for (const skill of skills) {
     const id = String(skill.id ?? '').trim()
     if (!id || id === PROJECT_UNDERSTANDING_COMMAND) continue
+    const slashName = skillSlashName(skill)
+    if (!slashName) continue
     items.push({
       id,
-      label: `/${id}`,
-      description: String(skill.name ?? skill.description ?? id),
+      label: `/${slashName}`,
+      description: skillSlashDescription(skill, slashName),
       group: 'skills',
-      insert: `Use ${id} for this task:`,
+      insert: `Use ${slashName} for this task:`,
     })
   }
 
@@ -99,12 +120,11 @@ export function replaceSlashTrigger(
 function matchesSlashQuery(item: SlashCommandItem, query: string) {
   const q = query.trim().toLowerCase()
   if (!q) return true
-  return [
-    item.id,
-    item.label,
-    item.description,
-    item.insert,
-  ].some(field => String(field).toLowerCase().includes(q))
+  const fields = [item.label, item.description, item.insert]
+  if (item.group === 'essential') {
+    fields.push(item.id)
+  }
+  return fields.some(field => String(field).toLowerCase().includes(q))
 }
 
 export function filterSlashCommandItems(items: SlashCommandItem[], query: string) {

@@ -79,7 +79,7 @@ function main() {
     )
   }
 
-  const required = ['characters/char_0.png', 'walls.png']
+  const required = ['floors.png', 'walls.png', 'characters/char_0.png']
   for (const rel of required) {
     const p = join(assetsRoot, rel)
     if (!existsSync(p) && !existsSync(join(publicRoot, rel))) {

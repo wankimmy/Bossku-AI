@@ -63,6 +63,7 @@ class OrchestratorService
         protected ExecutorApprovalService $executorApprovals,
         protected AgentPersonaService $agentPersonas,
         protected UserSelfLearningService $userSelfLearning,
+        protected ObsidianSyncService $obsidianSync,
     ) {}
 
     /**
@@ -1254,6 +1255,8 @@ class OrchestratorService
             'path' => $kind,
         ]);
 
+        $this->obsidianSync->sync($run, $modelRoute, $final);
+
         return [
             'run_id' => $run->id,
             'final_output' => $final,
@@ -1933,6 +1936,8 @@ class OrchestratorService
             'risk' => $modelRoute['risk_level'] ?? null,
             'skill' => $modelRoute['skill'] ?? null,
         ]);
+
+        $this->obsidianSync->sync($run, $modelRoute, $finalOutput);
 
         $skillsUsed = collect($plan['selected_skills'] ?? [])
             ->filter(fn ($s) => is_array($s))

@@ -9,6 +9,8 @@ const WALL_GRID_COLS = 4
 const WALL_BITMASK_COUNT = 16
 const FLOOR_PATTERN_COUNT = 7
 const FLOOR_TILE_SIZE = 16
+/** Matches pixel-office `FALLBACK_FLOOR_COLOR` in constants.ts */
+export const FALLBACK_FLOOR_COLOR = '#808080'
 const CHAR_FRAME_W = 24
 const CHAR_FRAME_H = 32
 const CHAR_FRAMES_PER_ROW = 7
@@ -192,21 +194,24 @@ async function canvasToSprite(canvas: HTMLCanvasElement, width: number, height: 
   return sprite
 }
 
-async function loadFloorTiles(base: string): Promise<string[][][] | null> {
-  try {
-    const splitUrls = await Promise.all(
-      Array.from({ length: FLOOR_PATTERN_COUNT }, (_, idx) => firstExistingAssetUrl([
-        `${base}/furniture/floors/floor_${idx}.png`,
-        `${base}/floors/floor_${idx}.png`,
-      ])),
-    )
-    if (splitUrls.every(Boolean)) {
-      return Promise.all(
-        splitUrls.map(url => pngUrlToSpriteData(url!, FLOOR_TILE_SIZE, FLOOR_TILE_SIZE)),
-      )
-    }
+/** Procedural floor patterns when PNG tilesets are unavailable (no network). */
+export function createProceduralFloorSprites(): string[][][] {
+  const tile: string[][] = Array.from({ length: FLOOR_TILE_SIZE }, () =>
+    Array(FLOOR_TILE_SIZE).fill(FALLBACK_FLOOR_COLOR),
+  )
+  return Array.from({ length: FLOOR_PATTERN_COUNT }, () =>
+    tile.map(row => [...row]),
+  )
+}
 
-    const img = await loadImage(`${base}/floors.png`)
+async function loadFloorTilesFromAtlas(base: string): Promise<string[][][] | null> {
+  const atlasUrl = `${base}/floors.png`
+  if (!(await assetUrlExists(atlasUrl))) {
+    return null
+  }
+
+  try {
+    const img = await loadImage(atlasUrl)
     const sprites: string[][][] = []
     for (let t = 0; t < FLOOR_PATTERN_COUNT; t++) {
       const canvas = document.createElement('canvas')
@@ -232,7 +237,50 @@ async function loadFloorTiles(base: string): Promise<string[][][] | null> {
   }
 }
 
+async function loadFloorTilesFromSplit(base: string): Promise<string[][][] | null> {
+  const first = await assetUrlExists(`${base}/floors/floor_0.png`)
+    || await assetUrlExists(`${base}/furniture/floors/floor_0.png`)
+  if (!first) {
+    return null
+  }
+
+  try {
+    const splitUrls = await Promise.all(
+      Array.from({ length: FLOOR_PATTERN_COUNT }, (_, idx) => firstExistingAssetUrl([
+        `${base}/furniture/floors/floor_${idx}.png`,
+        `${base}/floors/floor_${idx}.png`,
+      ])),
+    )
+    if (!splitUrls.every(Boolean)) {
+      return null
+    }
+    return Promise.all(
+      splitUrls.map(url => pngUrlToSpriteData(url!, FLOOR_TILE_SIZE, FLOOR_TILE_SIZE)),
+    )
+  } catch {
+    return null
+  }
+}
+
+export async function loadFloorTiles(base: string): Promise<string[][][] | null> {
+  const fromAtlas = await loadFloorTilesFromAtlas(base)
+  if (fromAtlas) {
+    return fromAtlas
+  }
+
+  const fromSplit = await loadFloorTilesFromSplit(base)
+  if (fromSplit) {
+    return fromSplit
+  }
+
+  return createProceduralFloorSprites()
+}
+
 async function loadWallTiles(base: string): Promise<string[][][] | null> {
+  if (!(await assetUrlExists(`${base}/walls.png`))) {
+    return null
+  }
+
   try {
     const img = await loadImage(`${base}/walls.png`)
     const sprites: string[][][] = []
@@ -339,9 +387,7 @@ export async function loadAllPixelOfficeAssets(
   }
 
   const floors = await loadFloorTiles(base)
-  if (floors) {
-    messages.push({ type: 'floorTilesLoaded', sprites: floors })
-  }
+  messages.push({ type: 'floorTilesLoaded', sprites: floors ?? createProceduralFloorSprites() })
 
   const walls = await loadWallTiles(base)
   if (walls) {

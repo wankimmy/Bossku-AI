@@ -19,9 +19,11 @@ import {
   installFurnitureBundle,
   parseCatalogAssets,
 } from './zep-furniture-bundle.mjs'
+import { copyZepTilesetAssets, tilesetsPresent } from './zep-tileset-copy.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const destFurniture = join(__dirname, '../public/assets/furniture')
+const destAssetsRoot = join(__dirname, '../public/assets')
+const destFurniture = join(destAssetsRoot, 'furniture')
 const vendorFurniture = join(__dirname, '../vendor/zep-furniture')
 const tmpDir = join(__dirname, '../.tmp-furniture-fetch')
 
@@ -113,6 +115,16 @@ async function extractVsix(vsixPath, outDir) {
   zip.extractAllTo(outDir, true)
 }
 
+async function copyTilesetsFromExtract(extractDir) {
+  const tileset = copyZepTilesetAssets(extractDir, destAssetsRoot, {
+    log: msg => console.log(`[fetch-furniture-bundle]${msg}`),
+  })
+  if (tileset.floors || tileset.walls || tileset.characters) {
+    console.log('[fetch-furniture-bundle] Copied tileset assets from VSIX.')
+  }
+  return tileset
+}
+
 export async function fetchFurnitureBundle() {
   if (!shouldFetch()) {
     console.log('[fetch-furniture-bundle] Skipped (BOSSKU_AUTO_FETCH_FURNITURE_BUNDLE=0).')
@@ -122,18 +134,26 @@ export async function fetchFurnitureBundle() {
   if (hasValidFurnitureBundle(destFurniture)) {
     const count = parseCatalogAssets(catalogPath(destFurniture)).length
     console.log(`[fetch-furniture-bundle] Valid bundle at public/assets/furniture (${count} assets, PNGs present).`)
-    return true
+    if (!tilesetsPresent(destAssetsRoot)) {
+      console.log('[fetch-furniture-bundle] Tilesets missing; fetching VSIX for floors/walls/characters...')
+    } else {
+      return true
+    }
   }
 
-  if (existsSync(destFurniture)) {
+  if (existsSync(destFurniture) && !hasValidFurnitureBundle(destFurniture)) {
     console.warn('[fetch-furniture-bundle] Incomplete bundle at dest; removing and re-fetching.')
     rmSync(destFurniture, { recursive: true, force: true })
   }
 
-  if (hasValidFurnitureBundle(vendorFurniture)) {
+  if (hasValidFurnitureBundle(vendorFurniture) && tilesetsPresent(destAssetsRoot)) {
     console.log('[fetch-furniture-bundle] Using vendor cache.')
     installFurnitureBundle(vendorFurniture, destFurniture)
     return true
+  }
+
+  if (hasValidFurnitureBundle(vendorFurniture) && !tilesetsPresent(destAssetsRoot)) {
+    console.log('[fetch-furniture-bundle] Vendor furniture OK; tilesets still missing, will fetch VSIX.')
   }
 
   if (existsSync(tmpDir)) rmSync(tmpDir, { recursive: true })
@@ -155,6 +175,7 @@ export async function fetchFurnitureBundle() {
       if (existsSync(extractDir)) rmSync(extractDir, { recursive: true })
       mkdirSync(extractDir, { recursive: true })
       await extractVsix(vsixPath, extractDir)
+      await copyTilesetsFromExtract(extractDir)
 
       const catalogDir = findBestCatalogDir(extractDir)
       if (!catalogDir) {
@@ -181,7 +202,7 @@ export async function fetchFurnitureBundle() {
       installFurnitureBundle(exportDir, destFurniture)
 
       if (existsSync(tmpDir)) rmSync(tmpDir, { recursive: true })
-      return true
+      return hasValidFurnitureBundle(destFurniture) || tilesetsPresent(destAssetsRoot)
     } catch (err) {
       console.warn(`[fetch-furniture-bundle] ${publisher}.${name} failed:`, err.message || err)
     }

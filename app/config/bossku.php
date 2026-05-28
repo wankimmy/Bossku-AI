@@ -85,6 +85,15 @@ return [
      */
     'orchestrator_clarification_mode' => env('BOSSKU_ORCHESTRATOR_CLARIFICATION_MODE', 'smart'),
 
+    /**
+     * Obsidian vault sync — set these to write run prompts/outputs to your Obsidian vault.
+     * Leave blank to disable (no error thrown, writes are silently skipped).
+     * In Docker the vault is typically mounted at /workspace/Safwan-Obsidian-Vault via the
+     * ../:/workspace volume binding in docker-compose.yml.
+     */
+    'obsidian_vault_path'    => env('OBSIDIAN_VAULT_PATH', ''),
+    'obsidian_project_folder' => env('OBSIDIAN_PROJECT_FOLDER', 'Bossku-AI'),
+
     /** Auto-promote high-confidence learning events to searchable memory. */
     'learning_auto_promote_enabled' => env('BOSSKU_LEARNING_AUTO_PROMOTE_ENABLED', true),
     'learning_auto_promote_min_confidence' => (float) env('BOSSKU_LEARNING_AUTO_PROMOTE_MIN_CONFIDENCE', 0.85),
