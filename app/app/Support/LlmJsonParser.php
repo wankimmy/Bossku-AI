@@ -34,27 +34,124 @@ final class LlmJsonParser
     protected static function candidateStrings(string $text): array
     {
         $out = [];
-        $stripped = self::stripMarkdownFences($text);
+
+        // Strip <think>…</think> / <thinking>…</thinking> before any extraction so that
+        // braces inside reasoning tokens don't mislead balanced object scanning.
+        $noThink = self::stripThinkingBlocks($text);
+
+        $stripped = self::stripMarkdownFences($noThink);
         if ($stripped !== '') {
             $out[] = $stripped;
         }
-        if ($stripped !== $text) {
-            $out[] = $text;
+        if ($stripped !== $noThink) {
+            $out[] = $noThink;
         }
 
-        $extracted = self::extractOutermostObject($stripped !== '' ? $stripped : $text);
-        if ($extracted !== null && ! in_array($extracted, $out, true)) {
-            $out[] = $extracted;
-        }
+        $sources = array_values(array_unique(array_filter([
+            $stripped !== '' ? $stripped : null,
+            $noThink !== '' ? $noThink : null,
+            $text,
+        ])));
 
-        if ($text !== $stripped && $extracted === null) {
-            $fromRaw = self::extractOutermostObject($text);
-            if ($fromRaw !== null && ! in_array($fromRaw, $out, true)) {
-                $out[] = $fromRaw;
+        foreach ($sources as $source) {
+            foreach (self::extractBalancedObjects($source) as $object) {
+                if (! in_array($object, $out, true)) {
+                    $out[] = $object;
+                }
             }
         }
 
         return array_values(array_unique(array_filter($out)));
+    }
+
+    /**
+     * Scan for top-level `{…}` slices using brace depth (string-aware).
+     *
+     * @return list<string> longest-first so the main payload is tried before nested fragments
+     */
+    protected static function extractBalancedObjects(string $text): array
+    {
+        $objects = [];
+        $len = strlen($text);
+        $i = 0;
+
+        while ($i < $len) {
+            $start = strpos($text, '{', $i);
+            if ($start === false) {
+                break;
+            }
+
+            $end = self::findBalancedObjectEnd($text, $start);
+            if ($end === null) {
+                $i = $start + 1;
+
+                continue;
+            }
+
+            $objects[] = substr($text, $start, $end - $start + 1);
+            $i = $end + 1;
+        }
+
+        usort($objects, fn (string $a, string $b): int => strlen($b) <=> strlen($a));
+
+        return $objects;
+    }
+
+    protected static function findBalancedObjectEnd(string $text, int $start): ?int
+    {
+        if (($text[$start] ?? '') !== '{') {
+            return null;
+        }
+
+        $len = strlen($text);
+        $depth = 0;
+        $inString = false;
+        $escape = false;
+
+        for ($j = $start; $j < $len; $j++) {
+            $c = $text[$j];
+
+            if ($escape) {
+                $escape = false;
+
+                continue;
+            }
+
+            if ($inString) {
+                if ($c === '\\') {
+                    $escape = true;
+                } elseif ($c === '"') {
+                    $inString = false;
+                }
+
+                continue;
+            }
+
+            if ($c === '"') {
+                $inString = true;
+
+                continue;
+            }
+
+            if ($c === '{') {
+                $depth++;
+            } elseif ($c === '}') {
+                $depth--;
+                if ($depth === 0) {
+                    return $j;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    protected static function stripThinkingBlocks(string $text): string
+    {
+        // Removes <think>…</think> and <thinking>…</thinking> (case-insensitive, dotall).
+        $result = preg_replace('/<think(?:ing)?>\s*.*?\s*<\/think(?:ing)?>/is', '', $text) ?? $text;
+
+        return trim($result);
     }
 
     protected static function stripBom(string $text): string
@@ -73,17 +170,6 @@ final class LlmJsonParser
         $clean = preg_replace('/\s*```\s*$/', '', $clean) ?? $clean;
 
         return trim($clean);
-    }
-
-    protected static function extractOutermostObject(string $text): ?string
-    {
-        $start = strpos($text, '{');
-        $end = strrpos($text, '}');
-        if ($start === false || $end === false || $end <= $start) {
-            return null;
-        }
-
-        return substr($text, $start, $end - $start + 1);
     }
 
     /** @return array<string, mixed>|null */

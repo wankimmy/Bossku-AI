@@ -36,9 +36,11 @@ class ModelFallbackService
 
         foreach ($models as $idx => $model) {
             for ($attempt = 0; $attempt <= $retryCount; $attempt++) {
+                $responseText = '';
                 try {
                     $out = $this->gateway->chat($model, $messages, $temperature, $maxTokensAnthropic);
                     $text = trim($out['text']);
+                    $responseText = $text;
                     $modelResolved = (string) ($out['model_resolved'] ?? trim($model));
                     if ($text === '') {
                         throw new \RuntimeException('empty_response');
@@ -86,14 +88,19 @@ class ModelFallbackService
                         $resolvedPreview = '';
                         $previewProvider = '';
                     }
-                    $this->safeLog('warning', 'bosskuai.llm.retry', [
+                    $retryContext = [
                         'role' => $role,
                         'model' => $model,
                         'model_resolved' => $resolvedPreview ?: null,
                         'provider_preview' => $previewProvider ?: null,
                         'attempt' => $attempt,
                         'error' => $lastError,
-                    ]);
+                    ];
+                    if ($lastError === 'invalid_json_parse' && $responseText !== '') {
+                        $retryContext['response_length'] = strlen($responseText);
+                        $retryContext['response_preview'] = self::sanitizeResponsePreview($responseText);
+                    }
+                    $this->safeLog('warning', 'bosskuai.llm.retry', $retryContext);
                 }
             }
         }
@@ -108,6 +115,16 @@ class ModelFallbackService
         } catch (\Throwable) {
             // Never block LLM fallback / streaming when handlers throw (Docker log file perms, etc.)
         }
+    }
+
+    protected static function sanitizeResponsePreview(string $text, int $maxLen = 240): string
+    {
+        $preview = preg_replace('/\s+/', ' ', trim($text)) ?? '';
+        if (strlen($preview) > $maxLen) {
+            $preview = substr($preview, 0, $maxLen).'…';
+        }
+
+        return $preview;
     }
 
 }
