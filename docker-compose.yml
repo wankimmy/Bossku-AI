@@ -99,7 +99,7 @@ services:
     ports:
       - "${BOSSKU_PORT_POSTGRES:-28432}:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - ./data/postgres:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U bossku -d bossku"]
       interval: 5s
@@ -115,7 +115,6 @@ services:
     networks: [bossku]
 
 volumes:
-  pgdata:
   node_modules:
 
 networks:

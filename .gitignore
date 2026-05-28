@@ -28,6 +28,9 @@ coverage/
 tmp/
 temp/
 
+# Docker persistent data (bind mounts — never commit)
+data/
+
 # AI assistant (local)
 ai-assistant/memory/*
 !ai-assistant/memory/README.md
