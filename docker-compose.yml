@@ -11,6 +11,7 @@ services:
     env_file:
       - ./app/.env
     environment:
+      TZ: ${APP_TIMEZONE:-Asia/Kuala_Lumpur}
       BOSSKU_REPO_PATH: /repo
       # Allow php-fpm to write bind-mounted sibling repos under /workspace (see docker/php/entrypoint.sh).
       BOSSKU_WORKSPACE_WRITABLE: ${BOSSKU_WORKSPACE_WRITABLE:-true}
