@@ -378,6 +378,7 @@ class RunEventFactory
     protected function agentForType(string $type): string
     {
         return match (true) {
+            str_contains($type, 'specialist_agent') => 'specialist-agent',
             str_contains($type, 'post_memory_eval') => 'evaluator',
             str_contains($type, 'memory_synced') => 'memory',
             str_contains($type, 'planner') => 'orchestrator',
@@ -399,6 +400,7 @@ class RunEventFactory
             'executor' => 'coding',
             'auditor', 'security-auditor', 'evaluator' => 'review',
             'router', 'memory' => 'fast',
+            'specialist-agent' => 'reasoning',
             default => 'system',
         };
     }

@@ -7,6 +7,7 @@ use App\Models\BosskuAi\MemoryRunLink;
 use App\Models\BosskuAi\Run;
 use App\Models\BosskuAi\RunStep;
 use App\Models\BosskuAi\Skill;
+use App\Models\BosskuAi\SpecialistAgent;
 use App\Services\BosskuAi\AgentPersonaService;
 use App\Support\LlmTelemetry;
 use App\Support\StringCoercion;
@@ -26,6 +27,9 @@ use App\Services\Project\ProjectCommandRunner;
 use App\Services\Project\ProjectFileDiscovery;
 use App\Services\Project\ProjectPathResolver;
 use App\Services\Project\ProjectService;
+use App\Services\Specialists\SpecialistAgentDraftingService;
+use App\Services\Specialists\SpecialistAgentRouter;
+use App\Services\Specialists\SpecialistAgentRunner;
 use App\Services\Tools\ToolRegistry;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -64,6 +68,9 @@ class OrchestratorService
         protected AgentPersonaService $agentPersonas,
         protected UserSelfLearningService $userSelfLearning,
         protected ObsidianSyncService $obsidianSync,
+        protected SpecialistAgentRouter $specialistRouter,
+        protected SpecialistAgentRunner $specialistRunner,
+        protected SpecialistAgentDraftingService $specialistDrafting,
     ) {}
 
     /**
@@ -251,6 +258,120 @@ class OrchestratorService
     }
 
     /**
+     * @param  array<string, mixed>  $plan
+     * @param  array<string, mixed>  $routerCtx
+     * @param  list<array<string, mixed>>  $memPayload
+     * @param  array<string, mixed>  $agentPayload
+     * @return array<string, mixed>
+     */
+    protected function runSpecialistAgentStep(
+        Run $run,
+        SpecialistAgent $agent,
+        string $userPrompt,
+        string $agentPrompt,
+        array $plan,
+        array $routerCtx,
+        array $memPayload,
+        array $agentPayload,
+        ?callable $emit,
+    ): array {
+        $agent->loadMissing('linkedSkill');
+        $this->emit($emit, $this->basePayload($run, 'specialist_agent_started', [
+            'status' => 'running',
+            'agent' => $agent->role_slug,
+            'model_role' => 'reasoning',
+            'from_agent' => 'orchestrator',
+            'to_agent' => $agent->role_slug,
+            'summary' => $agent->display_name.' is preparing executor handoff.',
+            'message' => 'Specialist is reading the planner output, project context, linked skill, and memory notes.',
+            'step_number' => 3,
+            'artifacts' => [
+                'specialist_agent' => $agentPayload,
+            ],
+        ]));
+
+        $skillContent = $agent->linkedSkill?->content;
+        $handoff = $this->specialistRunner->run(
+            $agent,
+            $userPrompt,
+            $this->projects->agentWorkspaceContext(),
+            $plan,
+            $routerCtx,
+            $memPayload,
+            $skillContent !== null ? Str::limit($skillContent, 6000) : null,
+            $run->id,
+        );
+        $tokenEstimate = $this->estimateTokens(json_encode($handoff) ?: '');
+        $model = StringCoercion::toString($handoff['_specialist_model'] ?? null);
+        $provider = LlmTelemetry::resolveStepProvider($handoff);
+        $status = isset($handoff['_specialist_error']) ? 'warning' : 'success';
+        $message = StringCoercion::toString($handoff['handoff_to_executor'] ?? null, 'Specialist handoff is ready.');
+        $artifacts = [
+            'specialist_agent' => $agentPayload,
+            'specialist_handoff' => $handoff,
+            'handoff' => $handoff,
+        ];
+
+        $this->logStep(
+            $run,
+            3,
+            'specialist_agent',
+            $model !== '' ? $model : null,
+            $provider,
+            $agent->linkedSkill?->name,
+            $status === 'success' ? 'success' : 'failed',
+            $agentPrompt,
+            json_encode(['plan' => $plan, 'router' => $routerCtx, 'specialist_agent' => $agentPayload]),
+            json_encode($handoff),
+            null,
+            null,
+            null,
+            (int) ($handoff['latency_ms'] ?? 0),
+            $tokenEstimate,
+            StringCoercion::toString($handoff['_specialist_error'] ?? null) ?: null,
+            $this->events->metadata(
+                $agent->role_slug,
+                'reasoning',
+                StringCoercion::toString($handoff['summary'] ?? null, $agent->display_name.' completed handoff.'),
+                $message,
+                $artifacts,
+                $agent->role_slug,
+                'executor',
+            )
+        );
+
+        $agent->recordUsage();
+        $agentPayload = $this->specialistRouter->payloadForAgent($agent->refresh());
+        $artifacts['specialist_agent'] = $agentPayload;
+
+        $this->emit($emit, $this->basePayload($run, 'specialist_agent_done', [
+            'status' => $status,
+            'agent' => $agent->role_slug,
+            'model_role' => 'reasoning',
+            'model' => $model,
+            'from_agent' => $agent->role_slug,
+            'to_agent' => 'executor',
+            'summary' => StringCoercion::toString($handoff['summary'] ?? null, $agent->display_name.' completed handoff.'),
+            'message' => $message,
+            'latency_ms' => (int) ($handoff['latency_ms'] ?? 0),
+            'token_estimate' => $tokenEstimate,
+            'output' => json_encode($handoff) ?: '',
+            'artifacts' => $artifacts,
+        ]));
+
+        return [
+            'agent' => $agentPayload,
+            'handoff' => $handoff,
+            'summary' => StringCoercion::toString($handoff['summary'] ?? null),
+            'handoff_to_executor' => $message,
+            'model' => $model,
+            'provider' => $provider,
+            'latency_ms' => (int) ($handoff['latency_ms'] ?? 0),
+            'token_estimate' => $tokenEstimate,
+        ];
+    }
+
+    /**
      * @param  list<array{role: string, content: string}>  $conversation
      * @param  array<string, mixed>  $modelRoute
      * @param  array<string, string>  $modelsResolved
@@ -330,6 +451,27 @@ class OrchestratorService
                 'skills_used' => [$routerCtx['primary_skill']['name'] ?? null],
             ],
         ]));
+
+        $matchedSpecialist = $this->specialistRouter->matchForPrompt($agentPrompt, $activeProject);
+        $specialistAgentPayload = null;
+        if ($matchedSpecialist !== null) {
+            $specialistAgentPayload = $this->specialistRouter->payloadForAgent($matchedSpecialist);
+            $routerCtx['specialist_agent'] = $specialistAgentPayload;
+            $modelRoute['specialist_agent'] = $specialistAgentPayload;
+
+            $this->emit($emit, $this->basePayload($run, 'specialist_agent_selected', [
+                'status' => 'success',
+                'agent' => $matchedSpecialist->role_slug,
+                'model_role' => 'reasoning',
+                'from_agent' => 'orchestrator',
+                'to_agent' => $matchedSpecialist->role_slug,
+                'summary' => $matchedSpecialist->display_name.' matched this project prompt.',
+                'message' => implode(', ', $matchedSpecialist->trigger_keywords ?? []),
+                'artifacts' => [
+                    'specialist_agent' => $specialistAgentPayload,
+                ],
+            ]));
+        }
 
         $repoAvailable = true;
         $repoError = '';
@@ -520,6 +662,26 @@ class OrchestratorService
             );
         }
 
+        $specialistContext = [];
+        if ($matchedSpecialist !== null) {
+            $specialistContext = $this->runSpecialistAgentStep(
+                $run,
+                $matchedSpecialist,
+                $userPrompt,
+                $agentPrompt,
+                $plan,
+                $routerCtx,
+                $memPayload,
+                $specialistAgentPayload ?? $this->specialistRouter->payloadForAgent($matchedSpecialist),
+                $emit,
+            );
+            $plan['specialist_agent'] = $specialistContext;
+            $routerCtx['specialist_agent_handoff'] = $specialistContext;
+            $modelRoute['specialist_agent_handoff'] = $specialistContext;
+            $modelsResolved['specialist_agent'] = (string) ($specialistContext['model'] ?? '');
+            $tokenAcc += (int) ($specialistContext['token_estimate'] ?? 0);
+        }
+
         $preflightReads = $this->preflightReadTargetFiles($run, $plan, $emit, $modelRoute);
 
         $skillName = (string) ($routerCtx['primary_skill']['name'] ?? 'cofounder');
@@ -540,6 +702,8 @@ class OrchestratorService
         $pbExcerpt = $this->pickPlaybookExcerpt($routerCtx, $step);
         $chkExcerpt = $this->pickChecklistExcerpt($routerCtx, $step);
 
+        $executorStepNumber = $specialistContext !== [] ? 4 : 3;
+
         $this->emit($emit, $this->basePayload($run, 'executor_step_started', [
             'status' => 'running',
             'agent' => 'executor',
@@ -548,7 +712,7 @@ class OrchestratorService
             'to_agent' => 'executor',
             'summary' => 'Executor is applying the plan.',
             'message' => StringCoercion::toString($plan['handoff_message'] ?? null, 'Executor received the plan.'),
-            'step_number' => 3,
+            'step_number' => $executorStepNumber,
             'skill' => $skillName,
             'model' => $modelsResolved['executor'] ?? '',
         ]));
@@ -569,6 +733,7 @@ class OrchestratorService
             $memPayload,
             $conversation,
             $run->id,
+            $specialistContext,
         );
         $execResult = ExecutorEvidenceSupport::mergePreflightReads($execResult, $preflightReads);
         $execResult = $this->ensureExecutorEvidence($run, $plan, $execResult, $userPrompt, $emit);
@@ -611,7 +776,7 @@ class OrchestratorService
         }
 
         $exTok = $this->estimateTokens(json_encode($execResult) ?: '');
-        $this->logStep($run, 3, 'executor', $modelsResolved['executor'], LlmTelemetry::resolveStepProvider($execResult), $skillName, ($execResult['status'] ?? '') === 'failed' ? 'failed' : 'success', json_encode($step), json_encode($execResult), json_encode($execResult), null, null, null, (int) ($execResult['latency_ms'] ?? 0), $exTok, null, $this->events->metadata(
+        $this->logStep($run, $executorStepNumber, 'executor', $modelsResolved['executor'], LlmTelemetry::resolveStepProvider($execResult), $skillName, ($execResult['status'] ?? '') === 'failed' ? 'failed' : 'success', json_encode($step), json_encode($execResult), json_encode($execResult), null, null, null, (int) ($execResult['latency_ms'] ?? 0), $exTok, null, $this->events->metadata(
             'executor',
             'coding',
             'Executor completed the requested changes.',
@@ -743,7 +908,7 @@ class OrchestratorService
             $tokenAcc,
             $tRun,
             [$execResult],
-            3,
+            $executorStepNumber,
         );
     }
 
@@ -1037,7 +1202,7 @@ class OrchestratorService
                 }
                 $revisionResult = $revAfter;
                 $revTok = $this->estimateTokens(json_encode($revisionResult) ?: '');
-                $this->logStep($run, 4, 'executor_revision', $modelsResolved['executor'], LlmTelemetry::resolveStepProvider($revisionResult), $skillName, ($revisionResult['status'] ?? '') === 'failed' ? 'failed' : 'success', json_encode($revisionStep), json_encode(['audit' => $lastAudit, 'previous_executor' => $execResult]), json_encode($revisionResult), null, null, null, (int) ($revisionResult['latency_ms'] ?? 0), $revTok, null, $this->events->metadata(
+                $this->logStep($run, $stepNum + 1, 'executor_revision', $modelsResolved['executor'], LlmTelemetry::resolveStepProvider($revisionResult), $skillName, ($revisionResult['status'] ?? '') === 'failed' ? 'failed' : 'success', json_encode($revisionStep), json_encode(['audit' => $lastAudit, 'previous_executor' => $execResult]), json_encode($revisionResult), null, null, null, (int) ($revisionResult['latency_ms'] ?? 0), $revTok, null, $this->events->metadata(
                     'executor',
                     'coding',
                     'Executor applied audit follow-up fixes.',
@@ -1819,15 +1984,45 @@ class OrchestratorService
             'status' => 'completed',
             'total_latency_ms' => $totalMs,
             'total_token_estimate' => $tokenAcc,
-            'metadata' => [
+            'metadata' => array_merge($run->metadata ?? [], [
                 'plan' => $plan,
                 'router' => $routerCtx,
                 'routing_decision' => $modelRoute,
                 'models_resolved' => $modelsResolved,
                 'security_audit' => $lastSecurity,
                 'final_reviewer' => $lastFinal,
-            ],
+            ]),
         ]);
+
+        try {
+            $draft = $this->specialistDrafting->maybeDraftFromRun($run->refresh(), [
+                'skill_name' => (string) ($routerCtx['primary_skill']['name'] ?? $modelRoute['skill'] ?? ''),
+                'planner_output' => $plan,
+                'router_context' => $routerCtx,
+                'executor_result' => $executorOutputs[0] ?? [],
+                'audit_result' => $lastAudit,
+                'memory_signals' => $memPayload,
+            ]);
+            if ($draft !== null) {
+                $this->emit($emit, $this->basePayload($run, 'specialist_agent_candidate_drafted', [
+                    'status' => 'success',
+                    'agent' => 'orchestrator',
+                    'model_role' => 'fast',
+                    'from_agent' => 'orchestrator',
+                    'to_agent' => $draft->role_slug,
+                    'summary' => 'Draft specialist agent created for review: '.$draft->display_name,
+                    'message' => 'Approve this specialist before it can affect future runs.',
+                    'artifacts' => [
+                        'specialist_agent' => $draft->toOfficePayload(),
+                    ],
+                ]));
+            }
+        } catch (\Throwable $e) {
+            Log::warning('bosskuai.specialist_agent.draft_failed', [
+                'run_id' => $run->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         $this->logStep($run, 9999, 'final', null, 'ollama', null, 'success', $prompt, $finalOutput, $finalOutput, null, null, null, null, null, null, $this->events->metadata(
             'final-reviewer',

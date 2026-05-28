@@ -4,7 +4,9 @@ import {
   BOSSKU_PIXEL_AGENT_ROLES,
   agentIdForRole,
   loadPersistedSeats,
+  specialistAgentMeta,
   type BosskuPixelAgentRole,
+  type SpecialistPixelAgentInput,
 } from '~/utils/pixelOfficeLayout'
 import { formatToolCallSummary, formatToolCallTitle, isToolCallEvent } from '~/utils/formatToolCall'
 
@@ -23,6 +25,11 @@ function nextToolId(): string {
 function inferAgent(evt: SseEvent): string {
   if (isToolCallEvent(evt)) return 'tools'
   const type = String(evt.type ?? '')
+  const eventAgent = String(evt.agent ?? '')
+  if (type.includes('specialist_agent')) {
+    const payload = specialistPayloadFromEvent(evt)
+    return eventAgent || String(payload?.role_slug ?? 'specialist-agent')
+  }
   if (type.includes('planner')) return 'orchestrator'
   if (type.includes('executor')) return 'executor'
   if (type.includes('security')) return 'security-auditor'
@@ -31,7 +38,7 @@ function inferAgent(evt: SseEvent): string {
   if (type.includes('final')) return 'final-reviewer'
   if (type.includes('router')) return 'router'
   if (type.includes('memory')) return 'memory'
-  const agent = String(evt.agent ?? '')
+  const agent = eventAgent
   if (agent && agentIdForRole(agent)) return agent
   return 'orchestrator'
 }
@@ -79,11 +86,32 @@ function toolStatusLabel(evt: SseEvent): string {
   return `${title}: ${summary}`
 }
 
-function setActiveMessages(activeRole: BosskuPixelAgentRole, status: string): PixelOfficeHostMessage[] {
+type DynamicPixelAgent = {
+  role: string
+  id: number
+  meta: {
+    palette: number
+    hueShift: number
+    seatId: string | null
+    label: string
+  }
+}
+
+function dynamicIds(state: PixelOfficeAdapterState): number[] {
+  return Object.values(state.dynamicAgents).map(agent => agent.id)
+}
+
+function allKnownAgentIds(state?: PixelOfficeAdapterState): number[] {
+  return [
+    ...BOSSKU_PIXEL_AGENT_ROLES.map(role => BOSSKU_AGENT_IDS[role]),
+    ...(state ? dynamicIds(state) : []),
+  ]
+}
+
+function setActiveById(activeId: number, status: string, state?: PixelOfficeAdapterState): PixelOfficeHostMessage[] {
   const messages: PixelOfficeHostMessage[] = []
-  for (const role of BOSSKU_PIXEL_AGENT_ROLES) {
-    const id = BOSSKU_AGENT_IDS[role]
-    if (role === activeRole) {
+  for (const id of allKnownAgentIds(state)) {
+    if (id === activeId) {
       messages.push({ type: 'agentStatus', id, status: 'active' })
     } else {
       messages.push({ type: 'agentStatus', id, status: 'waiting' })
@@ -91,7 +119,6 @@ function setActiveMessages(activeRole: BosskuPixelAgentRole, status: string): Pi
     }
   }
   if (status) {
-    const activeId = BOSSKU_AGENT_IDS[activeRole]
     const toolId = nextToolId()
     messages.push({
       type: 'agentToolStart',
@@ -103,42 +130,58 @@ function setActiveMessages(activeRole: BosskuPixelAgentRole, status: string): Pi
   return messages
 }
 
-function clearAllTools(): PixelOfficeHostMessage[] {
-  return BOSSKU_PIXEL_AGENT_ROLES.flatMap(role => [
-    { type: 'agentToolsClear', id: BOSSKU_AGENT_IDS[role] },
-    { type: 'agentToolPermissionClear', id: BOSSKU_AGENT_IDS[role] },
+function setActiveMessages(activeRole: BosskuPixelAgentRole, status: string, state?: PixelOfficeAdapterState): PixelOfficeHostMessage[] {
+  return setActiveById(BOSSKU_AGENT_IDS[activeRole], status, state)
+}
+
+function clearAllTools(state?: PixelOfficeAdapterState): PixelOfficeHostMessage[] {
+  return allKnownAgentIds(state).flatMap(id => [
+    { type: 'agentToolsClear', id },
+    { type: 'agentToolPermissionClear', id },
   ])
 }
 
-export function spawnCastMessages(): PixelOfficeHostMessage[] {
+export function spawnCastMessages(dynamicAgents: DynamicPixelAgent[] = []): PixelOfficeHostMessage[] {
   const meta = loadPersistedSeats()
-  const agents = BOSSKU_PIXEL_AGENT_ROLES.map(role => BOSSKU_AGENT_IDS[role])
+  const agents = [
+    ...BOSSKU_PIXEL_AGENT_ROLES.map(role => BOSSKU_AGENT_IDS[role]),
+    ...dynamicAgents.map(agent => agent.id),
+  ]
   const agentMeta: Record<number, { palette: number; hueShift: number; seatId: string | null }> = {}
   for (const role of BOSSKU_PIXEL_AGENT_ROLES) {
     const id = BOSSKU_AGENT_IDS[role]
     const m = meta[id]
     agentMeta[id] = { palette: m.palette, hueShift: m.hueShift, seatId: m.seatId }
   }
+  for (const agent of dynamicAgents) {
+    const persisted = meta[agent.id]
+    const m = persisted ? { ...agent.meta, ...persisted } : agent.meta
+    agentMeta[agent.id] = { palette: m.palette, hueShift: m.hueShift, seatId: m.seatId }
+  }
   return [{ type: 'existingAgents', agents, agentMeta }]
 }
 
-function mapSingleEvent(evt: SseEvent, castSpawned: boolean): PixelOfficeHostMessage[] {
+function mapSingleEvent(evt: SseEvent, state: PixelOfficeAdapterState): PixelOfficeHostMessage[] {
   const type = String(evt.type ?? '')
   const agentRole = inferAgent(evt)
-  const agentId = agentIdForRole(agentRole)
+  const agentId = agentIdForRole(agentRole) ?? state.dynamicAgents[agentRole]?.id ?? specialistDescriptorFromEvent(evt)?.id
 
   if (type === 'run_started') {
     toolSeq = 0
-    return spawnCastMessages()
+    return spawnCastMessages(Object.values(state.dynamicAgents))
   }
 
-  if (!castSpawned) return []
+  if (type === 'specialist_agent_selected') {
+    return state.castSpawned ? spawnCastMessages(Object.values(state.dynamicAgents)) : []
+  }
+
+  if (!state.castSpawned) return []
 
   if (type === 'clarification_requested') {
     const stage = String(evt.stage ?? '')
     const id = stage === 'user_local_commands' ? BOSSKU_AGENT_IDS.executor : BOSSKU_AGENT_IDS.orchestrator
     return [
-      ...clearAllTools(),
+      ...clearAllTools(state),
       { type: 'agentStatus', id, status: 'waiting' },
     ]
   }
@@ -146,7 +189,7 @@ function mapSingleEvent(evt: SseEvent, castSpawned: boolean): PixelOfficeHostMes
   if (type === 'approval_requested') {
     const id = BOSSKU_AGENT_IDS.executor
     return [
-      ...clearAllTools(),
+      ...clearAllTools(state),
       { type: 'agentToolPermission', id },
       { type: 'agentStatus', id, status: 'active' },
     ]
@@ -162,10 +205,10 @@ function mapSingleEvent(evt: SseEvent, castSpawned: boolean): PixelOfficeHostMes
 
   if (type === 'run_completed' || type === 'run_failed' || type === 'planner_failed') {
     return [
-      ...clearAllTools(),
-      ...BOSSKU_PIXEL_AGENT_ROLES.map(role => ({
+      ...clearAllTools(state),
+      ...allKnownAgentIds(state).map(id => ({
         type: 'agentStatus',
-        id: BOSSKU_AGENT_IDS[role],
+        id,
         status: 'waiting',
       })),
     ]
@@ -177,9 +220,9 @@ function mapSingleEvent(evt: SseEvent, castSpawned: boolean): PixelOfficeHostMes
     return [
       { type: 'agentStatus', id: agentId, status: 'active' },
       { type: 'agentToolStart', id: agentId, toolId, status },
-      ...BOSSKU_PIXEL_AGENT_ROLES.filter(r => BOSSKU_AGENT_IDS[r] !== agentId).map(role => ({
+      ...allKnownAgentIds(state).filter(id => id !== agentId).map(id => ({
         type: 'agentStatus',
-        id: BOSSKU_AGENT_IDS[role],
+        id,
         status: 'waiting',
       })),
     ]
@@ -189,8 +232,9 @@ function mapSingleEvent(evt: SseEvent, castSpawned: boolean): PixelOfficeHostMes
     const summary = String(evt.summary ?? evt.message ?? type.replaceAll('_', ' '))
     const role = agentRole as BosskuPixelAgentRole
     if (agentIdForRole(role)) {
-      return setActiveMessages(role, summary)
+      return setActiveMessages(role, summary, state)
     }
+    return setActiveById(agentId, summary, state)
   }
 
   if (isStageDone(type) && agentId) {
@@ -207,6 +251,7 @@ export type PixelOfficeAdapterState = {
   lastSeq: number
   castSpawned: boolean
   processedIds: Set<string>
+  dynamicAgents: Record<string, DynamicPixelAgent>
 }
 
 export function createPixelOfficeAdapterState(): PixelOfficeAdapterState {
@@ -214,6 +259,28 @@ export function createPixelOfficeAdapterState(): PixelOfficeAdapterState {
     lastSeq: 0,
     castSpawned: false,
     processedIds: new Set(),
+    dynamicAgents: {},
+  }
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null
+}
+
+function specialistPayloadFromEvent(evt: SseEvent): SpecialistPixelAgentInput | null {
+  const artifacts = asRecord(evt.artifacts)
+  const payload = asRecord(artifacts?.specialist_agent) ?? asRecord((evt as Record<string, unknown>).specialist_agent)
+  return payload as SpecialistPixelAgentInput | null
+}
+
+function specialistDescriptorFromEvent(evt: SseEvent): DynamicPixelAgent | null {
+  const payload = specialistPayloadFromEvent(evt)
+  if (!payload) return null
+  const descriptor = specialistAgentMeta(payload)
+  return {
+    role: descriptor.role,
+    id: descriptor.id,
+    meta: descriptor.meta,
   }
 }
 
@@ -233,8 +300,12 @@ export function applyBosskuEventsToPixelOffice(
     }
     state.processedIds.add(id)
     if (seq > state.lastSeq) state.lastSeq = seq
+    const dynamicAgent = specialistDescriptorFromEvent(evt)
+    if (dynamicAgent) {
+      state.dynamicAgents[dynamicAgent.role] = dynamicAgent
+    }
 
-    const batch = mapSingleEvent(evt, state.castSpawned)
+    const batch = mapSingleEvent(evt, state)
     if (String(evt.type ?? '') === 'run_started') {
       state.castSpawned = true
     }
@@ -248,5 +319,6 @@ export function resetPixelOfficeAdapterState(state: PixelOfficeAdapterState): vo
   state.lastSeq = 0
   state.castSpawned = false
   state.processedIds.clear()
+  state.dynamicAgents = {}
   toolSeq = 0
 }

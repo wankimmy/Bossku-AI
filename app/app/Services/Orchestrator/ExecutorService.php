@@ -40,6 +40,7 @@ class ExecutorService
         array $memoryContext = [],
         array $conversation = [],
         ?string $runId = null,
+        array $specialistContext = [],
     ): array {
         $skillName = (string) ($step['skill'] ?? $skillRow['name'] ?? 'unknown');
         $task = (string) ($step['task'] ?? '');
@@ -52,6 +53,7 @@ class ExecutorService
         $execRules = implode("\n", array_map(fn ($r) => '- '.$r, $this->modelConfig->executorRules()));
 
         $memBlock = $this->buildMemoryBlock($memoryContext);
+        $specialistBlock = $this->buildSpecialistBlock($specialistContext);
         $conversationBlock = $this->buildConversationBlock($conversation);
         $plannerQuestions = is_array($plan['planner_questions'] ?? null) && $plan['planner_questions'] !== []
             ? "\nUNRESOLVED PLANNER QUESTIONS (address these if relevant to your work):\n".implode("\n", array_map(
@@ -103,6 +105,9 @@ Workspace (mandatory — use relative paths only):
 {$plannerQuestions}
 Prior memory context (lessons from past runs — you MUST apply these):
 {$memBlock}
+
+Specialist agent handoff (apply this if present):
+{$specialistBlock}
 
 Preflight file_read_safe results:
 {$this->jsonEncode(
@@ -350,6 +355,16 @@ SYS;
         }
 
         return implode("\n", $lines);
+    }
+
+    /** @param array<string, mixed> $specialistContext */
+    protected function buildSpecialistBlock(array $specialistContext): string
+    {
+        if ($specialistContext === []) {
+            return '(no specialist agent selected for this run)';
+        }
+
+        return $this->jsonEncode($specialistContext);
     }
 
     /** @param array<string, mixed> $data */

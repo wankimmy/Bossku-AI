@@ -136,6 +136,28 @@ export interface SkillCandidateExtended extends SkillCandidate {
   approval_status: 'draft' | 'pending_review' | 'approved' | 'rejected' | string
 }
 
+export interface SpecialistAgent {
+  id: string
+  project_id: string
+  role_slug: string
+  display_name: string
+  description?: string | null
+  trigger_keywords?: string[] | null
+  persona_content?: string | null
+  linked_skill_id?: string | null
+  linked_skill?: { id: string; name: string } | null
+  project?: { id: string; name: string } | null
+  approval_status: 'draft' | 'pending_review' | 'approved' | 'rejected' | 'archived' | string
+  pixel_palette?: number
+  pixel_hue_shift?: number
+  seat_id?: string | null
+  usage_count?: number
+  last_used_at?: string | null
+  metadata?: Record<string, unknown>
+  created_at?: string
+  updated_at?: string
+}
+
 export interface GraphNode {
   id: string
   label: string

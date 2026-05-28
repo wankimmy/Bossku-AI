@@ -31,6 +31,7 @@ use App\Http\Controllers\Api\SettingsApiController;
 use App\Http\Controllers\Api\SkillCandidateController;
 use App\Http\Controllers\Api\SkillController;
 use App\Http\Controllers\Api\SkillsGraphController;
+use App\Http\Controllers\Api\SpecialistAgentController;
 use App\Http\Controllers\Api\WorkspaceGraphController;
 use App\Http\Controllers\Api\SoulController;
 use App\Http\Controllers\Api\UsageController;
@@ -70,6 +71,7 @@ Route::middleware('bossku.api')->group(function () {
     Route::post('/runs/{runId}/resume', [RunActionController::class, 'resume']);
     Route::post('/runs/{runId}/steps/{stepId}/rerun', [RunActionController::class, 'rerunStep']);
     Route::post('/runs/{runId}/create-skill', [RunActionController::class, 'createSkill']);
+    Route::post('/runs/{runId}/create-specialist-agent', [RunActionController::class, 'createSpecialistAgent']);
 
 // ── Skills ────────────────────────────────────────────────────────────────────
 Route::get('/skills', [SkillController::class, 'index']);
@@ -82,6 +84,14 @@ Route::get('/skill-candidates/{id}', [SkillCandidateController::class, 'show']);
 Route::patch('/skill-candidates/{id}', [SkillCandidateController::class, 'update']);
 Route::post('/skill-candidates/{id}/approve', [SkillCandidateController::class, 'approve']);
 Route::post('/skill-candidates/{id}/reject', [SkillCandidateController::class, 'reject']);
+
+// Specialist agents
+Route::get('/specialist-agents', [SpecialistAgentController::class, 'index']);
+Route::get('/specialist-agents/{id}', [SpecialistAgentController::class, 'show']);
+Route::patch('/specialist-agents/{id}', [SpecialistAgentController::class, 'update']);
+Route::post('/specialist-agents/{id}/approve', [SpecialistAgentController::class, 'approve']);
+Route::post('/specialist-agents/{id}/reject', [SpecialistAgentController::class, 'reject']);
+Route::post('/specialist-agents/{id}/archive', [SpecialistAgentController::class, 'archive']);
 
 // ── Rules / Playbooks / Checklists ────────────────────────────────────────────
 Route::get('/rules', [RuleController::class, 'index']);

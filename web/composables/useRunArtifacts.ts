@@ -109,7 +109,7 @@ export function useRunArtifacts(items: UnknownRecord[] = []): NormalizedRunArtif
       messages.push({
         id: String(item.id ?? event.id ?? `${type || agent}-${idx}`),
         agent,
-        title: isToolCallEvent(event) ? formatToolCallTitle(event) : titleForAgent(agent),
+        title: isToolCallEvent(event) ? formatToolCallTitle(event) : titleForAgent(agent, artifacts),
         status,
         model_role: stringOrUndefined(event.model_role ?? metadata.model_role),
         model: stringOrUndefined(event.model ?? item.model ?? metadata.model),
@@ -290,6 +290,7 @@ function inferRoutingFromMessages(messages: AgentMessage[], routing: RoutingSumm
 
 function modelRoleForAgent(agent: string): string {
   if (agent === 'orchestrator' || agent === 'final-reviewer') return 'reasoning'
+  if (agent.includes('specialist')) return 'reasoning'
   if (agent === 'executor') return 'coding'
   if (agent === 'auditor' || agent === 'security-auditor' || agent === 'evaluator') return 'review'
   if (agent === 'router' || agent === 'memory') return 'fast'
@@ -297,7 +298,7 @@ function modelRoleForAgent(agent: string): string {
 }
 
 function buildHandoff(messages: AgentMessage[]): HandoffNode[] {
-  return WORKFLOW.map((node) => {
+  const base = WORKFLOW.map((node) => {
     const matches = messages.filter(message => message.agent === node.agent)
     const revision = node.label.includes('revision')
       ? messages.find(message => String(message.id).includes('executor_revision') || String(message.summary ?? '').toLowerCase().includes('revision'))
@@ -305,6 +306,33 @@ function buildHandoff(messages: AgentMessage[]): HandoffNode[] {
     const message = revision ?? matches.at(-1)
     return { ...node, status: message?.status ?? node.status }
   })
+
+  const specialistNodes = messages
+    .filter(isSpecialistMessage)
+    .reduce<HandoffNode[]>((nodes, message) => {
+      if (nodes.some(node => node.agent === message.agent)) return nodes
+      nodes.push({
+        agent: message.agent,
+        label: titleForAgent(message.agent, message.artifacts ?? {}),
+        status: message.status,
+      })
+      return nodes
+    }, [])
+
+  if (specialistNodes.length === 0) return base
+
+  return [
+    base[0],
+    ...specialistNodes,
+    ...base.slice(1),
+  ]
+}
+
+function isSpecialistMessage(message: AgentMessage): boolean {
+  if (asRecord(message.artifacts?.specialist_agent)) return true
+  return typeof message.agent === 'string'
+    && message.agent.includes('specialist')
+    && !['system', 'router', 'memory', 'evaluator', 'tools'].includes(message.agent)
 }
 
 function dedupeChecklistLatest(items: PlanChecklistItem[]): PlanChecklistItem[] {
@@ -520,6 +548,7 @@ function parseRemainingRisks(raw: string, findings: AuditFinding[]): RiskItem[] 
 
 function inferAgent(type: string) {
   if (type === 'tool_call') return 'tools'
+  if (type.includes('specialist_agent')) return 'specialist-agent'
   if (type === 'commands_executed') return 'executor'
   if (type.includes('planner')) return 'orchestrator'
   if (type.includes('executor')) return 'executor'
@@ -532,7 +561,11 @@ function inferAgent(type: string) {
   return 'system'
 }
 
-function titleForAgent(agent: string) {
+function titleForAgent(agent: string, artifacts: UnknownRecord = {}) {
+  const specialist = asRecord(artifacts.specialist_agent)
+  const displayName = stringOrUndefined(specialist?.display_name)
+  if (displayName) return displayName
+
   return agent
     .split('-')
     .map(part => part.charAt(0).toUpperCase() + part.slice(1))

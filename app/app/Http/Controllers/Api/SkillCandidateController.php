@@ -32,8 +32,8 @@ class SkillCandidateController extends Controller
     {
         $candidate = SkillCandidate::findOrFail($id);
 
-        /** @var \App\Services\Learning\SkillCandidateGenerator $generator */
-        $generator = app(\App\Services\Learning\SkillCandidateGenerator::class);
+        /** @var \App\Services\Skills\SkillCandidateGenerator $generator */
+        $generator = app(\App\Services\Skills\SkillCandidateGenerator::class);
         $skill = $generator->approve($candidate);
 
         return response()->json([

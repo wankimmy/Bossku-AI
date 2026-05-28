@@ -27,6 +27,15 @@ export type AgentSeatMeta = {
   label: string
 }
 
+export type SpecialistPixelAgentInput = {
+  id?: string | number | null
+  role_slug?: string | null
+  display_name?: string | null
+  pixel_palette?: number | null
+  pixel_hue_shift?: number | null
+  seat_id?: string | null
+}
+
 /** Chair / couch seat uids from realistic-office-layout.json (zep default). */
 const ROLE_SEAT_IDS: Record<BosskuPixelAgentRole, string> = {
   orchestrator: 'f-1770831748000-ksmj',
@@ -53,6 +62,31 @@ export function agentIdForRole(role: string): number | null {
     return BOSSKU_AGENT_IDS[role as BosskuPixelAgentRole]
   }
   return null
+}
+
+export function specialistAgentId(seed: string | number | null | undefined): number {
+  const text = String(seed ?? 'specialist-agent')
+  let hash = 0
+  for (let i = 0; i < text.length; i += 1) {
+    hash = ((hash << 5) - hash + text.charCodeAt(i)) | 0
+  }
+
+  return 1000 + (Math.abs(hash) % 900000)
+}
+
+export function specialistAgentMeta(agent: SpecialistPixelAgentInput): { id: number; meta: AgentSeatMeta; role: string } {
+  const role = String(agent.role_slug ?? agent.id ?? 'specialist-agent')
+  const id = specialistAgentId(agent.id ?? role)
+  return {
+    id,
+    role,
+    meta: {
+      palette: Number.isFinite(Number(agent.pixel_palette)) ? Number(agent.pixel_palette) : id % 6,
+      hueShift: Number.isFinite(Number(agent.pixel_hue_shift)) ? Number(agent.pixel_hue_shift) : 0,
+      seatId: agent.seat_id ? String(agent.seat_id) : null,
+      label: String(agent.display_name ?? role.replaceAll('-', ' ')),
+    },
+  }
 }
 
 export function roleForAgentId(id: number): BosskuPixelAgentRole | null {
@@ -109,6 +143,14 @@ export function loadPersistedSeats(): Record<number, AgentSeatMeta> {
       const id = Number(key)
       if (base[id] && value) {
         base[id] = { ...base[id], ...value, label: base[id].label }
+      }
+      else if (id >= 1000 && value) {
+        base[id] = {
+          palette: Number.isFinite(Number(value.palette)) ? Number(value.palette) : 0,
+          hueShift: Number.isFinite(Number(value.hueShift)) ? Number(value.hueShift) : 0,
+          seatId: value.seatId ?? null,
+          label: value.label ?? `Agent ${id}`,
+        }
       }
     }
     return base

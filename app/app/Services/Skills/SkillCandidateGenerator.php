@@ -26,7 +26,7 @@ class SkillCandidateGenerator
         }
 
         $exists = SkillCandidate::where('name', $skillName)
-            ->whereIn('approval_status', ['pending', 'approved'])
+            ->whereIn('approval_status', ['draft', 'pending_review', 'approved'])
             ->exists();
 
         if ($exists) {

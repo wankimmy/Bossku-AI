@@ -5,7 +5,7 @@ import {
   createPixelOfficeAdapterState,
   resetPixelOfficeAdapterState,
 } from '~/utils/pixelOfficeAdapter'
-import { BOSSKU_AGENT_IDS } from '~/utils/pixelOfficeLayout'
+import { BOSSKU_AGENT_IDS, specialistAgentId } from '~/utils/pixelOfficeLayout'
 
 function evt(partial: SseEvent): SseEvent {
   return { seq: 1, ...partial }
@@ -101,5 +101,47 @@ describe('pixelOfficeAdapter', () => {
     resetPixelOfficeAdapterState(state)
     expect(state.castSpawned).toBe(false)
     expect(state.processedIds.size).toBe(0)
+  })
+
+  it('spawns and activates dynamic specialist agents from run events', () => {
+    const state = createPixelOfficeAdapterState()
+    applyBosskuEventsToPixelOffice([evt({ type: 'run_started', seq: 1, id: 'e1' })], state)
+
+    const specialist = {
+      id: '11111111-1111-4111-8111-111111111111',
+      role_slug: 'checkout-specialist',
+      display_name: 'Checkout Specialist',
+      pixel_palette: 3,
+      pixel_hue_shift: 15,
+      seat_id: 'f-specialist',
+    }
+
+    const selected = applyBosskuEventsToPixelOffice([
+      evt({
+        type: 'specialist_agent_selected',
+        seq: 2,
+        id: 'e2',
+        agent: 'checkout-specialist',
+        artifacts: { specialist_agent: specialist },
+      }),
+    ], state)
+    const expectedId = specialistAgentId(specialist.id)
+    const cast = selected.find(m => m.type === 'existingAgents')
+    expect(cast).toBeTruthy()
+    expect((cast?.agents as number[])).toContain(expectedId)
+    expect((cast?.agentMeta as Record<number, { palette: number }>)[expectedId].palette).toBe(3)
+
+    const started = applyBosskuEventsToPixelOffice([
+      evt({
+        type: 'specialist_agent_started',
+        seq: 3,
+        id: 'e3',
+        agent: 'checkout-specialist',
+        summary: 'Specialist is preparing handoff.',
+        artifacts: { specialist_agent: specialist },
+      }),
+    ], state)
+    expect(started.some(m => m.type === 'agentStatus' && m.id === expectedId && m.status === 'active')).toBe(true)
+    expect(started.some(m => m.type === 'agentToolStart' && m.id === expectedId)).toBe(true)
   })
 })

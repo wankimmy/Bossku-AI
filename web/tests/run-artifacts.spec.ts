@@ -336,4 +336,49 @@ describe('useRunArtifacts', () => {
     expect(normalized.checklist[0].owner).toBe('auditor')
     expect(normalized.auditFindings[0].severity).toBe('low')
   })
+
+  it('normalizes specialist agent handoff events as first-class messages and handoff nodes', () => {
+    const normalized = useRunArtifacts([
+      {
+        type: 'planner_done',
+        agent: 'orchestrator',
+        status: 'success',
+      },
+      {
+        type: 'specialist_agent_done',
+        agent: 'checkout-specialist',
+        status: 'success',
+        model_role: 'reasoning',
+        summary: 'Checkout specialist prepared execution strategy.',
+        artifacts: {
+          specialist_agent: {
+            id: '11111111-1111-4111-8111-111111111111',
+            role_slug: 'checkout-specialist',
+            display_name: 'Checkout Specialist',
+          },
+          specialist_handoff: {
+            summary: 'Checkout fee risk found.',
+            handoff_to_executor: 'Read checkout totals and fee formatting before editing.',
+          },
+        },
+      },
+      {
+        type: 'executor_step_started',
+        agent: 'executor',
+        status: 'running',
+      },
+    ])
+
+    expect(normalized.agentMessages[1].agent).toBe('checkout-specialist')
+    expect(normalized.agentMessages[1].title).toBe('Checkout Specialist')
+    expect(normalized.handoffNodes.map(node => node.agent)).toEqual([
+      'orchestrator',
+      'checkout-specialist',
+      'executor',
+      'auditor',
+      'executor',
+      'final-reviewer',
+    ])
+    expect(normalized.handoffNodes[1].label).toBe('Checkout Specialist')
+  })
 })

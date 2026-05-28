@@ -1,4 +1,4 @@
-# BosskuAI for Codex
+﻿# BosskuAI for Codex
 
 Use [`../AGENTS.md`](../AGENTS.md) as the canonical cross-tool contract. This file keeps Codex-specific deltas only.
 
@@ -41,20 +41,25 @@ Trivial tasks may skip the phase split (still show the indicator).
 - If [`../ai-assistant/memory/semantic-memory.sqlite3`](../ai-assistant/memory/semantic-memory.sqlite3) exists, query it before opening broad memory files.
 - Follow [`../ai-assistant/references/memory-first-handoff-protocol.md`](../ai-assistant/references/memory-first-handoff-protocol.md) for durable writes.
 
-## Obsidian session log (mandatory at session end)
-
-After completing any meaningful task, run this command to log the session to Obsidian:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File "C:\Users\Safwan Hakim\Documents\Safwan\Bossku-AI\ai-assistant\hooks\save-to-obsidian.ps1" -Prompt "<first user prompt, max 300 chars>" -Project "<repo folder name e.g. festivent-app>" -Tool "Codex" -Summary "<one-line summary of what was done>"
-```
-
-- Run once per session, at the very end — not after every reply.
-- Skip for trivial / 1-liner sessions (typo fixes, single lookups).
-- Use the actual repo folder name as `-Project` (e.g. `festivent-app`, `iman-quest`, `Bossku-AI`).
-
 ## References
 
 - [`../AGENTS.md`](../AGENTS.md)
 - [`../ai-assistant/references/workspace-layer-architecture.md`](../ai-assistant/references/workspace-layer-architecture.md)
 - [`../agents/model-router.md`](../agents/model-router.md)
+
+## Obsidian session log (mandatory at session end)
+
+After completing any meaningful task, append **one JSON line** to the journal file.
+This is the only required action — a background watcher syncs it to Obsidian automatically.
+
+**PowerShell (preferred):**
+```powershell
+Add-Content "$env:USERPROFILE\.cursor\obsidian-journal.jsonl" ('{"tool":"Cursor","project":"Bossku-AI","prompt":"FIRST_PROMPT","summary":"ONE_LINE_SUMMARY","ts":"' + (Get-Date -Format 'o') + '"}')
+```
+
+**Rules:**
+- Replace `Bossku-AI` with the repo folder name (e.g. `festivent-app`, `Bossku-AI`, `iman-quest`)
+- Replace `FIRST_PROMPT` with the user's first message (max 300 chars, escape inner quotes with `\"`)
+- Replace `ONE_LINE_SUMMARY` with a one-line description of what was done
+- Run **once per session** at the very end — not after every reply
+- Skip trivial sessions (single lookups, typo fixes, one-liner answers)
