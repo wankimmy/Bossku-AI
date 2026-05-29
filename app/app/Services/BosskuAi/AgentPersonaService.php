@@ -161,8 +161,17 @@ class AgentPersonaService
     }
 
     /**
-     * Create missing pipeline persona rows, and upgrade stub-content rows when a real .md file is now available.
-     * Never overwrites content that was manually edited by the user (i.e. no longer matches a known stub).
+     * Create missing pipeline persona rows, and upgrade rows when the .md file changed.
+     *
+     * Upgrade logic (in priority order):
+     *   1. Row does not exist → create from .md (or stub fallback).
+     *   2. Row content is a known builtin stub → upgrade to .md.
+     *   3. Row has an md_hash and the current .md hash differs → the .md changed since last
+     *      sync; upgrade automatically (this is the path that picks up agents/*.md edits).
+     *   4. Row has real content but no md_hash → was seeded before hash tracking; treat as
+     *      "potentially user-edited"; do NOT overwrite automatically. Use syncPersonasFromMd()
+     *      with $force=true to overwrite these.
+     *   5. Everything else → leave untouched (user-edited content).
      */
     public function ensurePipelinePersonas(): void
     {
@@ -173,23 +182,22 @@ class AgentPersonaService
         foreach (self::PIPELINE_ROLES as $role) {
             $existing = AgentPersona::query()->where('role', $role)->first();
 
-            if ($existing === null) {
-                $fromMd = $this->defaultContentFromAgentsMd($role);
-                $content = $fromMd ?? ($stubs[$role] ?? 'BosskuAI '.$role.' agent.');
+            $fromMd = $this->defaultContentFromAgentsMd($role);
+            $currentMdHash = $fromMd !== null ? hash('sha256', $fromMd) : null;
 
+            if ($existing === null) {
+                $content = $fromMd ?? ($stubs[$role] ?? 'BosskuAI '.$role.' agent.');
                 AgentPersona::query()->create([
-                    'role' => $role,
+                    'role'         => $role,
                     'display_name' => $names[$role] ?? ucfirst(str_replace('_', ' ', $role)),
-                    'content' => $content,
-                    'enabled' => true,
+                    'content'      => $content,
+                    'md_hash'      => $currentMdHash,
+                    'enabled'      => true,
                 ]);
                 $changed = true;
                 continue;
             }
 
-            // Upgrade rows that still carry default content (either a builtin stub, or the old
-            // conflicting final-reviewer format). Rows with user edits are left untouched.
-            $fromMd = $this->defaultContentFromAgentsMd($role);
             $currentContent = trim((string) $existing->content);
             $knownStubs = array_map('trim', array_merge(
                 array_values($stubs),
@@ -197,12 +205,16 @@ class AgentPersonaService
             ));
 
             $isStub = in_array($currentContent, $knownStubs, true);
-            // Detect the old final-reviewer.md format that described the wrong output contract.
             $isOldFinalReviewerFormat = $role === 'final_reviewer'
                 && str_contains($currentContent, 'Status: Completed / Partially Completed / Blocked');
 
-            if ($fromMd !== null && ($isStub || $isOldFinalReviewerFormat)) {
-                $existing->update(['content' => $fromMd]);
+            // md_hash is set → this row was last written by a sync; auto-upgrade when .md changed.
+            $mdHashChanged = $existing->md_hash !== null
+                && $currentMdHash !== null
+                && $existing->md_hash !== $currentMdHash;
+
+            if ($fromMd !== null && ($isStub || $isOldFinalReviewerFormat || $mdHashChanged)) {
+                $existing->update(['content' => $fromMd, 'md_hash' => $currentMdHash]);
                 $changed = true;
             }
         }
@@ -210,6 +222,88 @@ class AgentPersonaService
         if ($changed) {
             $this->clearCache();
         }
+    }
+
+    /**
+     * Force-sync all (or specific) pipeline persona rows from their agents/*.md files.
+     *
+     * This is the escape hatch when rows have real content but no md_hash (seeded before
+     * hash tracking was added) and you want to push new .md content through without dropping
+     * the DB and re-seeding.
+     *
+     * @param  list<string>|null  $roles  Null means all PIPELINE_ROLES.
+     * @param  bool  $dryRun  When true, report what would change without writing.
+     * @return list<array{role: string, action: string, old_preview: string, new_preview: string}>
+     */
+    public function syncPersonasFromMd(?array $roles = null, bool $dryRun = false): array
+    {
+        $roles ??= self::PIPELINE_ROLES;
+        $names = self::defaultDisplayNames();
+        $report = [];
+
+        foreach ($roles as $role) {
+            $fromMd = $this->defaultContentFromAgentsMd($role);
+            if ($fromMd === null) {
+                $report[] = [
+                    'role'        => $role,
+                    'action'      => 'skip_no_md_file',
+                    'old_preview' => '',
+                    'new_preview' => '',
+                ];
+                continue;
+            }
+
+            $newHash = hash('sha256', $fromMd);
+            $existing = AgentPersona::query()->where('role', $role)->first();
+
+            if ($existing === null) {
+                if (! $dryRun) {
+                    AgentPersona::query()->create([
+                        'role'         => $role,
+                        'display_name' => $names[$role] ?? ucfirst(str_replace('_', ' ', $role)),
+                        'content'      => $fromMd,
+                        'md_hash'      => $newHash,
+                        'enabled'      => true,
+                    ]);
+                }
+                $report[] = [
+                    'role'        => $role,
+                    'action'      => 'created',
+                    'old_preview' => '',
+                    'new_preview' => mb_substr($fromMd, 0, 80),
+                ];
+                continue;
+            }
+
+            $oldContent = trim((string) $existing->content);
+            if ($oldContent === trim($fromMd)) {
+                $existing->md_hash === $newHash
+                    ? $report[] = ['role' => $role, 'action' => 'unchanged', 'old_preview' => '', 'new_preview' => '']
+                    : ($dryRun ?: $existing->update(['md_hash' => $newHash]));
+                if ($oldContent !== trim($fromMd) || $existing->md_hash !== $newHash) {
+                    $report[] = ['role' => $role, 'action' => 'hash_updated', 'old_preview' => mb_substr($oldContent, 0, 80), 'new_preview' => mb_substr($fromMd, 0, 80)];
+                } else {
+                    $report[] = ['role' => $role, 'action' => 'unchanged', 'old_preview' => '', 'new_preview' => ''];
+                }
+                continue;
+            }
+
+            if (! $dryRun) {
+                $existing->update(['content' => $fromMd, 'md_hash' => $newHash]);
+            }
+            $report[] = [
+                'role'        => $role,
+                'action'      => $dryRun ? 'would_update' : 'updated',
+                'old_preview' => mb_substr($oldContent, 0, 80),
+                'new_preview' => mb_substr($fromMd, 0, 80),
+            ];
+        }
+
+        if (! $dryRun) {
+            $this->clearCache();
+        }
+
+        return $report;
     }
 
     /**

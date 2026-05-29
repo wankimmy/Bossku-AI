@@ -34,6 +34,25 @@ Orchestrator: detect **`Skill`** for the `[BOSSKUAI]` line using keywords in the
 
 Resolve conflicts by **risk** then **intent**: auth/security cues → prefer **security** if in doubt vs generic **laravel**; DB schema vs app code vs **database**.
 
+## Loop & alignment cues (cross-cutting — pair with the domain skill)
+
+These are *phase* skills layered on top of the domain skill above, not replacements. They carry the **loop-until-fixed** discipline every agent now follows.
+
+| Keywords / cues | Skill |
+|---|---|
+| diagnose, debug, broken, throwing, failing, flaky, perf regression, "why is this happening" | `bosskuai-diagnose-loop` |
+| write tests first, TDD, red-green-refactor, tracer bullet, regression test | `bosskuai-tdd-loop` |
+| build failing, typecheck error, lint error, CI red, dependency conflict | `bosskuai-diagnose-loop` (via build-fixer) |
+| review the PR/MR, greploop, fix all comments, "until 5/5", resolve threads | `bosskuai-greptile-review-loop` |
+| check the PR/MR, unresolved comments, prepare for merge, failing checks | `bosskuai-pr-check` |
+| grill me, stress-test my plan, interview me, challenge this design | `bosskuai-grill-me` (or `bosskuai-grill-with-docs` if the repo has CONTEXT.md/ADRs) |
+| improve architecture, deepen modules, reduce coupling, ball of mud, make testable | `bosskuai-architecture-deepening` |
+| zoom out, bigger picture, map this area, "I don't know this code" | `bosskuai-zoom-out` |
+| prototype, "let me play with it", sanity-check the state machine, try a few designs | `bosskuai-throwaway-prototype` (demos/MVP → `bosskuai-rapid-prototype`) |
+| hand off, compact this conversation, fresh session pickup | `bosskuai-handoff` |
+
+Domain label sets the **primary** skill; the loop cue sets the **secondary** (e.g. `laravel + bosskuai-diagnose-loop`). When the request is purely a loop activity (e.g. "greploop this PR"), the loop skill is primary.
+
 ## Cross-reference
 
 Load deep playbooks via root [`skills/`](../skills/) summaries → `ai-assistant/skills/` + `skill-index.json`.

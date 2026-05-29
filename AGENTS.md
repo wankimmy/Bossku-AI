@@ -75,6 +75,20 @@ Core skills:
 
 Specialists are opt-in by clear task evidence. Deprecated aliases should route to their replacement skill.
 
+### Loop & alignment skills
+
+These power the **loop-until-fixed** discipline that every agent now follows (see [`agents/`](agents/)). Load the one that matches the phase:
+
+- `bosskuai-diagnose-loop` — hard bugs / perf regressions: build a fast pass/fail loop, then reproduce → hypothesise → instrument → fix → regression-test. Used by `build-fixer`, `executor`, `e2e-runner`.
+- `bosskuai-tdd-loop` — behavior changes via red→green→refactor on vertical slices. Used by `tdd-guide`, `executor`.
+- `bosskuai-greptile-review-loop` — iterate a PR/MR/CL until review is clean (5/5, zero unresolved). Used by all review/audit agents.
+- `bosskuai-pr-check` — audit a PR/MR/CL for unresolved comments, failing checks, and incomplete description, then fix + resolve. Used by `auditor`, `code-reviewer`, `final-reviewer`.
+- `bosskuai-grill-me` / `bosskuai-grill-with-docs` — relentless one-question-at-a-time interrogation to align on a plan before building; the `-with-docs` variant also sharpens `CONTEXT.md` / ADRs. Used by `orchestrator`, `planner`, `clarification`.
+- `bosskuai-architecture-deepening` — turn shallow modules into deep ones for testability and AI-navigability. Used by `refactor-cleaner`, `planner`.
+- `bosskuai-zoom-out` — map an unfamiliar area up a layer of abstraction before editing. Used by `orchestrator`, `planner`, `docs-lookup`.
+- `bosskuai-throwaway-prototype` — disposable code that answers one design question (logic terminal app or toggleable UI variations). Used by `prototype-builder`.
+- `bosskuai-handoff` — compact the session into a pickup doc when stopping mid-task. Used by `writer`, pairs with `bosskuai-context-limit-continuation`.
+
 ## Model flow
 
 Same intent in two surfaces — **Docker MVP** enforces routing in code; **editor-only workspaces** follow it manually when each tool’s UI allows model switching. Full role/fallback table: [`agents/model-router.md`](agents/model-router.md).

@@ -18,6 +18,7 @@ class AgentPersona extends Model
         'role',
         'display_name',
         'content',
+        'md_hash',
         'enabled',
     ];
 
