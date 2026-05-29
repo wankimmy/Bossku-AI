@@ -9,7 +9,7 @@
     "build:pixel-office:bundle": "cd pixel-office && npm ci && npm run build",
     "prepare:pixel-office": "cd pixel-office && npm ci && npm run export:zep-furniture && npm run sync:zep-assets && npm run build",
     "build:pixel-office": "npm run prepare:pixel-office",
-    "build": "npm run build:pixel-office:bundle && nuxt build",
+    "build": "sh -c 'if [ \"$BOSSKU_SKIP_PIXEL_OFFICE_IN_NUXT_BUILD\" != 1 ]; then npm run build:pixel-office:bundle; fi' && nuxt build",
     "start": "node .output/server/index.mjs",
     "dev": "nuxt dev",
     "preview": "nuxt preview --host 0.0.0.0 --port 3000",

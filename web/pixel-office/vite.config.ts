@@ -6,6 +6,8 @@ export default defineConfig({
   build: {
     outDir: '../public/pixel-office',
     emptyOutDir: true,
+    // Binary assets merged in postbuild (copy-public-assets.mjs); avoids bind-mount EACCES on cpSync.
+    copyPublicDir: false,
   },
   base: '/pixel-office/',
 })

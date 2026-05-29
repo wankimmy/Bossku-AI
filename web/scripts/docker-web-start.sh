@@ -105,6 +105,7 @@ prepare_pixel_office() {
   if [ -f "$catalog" ] && find public/pixel-office/assets/furniture -name '*.png' 2>/dev/null | head -1 | grep -q .; then
     catalog_ok=1
     touch public/pixel-office/.prepare-stamp
+    export BOSSKU_SKIP_PIXEL_OFFICE_IN_NUXT_BUILD=1
     echo "[bossku-web] Pixel office bundle ready (furniture catalog + PNGs)."
   else
     rm -f public/pixel-office/.prepare-stamp
