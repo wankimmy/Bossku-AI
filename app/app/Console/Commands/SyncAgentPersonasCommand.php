@@ -21,24 +21,18 @@ class SyncAgentPersonasCommand extends Command
         $roles    = (array) $this->option('role') ?: null;
 
         if ($isDryRun) {
-            $this->line('<fg=yellow>Dry-run mode — no changes will be written.</>');
+            $this->line('<fg=yellow>Dry-run — no changes will be written.</>');
         }
-
         if ($isForce) {
-            $report = $service->syncPersonasFromMd($roles, $isDryRun);
-        } else {
-            // Standard path: only upgrades stubs and md_hash-tracked changed rows.
-            // Rows without md_hash that have real content are left alone.
-            $service->ensurePipelinePersonas();
-            $report = $service->syncPersonasFromMd($roles, true); // dry-run to produce the report
-            $this->line('<fg=cyan>Standard sync complete (stubs + md_hash-tracked changes).</>');
-            $this->line('Use <fg=yellow>--force</> to overwrite all rows from .md, including user-edited content.');
-            $this->renderReport($service->syncPersonasFromMd($roles, false));
-
-            return self::SUCCESS;
+            $this->line('<fg=yellow>Force — user-edited personas will be overwritten from agents/*.md.</>');
         }
 
+        $report = $service->syncPersonasFromMd($roles, force: $isForce, dryRun: $isDryRun);
         $this->renderReport($report);
+
+        if (! $isForce) {
+            $this->line('Use <fg=yellow>--force</> to also overwrite personas edited in the UI.');
+        }
 
         return self::SUCCESS;
     }
@@ -56,9 +50,11 @@ class SyncAgentPersonasCommand extends Command
 
         $this->table($headers, $rows);
 
-        $updated = count(array_filter($report, fn ($r) => in_array($r['action'], ['updated', 'created', 'would_update'], true)));
+        $writeActions = ['updated', 'created', 'hash_backfilled', 'would_update', 'would_backfill_hash'];
+        $changed = count(array_filter($report, fn ($r) => in_array($r['action'], $writeActions, true)));
+        $skipped = count(array_filter($report, fn ($r) => $r['action'] === 'skipped_user_edited'));
         $unchanged = count(array_filter($report, fn ($r) => $r['action'] === 'unchanged'));
 
-        $this->info("Updated: {$updated}  |  Unchanged: {$unchanged}  |  Total: ".count($report));
+        $this->info("Changed: {$changed}  |  Unchanged: {$unchanged}  |  Skipped (user-edited): {$skipped}  |  Total: ".count($report));
     }
 }

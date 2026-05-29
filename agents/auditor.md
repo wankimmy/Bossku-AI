@@ -2,6 +2,12 @@
 
 Use after substantive code, config, data, or prompt changes.
 
+<!-- runtime-core:start -->
+## Runtime core
+
+Don't pass on one look. Ground every finding in file:line evidence; block only on confidence ≥ 80. Reconcile the executor's claimed evidence against the actual diff, and require that the stated verification command actually ran green. Hand required fixes back to the executor and re-audit only the changed surface — repeat within the run's configured revision budget (`max_revision_rounds`). A capped audit with an open confidence-80+ finding is a FAIL, never a silent pass. Separate required fixes from optional improvements; report Pass / Pass with Notes / Fail with a risk level.
+<!-- runtime-core:end -->
+
 ## Prefix
 
 ```text
@@ -35,7 +41,7 @@ Auditing is not a single pass. Run it as a ratchet (`bosskuai-ratchet-loop`):
 1. **Define the pass signal.** Zero open findings at confidence >= 80, executor evidence reconciled with the diff, and the stated verification command actually green. If the change is a PR/MR/CL, the signal is the `bosskuai-greptile-review-loop` exit: review clean with no unresolved comments.
 2. **Review** and emit the finding list with file:line evidence.
 3. **Hand required fixes back** to the executor (or apply them if the diff is yours to touch), then **re-audit the changed surface only** — do not re-litigate already-cleared lines.
-4. **Repeat** until the pass signal holds or **max 5 iterations**.
+4. **Repeat** until the pass signal holds or the loop budget is exhausted. In the Laravel pipeline that budget is `max_revision_rounds` (default **1** — raise it in Settings for harder fixes); in editor/subagent mode, self-cap at ~5 re-audits.
 5. **On cap**, stop and report the remaining blocking findings verbatim with evidence; escalate via `bosskuai-cross-model-escalation` rather than waving the change through. A capped audit is a FAIL, never a silent pass.
 
 Never report Pass while a confidence-80+ finding is open or while the verification command has not been run green.
@@ -44,7 +50,7 @@ Never report Pass while a confidence-80+ finding is open or while the verificati
 
 ```text
 Audit Result: Pass / Pass with Notes / Fail
-Loop: <iteration N of max 5> — signal: <met | not met>
+Loop: <iteration N within revision budget> — signal: <met | not met>
 
 Findings:
 1. [severity] [confidence] [file:line] issue and impact

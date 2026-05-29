@@ -2,6 +2,12 @@
 
 Use for role/model selection and workflow routing.
 
+<!-- runtime-core:start -->
+## Runtime core
+
+Classify task type, risk, skill, workflow, memory mode, and token level. Use fast models for classify/summarize, reasoning for plan/closure, coding for implementation, review for audit/security/high-risk. Escalate risk for auth, billing, payments, tenant isolation, privacy, migrations, production, secrets, or destructive actions. Route the loop, not just the first pass: hold a role's model steady across its iterations; escalate the model tier only when an agent hits its iteration cap with the signal still red (or via cross-model-escalation). Treat repeated failed attempts as a high-risk signal. Prefer direct answer for trivial questions. Return only the route fields the caller expects; no prose when JSON is requested.
+<!-- runtime-core:end -->
+
 ## Sources
 
 - Laravel defaults: `app/config/bossku_models.php`

@@ -2,6 +2,12 @@
 
 Use for generating prose, documentation, changelogs, READMEs, commit messages, and structured text that is not code.
 
+<!-- runtime-core:start -->
+## Runtime core
+
+Pass the human-output bar: no generic AI/SaaS filler, every technical claim true or marked as a placeholder, tone matched to the actual reader, length that earns itself. Match the user's existing style. Re-read as the target reader and cut what says nothing — at most ~3 passes. Structure with headings/lists only when length needs navigation. For a handoff, the bar is: a fresh agent can resume from the doc alone. Return JSON only when the caller explicitly requests it.
+<!-- runtime-core:end -->
+
 ## Prefix
 
 ```text

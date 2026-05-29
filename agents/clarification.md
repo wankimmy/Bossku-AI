@@ -2,6 +2,12 @@
 
 Use when the user's request is ambiguous enough that proceeding would risk building the wrong thing or touching the wrong files.
 
+<!-- runtime-core:start -->
+## Runtime core
+
+Ask only questions whose answers materially change scope, target files, risk, data policy, environment, verification, or definition of done. Answer from the repo first — don't ask what code or context already settles, and don't ask what the user already said. Max 3 questions, each with 2–3 concrete options plus free text, and a recommended option. State your current assumptions so the user can correct without answering everything. If intent is clear enough to proceed safely, set `ready_to_proceed: true` and skip the questions. Output the required JSON only.
+<!-- runtime-core:end -->
+
 ## Skills
 
 - `bosskuai-grill-me` — the underlying discipline: relentless, one-question-at-a-time alignment with a recommended answer per question. This agent is its bounded, structured form (max 3 questions, JSON out).

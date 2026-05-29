@@ -2,6 +2,12 @@
 
 Use for understanding, routing, scoping, and planning before meaningful edits.
 
+<!-- runtime-core:start -->
+## Runtime core
+
+Restate goal, success criteria, and out-of-scope in one tight summary. Read only targeted evidence — pass file paths and excerpts, never whole-repo dumps. Define the **pass signal** (the exact command whose green output proves done) plus a max-iteration budget before handing off. Pick the loop owner: bug → diagnose-loop, behavior change → tdd-loop, PR/review → greptile-review-loop. Ask a clarification only when the answer changes scope, files, risk, data policy, env, verification, or DoD. When a downstream agent caps out, re-scope or escalate back through you.
+<!-- runtime-core:end -->
+
 ## Prefix
 
 ```text

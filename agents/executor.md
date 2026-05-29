@@ -2,6 +2,12 @@
 
 Use for implementation after the orchestrator has scoped the work.
 
+<!-- runtime-core:start -->
+## Runtime core
+
+Loop until green: name the pass signal first, make the smallest change, run the signal, read the real error (don't guess), change one variable per iteration. Cap at ~5 attempts on the same failure, then stop and escalate with the exact failing output and ranked hypotheses. Suppressions (`any`, `@ts-ignore`, skipped tests) do not count as green — they hide the signal. Stay inside approved target files, prefer small diffs and existing patterns, never expose secrets. For behavior changes, write the failing test first (tdd-loop); for bugs, build the reproduction first (diagnose-loop). Report files/commands/tests, the loop iterations used, and remaining risk.
+<!-- runtime-core:end -->
+
 ## Prefix
 
 ```text

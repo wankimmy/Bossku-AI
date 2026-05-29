@@ -161,95 +161,49 @@ class AgentPersonaService
     }
 
     /**
-     * Create missing pipeline persona rows, and upgrade rows when the .md file changed.
+     * Safe propagate: create missing rows, migrate legacy/stale rows, and pull in agents/*.md
+     * changes — while leaving rows the user deliberately edited in the UI untouched.
      *
-     * Upgrade logic (in priority order):
-     *   1. Row does not exist → create from .md (or stub fallback).
-     *   2. Row content is a known builtin stub → upgrade to .md.
-     *   3. Row has an md_hash and the current .md hash differs → the .md changed since last
-     *      sync; upgrade automatically (this is the path that picks up agents/*.md edits).
-     *   4. Row has real content but no md_hash → was seeded before hash tracking; treat as
-     *      "potentially user-edited"; do NOT overwrite automatically. Use syncPersonasFromMd()
-     *      with $force=true to overwrite these.
-     *   5. Everything else → leave untouched (user-edited content).
+     * Runs automatically on every Docker startup (via AgentPersonaSeeder and the entrypoint),
+     * so editing a pipeline agents/*.md file and restarting is enough to update the live persona.
+     *
+     * @return list<array{role: string, action: string, old_preview: string, new_preview: string}>
      */
-    public function ensurePipelinePersonas(): void
+    public function ensurePipelinePersonas(): array
     {
-        $names = self::defaultDisplayNames();
-        $stubs = AgentPersonaBuiltinPrompts::previews();
-        $changed = false;
-
-        foreach (self::PIPELINE_ROLES as $role) {
-            $existing = AgentPersona::query()->where('role', $role)->first();
-
-            $fromMd = $this->defaultContentFromAgentsMd($role);
-            $currentMdHash = $fromMd !== null ? hash('sha256', $fromMd) : null;
-
-            if ($existing === null) {
-                $content = $fromMd ?? ($stubs[$role] ?? 'BosskuAI '.$role.' agent.');
-                AgentPersona::query()->create([
-                    'role'         => $role,
-                    'display_name' => $names[$role] ?? ucfirst(str_replace('_', ' ', $role)),
-                    'content'      => $content,
-                    'md_hash'      => $currentMdHash,
-                    'enabled'      => true,
-                ]);
-                $changed = true;
-                continue;
-            }
-
-            $currentContent = trim((string) $existing->content);
-            $knownStubs = array_map('trim', array_merge(
-                array_values($stubs),
-                ['BosskuAI '.$role.' agent.'],
-            ));
-
-            $isStub = in_array($currentContent, $knownStubs, true);
-            $isOldFinalReviewerFormat = $role === 'final_reviewer'
-                && str_contains($currentContent, 'Status: Completed / Partially Completed / Blocked');
-
-            // md_hash is set → this row was last written by a sync; auto-upgrade when .md changed.
-            $mdHashChanged = $existing->md_hash !== null
-                && $currentMdHash !== null
-                && $existing->md_hash !== $currentMdHash;
-
-            if ($fromMd !== null && ($isStub || $isOldFinalReviewerFormat || $mdHashChanged)) {
-                $existing->update(['content' => $fromMd, 'md_hash' => $currentMdHash]);
-                $changed = true;
-            }
-        }
-
-        if ($changed) {
-            $this->clearCache();
-        }
+        return $this->syncPersonasFromMd(null, force: false, dryRun: false);
     }
 
     /**
-     * Force-sync all (or specific) pipeline persona rows from their agents/*.md files.
+     * Single sync engine for pipeline personas. `ensurePipelinePersonas()` is the safe wrapper.
      *
-     * This is the escape hatch when rows have real content but no md_hash (seeded before
-     * hash tracking was added) and you want to push new .md content through without dropping
-     * the DB and re-seeding.
+     * Per role, given the compact runtime-core extracted from agents/*.md:
+     *   - no row                          → create, tracking the .md (md_hash = sha256(core)).
+     *   - row marked USER_EDITED & !force → skip (the user owns it via the UI; use --force to override).
+     *   - content already equals the .md  → backfill md_hash if missing/stale; otherwise unchanged.
+     *   - content differs                 → adopt the .md and (re)track it. This covers stubs,
+     *                                        legacy null-hash rows, and genuine .md edits.
      *
      * @param  list<string>|null  $roles  Null means all PIPELINE_ROLES.
-     * @param  bool  $dryRun  When true, report what would change without writing.
+     * @param  bool  $force   Overwrite even USER_EDITED rows (re-tracks them to the .md).
+     * @param  bool  $dryRun  Report what would change without writing.
      * @return list<array{role: string, action: string, old_preview: string, new_preview: string}>
      */
-    public function syncPersonasFromMd(?array $roles = null, bool $dryRun = false): array
+    public function syncPersonasFromMd(?array $roles = null, bool $force = false, bool $dryRun = false): array
     {
         $roles ??= self::PIPELINE_ROLES;
         $names = self::defaultDisplayNames();
         $report = [];
+        $wrote = false;
+
+        $row = function (string $role, string $action, string $old = '', string $new = '') use (&$report): void {
+            $report[] = ['role' => $role, 'action' => $action, 'old_preview' => $old, 'new_preview' => $new];
+        };
 
         foreach ($roles as $role) {
             $fromMd = $this->defaultContentFromAgentsMd($role);
             if ($fromMd === null) {
-                $report[] = [
-                    'role'        => $role,
-                    'action'      => 'skip_no_md_file',
-                    'old_preview' => '',
-                    'new_preview' => '',
-                ];
+                $row($role, 'skip_no_md_file');
                 continue;
             }
 
@@ -265,45 +219,55 @@ class AgentPersonaService
                         'md_hash'      => $newHash,
                         'enabled'      => true,
                     ]);
+                    $wrote = true;
                 }
-                $report[] = [
-                    'role'        => $role,
-                    'action'      => 'created',
-                    'old_preview' => '',
-                    'new_preview' => mb_substr($fromMd, 0, 80),
-                ];
+                $row($role, 'created', '', mb_substr($fromMd, 0, 80));
+                continue;
+            }
+
+            // The user edited this persona in the UI — never clobber it on an auto-sync.
+            if ($existing->md_hash === self::USER_EDITED_HASH && ! $force) {
+                $row($role, 'skipped_user_edited');
                 continue;
             }
 
             $oldContent = trim((string) $existing->content);
             if ($oldContent === trim($fromMd)) {
-                $existing->md_hash === $newHash
-                    ? $report[] = ['role' => $role, 'action' => 'unchanged', 'old_preview' => '', 'new_preview' => '']
-                    : ($dryRun ?: $existing->update(['md_hash' => $newHash]));
-                if ($oldContent !== trim($fromMd) || $existing->md_hash !== $newHash) {
-                    $report[] = ['role' => $role, 'action' => 'hash_updated', 'old_preview' => mb_substr($oldContent, 0, 80), 'new_preview' => mb_substr($fromMd, 0, 80)];
+                if ($existing->md_hash === $newHash) {
+                    $row($role, 'unchanged');
                 } else {
-                    $report[] = ['role' => $role, 'action' => 'unchanged', 'old_preview' => '', 'new_preview' => ''];
+                    if (! $dryRun) {
+                        $existing->update(['md_hash' => $newHash]);
+                        $wrote = true;
+                    }
+                    $row($role, $dryRun ? 'would_backfill_hash' : 'hash_backfilled');
                 }
                 continue;
             }
 
             if (! $dryRun) {
                 $existing->update(['content' => $fromMd, 'md_hash' => $newHash]);
+                $wrote = true;
             }
-            $report[] = [
-                'role'        => $role,
-                'action'      => $dryRun ? 'would_update' : 'updated',
-                'old_preview' => mb_substr($oldContent, 0, 80),
-                'new_preview' => mb_substr($fromMd, 0, 80),
-            ];
+            $row($role, $dryRun ? 'would_update' : 'updated', mb_substr($oldContent, 0, 80), mb_substr($fromMd, 0, 80));
         }
 
-        if (! $dryRun) {
+        if ($wrote) {
             $this->clearCache();
         }
 
         return $report;
+    }
+
+    /** Hash sentinel marking a persona row as user-owned (edited via the UI), exempt from auto-sync. */
+    public const USER_EDITED_HASH = 'user-edited';
+
+    /** SHA-256 of the runtime-core currently published for a role, or null when the .md is missing. */
+    public function currentMdHash(string $role): ?string
+    {
+        $fromMd = $this->defaultContentFromAgentsMd($this->normalizeRole($role));
+
+        return $fromMd !== null ? hash('sha256', $fromMd) : null;
     }
 
     /**
@@ -349,7 +313,22 @@ class AgentPersonaService
             return null;
         }
 
-        return trim((string) File::get($path)) ?: null;
+        $raw = (string) File::get($path);
+
+        // Token efficiency: the full agent .md is the rich editor/subagent-facing doc.
+        // For runtime system-prompt injection we only need the compact operating core,
+        // delimited by <!-- runtime-core:start --> ... <!-- runtime-core:end -->.
+        // The role's detailed contract + output schema already live in the per-role
+        // service system prompt, so injecting the whole doc is largely redundant.
+        // Fall back to the full file when no marker block is present.
+        if (preg_match('/<!--\s*runtime-core:start\s*-->(.*?)<!--\s*runtime-core:end\s*-->/s', $raw, $m)) {
+            $core = trim($m[1]);
+            if ($core !== '') {
+                return $core;
+            }
+        }
+
+        return trim($raw) ?: null;
     }
 
     /** @return array<string, string> */

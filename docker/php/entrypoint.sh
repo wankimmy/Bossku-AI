@@ -67,6 +67,16 @@ case "$1" in php-fpm*|php*)
   echo "[bossku] Seeding spec data..."
   php artisan db:seed --class=BosskuAiSpecSeeder --force --no-interaction
 
+  # Sync pipeline agent personas from agents/*.md → DB (auto-propagates edits on every up).
+  # Safe by default: migrates legacy/stale rows and pulls in .md changes, but preserves
+  # personas a user edited in the UI. Set BOSSKU_FORCE_PERSONA_SYNC=true to overwrite those too.
+  echo "[bossku] Syncing agent personas from agents/*.md..."
+  if [ "${BOSSKU_FORCE_PERSONA_SYNC:-false}" = "true" ]; then
+    php artisan bosskuai:sync-personas --force --no-interaction || echo "[bossku] Persona sync skipped (non-fatal)"
+  else
+    php artisan bosskuai:sync-personas --no-interaction || echo "[bossku] Persona sync skipped (non-fatal)"
+  fi
+
   # Bootstrap soul.md into soul_versions table
   echo "[bossku] Bootstrapping soul..."
   php artisan bosskuai:soul-bootstrap --no-interaction || echo "[bossku] Soul bootstrap skipped (already exists)"

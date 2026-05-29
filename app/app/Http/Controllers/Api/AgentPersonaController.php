@@ -67,6 +67,9 @@ class AgentPersonaController extends Controller
 
         if (array_key_exists('content', $data)) {
             $row->content = $data['content'];
+            // Mark as user-owned so the auto-sync on Docker startup won't overwrite this edit.
+            // The user can re-attach to agents/*.md via the reset endpoint.
+            $row->md_hash = AgentPersonaService::USER_EDITED_HASH;
         }
         if (array_key_exists('enabled', $data)) {
             $row->enabled = (bool) $data['enabled'];
@@ -97,11 +100,13 @@ class AgentPersonaController extends Controller
             ?? AgentPersonaBuiltinPrompts::previews()[$role]
             ?? '';
 
+        // Re-attach to agents/*.md: track its hash so future .md edits auto-propagate again.
         $row = AgentPersona::query()->updateOrCreate(
             ['role' => $role],
             [
                 'display_name' => AgentPersonaService::defaultDisplayNames()[$role] ?? $role,
                 'content' => $content,
+                'md_hash' => $this->personas->currentMdHash($role),
                 'enabled' => true,
             ]
         );
