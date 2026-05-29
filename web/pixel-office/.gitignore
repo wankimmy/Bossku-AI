@@ -27,4 +27,5 @@ dist-ssr
 */assets/*
 !*/assets/characters/
 !*/assets/default-layout.json
+!*/assets/realistic-office-layout.json
 !*/assets/walls.png

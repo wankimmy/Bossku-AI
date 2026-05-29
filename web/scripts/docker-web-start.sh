@@ -92,7 +92,14 @@ prepare_pixel_office() {
       exit 1
     fi
   fi
-  NPM_CONFIG_PRODUCTION=false npm run build:pixel-office:bundle
+  if ! NPM_CONFIG_PRODUCTION=false npm run build:pixel-office:bundle; then
+    if pixel_office_graceful; then
+      echo "[bossku-web] build:pixel-office:bundle failed (graceful mode; Nuxt will start without pixel-office bundle)."
+    else
+      echo "[bossku-web] build:pixel-office:bundle failed. Set BOSSKU_PIXEL_OFFICE_SKIP_ASSETS=1 or BOSSKU_PIXEL_OFFICE_GRACEFUL=1."
+      exit 1
+    fi
+  fi
   mkdir -p public/pixel-office
   catalog_ok=0
   if [ -f "$catalog" ] && find public/pixel-office/assets/furniture -name '*.png' 2>/dev/null | head -1 | grep -q .; then
