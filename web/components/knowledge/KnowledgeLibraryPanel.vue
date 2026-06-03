@@ -23,6 +23,19 @@ type LearnUrlResult = {
   chunks: number
   indexed: number
   type: 'youtube' | 'web'
+  embeddings?: boolean
+}
+
+type SearchResult = {
+  title: string
+  url: string
+  snippet: string
+}
+
+type SearchResponse = {
+  query: string
+  results: SearchResult[]
+  learned: unknown[]
 }
 
 type RecentResponse = {
@@ -30,6 +43,50 @@ type RecentResponse = {
 }
 
 const api = useApi()
+
+// ── Search the web (DuckDuckGo, no API key) → discover then learn ──
+const searchQuery = ref('')
+const searchLoading = ref(false)
+const searchError = ref('')
+const searchResults = ref<SearchResult[]>([])
+const learningUrl = ref('')
+
+async function runWebSearch() {
+  const query = searchQuery.value.trim()
+  if (!query) return
+  searchLoading.value = true
+  searchError.value = ''
+  try {
+    const res = await api.post('/knowledge/search', { query }) as SearchResponse
+    searchResults.value = res.results ?? []
+    if (searchResults.value.length === 0) {
+      searchError.value = 'No results found. Try a different query.'
+    }
+  }
+  catch (e) {
+    searchError.value = apiErrorMessage(e, 'Web search failed.')
+  }
+  finally {
+    searchLoading.value = false
+  }
+}
+
+// Learn a specific URL (shared by search results + the Learn-from-URL box).
+async function learnUrl(url: string) {
+  learningUrl.value = url
+  learnError.value = ''
+  try {
+    const result = await api.post('/knowledge/learn-url', { url }) as LearnUrlResult
+    learnResults.value.unshift(result)
+    await refresh()
+  }
+  catch (e) {
+    learnError.value = apiErrorMessage(e, 'Failed to learn from URL.')
+  }
+  finally {
+    learningUrl.value = ''
+  }
+}
 
 // ── Learn from URL (single URL — YouTube transcript or web page) ──
 const learnUrlInput = ref('')
@@ -42,24 +99,21 @@ async function learnFromUrl() {
   const url = learnUrlInput.value.trim()
   if (!url) return
   learnLoading.value = true
-  learnError.value = ''
   learnProgress.value = (url.includes('youtube.com') || url.includes('youtu.be'))
-    ? 'Fetching YouTube transcript…'
+    ? 'Fetching captions (incl. auto-generated)…'
     : 'Fetching and reading page…'
   try {
-    const result = await api.post('/knowledge/learn-url', { url }) as LearnUrlResult
-    learnResults.value.unshift(result)
-    learnUrlInput.value = ''
-    await refresh()
-  }
-  catch (e) {
-    learnError.value = apiErrorMessage(e, 'Failed to learn from URL.')
+    await learnUrl(url)
+    if (!learnError.value) learnUrlInput.value = ''
   }
   finally {
     learnLoading.value = false
     learnProgress.value = ''
   }
 }
+
+// Warn when learned chunks were stored without vector embeddings (keyword-only recall).
+const embeddingsOff = computed(() => learnResults.value.some(r => r.embeddings === false))
 
 function onLearnKeydown(e: KeyboardEvent) {
   if (e.key === 'Enter') learnFromUrl()
@@ -147,6 +201,60 @@ function statusClass(status?: string) {
 <template>
   <div class="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)]">
 
+    <!-- ── Search the web (DuckDuckGo, no key) ────────────────────────── -->
+    <section class="min-w-0 space-y-4 rounded-2xl border border-sky-500/20 bg-zinc-950/80 p-4 sm:p-5 lg:col-span-2">
+      <div>
+        <h2 class="text-lg font-semibold text-zinc-100">Search the web</h2>
+        <p class="text-sm text-zinc-500">
+          Find sources by keyword (no API key — via DuckDuckGo), then learn any result straight into memory.
+        </p>
+      </div>
+
+      <div class="flex gap-3">
+        <input
+          v-model="searchQuery"
+          type="search"
+          class="min-w-0 flex-1 rounded-xl border border-zinc-800 bg-zinc-900/70 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-sky-400"
+          placeholder="e.g. Malaysian event vendor marketplace trends 2026"
+          :disabled="searchLoading"
+          @keydown.enter="runWebSearch"
+        >
+        <button
+          type="button"
+          class="shrink-0 rounded-xl bg-sky-500 px-5 py-2 text-sm font-semibold text-zinc-950 hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
+          :disabled="searchLoading || !searchQuery.trim()"
+          @click="runWebSearch"
+        >
+          <span v-if="searchLoading" class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-zinc-900/30 border-t-zinc-900" />
+          <span v-else>Search</span>
+        </button>
+      </div>
+
+      <p v-if="searchError" class="rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">{{ searchError }}</p>
+
+      <ul v-if="searchResults.length" class="space-y-2">
+        <li
+          v-for="r in searchResults"
+          :key="r.url"
+          class="flex items-start gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-3"
+        >
+          <div class="min-w-0 flex-1">
+            <a :href="r.url" target="_blank" rel="noopener" class="text-sm font-medium text-zinc-100 hover:text-sky-300">{{ r.title }}</a>
+            <p v-if="r.snippet" class="mt-0.5 line-clamp-2 text-xs text-zinc-500">{{ r.snippet }}</p>
+            <span class="mt-0.5 block truncate text-[11px] text-zinc-600">{{ r.url }}</span>
+          </div>
+          <button
+            type="button"
+            class="shrink-0 rounded-lg border border-zinc-700 px-3 py-1.5 text-xs text-zinc-200 hover:border-emerald-400 hover:text-emerald-200 disabled:cursor-not-allowed disabled:opacity-50"
+            :disabled="learningUrl === r.url"
+            @click="learnUrl(r.url)"
+          >
+            {{ learningUrl === r.url ? 'Learning…' : 'Learn' }}
+          </button>
+        </li>
+      </ul>
+    </section>
+
     <!-- ── Learn from URL (YouTube transcript / web article) ──────────── -->
     <section class="min-w-0 space-y-4 rounded-2xl border border-emerald-500/20 bg-zinc-950/80 p-4 sm:p-5 lg:col-span-2">
       <div>
@@ -179,6 +287,9 @@ function statusClass(status?: string) {
 
       <p v-if="learnProgress" class="text-xs text-sky-300">{{ learnProgress }}</p>
       <p v-if="learnError" class="rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">{{ learnError }}</p>
+      <p v-if="embeddingsOff" class="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+        ⚠ Stored without vector embeddings — content is keyword-searchable only. Enable memory embeddings in Settings → Ollama &amp; Models for semantic recall.
+      </p>
 
       <ul v-if="learnResults.length" class="space-y-2">
         <li

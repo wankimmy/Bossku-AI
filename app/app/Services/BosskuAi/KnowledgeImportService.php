@@ -744,6 +744,9 @@ class KnowledgeImportService
             'indexed' => $indexed,
             'type' => $sourceType,
             'deduplicated' => $existing > 0,
+            // Surface whether chunks were stored with vector embeddings. When false,
+            // learned content is only keyword-searchable (semantic recall degraded).
+            'embeddings' => $this->memoryService?->embeddingsEnabled() ?? false,
         ];
     }
 
@@ -755,7 +758,10 @@ class KnowledgeImportService
 
         if (strlen($transcript) < 100) {
             throw new \RuntimeException(
-                'No captions available for this video (try a video with subtitles enabled).',
+                'Could not retrieve captions for this video. YouTube frequently blocks caption '
+                .'downloads from server/datacenter IPs (a PO token is required), so captions may '
+                .'exist but be unreachable from here. Try running BosskuAI from a residential '
+                .'network, or enable an audio-transcription fallback.',
             );
         }
 
@@ -907,8 +913,12 @@ class KnowledgeImportService
      *
      * @return list<string>
      */
-    protected function chunkText(string $text, int $chunkSize = 1400, int $overlap = 250, int $maxChunks = 60): array
+    protected function chunkText(string $text, ?int $chunkSize = null, ?int $overlap = null, ?int $maxChunks = null): array
     {
+        $chunkSize = $chunkSize ?? (int) config('bossku.learn_chunk_size', 1400);
+        $overlap = $overlap ?? (int) config('bossku.learn_chunk_overlap', 250);
+        $maxChunks = $maxChunks ?? (int) config('bossku.learn_max_chunks', 300);
+
         $chunks = [];
         $start = 0;
         $len = strlen($text);
@@ -931,10 +941,14 @@ class KnowledgeImportService
                 $chunks[] = $chunk;
             }
 
-            $start = $end - $overlap;
-            if ($start >= $len) {
+            // Text fully consumed — stop. (Without this, $start = $end - $overlap
+            // stays below $len at the tail and re-emits the final chunk until the
+            // maxChunks cap, polluting memory with duplicate trailing chunks.)
+            if ($end >= $len) {
                 break;
             }
+
+            $start = $end - $overlap;
         }
 
         return $chunks;

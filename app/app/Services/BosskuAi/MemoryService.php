@@ -26,6 +26,12 @@ class MemoryService
         return $this->settings->memoryOllamaEnabled();
     }
 
+    /** Whether stored memories get vector embeddings (vs keyword-only fallback). */
+    public function embeddingsEnabled(): bool
+    {
+        return $this->memoryOllamaEnabled();
+    }
+
     /** @param array<string,mixed> $metadata */
     public function store(
         string $content,

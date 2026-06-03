@@ -100,4 +100,12 @@ return [
     /** @var list<string> */
     'learning_auto_promote_types' => ['pattern', 'preference'],
     'learning_batch_size' => (int) env('BOSSKU_LEARNING_BATCH_SIZE', 50),
+
+    /**
+     * URL/YouTube "learn" ingestion chunking. Raise learn_max_chunks for very long
+     * articles or video transcripts (default covers ~340k chars ≈ a 3-4 hour talk).
+     */
+    'learn_chunk_size' => (int) env('BOSSKU_LEARN_CHUNK_SIZE', 1400),
+    'learn_chunk_overlap' => (int) env('BOSSKU_LEARN_CHUNK_OVERLAP', 250),
+    'learn_max_chunks' => (int) env('BOSSKU_LEARN_MAX_CHUNKS', 300),
 ];
