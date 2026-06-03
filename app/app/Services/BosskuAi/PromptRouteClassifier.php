@@ -178,6 +178,20 @@ SYS;
     {
         $risk = trim((string) ($route['risk_level'] ?? 'low'));
 
+        // A conversational / writer-only answer is not a pipeline. Never escalate it
+        // into an executor or security chain just because the text mentions a
+        // sensitive keyword (e.g. asking advice about "checkout" or "auth").
+        if (
+            in_array((string) ($route['workflow'] ?? ''), ['direct_answer', 'writer_only', 'orchestrator_only'], true)
+            && ! ($route['needs_executor'] ?? false)
+        ) {
+            $route['needs_auditor'] = false;
+            $route['needs_security_auditor'] = false;
+            $route['needs_final_reviewer'] = false;
+
+            return $route;
+        }
+
         if (($route['audit_mode'] ?? '') === 'full' && $risk !== 'high') {
             $route['needs_auditor'] = true;
             $route['needs_security_auditor'] = true;

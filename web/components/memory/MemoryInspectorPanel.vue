@@ -175,6 +175,9 @@ function preview(m: MemoryItem) {
 <template>
   <div class="space-y-5">
 
+    <!-- ── know your user ───────────────────────────────────────────────── -->
+    <MemoryUserProfileCard />
+
     <!-- ── header stats ─────────────────────────────────────────────────── -->
     <div class="flex items-center justify-between">
       <p class="text-sm text-zinc-400">

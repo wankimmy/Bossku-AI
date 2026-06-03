@@ -185,6 +185,23 @@ class OrchestratorService
                 'summary' => $m->human_summary ?: Str::limit($m->content, 200),
                 'type' => $m->type,
             ])->values()->all();
+
+            // "Know your user": always surface the active user profile, even when
+            // it is not the closest semantic match, so every response is grounded
+            // in who the operator is.
+            $profile = Memory::query()
+                ->where('type', 'user')
+                ->where('is_active', true)
+                ->orderByDesc('updated_at')
+                ->first();
+            if ($profile && ! collect($memPayload)->contains(fn ($m) => ($m['id'] ?? null) === $profile->id)) {
+                array_unshift($memPayload, [
+                    'id' => $profile->id,
+                    'summary' => $profile->human_summary ?: Str::limit($profile->content, 400),
+                    'type' => 'user',
+                ]);
+            }
+
             foreach ($memories as $m) {
                 MemoryRunLink::query()->firstOrCreate(
                     [

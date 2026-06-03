@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\LearningController;
 use App\Http\Controllers\Api\LogsController;
 use App\Http\Controllers\Api\LogsStreamController;
 use App\Http\Controllers\Api\MemoryApiController;
+use App\Http\Controllers\Api\UserProfileController;
 use App\Http\Controllers\Api\ModelRoutingController;
 use App\Http\Controllers\Api\OllamaHealthController;
 use App\Http\Controllers\Api\PlaybookController;
@@ -108,6 +109,11 @@ Route::get('/memory', [MemoryApiController::class, 'index']);
 Route::post('/memory/search', [MemoryApiController::class, 'search']);
 Route::patch('/memory/{id}', [MemoryApiController::class, 'update']);
 Route::delete('/memory/{id}', [MemoryApiController::class, 'destroy']);
+
+// ── Know Your User (singleton type='user' profile) ───────────────────────────
+Route::get('/user-profile', [UserProfileController::class, 'show']);
+Route::put('/user-profile', [UserProfileController::class, 'update']);
+Route::post('/user-profile/generate', [UserProfileController::class, 'generate']);
 
 // ── Settings ──────────────────────────────────────────────────────────────────
 Route::get('/settings', [SettingsApiController::class, 'show']);

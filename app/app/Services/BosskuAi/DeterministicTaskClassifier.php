@@ -28,6 +28,13 @@ class DeterministicTaskClassifier
         $tokenLevel = 'medium';
         $auditMode = 'standard';
 
+        // Is the user actually asking to build/change code or files? Conversational
+        // prompts (advice, opinions, brainstorming) must NOT default to file edits.
+        $hasCodeVerb = (bool) preg_match(
+            '/\b(create|add|write|implement|fix|update|refactor|modify|patch|build|generate|delete|remove|rename|install|configure|deploy|migrate|debug|change|edit|setup|set up|integrate|wire up|scaffold|optimize|optimise|upgrade|convert|replace)\b/i',
+            $lower
+        );
+
         // Repository audit / review — must run executor + read files (never orchestrator_only)
         if (RepoTaskDetector::requiresRepositoryAccess($prompt)) {
             $auditMode = RepoTaskDetector::isFullRepositoryAudit($prompt) ? 'full' : 'repo';
@@ -48,8 +55,8 @@ class DeterministicTaskClassifier
             $tokenLevel = $auditMode === 'full' ? 'high' : 'medium';
         }
 
-        // Smoke / connectivity checks (no repo work)
-        if (preg_match('/^(test|ping|hello|hi|hey)\s*[!?.]*$/i', trim($prompt))) {
+        // Smoke / connectivity checks + social acknowledgements (no repo work)
+        if (preg_match('/^(test|ping|hello|hi|hey|yo|hiya|sup|good (morning|afternoon|evening)|thanks|thank you|thx|ty|cheers|ok|okay|cool|nice|great|awesome|got it)\s*[!?.]*$/i', trim($prompt))) {
             $taskType = 'question';
             $skill = 'generic';
             $workflow = 'direct_answer';
@@ -63,6 +70,37 @@ class DeterministicTaskClassifier
             $executorProfile = 'none';
             $memoryMode = 'none';
             $tokenLevel = 'low';
+        }
+
+        // Conversational / advisory — talk it through, never touch code.
+        // A deliberative lead ("should I…", "what do you think") wins even when a
+        // code verb is present, because the user is asking, not commanding.
+        $isRepoTask = RepoTaskDetector::requiresRepositoryAccess($prompt);
+        $deliberative = (bool) preg_match('/\b(should i|should we|do you think|what do you think|what.?s your (take|opinion|view)|would you recommend|is it (a )?good idea|good idea to|worth (it|adding|doing|building|trying)|pros and cons|wondering (if|whether)|not sure (if|whether)|which (one|option|approach)|better to|your (opinion|advice|thoughts|take|view) on|any (idea|ideas|thoughts|advice|suggestions)|help me (think|brainstorm|decide)|brainstorm|let.?s (discuss|talk|chat|think)|talk through|thoughts on|feedback on|advise|recommendation)\b/i', $lower);
+        $conversationalOpener = (bool) preg_match('/^(hmm+|so[,\s]|well[,\s]|btw|by the way|i (think|feel|wonder|guess|reckon)|what if|how about|what about|maybe we|curious)/i', trim($prompt));
+
+        if (! $isRepoTask && ($deliberative || ($conversationalOpener && ! $hasCodeVerb))) {
+            $det = (new RiskRuleEngine)->deterministicRisk($prompt);
+
+            return [
+                'task_type' => 'question',
+                'audit_mode' => 'standard',
+                'risk_level' => $det['risk'],
+                'skill' => 'generic',
+                'workflow' => 'direct_answer',
+                'needs_repo_context' => false,
+                'needs_file_edit' => false,
+                'needs_test_run' => false,
+                'needs_executor' => false,
+                'needs_auditor' => false,
+                'needs_security_auditor' => false,
+                'needs_final_reviewer' => false,
+                'executor_profile' => 'none',
+                'memory_mode' => 'read_only',
+                'estimated_token_level' => 'low',
+                'reason' => 'Conversational/advisory prompt — answered directly without code changes.',
+                '_deterministic_risk' => $det,
+            ];
         }
 
         // Snippet / example only (no repo edit implied), before broad "question" detection
@@ -241,6 +279,28 @@ class DeterministicTaskClassifier
             $workflow = 'orchestrator_executor_auditor_security_final_reviewer';
             $needsSecurity = true;
             $needsFinal = true;
+        }
+
+        // Catch-all: an unclassified prompt with no code-action verb and no repo
+        // task must not fall through to the orchestrator_executor default and edit
+        // code. Treat it as a conversation instead.
+        if (
+            $taskType === 'unknown'
+            && $workflow === 'orchestrator_executor'
+            && $needsFileEdit
+            && ! $hasCodeVerb
+            && ! RepoTaskDetector::requiresRepositoryAccess($prompt)
+        ) {
+            $taskType = 'question';
+            $workflow = 'direct_answer';
+            $needsFileEdit = false;
+            $needsExecutor = false;
+            $needsAuditor = false;
+            $needsSecurity = false;
+            $needsFinal = false;
+            $executorProfile = 'none';
+            $memoryMode = 'read_only';
+            $tokenLevel = 'low';
         }
 
         $riskEngine = new RiskRuleEngine;
