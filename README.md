@@ -259,6 +259,7 @@ See [`docs/production-deploy.md`](docs/production-deploy.md) for TLS, CORS, and 
 | Symptom | Fix |
 |---|---|
 | **Bootstrap 500 on first load** | `docker compose build backend && docker compose up -d backend` |
+| **502 on `/api/runs/stream` (Bad Gateway)** | Wait until `docker compose logs backend` shows `Bootstrap complete. Starting php-fpm`; test http://localhost:28480/api/health/ollama then retry. Rebuild: `docker compose build backend frontend && docker compose up -d` |
 | **"Run task" gets no events** | Check `docker compose logs -f backend`, then test http://localhost:28480/api/runs |
 | **No skills in the slash menu** | `docker compose exec backend php artisan bosskuai:import-knowledge --fresh` |
 | **Local Ollama unreachable** | Confirm Ollama is running; check `OLLAMA_BASE_URL=http://host.docker.internal:11434` |

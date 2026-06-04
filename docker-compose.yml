@@ -37,6 +37,12 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 9000"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 180s
     networks: [bossku]
 
   nginx:
@@ -48,7 +54,8 @@ services:
       - ./app:/var/www/html:ro
       - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks: [bossku]
 
   frontend:
@@ -81,7 +88,10 @@ services:
       BOSSKU_AUTO_FETCH_FURNITURE_BUNDLE: ${BOSSKU_AUTO_FETCH_FURNITURE_BUNDLE:-1}
       BOSSKU_ZEP_FURNITURE_CACHE: ${BOSSKU_ZEP_FURNITURE_CACHE:-1}
     depends_on:
-      - nginx
+      nginx:
+        condition: service_started
+      backend:
+        condition: service_healthy
     networks: [bossku]
     # Entry script lives in mounted web/scripts; sed strips CRLF if edited on Windows.
     command:

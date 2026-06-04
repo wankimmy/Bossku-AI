@@ -179,6 +179,8 @@ Example: `npm run build:pixel-office` inside `web/` when the frontend container 
 ## Common Fixes
 
 - Web app does not open: run `docker compose ps` and check that `frontend`, `nginx`, `backend`, `postgres`, and `redis` are running.
+- Database or seed errors mentioning `postgres` / **Name does not resolve**: run `docker compose ps` and ensure `postgres` is healthy, then `docker compose exec backend getent hosts postgres` and re-run `docker compose exec backend php artisan migrate --force` and `db:seed --class=BosskuAiSpecSeeder --force`.
+- **502 on `/api/runs/stream` (Bad Gateway)**: the API may still be bootstrapping. Run `docker compose logs backend` and wait for `Bootstrap complete. Starting php-fpm`. Confirm http://localhost:28480/api/health/ollama returns 200, then retry the run. Rebuild after code changes: `docker compose build backend frontend && docker compose up -d`.
 - API returns `500`: run `docker compose logs -f backend`.
 - No skills appear: run `docker compose exec backend php artisan bosskuai:import-knowledge --fresh`.
 - Local Ollama fails: check `OLLAMA_BASE_URL` and confirm Ollama is running.

@@ -52,6 +52,17 @@ class RunsApiTest extends TestCase
     }
 
     #[Test]
+    public function runs_stream_post_validation_returns_json_when_accept_is_event_stream(): void
+    {
+        $this->post('/api/runs/stream', [], [
+            'Accept' => 'text/event-stream',
+            'Content-Type' => 'application/json',
+        ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['prompt']);
+    }
+
+    #[Test]
     public function runs_stream_returns_event_stream_content_type(): void
     {
         $this->mock(OrchestratorService::class, function ($mock) {

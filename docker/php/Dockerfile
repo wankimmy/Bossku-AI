@@ -1,5 +1,5 @@
 FROM php:8.3-fpm-alpine
-RUN apk add --no-cache bash git curl zip unzip sudo docker-cli docker-cli-compose icu-dev oniguruma-dev libzip-dev postgresql-dev linux-headers $PHPIZE_DEPS \
+RUN apk add --no-cache bash git curl zip unzip sudo docker-cli docker-cli-compose icu-dev oniguruma-dev libzip-dev postgresql-dev postgresql18-client linux-headers $PHPIZE_DEPS \
     && docker-php-ext-install pdo pdo_pgsql mbstring intl zip bcmath sockets \
     && pecl install redis \
     && docker-php-ext-enable redis

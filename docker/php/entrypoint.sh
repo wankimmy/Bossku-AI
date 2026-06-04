@@ -48,12 +48,20 @@ case "$1" in php-fpm*|php*)
     php artisan key:generate --force
   fi
 
-  # Wait for Postgres to be ready (up to 30s)
+  # Wait for Postgres to be ready (up to 60s); fail fast so migrate/seed do not run on a dead DB
   echo "[bossku] Waiting for database..."
-  for i in $(seq 1 30); do
-    php artisan db:monitor --databases=pgsql 2>/dev/null && break || true
+  ready=0
+  for i in $(seq 1 60); do
+    if pg_isready -h postgres -U bossku -d bossku -q 2>/dev/null; then
+      ready=1
+      break
+    fi
     sleep 1
   done
+  if [ "$ready" != "1" ]; then
+    echo "[bossku] ERROR: postgres is not reachable on the Docker network. Start postgres: docker compose up -d postgres"
+    exit 1
+  fi
 
   # Run migrations (idempotent)
   echo "[bossku] Running migrations..."
