@@ -71,6 +71,7 @@ class OrchestratorService
         protected SpecialistAgentRouter $specialistRouter,
         protected SpecialistAgentRunner $specialistRunner,
         protected SpecialistAgentDraftingService $specialistDrafting,
+        protected ResumeIntentClassifier $resumeIntentClassifier,
     ) {}
 
     /**
@@ -79,20 +80,26 @@ class OrchestratorService
      */
     /**
      * @param  list<array{role: string, content: string}>  $conversation
+     * @param  array{routing_prompt?: string, long_prompt_attachment?: bool, metadata?: array<string, mixed>}  $options
      * @return array<string,mixed>
      */
-    public function run(string $prompt, ?callable $emit = null, array $conversation = []): array
+    public function run(string $prompt, ?callable $emit = null, array $conversation = [], array $options = []): array
     {
         $tRun = microtime(true);
         $tokenAcc = 0;
         $userPrompt = $prompt;
         $prompt = $this->effectivePrompt($userPrompt, $conversation);
+        $routingSeed = trim((string) ($options['routing_prompt'] ?? $userPrompt));
+        $routingPrompt = $this->effectivePrompt($routingSeed !== '' ? $routingSeed : $userPrompt, $conversation);
         $agentPrompt = trim($prompt."\n\n".$this->projects->agentWorkspaceContext());
 
         $runMeta = [
             'conversation_turns' => count($conversation),
             'conversation' => $conversation,
         ];
+        if (is_array($options['metadata'] ?? null)) {
+            $runMeta = array_merge($runMeta, $options['metadata']);
+        }
         $activeProject = $this->paths->activeProject();
         if ($activeProject !== null) {
             $runMeta['active_project_id'] = $activeProject->id;
@@ -112,10 +119,16 @@ class OrchestratorService
         ]));
 
         $t0 = microtime(true);
-        $classified = $this->promptRouteClassifier->classify($agentPrompt);
+        $classified = $this->promptRouteClassifier->classify($routingPrompt);
         /** @var array<string, mixed> $modelRoute */
         $modelRoute = $classified['route'];
         $modelsResolved = $classified['models_resolved'];
+        if (($options['long_prompt_attachment'] ?? false) === true) {
+            $modelRoute = $this->ensureExecutorCanReadLongPrompt($modelRoute);
+            if (($modelsResolved['executor'] ?? '') === '') {
+                $modelsResolved['executor'] = (string) ($this->modelConfig->executorProfile('default')['primary'] ?? 'glm-5.1');
+            }
+        }
         $routerMeta = $classified['router_meta'];
         $routerMs = (int) round((microtime(true) - $t0) * 1000);
         $routerJson = json_encode($modelRoute) ?: '';
@@ -618,6 +631,40 @@ class OrchestratorService
                     'questions' => $plannerQuestions,
                 ]));
             }
+
+            $clarificationMode = $this->settings->orchestratorClarificationMode();
+            $shouldPauseForPlannerQuestions = $clarificationMode !== 'off'
+                && ($isLowConfidence || $clarificationMode === 'always');
+            if ($shouldPauseForPlannerQuestions) {
+                $plannerSummary = $isLowConfidence
+                    ? 'Low-confidence plan — please answer before BosskuAI continues.'
+                    : 'Planner needs your input before execution continues.';
+                $plannerClarification = $this->plannerQuestionsToClarification($plannerQuestions, $plannerSummary);
+                if ($plannerClarification['questions'] !== []) {
+                    return $this->pauseForClarification(
+                        $run,
+                        $plannerClarification,
+                        'planner_questions',
+                        [
+                            'user_prompt' => $userPrompt,
+                            'effective_prompt' => $prompt,
+                            'agent_prompt' => $agentPrompt,
+                            'conversation' => $conversation,
+                            'model_route' => $modelRoute,
+                            'models_resolved' => $modelsResolved,
+                            'router_meta' => $routerCtx,
+                            'router_ctx' => $routerCtx,
+                            'mem_payload' => $memPayload,
+                            'token_acc' => $tokenAcc,
+                            't_run' => $tRun,
+                            'plan' => $plan,
+                        ],
+                        $emit,
+                        'planner',
+                        'planner_questions',
+                    );
+                }
+            }
         }
 
         $execProfileKey = (string) ($plan['executor_profile'] ?? $modelRoute['executor_profile'] ?? 'default');
@@ -977,6 +1024,7 @@ class OrchestratorService
         $lastSecurity = null;
         $lastFinal = null;
         $revisionRoundsUsed = 0;
+        $checklistVerdictEmitted = false;
 
         $needsAuditor = ! $skipAuditor
             && ($modelRoute['needs_auditor'] ?? false)
@@ -1063,17 +1111,16 @@ class OrchestratorService
                 }
             }
 
-            // Surface checklist verdict trail
-            $verdictTrail = is_array($lastAudit['verdict_trail'] ?? null) ? $lastAudit['verdict_trail'] : [];
-            if ($verdictTrail !== [] && $emit !== null) {
-                $disputed = array_filter($verdictTrail, fn ($v) => ($v['auditor_verdict'] ?? '') !== 'verified');
-                $this->emit($emit, $this->basePayload($run, 'checklist_verdict', [
-                    'status' => count($disputed) > 0 ? 'warning' : 'success',
-                    'agent' => 'auditor',
-                    'summary' => count($verdictTrail).' checklist item(s) reviewed; '.count($disputed).' disputed or unverifiable.',
-                    'verdict_trail' => $verdictTrail,
-                ]));
-            }
+            // Reconcile checklist with auditor verdict + evidence; surface to UI
+            $reconciledChecklist = $this->emitReconciledChecklistVerdict(
+                $run,
+                $plan,
+                $execResult,
+                $lastAudit,
+                $emit,
+            );
+            $plan = $reconciledChecklist['plan'];
+            $checklistVerdictEmitted = $reconciledChecklist['emitted'] || $checklistVerdictEmitted;
 
             if ($this->shouldPauseForAgentEscalation($run, $lastAudit, 'auditor_escalation')) {
                 $pipeline = $this->buildExecutorPipelineSnapshot(
@@ -1325,6 +1372,19 @@ class OrchestratorService
             $tokenAcc += $fTok;
             $this->emit($emit, $this->events->finalReviewerDone($run, $lastFinal, $modelsResolved['final_reviewer'] ?? null, $fMs, $fTok));
         }
+        if (! $checklistVerdictEmitted) {
+            $reconciledChecklist = $this->emitReconciledChecklistVerdict(
+                $run,
+                $plan,
+                $execResult,
+                $lastAudit,
+                $emit,
+            );
+            $plan = $reconciledChecklist['plan'];
+        } else {
+            $plan = $this->reconcilePlanChecklist($plan, $execResult, $lastAudit);
+        }
+
         $finalOutput = $this->composeUserOutput($lastAudit, $execResult, $lastFinal, $lastSecurity, $modelRoute, $modelsResolved, $memPayload, $userPrompt, $plan);
 
         return $this->completeRun(
@@ -1368,26 +1428,7 @@ class OrchestratorService
         $ms = (int) round((microtime(true) - $t0) * 1000);
         $tok = $this->estimateTokens($body);
 
-        if ($kind === 'direct_answer') {
-            $indicatorModels = [
-                'router' => $modelsResolved['router'] ?? '',
-                'orchestrator' => '',
-                'executor' => '',
-                'auditor' => '',
-                'direct_answer' => $modelsResolved['direct_answer'] ?? $modelsResolved['router'] ?? '',
-            ];
-        } else {
-            $indicatorModels = [
-                'router' => $modelsResolved['router'] ?? '',
-                'orchestrator' => '',
-                'executor' => '',
-                'auditor' => '',
-                'writer' => $modelsResolved['writer'] ?? '',
-            ];
-        }
-
-        $indicator = BosskuResponseIndicator::line($modelRoute, $indicatorModels);
-        $final = BosskuResponseIndicator::prepend($body, $indicator);
+        $final = $body;
 
         $this->logStep($run, 5, $kind, $modelsResolved['direct_answer'] ?? $modelsResolved['writer'] ?? null, null, null, 'success', $prompt, $prompt, $final, null, null, null, $ms, $tok, null, [
             'routing_decision' => $modelRoute,
@@ -1453,6 +1494,126 @@ class OrchestratorService
     }
 
     /**
+     * @param  array<string, mixed>  $modelRoute
+     * @return array<string, mixed>
+     */
+    protected function ensureExecutorCanReadLongPrompt(array $modelRoute): array
+    {
+        if (($modelRoute['needs_executor'] ?? false) === true) {
+            return $modelRoute;
+        }
+
+        $modelRoute['needs_repo_context'] = true;
+        $modelRoute['needs_executor'] = true;
+        $modelRoute['needs_file_edit'] = false;
+        $modelRoute['needs_auditor'] = false;
+        $modelRoute['needs_security_auditor'] = false;
+        $modelRoute['needs_final_reviewer'] = false;
+        $modelRoute['workflow'] = 'orchestrator_executor';
+        $modelRoute['executor_profile'] = 'default';
+        $modelRoute['audit_mode'] = $modelRoute['audit_mode'] ?? 'standard';
+        $reason = trim((string) ($modelRoute['reason'] ?? ''));
+        $modelRoute['reason'] = trim($reason.' Long prompt attachment requires executor file reads.');
+
+        return $modelRoute;
+    }
+
+    /**
+     * @param  array<string, mixed>  $plan
+     * @param  array<string, mixed>  $execResult
+     * @param  array<string, mixed>  $lastAudit
+     * @return array<string, mixed>
+     */
+    /**
+     * @param  list<array<string, mixed>>  $plannerQuestions
+     * @return array{questions: list<array<string, mixed>>, assumptions: list<string>, ready_to_proceed: bool, summary: string}
+     */
+    protected function plannerQuestionsToClarification(array $plannerQuestions, string $summary): array
+    {
+        $questions = [];
+        foreach ($plannerQuestions as $idx => $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+            $prompt = trim((string) ($item['question'] ?? $item['prompt'] ?? ''));
+            if ($prompt === '') {
+                continue;
+            }
+            $questions[] = [
+                'id' => (string) ($item['id'] ?? 'pq-'.($idx + 1)),
+                'prompt' => $prompt,
+                'why_it_matters' => trim((string) ($item['why'] ?? $item['why_it_matters'] ?? '')),
+                'options' => $this->clarification->normalizeOptionsToThree([], 'planner_questions'),
+                'allow_free_text' => true,
+            ];
+            if (count($questions) >= 3) {
+                break;
+            }
+        }
+
+        return [
+            'questions' => $questions,
+            'assumptions' => [],
+            'ready_to_proceed' => false,
+            'summary' => $summary !== '' ? $summary : 'Planner needs your input before execution continues.',
+        ];
+    }
+
+    protected function reconcilePlanChecklist(array $plan, array $execResult, array $lastAudit): array
+    {
+        $planChecklist = is_array($plan['checklist'] ?? null) ? $plan['checklist'] : [];
+        if ($planChecklist === []) {
+            return $plan;
+        }
+
+        $verdictTrail = is_array($lastAudit['verdict_trail'] ?? null) ? $lastAudit['verdict_trail'] : [];
+        $checklistStatus = is_array($execResult['checklist_status'] ?? null) ? $execResult['checklist_status'] : [];
+        $evidence = ChecklistReconciler::evidenceFromExecutorResult($execResult);
+        $plan['checklist'] = ChecklistReconciler::reconcile(
+            $planChecklist,
+            $checklistStatus,
+            $verdictTrail,
+            $evidence,
+        );
+
+        return $plan;
+    }
+
+    /**
+     * @param  array<string, mixed>  $plan
+     * @param  array<string, mixed>  $lastAudit
+     * @return array{plan: array<string, mixed>, emitted: bool}
+     */
+    protected function emitReconciledChecklistVerdict(
+        Run $run,
+        array $plan,
+        array $execResult,
+        array $lastAudit,
+        ?callable $emit,
+    ): array {
+        $plan = $this->reconcilePlanChecklist($plan, $execResult, $lastAudit);
+        $planChecklist = is_array($plan['checklist'] ?? null) ? $plan['checklist'] : [];
+        if ($planChecklist === [] || $emit === null) {
+            return ['plan' => $plan, 'emitted' => false];
+        }
+
+        $verdictTrail = is_array($lastAudit['verdict_trail'] ?? null) ? $lastAudit['verdict_trail'] : [];
+        $stats = ChecklistReconciler::summarizeChecklist($planChecklist);
+
+        $this->emit($emit, $this->basePayload($run, 'checklist_verdict', [
+            'status' => $stats['has_issues'] ? 'warning' : 'success',
+            'agent' => 'auditor',
+            'summary' => ChecklistReconciler::formatVerdictSummary($planChecklist, $verdictTrail),
+            'verdict_trail' => $verdictTrail,
+            'artifacts' => [
+                'checklist' => $planChecklist,
+            ],
+        ]));
+
+        return ['plan' => $plan, 'emitted' => true];
+    }
+
+    /**
      * @param array<string, mixed>|null $lastFinal
      * @param array<string, mixed> $modelRoute
      * @param array<string, string> $modelsResolved
@@ -1471,9 +1632,15 @@ class OrchestratorService
         array $plan = [],
     ): string {
         $commandOutcome = $this->summarizeCommandExecution($execResult);
+        $checklistStats = ChecklistReconciler::summarizeChecklist(
+            is_array($plan['checklist'] ?? null) ? $plan['checklist'] : [],
+        );
         $status = (($execResult['status'] ?? '') === 'failed' || ($lastAudit['status'] ?? '') === 'failed')
             ? 'Partially Completed'
             : 'Completed';
+        if ($checklistStats['has_issues']) {
+            $status = 'Partially Completed';
+        }
         if ($commandOutcome['git_restore_failed']) {
             $status = 'Partially Completed';
         }
@@ -1531,6 +1698,17 @@ class OrchestratorService
             '',
             '## Status',
             $status,
+            ...($checklistStats['total'] > 0
+                ? [
+                    '',
+                    '## Checklist verification',
+                    'Verified '.$checklistStats['verified'].'/'.$checklistStats['total'].' plan item(s).'
+                        .($checklistStats['disputed'] > 0 ? ' '.$checklistStats['disputed'].' disputed.' : '')
+                        .($checklistStats['unverifiable'] > 0 ? ' '.$checklistStats['unverifiable'].' unverifiable.' : '')
+                        .($checklistStats['needs_revision'] > 0 ? ' '.$checklistStats['needs_revision'].' need revision.' : '')
+                        .($checklistStats['failed'] > 0 ? ' '.$checklistStats['failed'].' failed.' : ''),
+                ]
+                : []),
             '',
             '## What changed',
             $commandOutcome['summary_text'],

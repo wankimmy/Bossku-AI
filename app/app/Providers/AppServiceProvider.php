@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+use App\Services\Attachments\AttachmentIngestionService;
+use App\Services\Attachments\AttachmentRunContextService;
+use App\Services\Attachments\VisionService;
 use App\Services\BosskuAi\AgentPersonaService;
 use App\Services\BosskuAi\ContextBudgetGuard;
 use App\Services\BosskuAi\DeterministicTaskClassifier;
@@ -97,6 +100,9 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(WriterService::class);
         $this->app->singleton(ToolRegistry::class);
         $this->app->singleton(OrchestratorService::class);
+        $this->app->singleton(VisionService::class);
+        $this->app->singleton(AttachmentIngestionService::class);
+        $this->app->singleton(AttachmentRunContextService::class);
 
         $this->app->bind(KnowledgeImportService::class, function ($app) {
             $repo = (string) config('bossku.repo_root');

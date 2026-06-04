@@ -1,10 +1,18 @@
 import type { SseEvent } from '~/composables/useRunStream'
 
+export type ChatAttachmentMeta = {
+  id: string
+  name: string
+  kind: string
+  size: number
+}
+
 export type ChatTurn = {
   id: string
   role: 'user' | 'assistant'
   content: string
   createdAt: number
+  attachments?: ChatAttachmentMeta[]
 }
 
 export type LandingConversation = {
@@ -194,13 +202,19 @@ export function useLandingChat() {
     return conv
   }
 
-  function addUserTurn(content: string): ChatTurn {
+  function addUserTurn(content: string, attachments?: ChatAttachmentMeta[]): ChatTurn {
     const text = content.trim()
     const conv = ensureActiveConversation(text)
     if (conv.turns.length === 0) {
       conv.title = titleFromMessage(text)
     }
-    const turn: ChatTurn = { id: newId('turn'), role: 'user', content: text, createdAt: Date.now() }
+    const turn: ChatTurn = {
+      id: newId('turn'),
+      role: 'user',
+      content: text,
+      createdAt: Date.now(),
+      ...(attachments && attachments.length > 0 ? { attachments } : {}),
+    }
     conv.turns.push(turn)
     touchConversation(conv.id)
     return turn

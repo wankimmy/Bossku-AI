@@ -8,6 +8,7 @@ import type {
   HandoffNode,
   NormalizedRunArtifacts,
   PlanChecklistItem,
+  PlanOverview,
   RiskItem,
   RoutingSummary,
   TestRun,
@@ -55,6 +56,7 @@ export function useRunArtifacts(items: UnknownRecord[] = []): NormalizedRunArtif
   const routingSummary: RoutingSummary = { backend: 'Ollama' }
   let memoryUsed = false
   let finalRaw = ''
+  let latestPlanRaw: UnknownRecord | undefined
 
   for (const [idx, item] of items.entries()) {
     const event = unwrapStep(item)
@@ -71,6 +73,12 @@ export function useRunArtifacts(items: UnknownRecord[] = []): NormalizedRunArtif
     }
 
     applyRouting(event, artifacts, routingSummary, type)
+
+    const planArtifact = asRecord(artifacts.plan)
+    if (planArtifact) {
+      latestPlanRaw = planArtifact
+    }
+
     pushAll(checklist, asChecklist(artifacts.checklist))
     pushAll(filesRead, asFileReads(artifacts.files_read))
     pushAll(filesChanged, asFileChanges(artifacts.files_changed))
@@ -143,10 +151,12 @@ export function useRunArtifacts(items: UnknownRecord[] = []): NormalizedRunArtif
     dedupeChecklistLatest(checklist),
     items,
   )
+  const plan = buildPlanOverview(latestPlanRaw, resolvedChecklist)
 
   return {
     agentMessages: messages,
     handoffNodes: buildHandoff(messages),
+    plan,
     checklist: resolvedChecklist,
     filesRead: dedupeBy(filesRead, item => item.path),
     filesChanged: dedupeBy(filesChanged, item => `${item.change_type}:${item.path}:${item.summary ?? ''}`),
@@ -394,7 +404,15 @@ function resolveChecklistProgress(
 }
 
 function isTerminalChecklistStatus(status: string): boolean {
-  return ['completed', 'passed', 'failed', 'needs_revision', 'skipped'].includes(status)
+  return [
+    'completed',
+    'passed',
+    'failed',
+    'needs_revision',
+    'skipped',
+    'disputed',
+    'unverifiable',
+  ].includes(status)
 }
 
 function eventProgress(events: UnknownRecord[]): EventProgress {
@@ -602,6 +620,34 @@ function summaryFromArtifacts(artifacts: UnknownRecord, type: string) {
     return `${ok}/${rows.length} git command(s) executed.`
   }
   return undefined
+}
+
+function buildPlanOverview(
+  raw: UnknownRecord | undefined,
+  todos: PlanChecklistItem[],
+): PlanOverview | undefined {
+  if (!raw && todos.length === 0) {
+    return undefined
+  }
+
+  const goal = stringOrUndefined(raw?.goal)
+    ?? stringOrUndefined(raw?.task_summary)
+    ?? stringOrUndefined(raw?.summary)
+
+  if (!goal && todos.length === 0) {
+    return undefined
+  }
+
+  return {
+    goal,
+    taskSummary: stringOrUndefined(raw?.task_summary) ?? stringOrUndefined(raw?.summary),
+    keyDesignDecisions: asStringArray(raw?.key_design_decisions),
+    flowDiagram: stringOrUndefined(raw?.flow_diagram),
+    flowSteps: asStringArray(raw?.flow_steps),
+    notes: asStringArray(raw?.constraints),
+    risks: asStringArray(raw?.risk_notes),
+    todos,
+  }
 }
 
 function asChecklist(value: unknown): PlanChecklistItem[] {

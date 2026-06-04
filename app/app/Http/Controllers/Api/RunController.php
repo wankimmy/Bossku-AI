@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\BosskuAi\FeedbackItem;
 use App\Models\BosskuAi\Run;
+use App\Services\Attachments\AttachmentRunContextService;
 use App\Services\Orchestrator\OrchestratorService;
+use App\Services\Runs\LongPromptTempFileService;
 use App\Services\RunStreamEventService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -16,6 +18,8 @@ class RunController extends Controller
 {
     public function __construct(
         private readonly RunStreamEventService $streamEventLog,
+        private readonly LongPromptTempFileService $longPromptFiles,
+        private readonly AttachmentRunContextService $attachmentContext,
     ) {}
 
     private function findRun(string $id): ?Run
@@ -77,9 +81,15 @@ class RunController extends Controller
     {
         return response()->stream(function () use ($orchestrator, $id) {
             $this->streamEventLog->beginBackgroundStream();
+            $terminal = false;
+            $emit = $this->streamEventLog->sseEmitter(function (array $evt) use (&$terminal): void {
+                if (in_array((string) ($evt['type'] ?? ''), ['run_completed', 'run_failed'], true)) {
+                    $terminal = true;
+                }
+            });
 
             try {
-                $orchestrator->continueAfterApprovals($id, $this->streamEventLog->sseEmitter());
+                $orchestrator->continueAfterApprovals($id, $emit);
             } catch (\Throwable $e) {
                 $failed = [
                     'type' => 'run_failed',
@@ -87,7 +97,10 @@ class RunController extends Controller
                     'error' => $e->getMessage(),
                     'run_id' => $id,
                 ];
-                ($this->streamEventLog->sseEmitter())($failed);
+                $terminal = true;
+                $emit($failed);
+            } finally {
+                $this->cleanupLongPromptIfTerminal($id, $emit, $terminal);
             }
         }, 200, [
             'Content-Type' => 'text/event-stream',
@@ -130,12 +143,18 @@ class RunController extends Controller
 
         return response()->stream(function () use ($orchestrator, $id, $answers, $reviewDecision, $codeReviewComment) {
             $this->streamEventLog->beginBackgroundStream();
+            $terminal = false;
+            $emit = $this->streamEventLog->sseEmitter(function (array $evt) use (&$terminal): void {
+                if (in_array((string) ($evt['type'] ?? ''), ['run_completed', 'run_failed'], true)) {
+                    $terminal = true;
+                }
+            });
 
             try {
                 $orchestrator->continueRun(
                     $id,
                     $answers,
-                    $this->streamEventLog->sseEmitter(),
+                    $emit,
                     $reviewDecision,
                     $codeReviewComment,
                 );
@@ -146,7 +165,10 @@ class RunController extends Controller
                     'error' => $e->getMessage(),
                     'run_id' => $id,
                 ];
-                ($this->streamEventLog->sseEmitter())($failed);
+                $terminal = true;
+                $emit($failed);
+            } finally {
+                $this->cleanupLongPromptIfTerminal($id, $emit, $terminal);
             }
         }, 200, [
             'Content-Type' => 'text/event-stream',
@@ -161,17 +183,31 @@ class RunController extends Controller
     public function store(Request $request, OrchestratorService $orchestrator)
     {
         $data = $this->validateRunInput($request);
+        $prepared = $this->preparePromptForRun(
+            $this->promptWithAttachments($data['prompt'], $data['attachment_ids']),
+        );
+        if ($prepared instanceof JsonResponse) {
+            return $prepared;
+        }
         $started = microtime(true);
 
         Log::info('bossku.run.started', [
             'channel' => 'sync',
             'ip' => $request->ip(),
             'prompt_length' => strlen($data['prompt']),
+            'attachment_count' => count($data['attachment_ids']),
+            'long_prompt_materialized' => $prepared['materialized'],
         ]);
 
         try {
-            $result = $orchestrator->run($data['prompt'], null, $data['conversation']);
+            $result = $this->runPreparedPrompt($orchestrator, $prepared, null, $data['conversation']);
+
+            $runId = (string) ($result['run_id'] ?? '');
+            $this->linkAttachmentsToRun($data['attachment_ids'], $runId);
+            $this->finalizePreparedPrompt($prepared, $runId, null);
         } catch (\Throwable $e) {
+            $this->finalizePreparedPrompt($prepared, null, null, true);
+
             Log::warning('bossku.run.failed', [
                 'ip' => $request->ip(),
                 'prompt_length' => strlen($data['prompt']),
@@ -203,42 +239,83 @@ class RunController extends Controller
             'prompt' => 'required|string|max:50000',
         ])->validate();
 
-        return $this->streamRun($orchestrator, $validated['prompt'], []);
+        return $this->streamRun($orchestrator, $this->longPromptFiles->inline($validated['prompt']), []);
     }
 
-    public function streamPost(Request $request, OrchestratorService $orchestrator): StreamedResponse
+    public function streamPost(Request $request, OrchestratorService $orchestrator): StreamedResponse|JsonResponse
     {
         $data = $this->validateRunInput($request);
+        $misroute = $this->awaitingClarificationMisrouteResponse($data['conversation']);
+        if ($misroute !== null) {
+            return $misroute;
+        }
+        $prepared = $this->preparePromptForRun(
+            $this->promptWithAttachments($data['prompt'], $data['attachment_ids']),
+        );
+        if ($prepared instanceof JsonResponse) {
+            return $prepared;
+        }
 
-        return $this->streamRun($orchestrator, $data['prompt'], $data['conversation']);
+        return $this->streamRun($orchestrator, $prepared, $data['conversation'], $data['attachment_ids']);
     }
 
     /**
      * @param  list<array{role: string, content: string}>  $conversation
+     * @param  list<string>  $attachmentIds
+     * @param  array{prompt: string, routing_prompt: string, materialized: bool, metadata: array<string, mixed>|null}  $prepared
      */
-    private function streamRun(OrchestratorService $orchestrator, string $prompt, array $conversation): StreamedResponse
-    {
+    private function streamRun(
+        OrchestratorService $orchestrator,
+        array $prepared,
+        array $conversation,
+        array $attachmentIds = [],
+    ): StreamedResponse {
         $ip = request()->ip();
-        $promptLength = strlen($prompt);
+        $promptLength = strlen($prepared['prompt']);
+        $originalPromptLength = is_array($prepared['metadata'] ?? null)
+            ? (int) ($prepared['metadata']['original_length'] ?? $promptLength)
+            : $promptLength;
 
-        return response()->stream(function () use ($orchestrator, $prompt, $conversation, $ip, $promptLength) {
+        return response()->stream(function () use ($orchestrator, $prepared, $conversation, $attachmentIds, $ip, $promptLength, $originalPromptLength) {
             $this->streamEventLog->beginBackgroundStream();
 
             $started = microtime(true);
             $runId = null;
+            $terminal = false;
             $emit = $this->streamEventLog->sseEmitter(function (array $evt) use (&$runId): void {
                 if (isset($evt['run_id'])) {
                     $runId = $evt['run_id'];
                 }
             });
+            $emitTracked = function (array $evt) use ($emit, &$runId, &$terminal): void {
+                if (isset($evt['run_id'])) {
+                    $runId = (string) $evt['run_id'];
+                }
+                if (in_array((string) ($evt['type'] ?? ''), ['run_completed', 'run_failed'], true)) {
+                    $terminal = true;
+                }
+                $emit($evt);
+            };
+
+            if ($prepared['materialized'] && is_array($prepared['metadata'])) {
+                $emitTracked($this->longPromptFiles->materializedEvent($prepared['metadata']));
+            }
 
             Log::info('bossku.run.stream_started', [
                 'ip' => $ip,
                 'prompt_length' => $promptLength,
+                'original_prompt_length' => $originalPromptLength,
+                'long_prompt_materialized' => $prepared['materialized'],
             ]);
 
             try {
-                $orchestrator->run($prompt, $emit, $conversation);
+                $result = $this->runPreparedPrompt($orchestrator, $prepared, $emitTracked, $conversation);
+                if ($runId === null && isset($result['run_id'])) {
+                    $runId = (string) $result['run_id'];
+                }
+                if ($runId !== null && $runId !== '') {
+                    $this->linkAttachmentsToRun($attachmentIds, $runId);
+                }
 
                 Log::info('bossku.run.stream_completed', [
                     'run_id' => $runId,
@@ -261,6 +338,9 @@ class RunController extends Controller
                     'error' => $e->getMessage(),
                     'run_id' => $runId,
                 ]);
+                $terminal = true;
+            } finally {
+                $this->finalizePreparedPrompt($prepared, $runId, $emitTracked, $terminal);
             }
         }, 200, [
             'Content-Type' => 'text/event-stream',
@@ -273,24 +353,148 @@ class RunController extends Controller
     }
 
     /**
-     * @return array{prompt: string, conversation: list<array{role: string, content: string}>}
+     * @return array{
+     *   prompt: string,
+     *   conversation: list<array{role: string, content: string}>,
+     *   attachment_ids: list<string>
+     * }
      */
     private function validateRunInput(Request $request): array
     {
+        $maxAttachments = max(1, (int) config('bossku.attachments.max_per_run', 10));
+
         $validated = $request->validate([
-            'prompt' => 'required|string|max:50000',
+            'prompt' => 'required|string|max:'.LongPromptTempFileService::MAX_ACCEPTED_CHARS,
             'conversation' => 'sometimes|array|max:50',
             'conversation.*.role' => 'required_with:conversation|in:user,assistant',
             'conversation.*.content' => 'required_with:conversation|string|max:20000',
+            'attachment_ids' => 'sometimes|array|max:'.$maxAttachments,
+            'attachment_ids.*' => 'uuid',
         ]);
 
         /** @var list<array{role: string, content: string}> $conversation */
         $conversation = $validated['conversation'] ?? [];
+        /** @var list<string> $attachmentIds */
+        $attachmentIds = array_values(array_unique($validated['attachment_ids'] ?? []));
 
         return [
             'prompt' => $validated['prompt'],
             'conversation' => $conversation,
+            'attachment_ids' => $attachmentIds,
         ];
+    }
+
+    /**
+     * @param  list<string>  $attachmentIds
+     */
+    private function promptWithAttachments(string $prompt, array $attachmentIds): string
+    {
+        return $this->attachmentContext->prependToPrompt($prompt, $attachmentIds);
+    }
+
+    /**
+     * @param  list<string>  $attachmentIds
+     */
+    private function linkAttachmentsToRun(array $attachmentIds, string $runId): void
+    {
+        if ($runId === '' || $attachmentIds === []) {
+            return;
+        }
+
+        $this->attachmentContext->linkToRun($attachmentIds, $runId);
+    }
+
+    /**
+     * @return array{prompt: string, routing_prompt: string, materialized: bool, metadata: array<string, mixed>|null}|JsonResponse
+     */
+    private function preparePromptForRun(string $prompt): array|JsonResponse
+    {
+        try {
+            return $this->longPromptFiles->prepare($prompt);
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    /**
+     * @param  array{prompt: string, routing_prompt: string, materialized: bool, metadata: array<string, mixed>|null}  $prepared
+     * @return array<string, mixed>
+     */
+    private function orchestratorOptionsForPreparedPrompt(array $prepared): array
+    {
+        if (! $prepared['materialized'] || ! is_array($prepared['metadata'])) {
+            return [];
+        }
+
+        return [
+            'routing_prompt' => $prepared['routing_prompt'],
+            'long_prompt_attachment' => true,
+            'metadata' => [
+                'long_prompt' => $prepared['metadata'],
+            ],
+        ];
+    }
+
+    /**
+     * @param  array{prompt: string, routing_prompt: string, materialized: bool, metadata: array<string, mixed>|null}  $prepared
+     * @param  callable(array<string, mixed>): void|null  $emit
+     * @param  list<array{role: string, content: string}>  $conversation
+     * @return array<string, mixed>
+     */
+    private function runPreparedPrompt(
+        OrchestratorService $orchestrator,
+        array $prepared,
+        ?callable $emit,
+        array $conversation,
+    ): array {
+        $options = $this->orchestratorOptionsForPreparedPrompt($prepared);
+        if ($options === []) {
+            return $orchestrator->run($prepared['prompt'], $emit, $conversation);
+        }
+
+        return $orchestrator->run($prepared['prompt'], $emit, $conversation, $options);
+    }
+
+    /**
+     * @param  array{prompt: string, routing_prompt: string, materialized: bool, metadata: array<string, mixed>|null}  $prepared
+     * @param  callable(array<string, mixed>): void|null  $emit
+     */
+    private function finalizePreparedPrompt(array $prepared, ?string $runId, ?callable $emit = null, bool $force = false): void
+    {
+        if (! $prepared['materialized'] || ! is_array($prepared['metadata'])) {
+            return;
+        }
+
+        $run = ($runId !== null && $runId !== '') ? Run::query()->find($runId) : null;
+        $terminal = $force || $run === null || in_array((string) $run->status, ['completed', 'failed'], true);
+        if (! $terminal) {
+            $this->longPromptFiles->storeRunMetadata($runId, array_merge($prepared['metadata'], [
+                'cleanup_status' => 'kept_for_resume',
+            ]));
+            return;
+        }
+
+        $cleaned = $this->longPromptFiles->cleanupRun($runId, $prepared['metadata']);
+        if ($emit !== null && is_array($cleaned)) {
+            $emit($this->longPromptFiles->cleanedEvent($runId, $cleaned));
+        }
+    }
+
+    /** @param callable(array<string, mixed>): void $emit */
+    private function cleanupLongPromptIfTerminal(string $runId, callable $emit, bool $terminal): void
+    {
+        $run = Run::query()->find($runId);
+        $shouldClean = $terminal || in_array((string) ($run?->status ?? ''), ['completed', 'failed'], true);
+        if (! $shouldClean) {
+            return;
+        }
+
+        $cleaned = $this->longPromptFiles->cleanupRun($runId);
+        if (is_array($cleaned)) {
+            $emit($this->longPromptFiles->cleanedEvent($runId, $cleaned));
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -370,6 +574,51 @@ class RunController extends Controller
             ->get();
 
         return response()->json($feedback);
+    }
+
+    /**
+     * @param  list<array{role: string, content: string}>  $conversation
+     */
+    private function awaitingClarificationMisrouteResponse(array $conversation): ?JsonResponse
+    {
+        if ($conversation === []) {
+            return null;
+        }
+
+        $encoded = json_encode($conversation);
+        if ($encoded === false) {
+            return null;
+        }
+
+        $candidates = Run::query()
+            ->where('status', 'awaiting_input')
+            ->orderByDesc('updated_at')
+            ->limit(20)
+            ->get();
+
+        foreach ($candidates as $run) {
+            /** @var array<string, mixed> $meta */
+            $meta = is_array($run->metadata) ? $run->metadata : [];
+            /** @var array<string, mixed> $checkpoint */
+            $checkpoint = is_array($meta['checkpoint'] ?? null) ? $meta['checkpoint'] : [];
+            if (($checkpoint['stage'] ?? null) === 'executor_approvals') {
+                continue;
+            }
+
+            $storedConversation = is_array($meta['conversation'] ?? null) ? $meta['conversation'] : [];
+            if (json_encode($storedConversation) !== $encoded) {
+                continue;
+            }
+
+            return response()->json([
+                'message' => 'A run is awaiting your input. Reply via continue/stream instead of starting a new run.',
+                'awaiting_run_id' => $run->id,
+                'stage' => $checkpoint['stage'] ?? null,
+                'resume_endpoint' => '/api/runs/'.$run->id.'/continue/stream',
+            ], 409);
+        }
+
+        return null;
     }
 
     private function executorApprovalsMisrouteResponse(string $runId): ?JsonResponse

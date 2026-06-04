@@ -54,6 +54,23 @@ return [
     /** @deprecated Use auto_execute_project_commands */
     'auto_execute_git_commands' => env('BOSSKU_AUTO_EXECUTE_GIT_COMMANDS', true),
     'allow_docker_compose_commands' => env('BOSSKU_ALLOW_DOCKER_COMPOSE', true),
+    /**
+     * When true, npm/yarn/pnpm/npx commands from commands_run may execute in the active project (Docker-friendly).
+     */
+    'allow_package_manager_commands' => env('BOSSKU_ALLOW_PACKAGE_MANAGER_COMMANDS', true),
+    /**
+     * When true, commands may use cwd (or --prefix/--cwd) under BOSSKU_WORKSPACE_MOUNT for sibling repos.
+     */
+    'allow_workspace_command_paths' => env('BOSSKU_ALLOW_WORKSPACE_COMMAND_PATHS', true),
+    /**
+     * Extra allowlisted command prefixes (pipe-separated), e.g. "make test|uv run".
+     *
+     * @var list<string>
+     */
+    'project_command_extra_prefixes' => array_values(array_filter(array_map(
+        'trim',
+        explode('|', (string) env('BOSSKU_PROJECT_COMMAND_EXTRA_PREFIXES', '')),
+    ))),
     'project_command_timeout_seconds' => (int) env('BOSSKU_PROJECT_COMMAND_TIMEOUT', 300),
     /** @deprecated Use project_command_timeout_seconds */
     'git_command_timeout_seconds' => (int) env('BOSSKU_GIT_COMMAND_TIMEOUT', 60),
@@ -108,4 +125,40 @@ return [
     'learn_chunk_size' => (int) env('BOSSKU_LEARN_CHUNK_SIZE', 1400),
     'learn_chunk_overlap' => (int) env('BOSSKU_LEARN_CHUNK_OVERLAP', 250),
     'learn_max_chunks' => (int) env('BOSSKU_LEARN_MAX_CHUNKS', 300),
+
+    /**
+     * Vision model for chat image attachments (Ollama tag, e.g. llava, llava:13b, llama3.2-vision).
+     */
+    'vision_model' => env('BOSSKU_VISION_MODEL', 'llava'),
+
+    'attachments' => [
+        'max_per_upload' => (int) env('BOSSKU_ATTACHMENTS_MAX_PER_UPLOAD', 10),
+        'max_per_run' => (int) env('BOSSKU_ATTACHMENTS_MAX_PER_RUN', 10),
+        'max_file_kb' => (int) env('BOSSKU_ATTACHMENTS_MAX_FILE_KB', 10240),
+        'max_extracted_chars' => (int) env('BOSSKU_ATTACHMENTS_MAX_EXTRACTED_CHARS', 40000),
+        'allowed_mimes' => [
+            'text/plain',
+            'text/markdown',
+            'text/csv',
+            'text/html',
+            'text/css',
+            'text/javascript',
+            'text/xml',
+            'text/yaml',
+            'application/json',
+            'application/xml',
+            'application/pdf',
+            'application/javascript',
+            'application/typescript',
+            'application/x-yaml',
+            'application/sql',
+            'application/octet-stream',
+            'image/jpeg',
+            'image/png',
+            'image/gif',
+            'image/webp',
+            'image/bmp',
+            'image/svg+xml',
+        ],
+    ],
 ];

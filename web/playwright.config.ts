@@ -6,6 +6,9 @@ const mockBase = `http://127.0.0.1:${mockPort}`
 // reuseExistingServer silently binding to an unrelated app already on :3000.
 const webPort = Number(process.env.E2E_WEB_PORT || 28471)
 const webBase = `http://127.0.0.1:${webPort}`
+const nuxiBuildCommand = process.platform === 'win32'
+  ? 'npm.cmd exec nuxi build'
+  : 'npx nuxi build'
 
 export default defineConfig({
   testDir: './e2e/specs',
@@ -39,7 +42,7 @@ export default defineConfig({
       env: { ...process.env, MOCK_PORT: String(mockPort) },
     },
     {
-      command: `npm run build && node .output/server/index.mjs`,
+      command: `${nuxiBuildCommand} && node .output/server/index.mjs`,
       url: webBase,
       reuseExistingServer: false,
       timeout: 300_000,

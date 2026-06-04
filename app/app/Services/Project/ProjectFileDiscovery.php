@@ -310,7 +310,8 @@ class ProjectFileDiscovery
                 $symbols[] = $s;
             }
         }
-        if (preg_match_all('/\b(config\/[a-z0-9_./-]+\.php)\b/i', $text, $m)) {
+        // Use # delimiters — a literal / inside the character class must not close a /-delimited pattern.
+        if (preg_match_all('#\b(config/[a-z0-9_.-]+\.php)\b#i', $text, $m)) {
             foreach ($m[1] as $s) {
                 $symbols[] = $s;
             }

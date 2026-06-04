@@ -34,9 +34,25 @@ const renderedContent = computed(() =>
         v-html="renderedContent"
       />
       <!-- User messages: plain pre-wrap -->
-      <p v-else class="whitespace-pre-wrap">
-        {{ turn.content }}
-      </p>
+      <div v-else class="space-y-2">
+        <ul
+          v-if="turn.attachments?.length"
+          class="flex flex-wrap gap-1.5"
+          aria-label="Attached files"
+        >
+          <li
+            v-for="file in turn.attachments"
+            :key="file.id"
+            class="inline-flex items-center gap-1 rounded-md border border-emerald-700/50 bg-emerald-950/40 px-2 py-0.5 text-xs text-emerald-100"
+          >
+            <span class="font-medium">{{ file.name }}</span>
+            <span class="text-emerald-300/70">{{ file.kind }}</span>
+          </li>
+        </ul>
+        <p v-if="turn.content" class="whitespace-pre-wrap">
+          {{ turn.content }}
+        </p>
+      </div>
     </div>
   </div>
 </template>

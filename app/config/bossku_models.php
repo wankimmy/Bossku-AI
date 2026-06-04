@@ -175,6 +175,11 @@ return [
         'retry_count' => 1,
     ],
 
+    /** Vision model for chat image attachments (resolved via aliases + Ollama). */
+    'vision' => [
+        'primary' => env('BOSSKU_VISION_MODEL', 'llava'),
+    ],
+
     /**
      * Logical BosskuAI model ids → Ollama Cloud (or compatible) ids.
      * Override per logical id in Settings → Ollama & Models → Cloud aliases.
@@ -192,6 +197,8 @@ return [
         'qwen3-coder-next' => 'qwen3-coder-next:cloud',
         'glm-5.1' => 'glm-5.1:cloud',
         'gemini-3-pro' => 'kimi-k2.6:cloud',
+        'llava' => 'llava',
+        'llava-vision' => 'llava',
     ],
 
     /** @var list<string> Allowed Ollama Cloud model tags (documentation + validation reference). */

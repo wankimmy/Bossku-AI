@@ -150,7 +150,8 @@ Output JSON only (no markdown fences). Required keys:
 status ("success"|"partial"|"failed"),
 files_read (array of {path, reason}),
 files_changed (array of {path, change_type, summary, why, after?, diff?}),
-commands_run, tests_run, tests_result, patch_summary,
+commands_run (array of {command: string, cwd?: string} — cwd optional for sibling repos under /workspace; omit to use active project),
+tests_run, tests_result, patch_summary,
 known_issues, needs_user_input, blockers, suggested_options, needs_audit,
 handoff_message (MUST cite: files read, files changed with paths, commands run),
 executor_questions (array of {id: string, question: string, why: string} — questions for the user before proceeding with high-stakes actions; empty if no blockers),
@@ -293,13 +294,19 @@ SYS;
                 return null;
             }
 
-            return [
+            $row = [
                 'command' => StringCoercion::toString($item['command'] ?? null),
                 'status' => StringCoercion::toString($item['status'] ?? null, 'completed'),
                 'exit_code' => $item['exit_code'] ?? null,
                 'duration_ms' => $item['duration_ms'] ?? null,
                 'output_summary' => StringCoercion::toString($item['output_summary'] ?? null),
             ];
+            $cwd = StringCoercion::toString($item['cwd'] ?? $item['working_directory'] ?? null, '');
+            if ($cwd !== '') {
+                $row['cwd'] = $cwd;
+            }
+
+            return $row;
         }, is_array($result['commands_run'] ?? null) ? $result['commands_run'] : []), fn ($item) => $item !== null && $item['command'] !== ''));
 
         $result['tests_run'] = is_array($result['tests_run'] ?? null) ? $result['tests_run'] : [];

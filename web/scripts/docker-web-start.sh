@@ -23,9 +23,22 @@ pixel_office_graceful() {
 }
 
 install_web_deps() {
+  stamp="node_modules/.bossku-install-stamp"
+  needs_install=0
   if [ ! -f node_modules/@nuxtjs/tailwindcss/package.json ]; then
-    echo "[bossku-web] Installing dependencies (dev deps required for nuxt build)..."
+    needs_install=1
+  elif [ ! -f "$stamp" ]; then
+    needs_install=1
+  elif [ -n "$(find package-lock.json package.json -newer "$stamp" 2>/dev/null)" ]; then
+    needs_install=1
+  fi
+
+  if [ "$needs_install" = "1" ]; then
+    echo "[bossku-web] Installing dependencies (lockfile changed or first run)..."
     NPM_CONFIG_PRODUCTION=false npm ci 2>/dev/null || NPM_CONFIG_PRODUCTION=false npm install
+    touch "$stamp"
+  else
+    echo "[bossku-web] Dependencies up to date."
   fi
 }
 

@@ -19,6 +19,8 @@ export type StepStatus =
   | 'fail'
   | 'needs_revision'
   | 'skipped'
+  | 'disputed'
+  | 'unverifiable'
   | string
 
 export interface PlanChecklistItem {
@@ -27,6 +29,18 @@ export interface PlanChecklistItem {
   description?: string
   owner: AgentName | string
   status: StepStatus
+}
+
+/** Cursor-style orchestrator plan surfaced in Plan tab and chat. */
+export interface PlanOverview {
+  goal?: string
+  taskSummary?: string
+  keyDesignDecisions: string[]
+  flowDiagram?: string
+  flowSteps: string[]
+  notes: string[]
+  risks: string[]
+  todos: PlanChecklistItem[]
 }
 
 export interface FileRead {
@@ -140,6 +154,7 @@ export interface RoutingSummary {
 export interface NormalizedRunArtifacts {
   agentMessages: AgentMessage[]
   handoffNodes: HandoffNode[]
+  plan?: PlanOverview
   checklist: PlanChecklistItem[]
   filesRead: FileRead[]
   filesChanged: FileChange[]

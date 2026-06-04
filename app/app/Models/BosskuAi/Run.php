@@ -69,6 +69,11 @@ class Run extends Model
         return $this->hasMany(RunStreamEvent::class, 'run_id')->orderBy('seq');
     }
 
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(Attachment::class, 'run_id');
+    }
+
     public function soulVersion(): BelongsTo
     {
         return $this->belongsTo(SoulVersion::class, 'soul_version_id');

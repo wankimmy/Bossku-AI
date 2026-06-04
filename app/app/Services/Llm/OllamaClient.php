@@ -57,6 +57,64 @@ class OllamaClient
     }
 
     /**
+     * Vision-capable chat (Ollama `images` on the last user message).
+     *
+     * @param  array<int, array{role: string, content: string}>  $messages
+     * @param  list<string>  $imagesBase64
+     */
+    public function chatWithImages(
+        string $model,
+        array $messages,
+        array $imagesBase64,
+        ?float $temperature = 0.2,
+    ): string {
+        if ($messages === []) {
+            throw new \InvalidArgumentException('messages must not be empty');
+        }
+
+        $payloadMessages = $messages;
+        $lastIndex = array_key_last($payloadMessages);
+        $last = $payloadMessages[$lastIndex];
+        if (($last['role'] ?? '') !== 'user') {
+            $payloadMessages[] = ['role' => 'user', 'content' => 'Describe the attached image(s).'];
+            $lastIndex = array_key_last($payloadMessages);
+            $last = $payloadMessages[$lastIndex];
+        }
+
+        $payloadMessages[$lastIndex] = array_merge($last, [
+            'images' => array_values(array_filter($imagesBase64, fn ($img) => is_string($img) && $img !== '')),
+        ]);
+
+        $url = rtrim($this->baseUrl, '/').'/api/chat';
+
+        $http = Http::timeout(300)->acceptJson();
+        if ($this->apiKey !== null && $this->apiKey !== '') {
+            $http = $http->withToken($this->apiKey);
+        }
+
+        $res = $http->post($url, [
+            'model' => $model,
+            'messages' => $payloadMessages,
+            'stream' => false,
+            'options' => ['temperature' => $temperature],
+        ]);
+
+        try {
+            $res->throw();
+        }
+        catch (RequestException $e) {
+            throw new \RuntimeException(
+                'Ollama vision chat failed at '.$this->baseUrl.'. Response: '.$res->body(),
+                previous: $e
+            );
+        }
+
+        $j = $res->json();
+
+        return (string) data_get($j, 'message.content', '');
+    }
+
+    /**
      * @return list<float>
      */
     public function embed(string $text, string $model, ?int $dimensions = 1536): array

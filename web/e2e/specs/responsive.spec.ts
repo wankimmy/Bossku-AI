@@ -58,7 +58,7 @@ test.describe('mobile layout patterns', () => {
     test.skip(testInfo.project.name !== 'mobile-pixel-7')
     await page.addInitScript(() => localStorage.setItem('bossku_onboarding_v1', '1'))
 
-    const stickyRun = page.locator('.fixed.inset-x-0.bottom-0').getByRole('button', { name: 'Run task' })
+    const stickyRun = page.locator('.fixed.inset-x-0.bottom-0').getByRole('button', { name: 'Send' })
 
     await page.goto('/')
     await expect(stickyRun).toBeVisible()

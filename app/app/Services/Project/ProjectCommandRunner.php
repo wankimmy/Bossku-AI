@@ -7,7 +7,8 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 
 /**
- * Runs allowlisted project commands (git, docker compose, php artisan, tests) in the active repo root.
+ * Runs allowlisted project commands (git, docker compose, php, composer, npm/yarn/pnpm) in the active repo
+ * or another directory under the Docker workspace mount.
  */
 class ProjectCommandRunner
 {
@@ -26,6 +27,32 @@ class ProjectCommandRunner
         'php vendor/bin/phpunit',
         'composer test',
         'composer install',
+        'composer run',
+        'composer dump-autoload',
+    ];
+
+    /** @var list<string> */
+    private const PACKAGE_MANAGER_PREFIXES = [
+        'npm ',
+        'npm install',
+        'npm uninstall',
+        'npm run',
+        'npm ci',
+        'npm test',
+        'npm audit',
+        'npm ls',
+        'npm list',
+        'npx ',
+        'yarn ',
+        'yarn install',
+        'yarn run',
+        'yarn add',
+        'yarn remove',
+        'pnpm ',
+        'pnpm install',
+        'pnpm run',
+        'pnpm add',
+        'pnpm remove',
     ];
 
     /** @var list<string> */
@@ -34,6 +61,7 @@ class ProjectCommandRunner
         'git push', 'git reset', 'git clean', 'git rebase', 'git merge',
         'git commit', 'git add', 'git stash',
         'docker run', 'docker build', 'docker system', 'docker volume',
+        'npm publish', 'yarn publish', 'pnpm publish',
         'rm -rf', 'mkfs', 'dd ',
     ];
 
@@ -51,6 +79,11 @@ class ProjectCommandRunner
         }
 
         return is_readable('/var/run/docker.sock');
+    }
+
+    public function packageManagersEnabled(): bool
+    {
+        return (bool) config('bossku.allow_package_manager_commands', true);
     }
 
     /**
@@ -80,8 +113,8 @@ class ProjectCommandRunner
         $ranRestore = false;
 
         if (! $this->enabled()) {
-            foreach ($this->normalizeCommandList($commandsRun) as $command) {
-                $executed[] = $this->skippedRow($command, 'auto_execute_project_commands disabled');
+            foreach ($this->normalizeCommandEntries($commandsRun) as $entry) {
+                $executed[] = $this->skippedRow($entry['command'], 'auto_execute_project_commands disabled');
             }
 
             return [
@@ -91,10 +124,20 @@ class ProjectCommandRunner
             ];
         }
 
-        $cwd = $this->repoRoot();
+        $defaultCwd = $this->repoRoot();
 
-        foreach ($this->normalizeCommandList($commandsRun) as $command) {
-            $validation = $this->validateCommand($command, $cwd);
+        foreach ($this->normalizeCommandEntries($commandsRun) as $entry) {
+            $command = $entry['command'];
+            $cwd = $entry['cwd'] ?? $defaultCwd;
+
+            $cwdError = $this->validateWorkingDirectory($cwd, $defaultCwd);
+            if ($cwdError !== null) {
+                $executed[] = $this->skippedRow($command, $cwdError);
+
+                continue;
+            }
+
+            $validation = $this->validateCommand($command, $defaultCwd);
             if ($validation !== null) {
                 $executed[] = $this->skippedRow($command, $validation);
 
@@ -110,7 +153,7 @@ class ProjectCommandRunner
 
         $postGitStatus = null;
         if ($executed !== [] && $this->ranAnyGitCommand($executed)) {
-            $postGitStatus = $this->captureGitStatus($cwd);
+            $postGitStatus = $this->captureGitStatus($defaultCwd);
         }
 
         return [
@@ -139,14 +182,34 @@ class ProjectCommandRunner
      */
     public function normalizeCommandList(array $commandsRun): array
     {
+        return array_map(
+            static fn (array $entry): string => $entry['command'],
+            $this->normalizeCommandEntries($commandsRun),
+        );
+    }
+
+    /**
+     * @param  list<mixed>  $commandsRun
+     * @return list<array{command: string, cwd: string|null}>
+     */
+    public function normalizeCommandEntries(array $commandsRun): array
+    {
         $out = [];
         foreach ($commandsRun as $item) {
-            $command = is_array($item)
-                ? StringCoercion::toString($item['command'] ?? null, '')
-                : StringCoercion::toString($item, '');
+            if (is_array($item)) {
+                $command = StringCoercion::toString($item['command'] ?? null, '');
+                $cwdRaw = $item['cwd'] ?? $item['working_directory'] ?? null;
+                $cwd = is_string($cwdRaw) ? trim($cwdRaw) : null;
+                if ($cwd === '') {
+                    $cwd = null;
+                }
+            } else {
+                $command = StringCoercion::toString($item, '');
+                $cwd = null;
+            }
             $command = trim($command);
             if ($command !== '') {
-                $out[] = $command;
+                $out[] = ['command' => $command, 'cwd' => $cwd];
             }
         }
 
@@ -160,6 +223,8 @@ class ProjectCommandRunner
             return 'Empty command.';
         }
 
+        $repoRoot = $repoRoot ?? $this->repoRoot();
+
         $lower = strtolower($command);
         foreach (self::FORBIDDEN_SUBSTRINGS as $forbidden) {
             if (str_contains($lower, strtolower($forbidden))) {
@@ -172,7 +237,12 @@ class ProjectCommandRunner
                 return 'Command blocked: docker compose requires /var/run/docker.sock on the Bossku backend (local dev).';
             }
 
-            return $this->validateComposePaths($command, $repoRoot ?? $this->repoRoot());
+            $composeError = $this->validateComposePaths($command, $repoRoot);
+            if ($composeError !== null) {
+                return $composeError;
+            }
+
+            return $this->validateEmbeddedPaths($command, $repoRoot);
         }
 
         foreach (self::GIT_PREFIXES as $prefix) {
@@ -183,11 +253,140 @@ class ProjectCommandRunner
 
         foreach (self::SHELL_PREFIXES as $prefix) {
             if (str_starts_with($lower, $prefix)) {
-                return null;
+                return $this->validateEmbeddedPaths($command, $repoRoot);
             }
         }
 
-        return 'Command blocked: only git, docker compose, php artisan, phpunit, and composer test/install are allowed.';
+        if ($this->isPackageManagerCommand($lower)) {
+            if (! $this->packageManagersEnabled()) {
+                return 'Command blocked: package manager commands are disabled (BOSSKU_ALLOW_PACKAGE_MANAGER_COMMANDS=false).';
+            }
+
+            return $this->validateEmbeddedPaths($command, $repoRoot);
+        }
+
+        foreach ($this->extraCommandPrefixes() as $prefix) {
+            if (str_starts_with($lower, strtolower($prefix))) {
+                return $this->validateEmbeddedPaths($command, $repoRoot);
+            }
+        }
+
+        return 'Command blocked: only git, docker compose, php artisan, phpunit, composer, and npm/yarn/pnpm commands are allowed.';
+    }
+
+    protected function isPackageManagerCommand(string $lower): bool
+    {
+        foreach (self::PACKAGE_MANAGER_PREFIXES as $prefix) {
+            if (str_starts_with($lower, $prefix)) {
+                return true;
+            }
+        }
+
+        return (bool) preg_match('/^(npm|npx|yarn|pnpm)\b/', $lower);
+    }
+
+    /**
+     * @return list<string>
+     */
+    protected function extraCommandPrefixes(): array
+    {
+        $raw = config('bossku.project_command_extra_prefixes', []);
+        if (is_string($raw)) {
+            $raw = array_filter(array_map('trim', explode('|', $raw)));
+        }
+
+        return is_array($raw) ? array_values(array_filter(array_map('strval', $raw))) : [];
+    }
+
+    protected function validateWorkingDirectory(string $cwd, string $repoRoot): ?string
+    {
+        $cwd = trim($cwd);
+        if ($cwd === '') {
+            return 'Empty working directory.';
+        }
+
+        $real = realpath($cwd);
+        if ($real === false || ! is_dir($real)) {
+            return 'Command blocked: working directory does not exist or is not mounted in the container.';
+        }
+
+        if ($this->pathIsAllowedRoot($real, $repoRoot)) {
+            return null;
+        }
+
+        return 'Command blocked: working directory must be inside the active project or the workspace mount ('.$this->workspaceMount().').';
+    }
+
+    protected function validateEmbeddedPaths(string $command, string $repoRoot): ?string
+    {
+        if (! (bool) config('bossku.allow_workspace_command_paths', true)) {
+            return null;
+        }
+
+        $patterns = [
+            '/(?:--prefix|-C)\s+([^\s]+)/i',
+            '/(?:--cwd|--dir)\s+([^\s]+)/i',
+        ];
+
+        foreach ($patterns as $pattern) {
+            if (! preg_match_all($pattern, $command, $matches)) {
+                continue;
+            }
+            foreach ($matches[1] as $path) {
+                $error = $this->validateReferencedPath(trim($path, '\'"'), $repoRoot);
+                if ($error !== null) {
+                    return $error;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    protected function validateReferencedPath(string $path, string $repoRoot): ?string
+    {
+        if ($path === '' || $path === '.') {
+            return null;
+        }
+
+        $absolute = str_starts_with($path, '/')
+            ? $path
+            : $repoRoot.'/'.ltrim($path, '/');
+
+        $real = realpath($absolute);
+        if ($real === false) {
+            return 'Command blocked: path not found under project or workspace: '.$path;
+        }
+
+        if ($this->pathIsAllowedRoot($real, $repoRoot)) {
+            return null;
+        }
+
+        return 'Command blocked: path must be inside the active project or workspace mount ('.$this->workspaceMount().').';
+    }
+
+    protected function pathIsAllowedRoot(string $realPath, string $repoRoot): bool
+    {
+        $repoReal = realpath($repoRoot) ?: $repoRoot;
+        if (str_starts_with($realPath, $repoReal)) {
+            return true;
+        }
+
+        if (! (bool) config('bossku.allow_workspace_command_paths', true)) {
+            return false;
+        }
+
+        $mount = $this->workspaceMount();
+        $mountReal = realpath($mount);
+
+        return $mountReal !== false
+            && is_dir($mountReal)
+            && str_starts_with($realPath, $mountReal);
+    }
+
+    protected function workspaceMount(): string
+    {
+        return rtrim((string) config('bossku.workspace_mount', '/workspace'), '/');
     }
 
     protected function validateComposePaths(string $command, string $repoRoot): ?string
@@ -196,21 +395,10 @@ class ProjectCommandRunner
             return null;
         }
 
-        $repoReal = realpath($repoRoot) ?: $repoRoot;
         foreach ($matches[1] as $file) {
-            $file = trim($file, '\'"');
-            if ($file === '') {
-                continue;
-            }
-            $absolute = str_starts_with($file, '/')
-                ? $file
-                : $repoRoot.'/'.ltrim($file, '/');
-            $real = realpath($absolute);
-            if ($real === false) {
-                return 'Command blocked: compose file not found under project root.';
-            }
-            if (! str_starts_with($real, $repoReal)) {
-                return 'Command blocked: compose file must be inside the active project.';
+            $error = $this->validateReferencedPath(trim($file, '\'"'), $repoRoot);
+            if ($error !== null) {
+                return $error;
             }
         }
 
@@ -309,7 +497,6 @@ class ProjectCommandRunner
             return;
         }
 
-        // Throttle to one log entry per hour so it doesn't spam on every request/run step.
         $key = 'bossku.docker_sock_warned';
         if (cache()->has($key)) {
             return;

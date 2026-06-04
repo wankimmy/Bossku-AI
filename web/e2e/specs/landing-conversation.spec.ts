@@ -8,7 +8,7 @@ test('restores saved chat and agent process after a completed run', async ({ pag
   await page.goto('/', { waitUntil: 'load' })
 
   await page.locator('textarea').first().fill('Seeded restore prompt')
-  await page.getByRole('button', { name: 'Run task' }).first().click()
+  await page.getByRole('button', { name: 'Send' }).first().click()
   await expect(page.getByText(/Mock stream done for:/i).first()).toBeVisible({
     timeout: 20_000,
   })
@@ -23,6 +23,6 @@ test('restores saved chat and agent process after a completed run', async ({ pag
 
   const restoredTabs = page.getByTestId('landing-conversation-tabs')
   await restoredTabs.getByRole('tab', { name: /^Chat/i }).click()
-  await expect(page.getByText('Seeded restore prompt')).toBeVisible()
+  await expect(page.getByText('Seeded restore prompt', { exact: true })).toBeVisible()
   await expect(page.getByText(/Mock stream done for:/i).first()).toBeVisible()
 })

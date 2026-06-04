@@ -134,7 +134,7 @@ const signalEmoji = (s: string) => {
 
     <!-- Plan -->
     <section v-else-if="tab === 'plan'">
-      <PlanChecklist :items="artifacts.checklist" />
+      <PlanOverview :plan="artifacts.plan" />
     </section>
 
     <!-- Tool Calls -->

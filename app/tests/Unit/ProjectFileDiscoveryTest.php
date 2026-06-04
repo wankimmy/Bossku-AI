@@ -102,6 +102,22 @@ PHP);
         $this->assertContains('deep/nested/level/DeepController.php', $result['paths']);
     }
 
+    #[Test]
+    public function extract_symbols_from_text_handles_config_paths_in_long_prompt(): void
+    {
+        $discovery = app(ProjectFileDiscovery::class);
+
+        $longPrompt = str_repeat("Review config/app.php and config/database.php for env setup.\n", 200);
+        $longPrompt .= 'Also check routes/web.php and UserSettingsController.';
+
+        $symbols = $discovery->extractSymbolsFromText($longPrompt);
+
+        $this->assertContains('config/app.php', $symbols);
+        $this->assertContains('config/database.php', $symbols);
+        $this->assertContains('routes/web.php', $symbols);
+        $this->assertContains('UserSettingsController', $symbols);
+    }
+
     private function normalize(string $path): string
     {
         return str_replace('\\', '/', rtrim($path, '/\\'));

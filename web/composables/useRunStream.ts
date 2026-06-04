@@ -284,7 +284,12 @@ export function useRunStream() {
 
   async function start(
     prompt: string,
-    options?: { conversation?: ConversationTurn[]; appendEvents?: boolean; convId?: string },
+    options?: {
+      conversation?: ConversationTurn[]
+      appendEvents?: boolean
+      convId?: string
+      attachmentIds?: string[]
+    },
   ) {
     if (options?.convId) {
       bindConversation(options.convId)
@@ -313,6 +318,7 @@ export function useRunStream() {
         body: JSON.stringify({
           prompt,
           conversation: options?.conversation ?? [],
+          attachment_ids: options?.attachmentIds ?? [],
         }),
         signal: abort.signal,
       })

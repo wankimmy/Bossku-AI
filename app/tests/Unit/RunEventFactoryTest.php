@@ -99,4 +99,34 @@ class RunEventFactoryTest extends TestCase
         $this->assertSame(42, $payload['latency_ms']);
         $this->assertSame(11, $payload['token_estimate']);
     }
+
+    #[Test]
+    public function run_completed_uses_short_path_agent_for_direct_answer_workflow(): void
+    {
+        $run = new Run([
+            'id' => '00000000-0000-0000-0000-000000000003',
+            'prompt' => 'test',
+            'status' => 'running',
+            'metadata' => [],
+        ]);
+
+        $factory = new RunEventFactory;
+
+        $payload = $factory->runCompleted(
+            $run,
+            'BosskuAI is running.',
+            25,
+            8,
+            ['workflow' => 'direct_answer'],
+            ['direct_answer' => 'mock-direct', 'router' => 'mock-router'],
+        );
+
+        $this->assertSame('run_completed', $payload['type']);
+        $this->assertSame('direct_answer', $payload['agent']);
+        $this->assertSame('direct_answer', $payload['from_agent']);
+        $this->assertSame('system', $payload['to_agent']);
+        $this->assertSame('fast', $payload['model_role']);
+        $this->assertSame('mock-direct', $payload['model']);
+        $this->assertSame('BosskuAI is running.', $payload['output']);
+    }
 }

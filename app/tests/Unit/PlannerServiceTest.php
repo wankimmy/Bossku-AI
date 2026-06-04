@@ -119,6 +119,9 @@ class PlannerServiceTest extends TestCase
 
         $this->assertStringContainsString('Output ONLY valid JSON', $system);
         $this->assertStringContainsString('target_file_list', $system);
+        $this->assertStringContainsString('key_design_decisions', $system);
+        $this->assertStringContainsString('flow_diagram', $system);
+        $this->assertStringContainsString('flowchart TD', $system);
         $this->assertStringContainsString('executor-ready and audit-ready', $system);
         $this->assertStringContainsString('If a path is not supported by repo evidence', $system);
         $this->assertStringContainsString('leave target_file_list empty rather than inventing one', $system);
@@ -190,5 +193,62 @@ class PlannerServiceTest extends TestCase
         $this->assertSame('plan-1', $out['checklist'][0]['id']);
         $this->assertSame('Inspect relevant files', $out['checklist'][0]['title']);
         $this->assertSame('answer_only', $out['execution_mode']);
+    }
+
+    #[Test]
+    public function planner_normalizes_flow_diagram_and_design_decisions(): void
+    {
+        $fallback = $this->mock(ModelFallbackService::class, function ($mock) {
+            $mock->shouldReceive('chatWithFallbacks')
+                ->once()
+                ->andReturn([
+                    'parsed' => [
+                        'summary' => 'Plan',
+                        'task_summary' => 'Plan',
+                        'goal' => 'Ship feature',
+                        'selected_skill' => 'general',
+                        'target_file_list' => [],
+                        'checklist' => [],
+                        'handoff_message' => 'Go.',
+                        'key_design_decisions' => ['Reuse existing planner event shape', ''],
+                        'flow_diagram' => "```mermaid\nflowchart TD\n  A[Start] --> B[Done]\n```",
+                        'flow_steps' => ['Start', 'Done'],
+                    ],
+                    'model_used' => 'kimi-k2.6',
+                    'model_resolved' => 'kimi-k2.6',
+                    'fallback_used' => false,
+                ]);
+        });
+
+        $routing = $this->mock(ModelRoutingConfig::class, function ($mock) {
+            $mock->shouldReceive('orchestrator')->once()->andReturn([
+                'primary' => 'kimi-k2.6',
+                'fallback' => [],
+                'retry_count' => 0,
+                'temperature' => 0.2,
+                'max_tokens' => 8192,
+            ]);
+        });
+
+        $settings = $this->mock(RuntimeSettings::class);
+        $projects = $this->mock(ProjectService::class, function ($mock) {
+            $mock->shouldReceive('evidenceRuleForPrompt')->once()->andReturn('Evidence rule.');
+        });
+        $discovery = $this->mock(ProjectFileDiscovery::class, function ($mock) {
+            $mock->shouldReceive('repoIndexForPlanner')->once()->andReturn('Repository root: /workspace');
+        });
+
+        $service = new PlannerService($fallback, $routing, $settings, $projects, $discovery);
+        $out = $service->plan('Ship it.', [], ['primary_skill' => ['name' => 'general']], [
+            'workflow' => 'orchestrator_executor',
+            'skill' => 'general',
+            'risk_level' => 'low',
+            'needs_executor' => true,
+        ]);
+
+        $this->assertSame(['Reuse existing planner event shape'], $out['key_design_decisions']);
+        $this->assertStringContainsString('flowchart TD', $out['flow_diagram']);
+        $this->assertStringNotContainsString('```', $out['flow_diagram']);
+        $this->assertSame(['Start', 'Done'], $out['flow_steps']);
     }
 }

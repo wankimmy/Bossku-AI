@@ -25,7 +25,7 @@ const tabs: Array<{ value: LandingTab; label: string; hint: string }> = [
   { value: 'chat', label: 'Chat', hint: 'User prompt and AI reply' },
   { value: 'process', label: 'Agent Process', hint: 'Planner, executor, audit, proof' },
   { value: 'agents', label: 'Agents', hint: 'Workflow and activity feed' },
-  { value: 'plan', label: 'Plan', hint: 'Orchestrator checklist' },
+  { value: 'plan', label: 'Plan', hint: 'Goal, flow, risks, to-dos' },
   { value: 'changes', label: 'Changes', hint: 'Files and commands' },
   { value: 'audit', label: 'Audit', hint: 'Findings and verdict' },
   { value: 'memory', label: 'Memory', hint: 'Context used' },
@@ -115,7 +115,7 @@ defineExpose({
       >
         <span class="mb-3 text-4xl">🤖</span>
         <p class="text-sm text-zinc-400">
-          Describe a task and hit <span class="font-semibold text-emerald-400">Run task</span>.
+          Send a message, question, or task.
         </p>
         <p class="mt-1 text-xs text-zinc-600">
           Past threads live under
@@ -129,6 +129,7 @@ defineExpose({
         :key="turn.id"
         :turn="turn"
       />
+      <slot name="chat-plan" />
     </div>
 
     <div

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AttachmentController;
 use App\Http\Controllers\Api\AgentController;
 use App\Http\Controllers\Api\AgentPersonaController;
 use App\Http\Controllers\Api\DataExplorerController;
@@ -52,7 +53,10 @@ Route::middleware('bossku.api')->group(function () {
         Route::post('/runs', [RunController::class, 'store']);
         Route::post('/runs/{id}/continue/stream', [RunController::class, 'continueStream']);
         Route::post('/runs/{id}/continue-approvals/stream', [RunController::class, 'continueApprovalsStream']);
+        Route::post('/attachments', [AttachmentController::class, 'store']);
     });
+
+    Route::delete('/attachments/{id}', [AttachmentController::class, 'destroy']);
 
     Route::get('/runs', [RunController::class, 'index']);
     Route::get('/runs/{id}', [RunController::class, 'show']);

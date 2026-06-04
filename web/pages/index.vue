@@ -20,6 +20,13 @@ import { loadActiveRunBinding } from '~/utils/activeRunStorage'
 import { apiUrl } from '~/composables/useApiBase'
 import { apiAuthHeaders } from '~/utils/apiAuthHeaders'
 import { streamResumeErrorAction } from '~/utils/runStreamErrors'
+import { shouldFocusAgentWorkflow, shouldShowRunSummaryCard } from '~/utils/smartChatDisplay'
+import { preparePromptForSubmission } from '~/utils/longPrompt'
+import {
+  buildFreeTextClarificationAnswers,
+  resolveSubmitTarget,
+} from '~/utils/resolveSubmitTarget'
+import type { ChatAttachmentMeta } from '~/composables/useLandingChat'
 
 definePageMeta({ layout: 'default' })
 
@@ -27,6 +34,8 @@ const route = useRoute()
 const router = useRouter()
 const prompt = ref('')
 const promptInput = ref<HTMLTextAreaElement | null>(null)
+const fileInput = ref<HTMLInputElement | null>(null)
+const attachments = useAttachments()
 const chat = useLandingChat()
 const skills = useSkills()
 const {
@@ -107,6 +116,9 @@ const { configured: configuredRouting } = useConfiguredRouting()
 const displayRouting = computed(() =>
   mergeRoutingSummary(artifacts.value.routingSummary, configuredRouting.value),
 )
+const showRunSummaryCard = computed(() =>
+  shouldShowRunSummaryCard(artifacts.value.routingSummary, Boolean(artifacts.value.finalResult.raw)),
+)
 const status = computed(() => {
   const last = events.value.at(-1)
   return last ? String(last.status ?? last.type ?? 'running') : 'idle'
@@ -158,9 +170,18 @@ function assistantRecordKey(content: string) {
   return `conv:${chat.activeId.value ?? 'local'}:${content}`
 }
 
-watch(running, (isRunning) => {
-  if (isRunning) focusAgentsPanel()
-})
+watch(
+  () => [
+    running.value,
+    artifacts.value.routingSummary.workflow,
+    (artifacts.value.routingSummary.pipelineAgents ?? []).join('|'),
+  ] as const,
+  ([isRunning]) => {
+    if (isRunning && shouldFocusAgentWorkflow(artifacts.value.routingSummary)) {
+      focusAgentsPanel()
+    }
+  },
+)
 
 watch(
   () => [running.value, finalOutput.value, runError.value, awaitingClarification.value, awaitingApprovalsFromEvents.value, runApprovals.awaitingApprovals.value] as const,
@@ -181,19 +202,55 @@ function focusAgentsPanel() {
   landingTab.value = 'agents'
 }
 
+function attachmentMetaForChat(): ChatAttachmentMeta[] {
+  return attachments.uploaded.value.map(a => ({
+    id: a.id,
+    name: a.name,
+    kind: a.kind,
+    size: a.size,
+  }))
+}
+
+function canSendMessage(): boolean {
+  return Boolean(prompt.value.trim()) || attachments.hasAttachments.value
+}
+
+async function resolveAttachmentIds(userText: string): Promise<string[]> {
+  if (!attachments.hasAttachments.value) return []
+  return attachments.uploadAll(userText)
+}
+
 async function syncRun() {
+  if (!canSendMessage() || attachments.uploading.value) return
   const userText = prompt.value.trim()
+    || (attachments.hasAttachments.value
+      ? 'Please read the attached file(s) and respond accordingly.'
+      : '')
   if (!userText) return
-  focusAgentsPanel()
+
+  let attachmentIds: string[] = []
+  try {
+    attachmentIds = await resolveAttachmentIds(userText)
+  }
+  catch {
+    return
+  }
+
+  const preparedPrompt = preparePromptForSubmission(userText)
   const prior = chat.conversationPayload()
-  chat.addUserTurn(userText)
+  chat.addUserTurn(preparedPrompt.chatContent, attachmentMetaForChat())
   syncConvQuery()
   prompt.value = ''
+  attachments.clear()
   closeSlashMenu()
   try {
     const res = await $fetch<{ final_output?: string }>(apiUrl('/runs'), {
       method: 'POST',
-      body: { prompt: userText, conversation: prior },
+      body: {
+        prompt: preparedPrompt.runPrompt,
+        conversation: prior,
+        attachment_ids: attachmentIds,
+      },
     })
     const out = res.final_output || 'Completed'
     events.value.push({
@@ -343,6 +400,22 @@ const showClarificationModal = computed(
     && !awaitingApprovalsFromEvents.value
     && effectiveClarificationRequest.value?.stage !== 'user_local_commands',
 )
+
+const composerAwaitingReply = computed(
+  () => effectiveClarificationRequest.value !== null
+    || awaitingClarification.value
+    || status.value === 'awaiting_input',
+)
+
+const composerPlaceholder = computed(() => {
+  if (composerAwaitingReply.value) {
+    if (showClarificationModal.value) {
+      return 'Reply in the popup or type here — your message resumes this run…'
+    }
+    return 'Reply to BosskuAI\'s question — your message resumes this run…'
+  }
+  return 'Message BosskuAI, ask a question, or describe an engineering task...'
+})
 
 const isLocalCommandsClarification = computed(
   () => effectiveClarificationRequest.value !== null
@@ -507,8 +580,8 @@ async function submitClarification(payload: {
   review_decision: 'approve' | 'request_changes'
   code_review_comment?: string
 }) {
-  const req = effectiveClarificationRequest.value
-  if (!req?.runId || submittingClarification.value) return
+  const runId = effectiveClarificationRequest.value?.runId ?? resolvedRunId.value
+  if (!runId || submittingClarification.value) return
   submittingClarification.value = true
   focusAgentsPanel()
   toast.info(
@@ -518,7 +591,7 @@ async function submitClarification(payload: {
   )
   try {
     await continueRun(
-      req.runId,
+      runId,
       payload.answers,
       payload.review_decision,
       payload.code_review_comment,
@@ -530,20 +603,62 @@ async function submitClarification(payload: {
   }
 }
 
-function submit() {
-  const userText = prompt.value.trim()
-  if (running.value || submittingClarification.value) return
+async function submit() {
+  if (running.value || submittingClarification.value || attachments.uploading.value) return
 
-  if (showClarificationModal.value || showApprovalModal.value || isLocalCommandsClarification.value) {
+  if (showApprovalModal.value || isLocalCommandsClarification.value) {
     return
   }
 
-  if (!userText) return
-  focusAgentsPanel()
+  if (!canSendMessage()) return
+
+  const userText = prompt.value.trim()
+    || (attachments.hasAttachments.value
+      ? 'Please read the attached file(s) and respond accordingly.'
+      : '')
+
+  const submitTarget = resolveSubmitTarget({
+    running: running.value,
+    submittingClarification: submittingClarification.value,
+    uploadingAttachments: attachments.uploading.value,
+    showClarificationModal: showClarificationModal.value,
+    showApprovalModal: showApprovalModal.value,
+    isLocalCommandsClarification: isLocalCommandsClarification.value,
+    awaitingClarification: awaitingClarification.value,
+    runStatus: status.value,
+    hasClarificationRequest: effectiveClarificationRequest.value !== null,
+    promptTrimmed: userText,
+  })
+
+  if (submitTarget === 'answer') {
+    const runId = effectiveClarificationRequest.value?.runId ?? resolvedRunId.value
+    if (!runId) return
+    const questionId = effectiveClarificationRequest.value?.questions[0]?.id ?? 'free_text'
+    prompt.value = ''
+    attachments.clear()
+    closeSlashMenu()
+    await submitClarification({
+      answers: buildFreeTextClarificationAnswers(questionId, userText),
+      review_decision: 'approve',
+    })
+    return
+  }
+
+  let attachmentIds: string[] = []
+  try {
+    attachmentIds = await resolveAttachmentIds(userText)
+  }
+  catch {
+    toast.error(attachments.error.value ?? 'Attachment upload failed.')
+    return
+  }
+
+  const preparedPrompt = preparePromptForSubmission(userText)
   const prior = chat.conversationPayload()
-  chat.addUserTurn(userText)
+  chat.addUserTurn(preparedPrompt.chatContent, attachmentMetaForChat())
   syncConvQuery()
   prompt.value = ''
+  attachments.clear()
   closeSlashMenu()
   lastRecordedRunId.value = null
   toast.info('Task started…')
@@ -552,7 +667,22 @@ function submit() {
     bindConversation(convId)
     chat.setActiveRunId(null)
   }
-  start(userText, { conversation: prior, convId: convId ?? undefined })
+  await start(preparedPrompt.runPrompt, {
+    conversation: prior,
+    convId: convId ?? undefined,
+    attachmentIds,
+  })
+}
+
+function onAttachClick() {
+  fileInput.value?.click()
+}
+
+function onFilesSelected(event: Event) {
+  const input = event.target as HTMLInputElement
+  if (!input.files?.length) return
+  attachments.addFiles(input.files)
+  input.value = ''
 }
 
 function assistantOutputFromEvents(evts: Record<string, unknown>[]): string {
@@ -639,7 +769,9 @@ function applyConversationFromRoute() {
     }
 
     backfillAssistantFromEvents(events.value as Record<string, unknown>[])
-    if (events.value.length > 0) focusAgentsPanel()
+    if (events.value.length > 0 && shouldFocusAgentWorkflow(artifacts.value.routingSummary)) {
+      focusAgentsPanel()
+    }
     const restoredOutput = assistantOutputFromEvents(events.value as Record<string, unknown>[])
     lastRecordedRunId.value = restoredOutput ? assistantRecordKey(restoredOutput) : null
     return
@@ -666,6 +798,7 @@ function newSession() {
   events.value = []
   lastRecordedRunId.value = null
   prompt.value = ''
+  attachments.clear()
   closeSlashMenu()
   landingTab.value = 'chat'
   router.replace({ path: '/', query: {} })
@@ -823,20 +956,68 @@ watch(showApprovalModal, async (open) => {
           >
             Answer in the popup (3 choices + text field), then press Continue.
           </p>
+          <div
+            v-if="attachments.hasAttachments.value"
+            class="mt-2 flex flex-wrap gap-2"
+          >
+            <div
+              v-for="item in attachments.pending.value"
+              :key="item.key"
+              class="inline-flex items-center gap-1 rounded-md border border-zinc-600 bg-zinc-900 px-2 py-1 text-xs text-zinc-200"
+            >
+              <span class="max-w-[12rem] truncate">{{ item.file.name }}</span>
+              <span class="text-zinc-500">{{ attachments.formatSize(item.file.size) }}</span>
+              <button
+                type="button"
+                class="ml-1 text-zinc-400 hover:text-rose-400"
+                aria-label="Remove file"
+                @click="attachments.removePending(item.key)"
+              >
+                ×
+              </button>
+            </div>
+            <div
+              v-for="file in attachments.uploaded.value"
+              :key="file.id"
+              class="inline-flex items-center gap-1 rounded-md border border-emerald-700/50 bg-emerald-950/40 px-2 py-1 text-xs text-emerald-100"
+            >
+              <span class="max-w-[12rem] truncate">{{ file.name }}</span>
+              <span class="text-emerald-300/70">{{ file.kind }}</span>
+              <button
+                type="button"
+                class="ml-1 text-emerald-300/80 hover:text-rose-300"
+                aria-label="Remove uploaded file"
+                @click="attachments.removeUploaded(file.id)"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+          <p
+            v-if="attachments.error.value"
+            class="mt-2 text-xs text-rose-400"
+          >
+            {{ attachments.error.value }}
+          </p>
+          <input
+            ref="fileInput"
+            type="file"
+            class="hidden"
+            multiple
+            accept="image/*,.pdf,.txt,.md,.json,.csv,.xml,.yaml,.yml,.html,.css,.js,.ts,.tsx,.vue,.php,.py,.go,.rs,.java,.sql,.log,.env"
+            @change="onFilesSelected"
+          >
           <textarea
             id="run-prompt"
             data-tour="chat-prompt"
             ref="promptInput"
             v-model="prompt"
             class="mt-2 block min-h-[110px] w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 disabled:cursor-not-allowed disabled:opacity-60"
-            :disabled="showClarificationModal"
             role="combobox"
             aria-controls="slash-menu"
             :aria-expanded="showSlashMenu"
             :aria-activedescendant="showSlashMenu ? `slash-opt-${slashActiveIndex}` : undefined"
-            :placeholder="showClarificationModal
-              ? 'Answer in the clarification popup to continue…'
-              : 'Describe the engineering task or type / for skills...'"
+            :placeholder="composerPlaceholder"
             @input="syncSlashTriggerFromEvent"
             @click="syncSlashTriggerFromSelection"
             @keyup="syncSlashTriggerFromSelection"
@@ -901,16 +1082,25 @@ watch(showApprovalModal, async (open) => {
           <div class="mt-3 flex flex-wrap items-center gap-2">
             <button
               type="button"
+              class="rounded-lg border border-zinc-300 px-3 py-2 text-sm hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
+              :disabled="running || showClarificationModal || attachments.uploading.value"
+              title="Attach files"
+              @click="onAttachClick"
+            >
+              Attach
+            </button>
+            <button
+              type="button"
               class="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-50 dark:bg-emerald-600 dark:hover:bg-emerald-700"
-              :disabled="running || submittingClarification || showClarificationModal || showSlashMenu || !prompt.trim()"
+              :disabled="running || submittingClarification || showSlashMenu || attachments.uploading.value || !canSendMessage()"
               @click="submit"
             >
-              Run task
+              {{ attachments.uploading.value ? 'Uploading…' : (composerAwaitingReply ? 'Reply' : 'Send') }}
             </button>
             <button
               type="button"
               class="rounded-lg border border-zinc-300 px-4 py-2 text-sm hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
-              :disabled="running || showSlashMenu || !prompt.trim()"
+              :disabled="running || showSlashMenu || attachments.uploading.value || !canSendMessage()"
               @click="syncRun"
             >
               Run sync API
@@ -949,7 +1139,14 @@ watch(showApprovalModal, async (open) => {
               />
             </template>
             <template #plan>
-              <PlanChecklist :items="artifacts.checklist" />
+              <PlanOverview :plan="artifacts.plan" />
+            </template>
+            <template #chat-plan>
+              <PlanOverview
+                v-if="artifacts.plan?.goal"
+                :plan="artifacts.plan"
+                compact
+              />
             </template>
             <template #changes>
               <ChangeTrackerPanel
@@ -971,7 +1168,7 @@ watch(showApprovalModal, async (open) => {
           </LandingConversationTabs>
         </section>
 
-        <FinalResultPanel v-if="artifacts.finalResult.raw" :result="artifacts.finalResult" />
+        <FinalResultPanel v-if="showRunSummaryCard" :result="artifacts.finalResult" />
         </div>
 
         <LandingPixelOfficeSidebar>
@@ -1009,10 +1206,10 @@ watch(showApprovalModal, async (open) => {
       <button
         type="button"
         class="w-full rounded-lg bg-emerald-700 px-3 py-2 text-sm font-medium text-white disabled:opacity-40"
-        :disabled="running || showSlashMenu || !prompt.trim()"
+        :disabled="running || showSlashMenu || attachments.uploading.value || !canSendMessage()"
         @click="submit"
       >
-        Run task
+        {{ attachments.uploading.value ? 'Uploading…' : (composerAwaitingReply ? 'Reply' : 'Send') }}
       </button>
     </div>
   </div>

@@ -173,13 +173,16 @@ class RunEventFactory
         array $modelRoute = [],
         array $modelsResolved = [],
     ): array {
+        $workflow = (string) ($modelRoute['workflow'] ?? '');
+        $agent = $this->completionAgentForWorkflow($workflow);
+
         return $this->event($run, 'run_completed', [
-            'agent' => 'final-reviewer',
-            'from_agent' => 'final-reviewer',
+            'agent' => $agent,
+            'from_agent' => $agent,
             'to_agent' => 'system',
             'status' => 'success',
-            'model_role' => 'reasoning',
-            'model' => $modelsResolved['final_reviewer'] ?? $modelsResolved['orchestrator'] ?? null,
+            'model_role' => $this->completionModelRoleForAgent($agent),
+            'model' => $this->completionModelForAgent($agent, $modelsResolved),
             'summary' => 'Run completed.',
             'message' => 'Final result is ready.',
             'routing' => $modelRoute,
@@ -194,6 +197,34 @@ class RunEventFactory
             'token_estimate' => $tokenEstimate,
             'output' => $output,
         ]);
+    }
+
+    protected function completionAgentForWorkflow(string $workflow): string
+    {
+        return match ($workflow) {
+            'direct_answer' => 'direct_answer',
+            'writer_only' => 'writer',
+            default => 'final-reviewer',
+        };
+    }
+
+    /** @param array<string, string> $modelsResolved */
+    protected function completionModelForAgent(string $agent, array $modelsResolved): ?string
+    {
+        return match ($agent) {
+            'direct_answer' => $modelsResolved['direct_answer'] ?? $modelsResolved['router'] ?? null,
+            'writer' => $modelsResolved['writer'] ?? $modelsResolved['orchestrator'] ?? null,
+            default => $modelsResolved['final_reviewer'] ?? $modelsResolved['orchestrator'] ?? null,
+        };
+    }
+
+    protected function completionModelRoleForAgent(string $agent): string
+    {
+        return match ($agent) {
+            'direct_answer' => 'fast',
+            'writer' => 'reasoning',
+            default => 'reasoning',
+        };
     }
 
     /**
@@ -397,9 +428,10 @@ class RunEventFactory
     {
         return match ($agent) {
             'orchestrator', 'final-reviewer' => 'reasoning',
+            'writer' => 'reasoning',
             'executor' => 'coding',
             'auditor', 'security-auditor', 'evaluator' => 'review',
-            'router', 'memory' => 'fast',
+            'router', 'memory', 'direct_answer' => 'fast',
             'specialist-agent' => 'reasoning',
             default => 'system',
         };

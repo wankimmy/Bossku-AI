@@ -64,6 +64,39 @@ class ContinueRunMisrouteTest extends TestCase
     }
 
     #[Test]
+    public function stream_post_returns_409_when_conversation_matches_awaiting_input_run(): void
+    {
+        $conversation = [['role' => 'user', 'content' => 'Build the app']];
+        $run = Run::factory()->create([
+            'status' => 'awaiting_input',
+            'metadata' => [
+                'conversation' => $conversation,
+                'checkpoint' => [
+                    'stage' => 'executor_escalation',
+                    'clarification' => [
+                        'summary' => 'Need input',
+                        'questions' => [['id' => 'q1', 'prompt' => 'Next step?']],
+                    ],
+                    'pipeline' => ['user_prompt' => 'Build the app'],
+                ],
+            ],
+        ]);
+
+        $response = $this->postJson('/api/runs/stream', [
+            'prompt' => 'start with stage 1 first',
+            'conversation' => $conversation,
+        ]);
+
+        $response->assertStatus(409)
+            ->assertJsonFragment([
+                'resume_endpoint' => "/api/runs/{$run->id}/continue/stream",
+            ]);
+
+        $run->refresh();
+        $this->assertSame('awaiting_input', $run->status);
+    }
+
+    #[Test]
     public function clarification_endpoint_returns_null_clarification_for_executor_approvals_stage(): void
     {
         $run = Run::factory()->create([

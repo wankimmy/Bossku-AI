@@ -183,8 +183,19 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
   }
 
   if (pathname === '/api/runs/stream' && (method === 'GET' || method === 'POST')) {
-    const prompt = url.searchParams.get('prompt') ?? ''
+    let prompt = url.searchParams.get('prompt') ?? ''
+    if (method === 'POST') {
+      try {
+        prompt = String(JSON.parse(await readBody(req) || '{}').prompt ?? '')
+      }
+      catch {
+        prompt = ''
+      }
+    }
     const runId = `run_mock_${Date.now()}`
+    const trimmedPrompt = prompt.trim()
+    const isSmokeChat = /^(test|ping|hello|hi|hey)\s*[!?.]*$/i.test(trimmedPrompt)
+    const isLongPrompt = prompt.length > 50_000
     cors(res)
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
@@ -203,6 +214,75 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
       run_id: runId,
     })
 
+    if (isLongPrompt) {
+      sse({
+        type: 'long_prompt_materialized',
+        status: 'success',
+        run_id: runId,
+        summary: 'Long prompt was written to temporary project files.',
+        artifacts: {
+          long_prompt: {
+            relative_dir: `tmp/bossku-prompts/mock-${Date.now()}`,
+            prompt_path: 'tmp/bossku-prompts/mock/prompt.md',
+            chunk_count: Math.ceil(prompt.length / 7500),
+            original_length: prompt.length,
+            cleanup_status: 'pending',
+          },
+        },
+      })
+    }
+
+    if (isSmokeChat) {
+      const route = {
+        workflow: 'direct_answer',
+        task_type: 'question',
+        risk_level: 'low',
+        skill: 'generic',
+        executor_profile: 'none',
+        needs_executor: false,
+        needs_auditor: false,
+        needs_security_auditor: false,
+        needs_final_reviewer: false,
+        memory_mode: 'none',
+      }
+      const models = {
+        router: 'mock-router',
+        direct_answer: 'mock-direct',
+      }
+
+      sse({
+        type: 'model_router_done',
+        agent: 'router',
+        status: 'success',
+        run_id: runId,
+        routing: route,
+        models,
+        artifacts: {
+          routing_decision: route,
+          models_resolved: models,
+          pipeline_agents: ['direct_answer'],
+          skipped_agents: ['executor', 'auditor', 'security-auditor', 'final-reviewer'],
+        },
+      })
+
+      sse({
+        type: 'run_completed',
+        agent: 'direct_answer',
+        from_agent: 'direct_answer',
+        to_agent: 'system',
+        status: 'success',
+        run_id: runId,
+        model_role: 'fast',
+        model: 'mock-direct',
+        routing: route,
+        models,
+        output: `BosskuAI is running. Your prompt "${trimmedPrompt}" was received.`,
+      })
+
+      res.end()
+      return
+    }
+
     sse({
       type: 'memory_loaded',
       status: 'ok',
@@ -213,13 +293,17 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
       type: 'routing_decision',
       status: 'ok',
       routing_decision: {
-        workflow: 'direct_answer',
-        task_type: 'question',
-        risk_level: 'low',
+        workflow: 'orchestrator_executor',
+        task_type: 'code_edit',
+        risk_level: 'medium',
         skill: 'laravel',
         executor_profile: 'backend',
-        needs_executor: false,
+        needs_executor: true,
         memory_mode: 'retrieve',
+      },
+      artifacts: {
+        pipeline_agents: ['orchestrator', 'executor'],
+        skipped_agents: ['auditor', 'security-auditor', 'final-reviewer'],
       },
     })
 
@@ -233,8 +317,25 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
       type: 'run_completed',
       status: 'ok',
       run_id: runId,
-      output: `Mock stream done for: ${prompt.slice(0, 80)}`,
+      output: isLongPrompt
+        ? `Mock stream done for long prompt attachment (${prompt.length} chars)`
+        : `Mock stream done for: ${prompt.slice(0, 80)}`,
     })
+
+    if (isLongPrompt) {
+      sse({
+        type: 'long_prompt_cleaned',
+        status: 'success',
+        run_id: runId,
+        summary: 'Long prompt temporary files were cleaned.',
+        artifacts: {
+          long_prompt: {
+            original_length: prompt.length,
+            cleanup_status: 'deleted',
+          },
+        },
+      })
+    }
 
     res.end()
     return

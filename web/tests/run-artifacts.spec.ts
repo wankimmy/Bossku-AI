@@ -223,6 +223,46 @@ describe('useRunArtifacts', () => {
     expect(completed.checklist[1].status).toBe('completed')
   })
 
+  it('uses reconciled checklist from checklist_verdict instead of marking disputed items completed', () => {
+    const normalized = useRunArtifacts([
+      {
+        type: 'planner_done',
+        agent: 'orchestrator',
+        status: 'success',
+        artifacts: {
+          checklist: [
+            { id: 'plan-1', title: 'Scaffold project', owner: 'executor', status: 'pending' },
+            { id: 'plan-2', title: 'Build 3D scene', owner: 'executor', status: 'pending' },
+          ],
+        },
+      },
+      {
+        type: 'executor_step_done',
+        agent: 'executor',
+        status: 'success',
+      },
+      {
+        type: 'auditor_done',
+        agent: 'auditor',
+        status: 'success',
+      },
+      {
+        type: 'checklist_verdict',
+        agent: 'auditor',
+        status: 'warning',
+        artifacts: {
+          checklist: [
+            { id: 'plan-1', title: 'Scaffold project', owner: 'executor', status: 'disputed' },
+            { id: 'plan-2', title: 'Build 3D scene', owner: 'executor', status: 'unverifiable' },
+          ],
+        },
+      },
+    ])
+
+    expect(normalized.checklist[0].status).toBe('disputed')
+    expect(normalized.checklist[1].status).toBe('unverifiable')
+  })
+
   it('parses next prompt section from final output', () => {
     const normalized = useRunArtifacts([
       {
@@ -380,5 +420,40 @@ describe('useRunArtifacts', () => {
       'final-reviewer',
     ])
     expect(normalized.handoffNodes[1].label).toBe('Checkout Specialist')
+  })
+
+  it('builds cursor-style plan overview from planner_done artifacts', () => {
+    const normalized = useRunArtifacts([
+      {
+        type: 'planner_done',
+        agent: 'orchestrator',
+        status: 'success',
+        artifacts: {
+          plan: {
+            goal: 'Add file attachments to chat',
+            task_summary: 'Chat attachments',
+            key_design_decisions: ['Ingest files to text at run entry'],
+            flow_diagram: 'flowchart TD\n  upload --> ingest',
+            flow_steps: ['Upload', 'Ingest', 'Run'],
+            constraints: ['Keep executor JSON-only'],
+            risk_notes: ['Vision model may be unavailable'],
+            checklist: [
+              { id: 'plan-1', title: 'Backend upload API', owner: 'executor', status: 'pending' },
+            ],
+          },
+          checklist: [
+            { id: 'plan-1', title: 'Backend upload API', owner: 'executor', status: 'pending' },
+          ],
+        },
+      },
+    ])
+
+    expect(normalized.plan?.goal).toBe('Add file attachments to chat')
+    expect(normalized.plan?.keyDesignDecisions).toEqual(['Ingest files to text at run entry'])
+    expect(normalized.plan?.flowDiagram).toContain('flowchart TD')
+    expect(normalized.plan?.flowSteps).toEqual(['Upload', 'Ingest', 'Run'])
+    expect(normalized.plan?.notes).toEqual(['Keep executor JSON-only'])
+    expect(normalized.plan?.risks).toEqual(['Vision model may be unavailable'])
+    expect(normalized.plan?.todos[0].title).toBe('Backend upload API')
   })
 })

@@ -69,6 +69,22 @@ trait OrchestratorClarificationTrait
             return $this->resumeFromCodeReviewRequest($run, $pipeline, $answerBlock, trim((string) $codeReviewComment), $emit);
         }
 
+        $stagesWithSmartResume = ['executor_stuck', 'executor_escalation', 'auditor_escalation'];
+        if (in_array($stage, $stagesWithSmartResume, true)) {
+            $intent = $this->resumeIntentClassifier->classify($answerBlock, [
+                'stage' => $stage,
+                'answers' => $allAnswers,
+                'option_only' => $this->resumeAnswersAreOptionOnly($allAnswers),
+                'has_free_text' => $this->resumeAnswersHaveFreeText($allAnswers),
+            ]);
+            if ($intent === 'abort') {
+                return $this->resumeAsStopped($run, $pipeline, $emit);
+            }
+            if ($intent === 'replan') {
+                return $this->resumeWithReplan($run, $pipeline, $answerBlock, $emit);
+            }
+        }
+
         if ($stage === 'executor_escalation') {
             return $this->resumeFromExecutorEscalation($run, $pipeline, $answerBlock, $emit);
         }
@@ -835,5 +851,153 @@ trait OrchestratorClarificationTrait
             't_run' => $tRun,
             'audit_feedback' => $auditFeedback,
         ];
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $answers
+     */
+    protected function resumeAnswersAreOptionOnly(array $answers): bool
+    {
+        if ($answers === []) {
+            return false;
+        }
+
+        foreach ($answers as $answer) {
+            if (! is_array($answer)) {
+                return false;
+            }
+            if (! empty($answer['free_text']) && trim((string) $answer['free_text']) !== '') {
+                return false;
+            }
+            if (empty($answer['option_id'])) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $answers
+     */
+    protected function resumeAnswersHaveFreeText(array $answers): bool
+    {
+        foreach ($answers as $answer) {
+            if (is_array($answer) && ! empty($answer['free_text']) && trim((string) $answer['free_text']) !== '') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  array<string, mixed>  $pipeline
+     * @return array<string, mixed>
+     */
+    protected function resumeWithReplan(Run $run, array $pipeline, string $answerBlock, ?callable $emit): array
+    {
+        /** @var array<string, mixed> $meta */
+        $meta = is_array($run->metadata) ? $run->metadata : [];
+        $meta['executor_stuck_resolved'] = true;
+        $resolved = is_array($meta['agent_escalation_resolved'] ?? null) ? $meta['agent_escalation_resolved'] : [];
+        $resolved['executor_escalation'] = true;
+        $resolved['auditor_escalation'] = true;
+        $meta['agent_escalation_resolved'] = $resolved;
+        $run->update(['metadata' => $meta]);
+
+        $userPrompt = (string) ($pipeline['user_prompt'] ?? $run->prompt);
+        /** @var list<array{role: string, content: string}> $conversation */
+        $conversation = is_array($pipeline['conversation'] ?? null) ? $pipeline['conversation'] : [];
+        $prompt = trim((string) ($pipeline['effective_prompt'] ?? $userPrompt)."\n\n".$answerBlock);
+        $agentPrompt = trim($prompt."\n\n".$this->projects->agentWorkspaceContext());
+        /** @var array<string, mixed> $modelRoute */
+        $modelRoute = is_array($pipeline['model_route'] ?? null) ? $pipeline['model_route'] : [];
+        /** @var array<string, string> $modelsResolved */
+        $modelsResolved = is_array($pipeline['models_resolved'] ?? null) ? $pipeline['models_resolved'] : [];
+        /** @var array<string, mixed> $routerMeta */
+        $routerMeta = is_array($pipeline['router_meta'] ?? null)
+            ? $pipeline['router_meta']
+            : (is_array($pipeline['router_ctx'] ?? null) ? $pipeline['router_ctx'] : []);
+        /** @var list<array<string, mixed>> $memPayload */
+        $memPayload = is_array($pipeline['mem_payload'] ?? null) ? $pipeline['mem_payload'] : [];
+
+        $this->emit($emit, $this->basePayload($run, 'planner_replan_requested', [
+            'status' => 'running',
+            'agent' => 'orchestrator',
+            'from_agent' => 'orchestrator',
+            'to_agent' => 'orchestrator',
+            'summary' => 'Returning to orchestrator to re-plan with your guidance.',
+            'message' => 'Your answer will reshape the execution checklist before the executor continues.',
+        ]));
+
+        return $this->runPipelineAfterMemory(
+            $run,
+            $userPrompt,
+            $prompt,
+            $agentPrompt,
+            $conversation,
+            $modelRoute,
+            $modelsResolved,
+            $routerMeta,
+            $memPayload,
+            $emit,
+            (int) ($pipeline['token_acc'] ?? 0),
+            (float) ($pipeline['t_run'] ?? microtime(true)),
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $pipeline
+     * @return array<string, mixed>
+     */
+    protected function resumeAsStopped(Run $run, array $pipeline, ?callable $emit): array
+    {
+        /** @var array<string, mixed> $meta */
+        $meta = is_array($run->metadata) ? $run->metadata : [];
+        $meta['executor_stuck_resolved'] = true;
+        $run->update(['metadata' => $meta]);
+
+        $userPrompt = (string) ($pipeline['user_prompt'] ?? $run->prompt);
+        $prompt = (string) ($pipeline['effective_prompt'] ?? $userPrompt);
+        /** @var array<string, mixed> $modelRoute */
+        $modelRoute = is_array($pipeline['model_route'] ?? null) ? $pipeline['model_route'] : [];
+        /** @var array<string, string> $modelsResolved */
+        $modelsResolved = is_array($pipeline['models_resolved'] ?? null) ? $pipeline['models_resolved'] : [];
+        /** @var list<array<string, mixed>> $memPayload */
+        $memPayload = is_array($pipeline['mem_payload'] ?? null) ? $pipeline['mem_payload'] : [];
+        /** @var array<string, mixed> $routerCtx */
+        $routerCtx = is_array($pipeline['router_ctx'] ?? null)
+            ? $pipeline['router_ctx']
+            : (is_array($pipeline['router_meta'] ?? null) ? $pipeline['router_meta'] : []);
+        /** @var array<string, mixed> $plan */
+        $plan = is_array($pipeline['plan'] ?? null) ? $pipeline['plan'] : [];
+
+        $finalOutput = implode("\n", [
+            '[BOSSKUAI]',
+            '## Status',
+            'Stopped',
+            '',
+            '## Summary',
+            'Run stopped at your request.',
+        ]);
+
+        return $this->completeRun(
+            $run,
+            $prompt,
+            $finalOutput,
+            $modelRoute,
+            $modelsResolved,
+            $memPayload,
+            $routerCtx,
+            $plan,
+            is_array($pipeline['executor_outputs'] ?? null) ? $pipeline['executor_outputs'] : [],
+            is_array($pipeline['last_audit'] ?? null) ? $pipeline['last_audit'] : [],
+            null,
+            null,
+            $emit,
+            (int) ($pipeline['token_acc'] ?? 0),
+            (float) ($pipeline['t_run'] ?? microtime(true)),
+        );
     }
 }

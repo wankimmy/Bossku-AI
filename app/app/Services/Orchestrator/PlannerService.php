@@ -80,9 +80,26 @@ CHECKLIST QUALITY:
 - Include at least one auditor-owned item for every code change, with explicit acceptance criteria.
 - Do not write vague items like "Fix the bug" — write "Modify app/Services/Foo.php: ensure method bar() returns early when $x is null (auditor verifies: no NPE in test case Y)".
 
-Output ONLY valid JSON (no markdown) with keys:
+CURSOR-STYLE PLAN SECTIONS (populate for UI display):
+- goal: one sentence user intent.
+- key_design_decisions: 2–6 bullets explaining architectural choices and trade-offs.
+- flow_diagram: Mermaid flowchart TD source (3–8 nodes) showing pipeline from user request to completion; also provide flow_steps as ordered text fallback.
+- risk_notes + constraints: notes and risks for the executor.
+- checklist: concrete to-dos with owners.
+
+MERMAID RULES for flow_diagram (must parse in Mermaid.js):
+- Start with flowchart TD on its own line.
+- Node IDs: camelCase or underscores only — no spaces in IDs.
+- Quote edge labels that contain parentheses, colons, or commas: A -->|"label (detail)"| B
+- Do not use style, classDef, click, or subgraph unless essential.
+- Output raw Mermaid only — no ```mermaid fences inside the JSON string.
+
+Output ONLY valid JSON (no markdown wrapper) with keys:
 task_summary (string),
 goal (string — one sentence, the actual user intent),
+key_design_decisions (string[] — 2–6 architectural choices / trade-offs),
+flow_diagram (string — Mermaid flowchart TD source, 3–8 nodes),
+flow_steps (string[] — ordered text steps mirroring flow_diagram, fallback if diagram fails),
 risk_level ("low"|"medium"|"high"),
 selected_skill (string),
 confidence (number 0.0–1.0 — how confident you are in this plan given available evidence),
@@ -258,8 +275,45 @@ SYS;
             : 0.7;
         $decoded['planner_questions'] = is_array($decoded['planner_questions'] ?? null) ? $decoded['planner_questions'] : [];
         $decoded['memory_applied'] = is_array($decoded['memory_applied'] ?? null) ? $decoded['memory_applied'] : [];
+        $decoded['key_design_decisions'] = $this->normalizeStringList($decoded['key_design_decisions'] ?? null);
+        $decoded['flow_steps'] = $this->normalizeStringList($decoded['flow_steps'] ?? null);
+        $decoded['flow_diagram'] = $this->sanitizeFlowDiagram(
+            StringCoercion::toString($decoded['flow_diagram'] ?? null, ''),
+        );
 
         return $decoded;
+    }
+
+    /** @return list<string> */
+    protected function normalizeStringList(mixed $value): array
+    {
+        if (! is_array($value)) {
+            return [];
+        }
+
+        $out = [];
+        foreach ($value as $item) {
+            $line = trim(is_string($item) ? $item : (is_scalar($item) ? (string) $item : ''));
+            if ($line !== '') {
+                $out[] = $line;
+            }
+        }
+
+        return $out;
+    }
+
+    protected function sanitizeFlowDiagram(string $raw): string
+    {
+        $text = trim($raw);
+        if ($text === '') {
+            return '';
+        }
+
+        if (preg_match('/^```(?:mermaid)?\s*\r?\n([\s\S]*?)\r?\n```\s*$/i', $text, $m)) {
+            $text = trim($m[1]);
+        }
+
+        return $text;
     }
 
     /** @param list<array<string,mixed>> $memories */
