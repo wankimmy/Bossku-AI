@@ -70,4 +70,88 @@ class UserLocalCommandsTest extends TestCase
 
         $this->assertTrue($method->invoke($service, $run, $execResult));
     }
+
+    #[Test]
+    public function detects_command_not_found_exit_127(): void
+    {
+        $service = app(OrchestratorService::class);
+        $method = new ReflectionMethod(OrchestratorService::class, 'commandsRequiringUserRun');
+        $method->setAccessible(true);
+
+        $needs = $method->invoke($service, [
+            [
+                'command' => 'npm install',
+                'ok' => false,
+                'exit_code' => 127,
+                'stderr' => 'sh: 1: npm: not found',
+            ],
+        ]);
+
+        $this->assertCount(1, $needs);
+        $this->assertSame('npm install', $needs[0]['command']);
+        $this->assertStringContainsString('exit 127', $needs[0]['reason']);
+    }
+
+    #[Test]
+    public function ignores_genuine_command_failures(): void
+    {
+        $service = app(OrchestratorService::class);
+        $method = new ReflectionMethod(OrchestratorService::class, 'commandsRequiringUserRun');
+        $method->setAccessible(true);
+
+        // A failing test suite and an npm registry 404 are real failures the
+        // agent should handle — they must NOT be handed back to the user.
+        $needs = $method->invoke($service, [
+            [
+                'command' => 'php artisan test',
+                'ok' => false,
+                'exit_code' => 1,
+                'stderr' => 'Tests: 1 failed, 5 passed',
+            ],
+            [
+                'command' => 'npm install left-pad',
+                'ok' => false,
+                'exit_code' => 1,
+                'stderr' => 'npm ERR! 404 Not Found - GET https://registry.npmjs.org/left-pad',
+            ],
+        ]);
+
+        $this->assertSame([], $needs);
+    }
+
+    #[Test]
+    public function merges_user_output_for_command_not_found_row(): void
+    {
+        $service = app(OrchestratorService::class);
+
+        $build = new ReflectionMethod(OrchestratorService::class, 'buildUserLocalCommandsClarification');
+        $build->setAccessible(true);
+        $clarification = $build->invoke($service, ['npm install']);
+        $questions = $clarification['questions'];
+
+        $merge = new ReflectionMethod(OrchestratorService::class, 'mergeUserCommandOutputsIntoExecResult');
+        $merge->setAccessible(true);
+
+        $execResult = [
+            'status' => 'partial',
+            '_commands_executed' => [[
+                'command' => 'npm install',
+                'ok' => false,
+                'exit_code' => 127,
+                'stderr' => 'sh: 1: npm: not found',
+            ]],
+        ];
+        $answers = [[
+            'question_id' => 'user_cmd_1',
+            'free_text' => 'added 10 packages in 2s',
+        ]];
+
+        $merged = $merge->invoke($service, $execResult, $answers, $questions);
+        $row = $merged['_commands_executed'][0];
+
+        $this->assertTrue($row['ok']);
+        $this->assertTrue($row['user_provided']);
+        $this->assertSame('added 10 packages in 2s', $row['stdout']);
+        $this->assertSame('success', $merged['status']);
+    }
 }

@@ -60,7 +60,12 @@ class ProjectFilesController extends Controller
             'path' => 'nullable|string|max:2000',
         ]);
 
-        $resolved = $this->paths->resolve((string) ($validated['path'] ?? ''));
+        try {
+            $resolved = $this->paths->resolve((string) ($validated['path'] ?? ''));
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
         $absolute = $resolved['absolute'];
 
         if (! is_dir($absolute)) {
@@ -115,7 +120,12 @@ class ProjectFilesController extends Controller
             'path' => 'required|string|max:2000',
         ]);
 
-        $resolved = $this->paths->resolve($validated['path']);
+        try {
+            $resolved = $this->paths->resolve($validated['path']);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
         $absolute = $resolved['absolute'];
 
         if (! is_file($absolute)) {
@@ -259,7 +269,12 @@ class ProjectFilesController extends Controller
             'run_id' => 'nullable|uuid|exists:bossku_ai_runs,id',
         ]);
 
-        $resolved = $this->paths->resolve($validated['path']);
+        try {
+            $resolved = $this->paths->resolve($validated['path']);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
         $absolute = $resolved['absolute'];
         $before = is_file($absolute) ? (string) file_get_contents($absolute) : '';
         $after = $validated['new_contents'];

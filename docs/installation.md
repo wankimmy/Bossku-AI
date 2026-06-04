@@ -64,6 +64,8 @@ docker compose exec backend php artisan db:seed
 docker compose exec backend php artisan bosskuai:import-knowledge --fresh
 ```
 
+> `--fresh` refreshes the knowledge base only (skills, rules, playbooks, checklists, references). Your run history and memory are preserved, so it is safe to re-run anytime.
+
 Open:
 
 - Web app: `http://localhost:28470`

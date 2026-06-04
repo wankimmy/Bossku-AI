@@ -19,24 +19,70 @@ trait OrchestratorUserLocalCommandsTrait
             if (! is_array($row)) {
                 continue;
             }
-            if (($row['ok'] ?? false) === true) {
+            if (! $this->rowRequiresUserRun($row)) {
                 continue;
             }
             $command = trim(StringCoercion::toString($row['command'] ?? null, ''));
             if ($command === '') {
                 continue;
             }
-            $reason = trim(StringCoercion::toString(
-                $row['reason'] ?? $row['stderr'] ?? null,
-                'Command could not run inside Bossku.',
-            ));
-            if (! $this->reasonRequiresUserRun($reason)) {
-                continue;
-            }
-            $out[] = ['command' => $command, 'reason' => $reason];
+            $out[] = ['command' => $command, 'reason' => $this->describeUserRunReason($row)];
         }
 
         return $out;
+    }
+
+    /**
+     * A failed command should be handed to the user only when Bossku physically
+     * cannot run it in the container: a missing binary (exit 127 / "command not
+     * found"), Docker being unavailable, or project commands disabled. Genuine
+     * failures (failing tests, lint, build errors, registry/network errors)
+     * stay with the agent to fix.
+     *
+     * @param  array<string, mixed>  $row
+     */
+    protected function rowRequiresUserRun(array $row): bool
+    {
+        if (($row['ok'] ?? false) === true) {
+            return false;
+        }
+
+        if ((int) ($row['exit_code'] ?? 0) === 127) {
+            return true;
+        }
+
+        $reason = trim(StringCoercion::toString($row['reason'] ?? $row['stderr'] ?? null, ''));
+
+        return $this->reasonRequiresUserRun($reason)
+            || $this->reasonIndicatesMissingBinary($reason);
+    }
+
+    protected function reasonIndicatesMissingBinary(string $reason): bool
+    {
+        if ($reason === '') {
+            return false;
+        }
+
+        // Shell "command not found" signatures only — not generic non-zero
+        // exits like npm registry "404 Not Found" or bundler "Module not found".
+        return (bool) preg_match(
+            '/(?:command not found|: not found\b|no such file or directory|not recognized as an internal or external command|executable file not found)/i',
+            $reason,
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    protected function describeUserRunReason(array $row): string
+    {
+        $raw = trim(StringCoercion::toString($row['reason'] ?? $row['stderr'] ?? null, ''));
+
+        if ((int) ($row['exit_code'] ?? 0) === 127 || $this->reasonIndicatesMissingBinary($raw)) {
+            return 'Not available in the Bossku container (exit 127): '.($raw !== '' ? $raw : 'command not found');
+        }
+
+        return $raw !== '' ? $raw : 'Command could not run inside Bossku.';
     }
 
     protected function reasonRequiresUserRun(string $reason): bool
@@ -73,7 +119,7 @@ trait OrchestratorUserLocalCommandsTrait
             $n = $idx + 1;
             $questions[] = [
                 'id' => 'user_cmd_'.$n,
-                'prompt' => "Run this command on your machine (Bossku runs in Docker and cannot execute it in the container):\n\n{$command}",
+                'prompt' => "Run this command on your machine — Bossku can't run it inside its container (the tool isn't installed there, or it needs Docker/host access):\n\n{$command}",
                 'why_it_matters' => 'Paste the full terminal output below so the agent can analyze it and continue the run.',
                 'options' => [
                     [
@@ -95,8 +141,8 @@ trait OrchestratorUserLocalCommandsTrait
             ],
             'ready_to_proceed' => false,
             'summary' => $count === 1
-                ? 'Bossku could not run 1 command in Docker. Please run it locally and paste the output.'
-                : "Bossku could not run {$count} commands in Docker. Please run each locally and paste the output.",
+                ? 'Bossku could not run 1 command in its container. Please run it locally and paste the output.'
+                : "Bossku could not run {$count} commands in its container. Please run each locally and paste the output.",
         ];
     }
 
@@ -246,7 +292,7 @@ trait OrchestratorUserLocalCommandsTrait
             }
             $command = trim(StringCoercion::toString($row['command'] ?? null, ''));
             $reason = StringCoercion::toString($row['reason'] ?? $row['stderr'] ?? null, '');
-            if ($command === '' || ! $this->reasonRequiresUserRun($reason)) {
+            if ($command === '' || ! $this->rowRequiresUserRun($row)) {
                 $merged[] = $row;
 
                 continue;

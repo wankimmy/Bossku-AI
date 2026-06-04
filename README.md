@@ -191,6 +191,8 @@ docker compose exec backend php artisan route:list
 docker compose exec backend php artisan test
 ```
 
+> `import-knowledge --fresh` only refreshes knowledge (skills, rules, playbooks, checklists, references); run history and memory are preserved.
+
 **Frontend:**
 ```bash
 cd web
