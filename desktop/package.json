@@ -1,0 +1,19 @@
+{
+  "name": "bosskuai-desktop",
+  "productName": "BosskuAI",
+  "version": "3.0.0",
+  "description": "BosskuAI desktop launcher — orchestrates the Dockerized BosskuAI stack and opens the dashboard in a native window.",
+  "private": true,
+  "main": "src/main.js",
+  "author": "BosskuAI",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder --win nsis"
+  },
+  "devDependencies": {
+    "electron": "^31.7.7",
+    "electron-builder": "^24.13.3"
+  }
+}
