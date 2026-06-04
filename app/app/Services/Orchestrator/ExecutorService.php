@@ -71,7 +71,7 @@ class ExecutorService
         }
 
         $payload = <<<Markdown
-[BOSSKUAI]
+Executor metadata:
 Skill: {$skillName}
 Planner confidence: {$planConfidence}
 
