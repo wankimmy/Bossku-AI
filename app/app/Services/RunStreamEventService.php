@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\BosskuAi\Run;
 use App\Models\BosskuAi\RunStreamEvent;
+use App\Services\Runs\RunExistenceGuard;
 use Illuminate\Database\QueryException;
 
 class RunStreamEventService
@@ -13,8 +14,9 @@ class RunStreamEventService
     /** @var array<string, int> */
     private array $nextSeqByRun = [];
 
-    /** @var array<string, bool> run_id => whether the parent run still exists */
-    private array $runExists = [];
+    public function __construct(
+        private readonly RunExistenceGuard $runGuard,
+    ) {}
 
     /**
      * @param  array<string, mixed>  $payload
@@ -32,7 +34,7 @@ class RunStreamEventService
         // longer exists (e.g. it was deleted while a terminal event was still
         // being emitted), skip the write rather than throwing a foreign-key
         // violation that would crash the stream.
-        if (! $this->runStillExists($runId)) {
+        if (! $this->runGuard->exists($runId)) {
             return;
         }
 
@@ -46,9 +48,9 @@ class RunStreamEventService
                 'created_at' => now(),
             ]);
         } catch (QueryException $e) {
-            if ($this->isIntegrityViolation($e)) {
+            if (RunExistenceGuard::isIntegrityViolation($e)) {
                 // Run was deleted between the existence check and the insert.
-                $this->runExists[$runId] = false;
+                $this->runGuard->markMissing($runId);
 
                 return;
             }
@@ -57,29 +59,6 @@ class RunStreamEventService
         }
 
         $this->pruneOldEvents($runId);
-    }
-
-    private function runStillExists(string $runId): bool
-    {
-        if (array_key_exists($runId, $this->runExists)) {
-            return $this->runExists[$runId];
-        }
-
-        return $this->runExists[$runId] = Run::query()->whereKey($runId)->exists();
-    }
-
-    private function isIntegrityViolation(QueryException $e): bool
-    {
-        // Postgres integrity-constraint SQLSTATE class is 23xxx (FK = 23503).
-        if (str_starts_with((string) $e->getCode(), '23')) {
-            return true;
-        }
-
-        $message = strtolower($e->getMessage());
-
-        return str_contains($message, 'foreign key')
-            || str_contains($message, 'violates foreign key')
-            || str_contains($message, 'foreign key constraint failed');
     }
 
     /**

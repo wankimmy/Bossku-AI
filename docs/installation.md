@@ -1,13 +1,62 @@
 # Installation
 
-BosskuAI has two installation paths.
+BosskuAI has three installation paths.
 
 | Path | Best for |
 |---|---|
-| Local web app | Running the dashboard and API on your machine |
-| Repo toolkit | Adding BosskuAI skills, rules, and helper files to another repo |
+| **Desktop app (Windows .exe)** | End users — one installer, no Docker (Hermes-style) |
+| **Docker stack** | Developers and power users who want Postgres/pgvector + Redis |
+| **Repo toolkit** | Adding BosskuAI skills, rules, and helper files to another repo |
 
-## Local Web App
+## Desktop App (Windows) — recommended
+
+Download and run **BosskuAI Setup** (same experience as [Hermes Desktop](https://hermes-agent.nousresearch.com/docs/user-guide/desktop)): a small installer that opens BosskuAI in a native window. **Docker is not required.**
+
+### Requirements
+
+- Windows 10 or 11
+- Internet on first launch (downloads portable PHP 8.3, Node 22, and Git into `%LOCALAPPDATA%\BosskuAI\`)
+- At least one model connection (Ollama Cloud, Anthropic, or Codex) after setup
+
+### Install and run
+
+1. Run `BosskuAI Setup <version>.exe` from `desktop/dist/` (or your release channel).
+2. Launch BosskuAI. First run will:
+   - copy the app to `%LOCALAPPDATA%\BosskuAI\stack`,
+   - download and install portable PHP, Node, and Git,
+   - run `composer install`, build the Nuxt dashboard, migrate SQLite, seed, and import knowledge,
+   - start the API (`localhost:28480`) and web UI (`localhost:28470`).
+3. First launch typically takes **5–15 minutes**. Later launches are much faster.
+
+Semantic memory works on desktop via **SQLite + stored embeddings** (no Postgres). Configure Ollama (or another embedding provider) in Settings so memories get vectorized.
+
+Use the tray icon to open, restart servers, stop servers, or quit.
+
+### Docker mode from the desktop app (optional)
+
+If you prefer the full Docker stack while developing the Electron shell:
+
+```powershell
+$env:BOSSKU_DESKTOP_RUNTIME = "docker"
+cd desktop
+npm start
+```
+
+Requires Docker Desktop running and the same ports (`28470` / `28480`) as below.
+
+### Build the installer from source
+
+```powershell
+cd desktop
+npm install
+npm run dist
+```
+
+Output: `desktop/dist/BosskuAI Setup <version>.exe`. The installer is unsigned by default (SmartScreen may warn). Add `desktop/assets/icon.ico` to brand the app.
+
+Logs: `%LOCALAPPDATA%\BosskuAI\logs\desktop.log`
+
+## Local Web App (Docker)
 
 ### Requirements
 
@@ -70,44 +119,6 @@ Open:
 
 - Web app: `http://localhost:28470`
 - API: `http://localhost:28480`
-
-## Desktop App (Windows)
-
-BosskuAI ships a desktop launcher (Electron) that wraps the same Docker stack in a native window. The app still runs everything in Docker — it just automates start-up, first-run database setup, and gives you a tray to start/stop the stack.
-
-### Requirements
-
-- Docker Desktop (installed and running)
-- Internet access on first launch (to build images and initialize the database)
-
-### Install and run
-
-1. Run `BosskuAI Setup <version>.exe` and follow the installer.
-2. Launch BosskuAI. On first run it will:
-   - check that Docker Desktop is available,
-   - copy the app files to your user-data folder,
-   - run `docker compose up -d --build`,
-   - run the first-time database bootstrap (`key:generate`, `migrate`, `db:seed`, `import-knowledge`),
-   - open the dashboard once it is ready.
-3. First launch can take several minutes (image build + Nuxt build). Subsequent launches are fast.
-
-Use the tray icon to Open, Restart stack, Stop stack (free resources), or Quit. Closing the window keeps the app in the tray.
-
-Add at least one model connection in Settings (Ollama, Anthropic, or Codex/OpenAI) after the app opens, or edit `app/.env` in the user-data stack folder.
-
-### Build the installer from source
-
-```powershell
-cd desktop
-npm install
-npm run dist
-```
-
-The installer is written to `desktop/dist/BosskuAI Setup <version>.exe`. Notes:
-
-- The build bundles the stack (`app`, `web`, `docker`, `docker-compose.yml`) as `resources/stack`, excluding `node_modules`, `vendor`, build output, and `app/.env`.
-- The installer is unsigned by default, so Windows SmartScreen may warn on first run. Provide a code-signing certificate in `desktop/electron-builder.yml` to sign it.
-- To brand the app, drop a 256x256 `desktop/assets/icon.ico`; otherwise the default Electron icon is used.
 
 ## Repo Toolkit
 

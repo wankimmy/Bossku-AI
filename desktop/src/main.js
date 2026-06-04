@@ -5,7 +5,6 @@ const { app, BrowserWindow, Tray, Menu, shell, nativeImage, ipcMain } = require(
 
 const {
   WEB_URL,
-  API_URL,
   HEALTH_TIMEOUT_MS,
   bundledStackDir,
   userStackDir,
@@ -20,6 +19,9 @@ const {
 } = require('./docker')
 const { syncStack } = require('./stackSync')
 const { isBootstrapped, ensureEnv, runBootstrap } = require('./bootstrap')
+const { resolveRuntimeMode } = require('./runtimeMode')
+const { startNative, stopNative, restartNative } = require('./nativeRuntime')
+const { ensureNativeBootstrap } = require('./bootstrapNative')
 
 // 1x1 emerald pixel — a valid tray image without shipping a binary asset.
 const TRAY_PNG =
@@ -31,6 +33,8 @@ let tray = null
 let isQuitting = false
 let booting = false
 let stackReady = false
+/** @type {'native' | 'docker'} */
+let runtimeMode = 'native'
 
 function createSplash() {
   splashWindow = new BrowserWindow({
@@ -52,7 +56,6 @@ function createSplash() {
   splashWindow.on('closed', () => {
     splashWindow = null
     if (!stackReady && !isQuitting) {
-      // User closed the splash before the app was ready.
       isQuitting = true
       app.quit()
     }
@@ -69,7 +72,6 @@ function sendLog(line) {
   if (splashWindow && !splashWindow.isDestroyed()) {
     splashWindow.webContents.send('log', line)
   }
-  // Helpful when launched from a console during development.
   console.log('[bossku]', line)
 }
 
@@ -95,7 +97,6 @@ function createMainWindow() {
     if (splashWindow && !splashWindow.isDestroyed()) splashWindow.close()
   })
 
-  // Open external links in the system browser, keep app links in-app.
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (!url.startsWith(WEB_URL)) {
       shell.openExternal(url)
@@ -137,39 +138,54 @@ function buildTray() {
 function refreshTrayMenu() {
   if (!tray) return
   const stackDir = userStackDir()
+  const isDocker = runtimeMode === 'docker'
+
   tray.setContextMenu(
     Menu.buildFromTemplate([
       { label: 'Open BosskuAI', click: showMainWindow, enabled: stackReady },
       { type: 'separator' },
       {
-        label: 'Restart stack',
+        label: isDocker ? 'Restart stack' : 'Restart servers',
         enabled: stackReady,
         click: async () => {
-          sendLogToConsole('Restarting stack...')
-          await composeRestart(stackDir, sendLogToConsole)
+          if (isDocker) {
+            await composeRestart(stackDir, sendLog)
+          } else {
+            await restartNative(stackDir, sendLog)
+          }
         },
       },
       {
-        label: 'Stop stack (free resources)',
+        label: isDocker ? 'Stop stack (free resources)' : 'Stop servers',
         enabled: stackReady,
         click: async () => {
-          await composeStop(stackDir, sendLogToConsole)
+          if (isDocker) {
+            await composeStop(stackDir, sendLog)
+          } else {
+            await stopNative(sendLog)
+            stackReady = false
+            refreshTrayMenu()
+          }
         },
       },
       { type: 'separator' },
       {
-        label: 'Quit (leave containers running)',
+        label: 'Quit',
         click: () => {
           isQuitting = true
           app.quit()
         },
       },
       {
-        label: 'Stop containers and quit',
+        label: isDocker ? 'Stop containers and quit' : 'Stop servers and quit',
         click: async () => {
           isQuitting = true
           try {
-            await composeStop(stackDir, sendLogToConsole)
+            if (isDocker) {
+              await composeStop(stackDir, sendLog)
+            } else {
+              await stopNative(sendLog)
+            }
           } finally {
             app.quit()
           }
@@ -179,15 +195,7 @@ function refreshTrayMenu() {
   )
 }
 
-function sendLogToConsole(line) {
-  console.log('[bossku]', line)
-}
-
-/**
- * Wait until `docker compose exec backend php -v` succeeds, which confirms the
- * backend container is running and ready to accept bootstrap commands.
- */
-async function waitForBackend(stackDir) {
+async function waitForBackendDocker(stackDir) {
   const deadline = Date.now() + HEALTH_TIMEOUT_MS
   let attempt = 0
   while (Date.now() < deadline) {
@@ -200,57 +208,118 @@ async function waitForBackend(stackDir) {
   return false
 }
 
+async function bootDocker() {
+  sendStatus('busy', 'Checking Docker...')
+  const docker = await dockerStatus()
+  if (!docker.ok) {
+    const hint =
+      docker.reason === 'missing'
+        ? 'Docker Desktop was not found. Install it from docker.com, or use the native desktop app without Docker.'
+        : 'Docker Desktop is installed but not running. Start it, wait for it to be ready, then click Retry.'
+    sendStatus('error', 'Docker is not available', hint)
+    return false
+  }
+  sendLog(`Docker engine ${docker.version} detected.`)
+
+  const stackDir = userStackDir()
+  if (app.isPackaged) {
+    sendStatus('busy', 'Preparing application files...')
+    await syncStack(bundledStackDir(), stackDir, sendLog)
+  }
+
+  sendStatus('busy', 'Configuring environment...')
+  await ensureEnv(stackDir, sendLog)
+
+  sendStatus('busy', 'Starting containers (first run builds images; this can take several minutes)...')
+  const up = await composeUp(stackDir, sendLog)
+  if (up.code !== 0) {
+    sendStatus('error', 'Failed to start containers', 'See the log above. Ensure Docker Desktop has enough resources, then click Retry.')
+    return false
+  }
+
+  sendStatus('busy', 'Waiting for the backend...')
+  if (!(await waitForBackendDocker(stackDir))) {
+    sendStatus('error', 'Backend did not become ready in time', 'Click Retry, or check Docker Desktop container logs.')
+    return false
+  }
+
+  if (!isBootstrapped()) {
+    sendStatus('busy', 'Initializing database (first run only)...')
+    await runBootstrap(stackDir, sendLog)
+  }
+
+  sendStatus('busy', 'Waiting for the dashboard to build...')
+  const webOk = await waitForHttp(WEB_URL, { timeoutMs: HEALTH_TIMEOUT_MS, onLog: sendLog })
+  if (!webOk) {
+    sendStatus('error', 'The web dashboard did not respond in time', 'The Nuxt build may still be running. Click Retry to keep waiting.')
+    return false
+  }
+
+  return true
+}
+
+async function bootNative() {
+  const stackDir = userStackDir()
+
+  if (app.isPackaged) {
+    sendStatus('busy', 'Preparing application files...')
+    await syncStack(bundledStackDir(), stackDir, sendLog)
+  }
+
+  const needsSetup = !isBootstrapped()
+  if (needsSetup) {
+    sendStatus('busy', 'Installing BosskuAI (first run — downloads PHP, Node, and Git)...')
+    sendLog('This can take 5–15 minutes on first launch. Internet access is required.')
+    try {
+      await ensureNativeBootstrap(stackDir, sendLog)
+    } catch (err) {
+      sendStatus(
+        'error',
+        'Setup failed',
+        String(err && err.message ? err.message : err),
+      )
+      return false
+    }
+  }
+
+  sendStatus('busy', 'Starting BosskuAI servers...')
+  try {
+    await startNative(stackDir, sendLog)
+  } catch (err) {
+    if (!needsSetup) {
+      sendStatus('busy', 'Repairing installation...')
+      try {
+        await ensureNativeBootstrap(stackDir, sendLog)
+        await startNative(stackDir, sendLog)
+      } catch (repairErr) {
+        sendStatus('error', 'Could not start BosskuAI', String(repairErr && repairErr.message ? repairErr.message : repairErr))
+        return false
+      }
+    } else {
+      sendStatus('error', 'Could not start BosskuAI', String(err && err.message ? err.message : err))
+      return false
+    }
+  }
+
+  sendStatus('busy', 'Waiting for the dashboard...')
+  const webOk = await waitForHttp(WEB_URL, { timeoutMs: HEALTH_TIMEOUT_MS, onLog: sendLog })
+  if (!webOk) {
+    sendStatus('error', 'The web dashboard did not respond in time', 'Click Retry to keep waiting.')
+    return false
+  }
+
+  return true
+}
+
 async function boot() {
   if (booting) return
   booting = true
+  runtimeMode = resolveRuntimeMode()
+  sendLog(`Runtime mode: ${runtimeMode}`)
+
   try {
-    sendStatus('busy', 'Checking Docker...')
-    const docker = await dockerStatus()
-    if (!docker.ok) {
-      const hint =
-        docker.reason === 'missing'
-          ? 'Docker Desktop was not found. Install it from docker.com, then click Retry.'
-          : 'Docker Desktop is installed but not running. Start it, wait for it to be ready, then click Retry.'
-      sendStatus('error', 'Docker is not available', hint)
-      booting = false
-      return
-    }
-    sendLog(`Docker engine ${docker.version} detected.`)
-
-    const stackDir = userStackDir()
-    if (app.isPackaged) {
-      sendStatus('busy', 'Preparing application files...')
-      await syncStack(bundledStackDir(), stackDir, sendLog)
-    }
-
-    sendStatus('busy', 'Configuring environment...')
-    await ensureEnv(stackDir, sendLog)
-
-    sendStatus('busy', 'Starting containers (first run builds images; this can take several minutes)...')
-    const up = await composeUp(stackDir, sendLog)
-    if (up.code !== 0) {
-      sendStatus('error', 'Failed to start containers', 'See the log above. Ensure Docker Desktop has enough resources, then click Retry.')
-      booting = false
-      return
-    }
-
-    sendStatus('busy', 'Waiting for the backend...')
-    if (!(await waitForBackend(stackDir))) {
-      sendStatus('error', 'Backend did not become ready in time', 'Click Retry, or check Docker Desktop container logs.')
-      booting = false
-      return
-    }
-
-    if (!isBootstrapped()) {
-      sendStatus('busy', 'Initializing database (first run only)...')
-      await runBootstrap(stackDir, sendLog)
-    }
-
-    sendStatus('busy', 'Waiting for the dashboard to build...')
-    const webOk = await waitForHttp(WEB_URL, { timeoutMs: HEALTH_TIMEOUT_MS, onLog: sendLog })
-    if (!webOk) {
-      sendStatus('error', 'The web dashboard did not respond in time', 'The Nuxt build may still be running. Click Retry to keep waiting.')
-      booting = false
+    const ok = runtimeMode === 'docker' ? await bootDocker() : await bootNative()
+    if (!ok) {
       return
     }
 
@@ -289,12 +358,15 @@ if (!gotLock) {
   })
 
   app.on('window-all-closed', () => {
-    // Intentionally empty: keep running in the tray instead of quitting.
+    // Keep running in the tray.
   })
 
   app.on('activate', showMainWindow)
 
-  app.on('before-quit', () => {
+  app.on('before-quit', async () => {
     isQuitting = true
+    if (runtimeMode === 'native') {
+      await stopNative()
+    }
   })
 }

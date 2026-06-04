@@ -2,7 +2,9 @@
 
 namespace App\Services\BosskuAi;
 
+use App\Services\Runs\RunExistenceGuard;
 use App\Support\LlmJsonParser;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Log;
 
 class ModelFallbackService
@@ -103,6 +105,10 @@ class ModelFallbackService
                             : null,
                     ];
                 } catch (\Throwable $e) {
+                    if ($e instanceof QueryException && RunExistenceGuard::isIntegrityViolation($e)) {
+                        throw $e;
+                    }
+
                     $lastError = $e->getMessage();
                     $failedAttempts[] = ['model' => $model, 'error' => $lastError];
                     try {

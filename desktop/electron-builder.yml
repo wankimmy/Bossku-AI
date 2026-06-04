@@ -9,11 +9,16 @@ directories:
 # App code that ships inside the asar.
 files:
   - src/**/*
+  - scripts/**/*
   - package.json
 
 # The Dockerized stack is bundled as resources/stack and copied to the user-data
 # dir at runtime (see src/stackSync.js). Heavy/rebuilt paths are filtered out.
 extraResources:
+  - from: scripts
+    to: install
+    filter:
+      - install.ps1
   - from: ../app
     to: stack/app
     filter:
