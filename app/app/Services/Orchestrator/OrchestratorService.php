@@ -118,7 +118,7 @@ class OrchestratorService
         $supervisorSlot = isset($options['supervisor_slot']) ? (int) $options['supervisor_slot'] : null;
         $existingRunId = is_string($options['existing_run_id'] ?? null) ? (string) $options['existing_run_id'] : null;
 
-        if ($existingRunId !== '') {
+        if ($existingRunId !== null && $existingRunId !== '') {
             $run = Run::query()->findOrFail($existingRunId);
             $run->update([
                 'prompt' => $userPrompt,

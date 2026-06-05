@@ -35,4 +35,4 @@ npm install
 npm run dist
 ```
 
-Output: `dist/BosskuAI Setup 3.0.0.exe`
+Output: `dist/BosskuAI Setup 3.0.3.exe`
