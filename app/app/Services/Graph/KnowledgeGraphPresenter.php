@@ -17,10 +17,8 @@ class KnowledgeGraphPresenter
      */
     public function present(): array
     {
-        $this->dedup->prune();
-
-        $dbNodes = GraphNode::query()->get();
-        $dbEdges = GraphEdge::query()->get();
+        $dbNodes = GraphNode::query()->limit(1000)->get();
+        $dbEdges = GraphEdge::query()->limit(2000)->get();
 
         $skillDescriptions = Skill::query()
             ->get(['id', 'name', 'description'])

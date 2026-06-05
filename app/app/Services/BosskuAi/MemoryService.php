@@ -316,10 +316,12 @@ class MemoryService
     protected function vectorSearchSqlite(array $vec, int $limit): Collection
     {
         $queryVec = array_slice($vec, 0, 1536);
+
+        // Fetch only the columns needed for ranking — avoids loading other large fields.
         $candidates = Memory::query()
             ->where('is_active', true)
             ->whereNotNull('embedding_json')
-            ->get();
+            ->get(['id', 'embedding_json', 'confidence']);
 
         $ranked = [];
         foreach ($candidates as $memory) {
@@ -344,16 +346,21 @@ class MemoryService
             }
             $confidence = (float) ($memory->confidence ?? 0.72);
             $ranked[] = [
-                'memory' => $memory,
+                'id' => (string) $memory->id,
                 'score' => $similarity * 0.65 + $confidence * 0.35,
             ];
         }
 
         usort($ranked, static fn (array $a, array $b): int => $b['score'] <=> $a['score']);
 
+        $topIds = array_column(array_slice($ranked, 0, $limit), 'id');
+        $scores = array_column(array_slice($ranked, 0, $limit), 'score', 'id');
+
         /** @var Collection<int, Memory> */
-        return collect(array_slice($ranked, 0, $limit))
-            ->map(static fn (array $row) => $row['memory'])
+        return Memory::query()
+            ->whereIn('id', $topIds)
+            ->get()
+            ->sortByDesc(fn ($m) => $scores[(string) $m->id] ?? 0)
             ->values();
     }
 

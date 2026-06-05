@@ -7,19 +7,22 @@ use App\Models\BosskuAi\AgentMessage;
 use App\Models\BosskuAi\Memory;
 use App\Models\BosskuAi\Run;
 use App\Models\BosskuAi\Skill;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
     public function index()
     {
-        $stats = [
-            'total_runs'   => Run::count(),
-            'runs_today'   => Run::whereDate('created_at', today())->count(),
-            'active_runs'  => Run::where('status', 'running')->count(),
-            'skills_count' => Skill::count(),
-            'memory_count' => Memory::count(),
-        ];
+        $stats = Cache::remember('dashboard.stats', 30, function () {
+            return [
+                'total_runs'   => Run::count(),
+                'runs_today'   => Run::whereDate('created_at', today())->count(),
+                'active_runs'  => Run::where('status', 'running')->count(),
+                'skills_count' => Skill::count(),
+                'memory_count' => Memory::count(),
+            ];
+        });
 
         $recentRuns = Run::query()
             ->orderByDesc('created_at')
