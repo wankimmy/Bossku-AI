@@ -20,7 +20,7 @@ const {
 const { syncStack } = require('./stackSync')
 const { isBootstrapped, ensureEnv, runBootstrap } = require('./bootstrap')
 const { resolveRuntimeMode } = require('./runtimeMode')
-const { startNative, stopNative, restartNative } = require('./nativeRuntime')
+const { startNative, stopNative, restartNative, runMigrations } = require('./nativeRuntime')
 const { ensureNativeBootstrap } = require('./bootstrapNative')
 const { initAutoUpdater, checkForUpdatesNow } = require('./updater')
 
@@ -284,6 +284,14 @@ async function bootNative() {
       )
       return false
     }
+  }
+
+  sendStatus('busy', 'Running database migrations...')
+  try {
+    await runMigrations(stackDir, sendLog)
+  } catch (err) {
+    sendStatus('error', 'Database migration failed', String(err && err.message ? err.message : err))
+    return false
   }
 
   sendStatus('busy', 'Starting BosskuAI servers...')

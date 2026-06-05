@@ -153,9 +153,42 @@ async function restartNative(stackDir, onLog) {
   await startNative(stackDir, onLog)
 }
 
+/**
+ * Run `php artisan migrate --force` against the user stack.
+ * Idempotent — safe to call on every startup to pick up new migrations.
+ *
+ * @param {string} stackDir
+ * @param {(line: string) => void} [onLog]
+ */
+async function runMigrations(stackDir, onLog) {
+  const rt = runtimePaths()
+  if (!fs.existsSync(rt.php)) {
+    if (onLog) onLog('PHP not found — skipping migrations (pre-setup).')
+    return
+  }
+
+  const appDir = path.join(stackDir, 'app')
+  const env = buildNativeEnv(stackDir)
+
+  await new Promise((resolve, reject) => {
+    const child = spawn(rt.php, ['artisan', 'migrate', '--force'], {
+      cwd: appDir,
+      env,
+      windowsHide: true,
+    })
+    pipeChild(child, 'migrate', onLog)
+    child.on('close', (code) => {
+      if (code === 0) resolve()
+      else reject(new Error(`Database migration failed (exit ${code})`))
+    })
+    child.on('error', reject)
+  })
+}
+
 module.exports = {
   startNative,
   stopNative,
   restartNative,
   nativeRunning,
+  runMigrations,
 }
