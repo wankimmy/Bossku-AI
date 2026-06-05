@@ -29,9 +29,9 @@ class LlmJsonParserTest extends TestCase
     }
 
     #[Test]
-    public function it_fails_on_invalid_json(): void
+    public function it_fails_when_no_object_is_present(): void
     {
-        $out = LlmJsonParser::parseObject('{"status": "broken"');
+        $out = LlmJsonParser::parseObject('Sorry, I could not complete that request.');
 
         $this->assertFalse($out['ok']);
         $this->assertSame('parse', $out['error']);
@@ -44,6 +44,72 @@ class LlmJsonParserTest extends TestCase
 
         $this->assertFalse($out['ok']);
         $this->assertSame('empty', $out['error']);
+    }
+
+    #[Test]
+    public function it_recovers_object_truncated_after_a_complete_value(): void
+    {
+        // Output token budget exhausted mid-object: the closing brace never arrives.
+        $out = LlmJsonParser::parseObject('{"status":"partial","summary":"Updated routes"');
+
+        $this->assertTrue($out['ok']);
+        $this->assertSame('partial', $out['data']['status'] ?? null);
+        $this->assertSame('Updated routes', $out['data']['summary'] ?? null);
+    }
+
+    #[Test]
+    public function it_recovers_when_cut_off_mid_string(): void
+    {
+        $out = LlmJsonParser::parseObject('{"summary":"this answer was cut off right here');
+
+        $this->assertTrue($out['ok']);
+        $this->assertSame('this answer was cut off right here', $out['data']['summary'] ?? null);
+    }
+
+    #[Test]
+    public function it_recovers_truncated_nested_structure_and_drops_dangling_key(): void
+    {
+        $raw = '{"task_summary":"do x","checklist":[{"id":"1","title":"a"},{"id":"2","title":"b"}],"handoff_message"';
+        $out = LlmJsonParser::parseObject($raw);
+
+        $this->assertTrue($out['ok']);
+        $this->assertSame('do x', $out['data']['task_summary'] ?? null);
+        $this->assertIsArray($out['data']['checklist'] ?? null);
+        $this->assertCount(2, $out['data']['checklist']);
+        $this->assertArrayNotHasKey('handoff_message', $out['data']);
+    }
+
+    #[Test]
+    public function it_strips_trailing_commas(): void
+    {
+        $out = LlmJsonParser::parseObject("{\"status\":\"success\",\"items\":[1,2,3,],}");
+
+        $this->assertTrue($out['ok']);
+        $this->assertSame('success', $out['data']['status'] ?? null);
+        $this->assertSame([1, 2, 3], $out['data']['items'] ?? null);
+    }
+
+    #[Test]
+    public function it_supplies_null_for_a_dangling_key_with_colon(): void
+    {
+        $out = LlmJsonParser::parseObject('{"status":"partial","patch_summary":');
+
+        $this->assertTrue($out['ok']);
+        $this->assertSame('partial', $out['data']['status'] ?? null);
+        $this->assertArrayHasKey('patch_summary', $out['data']);
+        $this->assertNull($out['data']['patch_summary']);
+    }
+
+    #[Test]
+    public function it_still_prefers_well_formed_json_over_recovery(): void
+    {
+        // A complete object must decode untouched even though extra prose follows.
+        $raw = "{\"status\":\"success\",\"patch_summary\":\"done\"}\nTrailing note that is not JSON.";
+        $out = LlmJsonParser::parseObject($raw);
+
+        $this->assertTrue($out['ok']);
+        $this->assertSame('success', $out['data']['status'] ?? null);
+        $this->assertSame('done', $out['data']['patch_summary'] ?? null);
     }
 
     #[Test]

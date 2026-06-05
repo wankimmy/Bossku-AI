@@ -57,7 +57,7 @@ class LlmGateway
         $resolved = $this->resolveAlias($logicalModel);
         $this->assertOllamaModel($resolved);
 
-        $out = $this->ollama->chatWithUsage($resolved, $messages, $temperature);
+        $out = $this->ollama->chatWithUsage($resolved, $messages, $temperature, $maxTokensAnthropic);
 
         $inputTokens = $out['input_tokens'] !== null ? (int) $out['input_tokens'] : null;
         $outputTokens = $out['output_tokens'] !== null ? (int) $out['output_tokens'] : null;

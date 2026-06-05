@@ -61,9 +61,16 @@ class ModelFallbackService
                         $callMetadata['prior_failures'] = $failedAttempts;
                     }
 
-                    $attemptMessages = $repairInstruction !== null
-                        ? array_merge($messages, [['role' => 'user', 'content' => $repairInstruction]])
-                        : $messages;
+                    $attemptMessages = $messages;
+                    if ($repairInstruction !== null) {
+                        // A parse failure almost always means the JSON was truncated because
+                        // the prompt left too little room in the context window. Shrink the
+                        // oversized context on this retry instead of growing it.
+                        if ($lastError === 'invalid_json_parse') {
+                            $attemptMessages = self::compactMessagesForRetry($attemptMessages);
+                        }
+                        $attemptMessages = array_merge($attemptMessages, [['role' => 'user', 'content' => $repairInstruction]]);
+                    }
 
                     $out = $this->gateway->chat(
                         $model,
@@ -194,6 +201,37 @@ class ModelFallbackService
         $preview = $responseText !== '' ? self::sanitizeResponsePreview($responseText) : '(empty)';
 
         return 'Repair the previous response. It failed structured validation with error: '.$error.'. Return exactly one JSON object only: no markdown fences, no prose, no commentary, and no [BOSSKUAI] header. Previous response preview: '.$preview;
+    }
+
+    /**
+     * Trim the middle of oversized non-system message contents so a retry has room to
+     * emit a complete JSON object. System messages (which carry the schema/rules) are
+     * left intact; head and tail of large user payloads are kept so the task and the
+     * output contract both survive.
+     *
+     * @param  array<int, array{role: string, content: string}>  $messages
+     * @return array<int, array{role: string, content: string}>
+     */
+    protected static function compactMessagesForRetry(array $messages, int $perMessageCap = 12000): array
+    {
+        foreach ($messages as $i => $message) {
+            if (($message['role'] ?? '') === 'system') {
+                continue;
+            }
+            $content = (string) ($message['content'] ?? '');
+            if (mb_strlen($content) <= $perMessageCap) {
+                continue;
+            }
+
+            $headLen = (int) round($perMessageCap * 0.6);
+            $tailLen = $perMessageCap - $headLen;
+            $removed = mb_strlen($content) - $perMessageCap;
+            $messages[$i]['content'] = mb_substr($content, 0, $headLen)
+                ."\n…[".$removed.' chars trimmed for retry to fit the context window]…'."\n"
+                .mb_substr($content, -$tailLen);
+        }
+
+        return $messages;
     }
 
 }

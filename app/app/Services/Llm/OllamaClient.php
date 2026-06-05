@@ -16,7 +16,7 @@ class OllamaClient
      * @param  array<int, array{role: string, content: string}>  $messages
      * @return array{text: string, input_tokens: int|null, output_tokens: int|null}
      */
-    public function chatWithUsage(string $model, array $messages, ?float $temperature = 0.2): array
+    public function chatWithUsage(string $model, array $messages, ?float $temperature = 0.2, ?int $maxTokens = null): array
     {
         $url = rtrim($this->baseUrl, '/').'/api/chat';
 
@@ -27,9 +27,9 @@ class OllamaClient
 
         $res = $http->post($url, [
             'model' => $model,
-            'messages' => $messages,
+            'messages' => self::sanitizeMessages($messages),
             'stream' => false,
-            'options' => ['temperature' => $temperature],
+            'options' => self::buildOptions($temperature, $maxTokens),
         ]);
 
         try {
@@ -94,9 +94,9 @@ class OllamaClient
 
         $res = $http->post($url, [
             'model' => $model,
-            'messages' => $payloadMessages,
+            'messages' => self::sanitizeMessages($payloadMessages),
             'stream' => false,
-            'options' => ['temperature' => $temperature],
+            'options' => self::buildOptions($temperature, null),
         ]);
 
         try {
@@ -128,7 +128,7 @@ class OllamaClient
 
         $payload = [
             'model' => $model,
-            'input' => $text,
+            'input' => self::toValidUtf8($text),
         ];
 
         if ($dimensions !== null) {
@@ -154,5 +154,60 @@ class OllamaClient
         }
 
         return array_values(array_map(static fn ($v) => (float) $v, $embedding));
+    }
+
+    /**
+     * Build the Ollama `options` block. `num_predict` caps output tokens so long
+     * structured JSON replies are not silently truncated (a common cause of
+     * downstream `invalid_json_parse`).
+     *
+     * @return array<string, mixed>
+     */
+    protected static function buildOptions(?float $temperature, ?int $maxTokens): array
+    {
+        $options = ['temperature' => $temperature];
+        if ($maxTokens !== null && $maxTokens > 0) {
+            $options['num_predict'] = $maxTokens;
+        }
+
+        return $options;
+    }
+
+    /**
+     * Ensure every message `content` is valid UTF-8 before it is JSON-encoded for the
+     * request body. Large, mixed context (file dumps, logs, pasted binaries) can carry
+     * invalid byte sequences that make `json_encode` emit a malformed body — which
+     * Ollama Cloud rejects with an `invalid_json_parse` style error.
+     *
+     * @param  array<int, array<string, mixed>>  $messages
+     * @return array<int, array<string, mixed>>
+     */
+    protected static function sanitizeMessages(array $messages): array
+    {
+        foreach ($messages as $i => $message) {
+            if (isset($message['content']) && is_string($message['content'])) {
+                $messages[$i]['content'] = self::toValidUtf8($message['content']);
+            }
+        }
+
+        return $messages;
+    }
+
+    protected static function toValidUtf8(string $value): string
+    {
+        if ($value === '' || mb_check_encoding($value, 'UTF-8')) {
+            return $value;
+        }
+
+        if (function_exists('mb_scrub')) {
+            return mb_scrub($value, 'UTF-8');
+        }
+
+        $prev = mb_substitute_character();
+        mb_substitute_character(0xFFFD);
+        $clean = mb_convert_encoding($value, 'UTF-8', 'UTF-8');
+        mb_substitute_character($prev);
+
+        return $clean;
     }
 }

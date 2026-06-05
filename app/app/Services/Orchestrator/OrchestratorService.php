@@ -1032,178 +1032,224 @@ class OrchestratorService
             && WorkflowRouteHelper::workflowIncludesAuditor($workflow);
 
         if ($needsAuditor && ($execResult['needs_audit'] ?? true)) {
-            $execResult = $this->ensureExecutorEvidence($run, $plan, $execResult, $userPrompt, $emit);
+            $maxRevisionRounds = $this->settings->maxRevisionRounds();
 
-            $this->emit($emit, $this->basePayload($run, 'auditor_started', [
-                'status' => 'running',
-                'agent' => 'auditor',
-                'model_role' => 'review',
-                'from_agent' => 'executor',
-                'to_agent' => 'auditor',
-                'summary' => 'Auditor is reviewing executor output.',
-                'step_number' => $stepNum,
-            ]));
-            $tA = microtime(true);
-            if ($this->executorFailedFromLlmJson($execResult)) {
-                $lastAudit = ExecutorEvidenceSupport::deterministicExecutorFailed(
-                    $this->executorFailureSummary($execResult),
-                );
-                $auditMs = (int) round((microtime(true) - $tA) * 1000);
-            }
-            else {
-                $lastAudit = $this->auditor->auditStep(
-                    $agentPrompt,
-                    $routerCtx,
-                    $modelRoute,
-                    $plan,
-                    $step,
-                    $execResult,
-                    $ruleLines,
-                    $chkExcerpt,
-                    ($modelRoute['risk_level'] ?? '') === 'high',
-                    $preflightReads,
-                    $run->id,
-                    $memPayload,
-                    $conversation,
-                );
-                $auditMs = (int) round((microtime(true) - $tA) * 1000);
-            }
-            $auditTok = $this->estimateTokens(json_encode($lastAudit) ?: '');
-            $modelsResolved['auditor'] = (string) ($lastAudit['_auditor_model'] ?? $modelsResolved['auditor'] ?? '');
-            $pass = ($lastAudit['_legacy_pass'] ?? false) === true;
-            $this->logStep($run, $stepNum + 100, 'auditor', $modelsResolved['auditor'], LlmTelemetry::resolveStepProvider($lastAudit), $skillName, $pass ? 'success' : (($lastAudit['status'] ?? '') === 'needs_revision' ? 'needs_revision' : 'failed'), json_encode($step), json_encode($execResult), json_encode($lastAudit), null, null, null, $auditMs, $auditTok, null, $this->events->metadata(
-                'auditor',
-                'review',
-                StringCoercion::toString($lastAudit['summary'] ?? null, 'Audit completed.'),
-                (($lastAudit['status'] ?? '') === 'needs_revision') ? 'Returning feedback to Executor.' : 'Sending audit result to Final Reviewer.',
-                ['audit' => $lastAudit, 'audit_findings' => $lastAudit['findings'] ?? []],
-                'auditor',
-                (($lastAudit['status'] ?? '') === 'needs_revision') ? 'executor' : 'final-reviewer'
-            ));
-            $tokenAcc += $auditTok;
-            $this->emit($emit, $this->events->auditorDone($run, $lastAudit, $modelsResolved['auditor'], $auditMs, $auditTok));
+            // Audit → revise loop: keep re-auditing after each revision until the auditor
+            // passes or the revision-round budget is spent. Re-auditing means the final
+            // verdict reflects the *revised* code, and any escalation to the user is based
+            // on a fresh audit rather than a stale pre-revision one.
+            while (true) {
+                $execResult = $this->ensureExecutorEvidence($run, $plan, $execResult, $userPrompt, $emit);
 
-            // Surface memory conflicts found by the auditor
-            $memConflicts = is_array($lastAudit['memory_conflicts'] ?? null) ? $lastAudit['memory_conflicts'] : [];
-            if ($memConflicts !== [] && $emit !== null) {
-                $this->emit($emit, $this->basePayload($run, 'memory_conflict_detected', [
-                    'status' => 'warning',
+                $this->emit($emit, $this->basePayload($run, 'auditor_started', [
+                    'status' => 'running',
                     'agent' => 'auditor',
-                    'summary' => 'Auditor detected '.count($memConflicts).' memory conflict(s) — executor repeated known past mistakes.',
-                    'conflicts' => $memConflicts,
+                    'model_role' => 'review',
+                    'from_agent' => 'executor',
+                    'to_agent' => 'auditor',
+                    'summary' => $revisionRoundsUsed > 0
+                        ? 'Auditor is re-reviewing the revised output (round '.($revisionRoundsUsed + 1).').'
+                        : 'Auditor is reviewing executor output.',
+                    'step_number' => $stepNum,
                 ]));
-            }
+                $tA = microtime(true);
+                if ($this->executorFailedFromLlmJson($execResult)) {
+                    $lastAudit = ExecutorEvidenceSupport::deterministicExecutorFailed(
+                        $this->executorFailureSummary($execResult),
+                    );
+                    $auditMs = (int) round((microtime(true) - $tA) * 1000);
+                }
+                else {
+                    $lastAudit = $this->auditor->auditStep(
+                        $agentPrompt,
+                        $routerCtx,
+                        $modelRoute,
+                        $plan,
+                        $step,
+                        $execResult,
+                        $ruleLines,
+                        $chkExcerpt,
+                        ($modelRoute['risk_level'] ?? '') === 'high',
+                        $preflightReads,
+                        $run->id,
+                        $memPayload,
+                        $conversation,
+                    );
+                    $auditMs = (int) round((microtime(true) - $tA) * 1000);
+                }
+                $auditTok = $this->estimateTokens(json_encode($lastAudit) ?: '');
+                $modelsResolved['auditor'] = (string) ($lastAudit['_auditor_model'] ?? $modelsResolved['auditor'] ?? '');
+                $pass = ($lastAudit['_legacy_pass'] ?? false) === true;
+                $this->logStep($run, $stepNum + 100 + $revisionRoundsUsed, 'auditor', $modelsResolved['auditor'], LlmTelemetry::resolveStepProvider($lastAudit), $skillName, $pass ? 'success' : (($lastAudit['status'] ?? '') === 'needs_revision' ? 'needs_revision' : 'failed'), json_encode($step), json_encode($execResult), json_encode($lastAudit), null, null, null, $auditMs, $auditTok, null, $this->events->metadata(
+                    'auditor',
+                    'review',
+                    StringCoercion::toString($lastAudit['summary'] ?? null, 'Audit completed.'),
+                    (($lastAudit['status'] ?? '') === 'needs_revision') ? 'Returning feedback to Executor.' : 'Sending audit result to Final Reviewer.',
+                    ['audit' => $lastAudit, 'audit_findings' => $lastAudit['findings'] ?? []],
+                    'auditor',
+                    (($lastAudit['status'] ?? '') === 'needs_revision') ? 'executor' : 'final-reviewer'
+                ));
+                $tokenAcc += $auditTok;
+                $this->emit($emit, $this->events->auditorDone($run, $lastAudit, $modelsResolved['auditor'], $auditMs, $auditTok));
 
-            // Surface auditor's high-stakes user questions and persist them
-            $auditorUserQuestions = is_array($lastAudit['user_questions'] ?? null) ? $lastAudit['user_questions'] : [];
-            if ($auditorUserQuestions !== []) {
-                $existingOpenQuestions = is_array($run->metadata['open_questions'] ?? null) ? $run->metadata['open_questions'] : [];
-                $run->update(['metadata' => array_merge($run->metadata ?? [], [
-                    'open_questions' => array_values(array_merge($existingOpenQuestions, $auditorUserQuestions)),
-                ])]);
-                if ($emit !== null) {
-                    $this->emit($emit, $this->basePayload($run, 'auditor_questions_surfaced', [
+                // Surface memory conflicts found by the auditor
+                $memConflicts = is_array($lastAudit['memory_conflicts'] ?? null) ? $lastAudit['memory_conflicts'] : [];
+                if ($memConflicts !== [] && $emit !== null) {
+                    $this->emit($emit, $this->basePayload($run, 'memory_conflict_detected', [
                         'status' => 'warning',
                         'agent' => 'auditor',
-                        'summary' => 'Auditor has '.count($auditorUserQuestions).' high-stakes question(s) requiring your decision.',
-                        'questions' => $auditorUserQuestions,
+                        'summary' => 'Auditor detected '.count($memConflicts).' memory conflict(s) — executor repeated known past mistakes.',
+                        'conflicts' => $memConflicts,
                     ]));
                 }
-            }
 
-            // Reconcile checklist with auditor verdict + evidence; surface to UI
-            $reconciledChecklist = $this->emitReconciledChecklistVerdict(
-                $run,
-                $plan,
-                $execResult,
-                $lastAudit,
-                $emit,
-            );
-            $plan = $reconciledChecklist['plan'];
-            $checklistVerdictEmitted = $reconciledChecklist['emitted'] || $checklistVerdictEmitted;
+                // Surface auditor's high-stakes user questions and persist them
+                $auditorUserQuestions = is_array($lastAudit['user_questions'] ?? null) ? $lastAudit['user_questions'] : [];
+                if ($auditorUserQuestions !== []) {
+                    $existingOpenQuestions = is_array($run->metadata['open_questions'] ?? null) ? $run->metadata['open_questions'] : [];
+                    $run->update(['metadata' => array_merge($run->metadata ?? [], [
+                        'open_questions' => array_values(array_merge($existingOpenQuestions, $auditorUserQuestions)),
+                    ])]);
+                    if ($emit !== null) {
+                        $this->emit($emit, $this->basePayload($run, 'auditor_questions_surfaced', [
+                            'status' => 'warning',
+                            'agent' => 'auditor',
+                            'summary' => 'Auditor has '.count($auditorUserQuestions).' high-stakes question(s) requiring your decision.',
+                            'questions' => $auditorUserQuestions,
+                        ]));
+                    }
+                }
 
-            if ($this->shouldPauseForAgentEscalation($run, $lastAudit, 'auditor_escalation')) {
-                $pipeline = $this->buildExecutorPipelineSnapshot(
+                // Reconcile checklist with auditor verdict + evidence; surface to UI
+                $reconciledChecklist = $this->emitReconciledChecklistVerdict(
                     $run,
-                    $userPrompt,
-                    $prompt,
-                    $agentPrompt,
-                    $conversation,
-                    $modelRoute,
-                    $modelsResolved,
-                    $routerCtx,
-                    $memPayload,
                     $plan,
-                    $workflow,
-                    $preflightReads,
-                    $execProfileKey,
-                    $skillName,
-                    $step,
-                    $skillRow,
-                    $ruleLines,
-                    $pbExcerpt,
-                    $chkExcerpt,
-                    $tokenAcc,
-                    $tRun,
-                    null,
-                );
-                $pipeline['exec_result'] = $execResult;
-                $pipeline['last_audit'] = $lastAudit;
-                $pipeline['executor_outputs'] = $executorOutputs;
-                $pipeline['step_num'] = $stepNum;
-
-                return $this->pauseForAgentEscalation(
-                    $run,
-                    'auditor_escalation',
-                    'auditor',
+                    $execResult,
                     $lastAudit,
-                    $pipeline,
                     $emit,
                 );
-            }
+                $plan = $reconciledChecklist['plan'];
+                $checklistVerdictEmitted = $reconciledChecklist['emitted'] || $checklistVerdictEmitted;
 
-            if (
-                ($lastAudit['status'] ?? '') === 'needs_revision'
-                && $this->executorFailedFromLlmJson($execResult)
-            ) {
-                $this->emit($emit, $this->basePayload($run, 'executor_revision_skipped', [
-                    'status' => 'warning',
-                    'agent' => 'executor',
-                    'summary' => 'Skipped executor revision: executor failed with JSON/model errors; re-running would not help.',
-                    'message' => StringCoercion::toString($execResult['known_issues'][0] ?? null, 'Executor LLM output was invalid.'),
-                ]));
-            }
+                if ($this->shouldPauseForAgentEscalation($run, $lastAudit, 'auditor_escalation')) {
+                    $pipeline = $this->buildExecutorPipelineSnapshot(
+                        $run,
+                        $userPrompt,
+                        $prompt,
+                        $agentPrompt,
+                        $conversation,
+                        $modelRoute,
+                        $modelsResolved,
+                        $routerCtx,
+                        $memPayload,
+                        $plan,
+                        $workflow,
+                        $preflightReads,
+                        $execProfileKey,
+                        $skillName,
+                        $step,
+                        $skillRow,
+                        $ruleLines,
+                        $pbExcerpt,
+                        $chkExcerpt,
+                        $tokenAcc,
+                        $tRun,
+                        null,
+                    );
+                    $pipeline['exec_result'] = $execResult;
+                    $pipeline['last_audit'] = $lastAudit;
+                    $pipeline['executor_outputs'] = $executorOutputs;
+                    $pipeline['step_num'] = $stepNum;
 
-            if (
-                ($lastAudit['status'] ?? '') === 'needs_revision'
-                && ($execResult['needs_user_input'] ?? false) === true
-            ) {
-                $this->emit($emit, $this->basePayload($run, 'executor_revision_skipped', [
-                    'status' => 'warning',
-                    'agent' => 'executor',
-                    'summary' => 'Skipped executor revision: executor is waiting for your input first.',
-                    'message' => StringCoercion::toString($execResult['blockers'][0] ?? $execResult['known_issues'][0] ?? null, 'User input required.'),
-                ]));
-            }
+                    return $this->pauseForAgentEscalation(
+                        $run,
+                        'auditor_escalation',
+                        'auditor',
+                        $lastAudit,
+                        $pipeline,
+                        $emit,
+                    );
+                }
 
-            if (
-                ($lastAudit['status'] ?? '') === 'needs_revision'
-                && $this->settings->maxRevisionRounds() > 0
-                && ! $this->executorFailedFromLlmJson($execResult)
-                && ($execResult['needs_user_input'] ?? false) !== true
-            ) {
+                // Auditor is satisfied — leave the loop and continue to security/final review.
+                if (($lastAudit['status'] ?? '') !== 'needs_revision') {
+                    break;
+                }
+
+                // Auditor wants changes, but another revision can't help when the executor
+                // produced unusable JSON or is explicitly waiting on the user. Explain and stop.
+                if ($this->executorFailedFromLlmJson($execResult)) {
+                    $this->emit($emit, $this->basePayload($run, 'executor_revision_skipped', [
+                        'status' => 'warning',
+                        'agent' => 'executor',
+                        'summary' => 'Skipped executor revision: executor failed with JSON/model errors; re-running would not help.',
+                        'message' => StringCoercion::toString($execResult['known_issues'][0] ?? null, 'Executor LLM output was invalid.'),
+                    ]));
+                    break;
+                }
+                if (($execResult['needs_user_input'] ?? false) === true) {
+                    $this->emit($emit, $this->basePayload($run, 'executor_revision_skipped', [
+                        'status' => 'warning',
+                        'agent' => 'executor',
+                        'summary' => 'Skipped executor revision: executor is waiting for your input first.',
+                        'message' => StringCoercion::toString($execResult['blockers'][0] ?? $execResult['known_issues'][0] ?? null, 'User input required.'),
+                    ]));
+                    break;
+                }
+
+                // Hard blocker, or the revision-round budget is spent while the auditor still
+                // wants changes → escalate to the user instead of silently shipping it.
+                if ($this->shouldPauseForExecutorStuck($run, $execResult, $lastAudit, $revisionRoundsUsed)) {
+                    return $this->pauseForExecutorStuck(
+                        $run,
+                        $this->buildExecutorPipelineSnapshot(
+                            $run,
+                            $userPrompt,
+                            $prompt,
+                            $agentPrompt,
+                            $conversation,
+                            $modelRoute,
+                            $modelsResolved,
+                            $routerCtx,
+                            $memPayload,
+                            $plan,
+                            $workflow,
+                            $preflightReads,
+                            $execProfileKey,
+                            $skillName,
+                            $step,
+                            $skillRow,
+                            $ruleLines,
+                            $pbExcerpt,
+                            $chkExcerpt,
+                            $tokenAcc,
+                            $tRun,
+                            [
+                                'original_prompt' => $agentPrompt,
+                                'audit_findings' => $lastAudit['findings'] ?? [],
+                            ],
+                        ),
+                        $execResult,
+                        $emit,
+                    );
+                }
+                if ($maxRevisionRounds <= 0 || $revisionRoundsUsed >= $maxRevisionRounds) {
+                    break;
+                }
+
+                // --- Run one revision round, then loop back to re-audit the result. ---
                 $this->emit($emit, $this->basePayload($run, 'executor_revision_started', [
                     'status' => 'running',
                     'agent' => 'executor',
                     'model_role' => 'coding',
                     'from_agent' => 'auditor',
                     'to_agent' => 'executor',
-                    'summary' => 'Executor is applying audit feedback.',
+                    'summary' => 'Executor is applying audit feedback (round '.($revisionRoundsUsed + 1).' of '.$maxRevisionRounds.').',
                     'message' => StringCoercion::toString($lastAudit['summary'] ?? null, 'Audit requested a revision.'),
                 ]));
 
                 $revisionStep = array_merge($step, [
-                    'id' => 2,
+                    'id' => 2 + $revisionRoundsUsed,
                     'title' => 'Fix audit feedback',
                 ]);
                 $auditFeedback = ExecutorEvidenceSupport::auditorPayloadForRevision(
@@ -1266,7 +1312,7 @@ class OrchestratorService
                 }
                 $revisionResult = $revAfter;
                 $revTok = $this->estimateTokens(json_encode($revisionResult) ?: '');
-                $this->logStep($run, $stepNum + 1, 'executor_revision', $modelsResolved['executor'], LlmTelemetry::resolveStepProvider($revisionResult), $skillName, ($revisionResult['status'] ?? '') === 'failed' ? 'failed' : 'success', json_encode($revisionStep), json_encode(['audit' => $lastAudit, 'previous_executor' => $execResult]), json_encode($revisionResult), null, null, null, (int) ($revisionResult['latency_ms'] ?? 0), $revTok, null, $this->events->metadata(
+                $this->logStep($run, $stepNum + 1 + $revisionRoundsUsed, 'executor_revision', $modelsResolved['executor'], LlmTelemetry::resolveStepProvider($revisionResult), $skillName, ($revisionResult['status'] ?? '') === 'failed' ? 'failed' : 'success', json_encode($revisionStep), json_encode(['audit' => $lastAudit, 'previous_executor' => $execResult]), json_encode($revisionResult), null, null, null, (int) ($revisionResult['latency_ms'] ?? 0), $revTok, null, $this->events->metadata(
                     'executor',
                     'coding',
                     'Executor applied audit follow-up fixes.',
@@ -1279,42 +1325,7 @@ class OrchestratorService
                 $this->emit($emit, $this->events->executorDone($run, $revisionResult, $modelsResolved['executor'], (int) ($revisionResult['latency_ms'] ?? 0), $revTok, 'executor_revision_done'));
                 $execResult = $revisionResult;
                 $executorOutputs[] = $revisionResult;
-                $revisionRoundsUsed = 1;
-
-                if ($this->shouldPauseForExecutorStuck($run, $execResult, $lastAudit, $revisionRoundsUsed)) {
-                    return $this->pauseForExecutorStuck(
-                        $run,
-                        $this->buildExecutorPipelineSnapshot(
-                            $run,
-                            $userPrompt,
-                            $prompt,
-                            $agentPrompt,
-                            $conversation,
-                            $modelRoute,
-                            $modelsResolved,
-                            $routerCtx,
-                            $memPayload,
-                            $plan,
-                            $workflow,
-                            $preflightReads,
-                            $execProfileKey,
-                            $skillName,
-                            $step,
-                            $skillRow,
-                            $ruleLines,
-                            $pbExcerpt,
-                            $chkExcerpt,
-                            $tokenAcc,
-                            $tRun,
-                            [
-                                'original_prompt' => $agentPrompt,
-                                'audit_findings' => $lastAudit['findings'] ?? [],
-                            ],
-                        ),
-                        $execResult,
-                        $emit,
-                    );
-                }
+                $revisionRoundsUsed++;
             }
         }
 

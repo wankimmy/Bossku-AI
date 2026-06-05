@@ -28,6 +28,7 @@ class OllamaProvider implements LlmProviderInterface
             $request->model,
             $request->messages,
             $request->temperature,
+            $request->maxTokens,
         );
 
         return new LlmResponse(

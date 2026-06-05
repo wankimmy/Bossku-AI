@@ -102,6 +102,57 @@ class ModelFallbackServiceTest extends TestCase
     }
 
     #[Test]
+    public function invalid_json_retry_compacts_oversized_context(): void
+    {
+        $bigUserContent = str_repeat('A', 30000);
+        $messages = [
+            ['role' => 'system', 'content' => 'JSON only.'],
+            ['role' => 'user', 'content' => $bigUserContent],
+        ];
+        $calls = [];
+
+        $gateway = $this->createMock(LlmGateway::class);
+        $gateway->expects($this->exactly(2))
+            ->method('chat')
+            ->willReturnCallback(function (string $model, array $messages) use (&$calls): array {
+                $calls[] = $messages;
+
+                return [
+                    'text' => count($calls) === 1
+                        ? 'Prose with no JSON object at all.'
+                        : '{"status":"success"}',
+                    'provider' => 'ollama',
+                    'input_tokens' => 2,
+                    'output_tokens' => 1,
+                    'model_logical' => $model,
+                    'model_resolved' => $model.':cloud',
+                ];
+            });
+
+        /** @var LlmGateway $gateway */
+        $svc = new ModelFallbackService($gateway, app(AgentPersonaService::class));
+        $svc->chatWithFallbacks(
+            ['qwen3-coder-next'],
+            $messages,
+            0.1,
+            1,
+            'test_role',
+            fn (mixed $j): bool => is_array($j) && isset($j['status'])
+        );
+
+        // First attempt sends the full oversized context.
+        $firstUser = collect($calls[0])->firstWhere('role', 'user')['content'] ?? '';
+        $this->assertSame(30000, mb_strlen($firstUser));
+
+        // Retry after invalid_json_parse trims the oversized user content so the model
+        // has room to finish a complete JSON object.
+        $retryContents = array_column($calls[1], 'content');
+        $compacted = collect($retryContents)->first(fn ($c) => str_contains((string) $c, 'trimmed for retry'));
+        $this->assertNotNull($compacted, 'Expected the oversized context to be trimmed on retry.');
+        $this->assertLessThan(30000, mb_strlen((string) $compacted));
+    }
+
+    #[Test]
     public function empty_structured_response_skips_same_model_retry_when_fallback_exists(): void
     {
         $messages = [
