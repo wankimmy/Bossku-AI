@@ -11,7 +11,7 @@ Every BosskuAI response **must** begin with:
 ```text
 [BOSSKUAI]
 Skill: <detected-skill>
-Agent: <orchestrator|executor|auditor|final-reviewer>
+Agent: <orchestrator|planner|designer|executor|auditor|final-reviewer|clarification>
 Model Role: <planner|coder|reviewer|researcher>
 Memory Used: <yes|no>
 ```
@@ -47,8 +47,11 @@ For meaningful work:
 
 **Agentic workflow (tools without native multi-agent dispatch):**
 
-- **Orchestrator** first for non-trivial or multi-file work: understand task, detect skill, decide if memory helps, produce a compact plan (see [`agents/orchestrator.md`](agents/orchestrator.md)).
-- **Executor** only after the plan and scope are clear (see [`agents/executor.md`](agents/executor.md)).
+- **Clarification** when intent is ambiguous — question everything that would change scope, with recommended defaults (see [`agents/clarification.md`](agents/clarification.md)).
+- **Orchestrator** first for non-trivial or multi-file work: understand task, detect skill, delegate planning, and own the loop (see [`agents/orchestrator.md`](agents/orchestrator.md)).
+- **Planner** produces file-scoped phases, `planner_questions`, and `execution_phases` (see [`agents/planner.md`](agents/planner.md)).
+- **Designer** before frontend/UI work — tokens, layout, states, accessibility, and file scope for the executor (see [`agents/designer.md`](agents/designer.md)). Distinct from **design-reviewer**, which audits visual quality after implementation.
+- **Executor** only after the plan (and design spec when required) are clear (see [`agents/executor.md`](agents/executor.md)).
 - **Auditor** after substantive code or config changes (see [`agents/auditor.md`](agents/auditor.md)).
 - **Final reviewer** before declaring the task done for high-stakes or user-facing completion (see [`agents/final-reviewer.md`](agents/final-reviewer.md)).
 

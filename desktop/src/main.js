@@ -1,7 +1,7 @@
 'use strict'
 
 const path = require('node:path')
-const { app, BrowserWindow, Tray, Menu, shell, nativeImage, ipcMain } = require('electron')
+const { app, BrowserWindow, Tray, Menu, shell, nativeImage, ipcMain, dialog } = require('electron')
 
 const {
   WEB_URL,
@@ -22,6 +22,7 @@ const { isBootstrapped, ensureEnv, runBootstrap } = require('./bootstrap')
 const { resolveRuntimeMode } = require('./runtimeMode')
 const { startNative, stopNative, restartNative } = require('./nativeRuntime')
 const { ensureNativeBootstrap } = require('./bootstrapNative')
+const { initAutoUpdater, checkForUpdatesNow } = require('./updater')
 
 // 1x1 emerald pixel — a valid tray image without shipping a binary asset.
 const TRAY_PNG =
@@ -85,6 +86,7 @@ function createMainWindow() {
     backgroundColor: '#0a0a0a',
     show: false,
     webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
     },
@@ -143,6 +145,8 @@ function refreshTrayMenu() {
   tray.setContextMenu(
     Menu.buildFromTemplate([
       { label: 'Open BosskuAI', click: showMainWindow, enabled: stackReady },
+      { type: 'separator' },
+      { label: 'Check for updates…', click: () => checkForUpdatesNow(sendLog) },
       { type: 'separator' },
       {
         label: isDocker ? 'Restart stack' : 'Restart servers',
@@ -327,6 +331,15 @@ async function boot() {
     refreshTrayMenu()
     sendStatus('ok', 'Ready')
     createMainWindow()
+
+    // Start watching GitHub Releases for new versions (no-op in dev / unpackaged).
+    initAutoUpdater({
+      getWindow: () => mainWindow || splashWindow,
+      sendLog,
+      prepareForQuit: () => {
+        isQuitting = true
+      },
+    })
   } catch (err) {
     sendStatus('error', 'Startup failed', String(err && err.message ? err.message : err))
   } finally {
@@ -341,6 +354,16 @@ function wireIpc() {
   ipcMain.on('quit', () => {
     isQuitting = true
     app.quit()
+  })
+  // Native folder picker for the dashboard (Project page "Open Folder").
+  ipcMain.handle('dialog:openFolder', async () => {
+    const parent = mainWindow ?? splashWindow ?? undefined
+    const result = await dialog.showOpenDialog(parent, {
+      title: 'Select project folder',
+      properties: ['openDirectory', 'createDirectory'],
+    })
+    if (result.canceled || result.filePaths.length === 0) return null
+    return result.filePaths[0]
   })
 }
 

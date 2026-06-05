@@ -31,6 +31,13 @@ return [
      * larger window than the Ollama default).
      */
     'ollama_num_ctx' => env('OLLAMA_NUM_CTX') !== null ? (int) env('OLLAMA_NUM_CTX') : null,
+    /**
+     * Thinking flag for thinking-capable Ollama models. null (default) = omit the param and
+     * let Ollama use the per-model default. Set BOSSKU_OLLAMA_THINK=false to suppress
+     * chain-of-thought (faster, fewer output tokens — useful when a thinking model returns
+     * its answer in `message.thinking` and leaves `message.content` empty).
+     */
+    'ollama_think' => env('OLLAMA_THINK') !== null ? filter_var(env('OLLAMA_THINK'), FILTER_VALIDATE_BOOLEAN) : null,
     'max_revision_rounds' => env('BOSSKUAI_MAX_REVISION_ROUNDS', 3),
     /**
      * Soft token budget per run (estimated tokens). When exceeded, a warning event is emitted
@@ -148,6 +155,72 @@ return [
      * Vision model for chat image attachments (Ollama tag, e.g. llava, llava:13b, llama3.2-vision).
      */
     'vision_model' => env('BOSSKU_VISION_MODEL', 'llava'),
+
+    /** Per-run git worktree isolation (AO/Emdash-style). */
+    'worktree_enabled' => env('BOSSKU_WORKTREE_ENABLED', true),
+    'worktree_auto_provision' => env('BOSSKU_WORKTREE_AUTO_PROVISION', false),
+    'worktree_pool_subdir' => env('BOSSKU_WORKTREE_POOL_SUBDIR', '.bossku/worktrees'),
+    /** @var list<string> */
+    'worktree_preserve_files' => array_filter(array_map('trim', explode(',', env('BOSSKU_WORKTREE_PRESERVE_FILES', '.env.example')))),
+    'worktree_cleanup_on_complete' => env('BOSSKU_WORKTREE_CLEANUP_ON_COMPLETE', true),
+    'worktree_fail_closed' => env('BOSSKU_WORKTREE_FAIL_CLOSED', true),
+
+    /** Parallel supervisor defaults */
+    'supervisor_max_children' => (int) env('BOSSKU_SUPERVISOR_MAX_CHILDREN', 4),
+    'supervisor_default_children' => (int) env('BOSSKU_SUPERVISOR_DEFAULT_CHILDREN', 2),
+    'supervisor_llm_synthesis' => env('BOSSKU_SUPERVISOR_LLM_SYNTHESIS', false),
+
+    /** Provider CLI runtime */
+    'cli_providers_enabled' => env('BOSSKU_CLI_PROVIDERS_ENABLED', true),
+    'cli_session_async_default' => env('BOSSKU_CLI_SESSION_ASYNC_DEFAULT', true),
+    'cli_session_async_default_windows' => env('BOSSKU_CLI_SESSION_ASYNC_DEFAULT_WINDOWS', false),
+    'memory_worktree_scoping' => env('BOSSKU_MEMORY_WORKTREE_SCOPING', true),
+    'agent_hook_token' => env('BOSSKU_AGENT_HOOK_TOKEN', ''),
+    'agent_hook_allowed_hosts' => env('BOSSKU_AGENT_HOOK_ALLOWED_HOSTS', '127.0.0.1,localhost'),
+
+    /** SCM / reactions (GitHub) */
+    'scm_github_token' => env('BOSSKU_GITHUB_TOKEN', env('GITHUB_TOKEN', '')),
+    'reactions_poll_interval_seconds' => (int) env('BOSSKU_REACTIONS_POLL_INTERVAL', 60),
+    'reactions_poll_batch_size' => (int) env('BOSSKU_REACTIONS_POLL_BATCH_SIZE', 50),
+    /** @var list<string> */
+    'reactions_watch_statuses' => array_filter(array_map('trim', explode(',', env('BOSSKU_REACTIONS_WATCH_STATUSES', 'running,paused,completed,partial')))),
+    'reactions' => [
+        'ci_failed' => [
+            'auto' => true,
+            'action' => 'resume_run',
+            'retries' => 2,
+            'escalate_after_attempts' => 3,
+            'cooldown_seconds' => (int) env('BOSSKU_REACTION_COOLDOWN_SECONDS', 300),
+        ],
+        'changes_requested' => [
+            'auto' => true,
+            'action' => 'resume_run',
+            'retries' => 2,
+            'escalate_after_attempts' => 3,
+            'cooldown_seconds' => (int) env('BOSSKU_REACTION_COOLDOWN_SECONDS', 300),
+        ],
+        'merge_conflict' => [
+            'auto' => true,
+            'action' => 'notify',
+            'retries' => 1,
+        ],
+        'approved_and_green' => [
+            'auto' => false,
+            'action' => 'notify',
+        ],
+        'agent_stuck' => [
+            'auto' => false,
+            'action' => 'notify',
+        ],
+    ],
+
+    /** Verified learning promotion */
+    'learning_require_verification' => env('BOSSKU_LEARNING_REQUIRE_VERIFICATION', true),
+    'learning_verification_commands' => env('BOSSKU_LEARNING_VERIFICATION_COMMANDS', 'php artisan test|npm test|npm run test'),
+
+    /** Remote / BYOI execution */
+    'ssh_execution_enabled' => env('BOSSKU_SSH_EXECUTION_ENABLED', false),
+    'byoi_enabled' => env('BOSSKU_BYOI_ENABLED', false),
 
     'attachments' => [
         'max_per_upload' => (int) env('BOSSKU_ATTACHMENTS_MAX_PER_UPLOAD', 10),

@@ -114,6 +114,27 @@ class LearningEngine
             ];
         }
 
+        $meta = is_array($run->metadata) ? $run->metadata : [];
+        if (isset($meta['reaction_resume']) && is_array($meta['reaction_resume'])) {
+            $extractions[] = [
+                'type' => 'failure',
+                'content' => 'SCM reaction feedback: '.json_encode($meta['reaction_resume']),
+                'confidence' => 0.88,
+                'importance' => 0.8,
+                'evidence' => ['run_id' => $run->getKey(), 'source' => 'scm_reaction'],
+            ];
+        }
+
+        if (isset($meta['workspace']) && is_array($meta['workspace'])) {
+            $extractions[] = [
+                'type' => 'pattern',
+                'content' => 'Run used isolated worktree on branch '.($meta['workspace']['branch_name'] ?? 'unknown'),
+                'confidence' => 0.7,
+                'importance' => 0.55,
+                'evidence' => ['run_id' => $run->getKey(), 'workspace' => $meta['workspace']],
+            ];
+        }
+
         return $extractions;
     }
 

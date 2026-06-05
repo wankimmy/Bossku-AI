@@ -140,8 +140,27 @@ async function submitRegister() {
   }
 }
 
-function openFolderHelper() {
-  toast.info('Open Folder is deferred for the web app. Paste the Docker host path manually for now; a desktop shell can add a real folder picker later.')
+async function openFolderHelper() {
+  const bridge = (window as unknown as {
+    bossku?: { openFolder?: () => Promise<string | null> }
+  }).bossku
+  if (bridge?.openFolder) {
+    try {
+      const folder = await bridge.openFolder()
+      if (!folder) return
+      newProjectHostPath.value = folder
+      if (!newProjectName.value.trim()) {
+        const parts = folder.replace(/[\\/]+$/, '').split(/[\\/]/)
+        newProjectName.value = parts[parts.length - 1] || ''
+      }
+    }
+    catch {
+      toast.error('Could not open the folder picker.')
+    }
+    return
+  }
+  // Plain browser (not the desktop shell): no native picker available.
+  toast.info('The native folder picker needs the BosskuAI desktop app. Paste the folder path here instead.')
   hostPathInput.value?.focus()
 }
 
@@ -296,9 +315,9 @@ onMounted(() => {
         Project
       </h1>
       <p class="mt-1 text-sm text-zinc-400">
-        Browse and edit files under the active project mount
-        <code class="rounded bg-zinc-950 px-1 text-xs text-emerald-400">{{ repoRoot || '/repo' }}</code>.
-        Agent runs use this same root — register a path, then click <strong class="text-zinc-300">Activate</strong> before auditing an external repo.
+        Browse and edit files under the active project folder
+        <code class="rounded bg-zinc-950 px-1 text-xs text-emerald-400">{{ repoRoot || '(no folder selected)' }}</code>.
+        Agent runs use this same root — add a folder, then click <strong class="text-zinc-300">Activate</strong> before auditing another project.
       </p>
     </header>
 
@@ -332,7 +351,7 @@ onMounted(() => {
       v-if="registry.projects.length > 0 && !registry.activeProjectId"
       class="rounded-lg border border-amber-800/60 bg-amber-950/30 px-4 py-3 text-sm text-amber-200"
     >
-      No active project. Security audits and the executor will fall back to <code class="text-amber-100">/repo</code> (Bossku-AI only) until you click <strong>Activate</strong> on the project below.
+      No active project. Security audits and the executor will fall back to the BosskuAI app's own folder until you click <strong>Activate</strong> on a project below.
     </div>
 
     <section class="rounded-lg border border-zinc-800 bg-zinc-900">
@@ -399,7 +418,7 @@ onMounted(() => {
             ref="hostPathInput"
             v-model="newProjectHostPath"
             type="text"
-            placeholder="Host path (e.g. C:/dev/projects/my-app)"
+            placeholder="Folder path (e.g. C:/dev/projects/my-app)"
             class="rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-sm font-mono"
           >
           <p v-if="hostPathWarning" class="sm:col-span-2 text-xs text-amber-400">
@@ -422,7 +441,7 @@ onMounted(() => {
             </button>
           </div>
           <p class="sm:col-span-2 text-xs text-zinc-500">
-            The web app still needs a typed Docker host path. A real folder picker belongs in a future desktop shell.
+            Click <strong class="text-zinc-300">Open Folder</strong> to pick a folder with the native Windows dialog, or paste a path. (In a plain browser, paste the path manually.)
           </p>
         </form>
       </div>

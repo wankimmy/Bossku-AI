@@ -19,6 +19,17 @@ class LlmJsonParserTest extends TestCase
     }
 
     #[Test]
+    public function it_parses_json_in_a_mislabelled_text_fence(): void
+    {
+        // A model wraps JSON (sometimes after the [BOSSKUAI] header) in a ```text fence.
+        $raw = "```text\n[BOSSKUAI]\nAgent: executor\n{\"status\":\"success\",\"summary\":\"ok\"}\n```";
+        $out = LlmJsonParser::parseObject($raw);
+
+        $this->assertTrue($out['ok']);
+        $this->assertSame('success', $out['data']['status'] ?? null);
+    }
+
+    #[Test]
     public function it_parses_json_after_prose(): void
     {
         $raw = "Here is the result:\n{\"status\":\"partial\",\"summary\":\"Updated routes\"}\nThanks.";

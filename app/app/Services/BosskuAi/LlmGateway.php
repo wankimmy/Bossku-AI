@@ -35,19 +35,22 @@ class LlmGateway
         ?string $runId = null,
         ?string $runStepId = null,
         array $metadata = [],
+        bool $jsonMode = false,
     ): array {
+        $responseFormat = $jsonMode ? 'json' : null;
         $inferredProvider = $this->resolveProviderForModel($model);
         $effectiveProvider = $forceProvider ?? ($inferredProvider !== 'ollama' ? $inferredProvider : null);
 
         if ($this->router !== null && ($effectiveProvider !== null || $this->shouldDelegate($role, $forceProvider))) {
             $request = LlmRequest::make($model, $messages, [
-                'role'           => $role,
-                'temperature'    => $temperature,
-                'max_tokens'     => $maxTokensAnthropic,
-                'force_provider' => $effectiveProvider,
-                'run_id'         => $runId,
-                'run_step_id'    => $runStepId,
-                'metadata'       => $metadata,
+                'role'            => $role,
+                'temperature'     => $temperature,
+                'max_tokens'      => $maxTokensAnthropic,
+                'force_provider'  => $effectiveProvider,
+                'run_id'          => $runId,
+                'run_step_id'     => $runStepId,
+                'metadata'        => $metadata,
+                'response_format' => $responseFormat,
             ]);
 
             return $this->router->complete($request)->toArray();
@@ -57,7 +60,7 @@ class LlmGateway
         $resolved = $this->resolveAlias($logicalModel);
         $this->assertOllamaModel($resolved);
 
-        $out = $this->ollama->chatWithUsage($resolved, $messages, $temperature, $maxTokensAnthropic);
+        $out = $this->ollama->chatWithUsage($resolved, $messages, $temperature, $maxTokensAnthropic, $responseFormat);
 
         $inputTokens = $out['input_tokens'] !== null ? (int) $out['input_tokens'] : null;
         $outputTokens = $out['output_tokens'] !== null ? (int) $out['output_tokens'] : null;

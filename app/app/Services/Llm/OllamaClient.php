@@ -14,9 +14,12 @@ class OllamaClient
 
     /**
      * @param  array<int, array{role: string, content: string}>  $messages
+     * @param  string|null  $format  Ollama `format` (e.g. "json") for grammar-constrained
+     *                               decoding — forces structured roles to emit valid JSON
+     *                               instead of prose / a stray [BOSSKUAI] indicator header.
      * @return array{text: string, input_tokens: int|null, output_tokens: int|null}
      */
-    public function chatWithUsage(string $model, array $messages, ?float $temperature = 0.2, ?int $maxTokens = null): array
+    public function chatWithUsage(string $model, array $messages, ?float $temperature = 0.2, ?int $maxTokens = null, ?string $format = null): array
     {
         $url = rtrim($this->baseUrl, '/').'/api/chat';
 
@@ -25,14 +28,19 @@ class OllamaClient
             $http = $http->withToken($this->apiKey);
         }
 
-        // stream:true → Ollama sends NDJSON chunks; Guzzle stream option buffers at socket
-        // level so very large completions don't load into memory as one giant string.
-        $res = $http->withOptions(['stream' => true])->post($url, self::withKeepAlive([
+        $payload = [
             'model' => $model,
             'messages' => self::sanitizeMessages($messages),
             'stream' => true,
             'options' => self::buildOptions($temperature, $maxTokens),
-        ]));
+        ];
+        if ($format !== null && $format !== '') {
+            $payload['format'] = $format;
+        }
+
+        // stream:true → Ollama sends NDJSON chunks; Guzzle stream option buffers at socket
+        // level so very large completions don't load into memory as one giant string.
+        $res = $http->withOptions(['stream' => true])->post($url, self::withThink(self::withKeepAlive($payload)));
 
         try {
             $res->throw();
@@ -51,11 +59,18 @@ class OllamaClient
      * Each line is a JSON object; content tokens accumulate and the final `done:true` line
      * carries `prompt_eval_count` / `eval_count` (usage stats).
      *
+     * Thinking models (kimi, deepseek, glm, qwen reasoning variants) stream their answer in
+     * `message.thinking` and may leave `message.content` empty — which the pipeline would
+     * otherwise treat as an `empty_response` and waste a fallback call. When content is empty
+     * we fall back to the accumulated thinking text; downstream JSON parsing still extracts
+     * the embedded object.
+     *
      * @return array{text: string, input_tokens: int|null, output_tokens: int|null}
      */
     private static function parseStreamedNdjson(string $rawBody): array
     {
-        $text = '';
+        $content = '';
+        $thinking = '';
         $inputTokens = null;
         $outputTokens = null;
 
@@ -69,7 +84,8 @@ class OllamaClient
             if (! is_array($chunk)) {
                 continue;
             }
-            $text .= (string) data_get($chunk, 'message.content', '');
+            $content .= (string) data_get($chunk, 'message.content', '');
+            $thinking .= (string) data_get($chunk, 'message.thinking', data_get($chunk, 'message.reasoning', ''));
             if ($chunk['done'] ?? false) {
                 $inputTokens = isset($chunk['prompt_eval_count']) ? (int) $chunk['prompt_eval_count'] : null;
                 $outputTokens = isset($chunk['eval_count']) ? (int) $chunk['eval_count'] : null;
@@ -77,7 +93,7 @@ class OllamaClient
         }
 
         return [
-            'text' => $text,
+            'text' => trim($content) !== '' ? $content : $thinking,
             'input_tokens' => $inputTokens,
             'output_tokens' => $outputTokens,
         ];
@@ -225,6 +241,25 @@ class OllamaClient
             return $payload;
         }
         $payload['keep_alive'] = is_numeric($keepAlive) ? (int) $keepAlive : (string) $keepAlive;
+
+        return $payload;
+    }
+
+    /**
+     * Optionally set the top-level `think` flag for thinking-capable models. Default (null)
+     * omits the param so Ollama keeps its per-model default. Set BOSSKU_OLLAMA_THINK=false to
+     * suppress chain-of-thought generation — lower latency and output tokens for roles that
+     * only need the final structured answer (e.g. the orchestrator/router).
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    protected static function withThink(array $payload): array
+    {
+        $think = config('bossku.ollama_think');
+        if (is_bool($think)) {
+            $payload['think'] = $think;
+        }
 
         return $payload;
     }

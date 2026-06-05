@@ -28,6 +28,8 @@ use App\Services\Project\ProjectCommandRunner;
 use App\Services\Project\ProjectFileDiscovery;
 use App\Services\Project\ProjectPathResolver;
 use App\Services\Project\ProjectService;
+use App\Services\Project\RunExecutionContext;
+use App\Services\Workspace\WorktreeManager;
 use App\Services\Specialists\SpecialistAgentDraftingService;
 use App\Services\Specialists\SpecialistAgentRouter;
 use App\Services\Specialists\SpecialistAgentRunner;
@@ -45,6 +47,7 @@ class OrchestratorService
         protected MemoryService $memory,
         protected SkillRouterService $router,
         protected PlannerService $planner,
+        protected DesignerService $designer,
         protected ClarificationService $clarification,
         protected ExecutorService $executor,
         protected AuditorService $auditor,
@@ -74,6 +77,8 @@ class OrchestratorService
         protected SpecialistAgentDraftingService $specialistDrafting,
         protected ResumeIntentClassifier $resumeIntentClassifier,
         protected CodebaseIndexService $codeIndex,
+        protected RunExecutionContext $runExecution,
+        protected WorktreeManager $worktrees,
     ) {}
 
     /**
@@ -108,11 +113,64 @@ class OrchestratorService
             $runMeta['active_project_name'] = $activeProject->name;
         }
 
-        $run = Run::query()->create([
-            'prompt' => $userPrompt,
-            'status' => 'running',
-            'metadata' => $runMeta,
-        ]);
+        $runKind = is_string($options['run_kind'] ?? null) ? (string) $options['run_kind'] : 'standard';
+        $parentRunId = is_string($options['parent_run_id'] ?? null) ? (string) $options['parent_run_id'] : null;
+        $supervisorSlot = isset($options['supervisor_slot']) ? (int) $options['supervisor_slot'] : null;
+        $existingRunId = is_string($options['existing_run_id'] ?? null) ? (string) $options['existing_run_id'] : null;
+
+        if ($existingRunId !== '') {
+            $run = Run::query()->findOrFail($existingRunId);
+            $run->update([
+                'prompt' => $userPrompt,
+                'status' => 'running',
+                'metadata' => array_merge(is_array($run->metadata) ? $run->metadata : [], $runMeta),
+                'run_kind' => $runKind,
+                'parent_run_id' => $parentRunId ?: $run->parent_run_id,
+                'supervisor_slot' => $supervisorSlot ?? $run->supervisor_slot,
+            ]);
+        } else {
+            $run = Run::query()->create([
+                'prompt' => $userPrompt,
+                'status' => 'running',
+                'metadata' => $runMeta,
+                'run_kind' => $runKind,
+                'parent_run_id' => $parentRunId,
+                'supervisor_slot' => $supervisorSlot,
+            ]);
+        }
+
+        $this->runExecution->bind((string) $run->getKey());
+
+        try {
+
+        if ($this->shouldProvisionWorktree($run, $options)) {
+            try {
+                $workspace = $this->worktrees->provisionForRun($run, $activeProject, is_array($options['workspace_intent'] ?? null) ? $options['workspace_intent'] : []);
+                $this->emit($emit, $this->basePayload($run, 'workspace_ready', [
+                    'status' => 'success',
+                    'summary' => 'Isolated worktree ready.',
+                    'artifacts' => [
+                        'branch_name' => $workspace->branch_name,
+                        'worktree_path' => $workspace->worktree_path,
+                    ],
+                ]));
+            } catch (\Throwable $e) {
+                if ($this->mustFailOnWorktreeError($runKind, $options)) {
+                    $run->update(['status' => 'failed']);
+                    $this->emit($emit, $this->basePayload($run, 'workspace_failed', [
+                        'status' => 'fail',
+                        'summary' => 'Worktree provisioning failed.',
+                        'message' => $e->getMessage(),
+                    ]));
+                    throw new \RuntimeException('Worktree provisioning failed: '.$e->getMessage(), 0, $e);
+                }
+                $this->emit($emit, $this->basePayload($run, 'workspace_failed', [
+                    'status' => 'warning',
+                    'summary' => 'Worktree provisioning failed; using project root.',
+                    'message' => $e->getMessage(),
+                ]));
+            }
+        }
 
         $this->emit($emit, $this->basePayload($run, 'run_started', [
             'status' => 'success',
@@ -194,7 +252,7 @@ class OrchestratorService
         if ($this->settings->memoryStorageEnabled()) {
             $t0 = microtime(true);
             $skillTag = is_string($modelRoute['skill'] ?? null) && $modelRoute['skill'] !== '' ? [$modelRoute['skill']] : [];
-            $memories = $this->memory->search($agentPrompt, $this->settings->maxMemoryResults(), $skillTag);
+            $memories = $this->memory->searchForRun($run, $agentPrompt, $this->settings->maxMemoryResults(), $skillTag);
             $memPayload = $memories->map(fn (Memory $m) => [
                 'id' => $m->id,
                 'summary' => $m->human_summary ?: Str::limit($m->content, 200),
@@ -287,6 +345,9 @@ class OrchestratorService
             $tokenAcc,
             $tRun,
         );
+        } finally {
+            $this->runExecution->clear();
+        }
     }
 
     /**
@@ -671,6 +732,62 @@ class OrchestratorService
 
         $execProfileKey = (string) ($plan['executor_profile'] ?? $modelRoute['executor_profile'] ?? 'default');
         $plan = $this->budgetGuard->narrowPlan($plan, $execProfileKey);
+
+        if ($this->designer->shouldRun($plan, $execProfileKey)) {
+            $designStart = microtime(true);
+            $this->emit($emit, $this->basePayload($run, 'designer_step_started', [
+                'status' => 'running',
+                'agent' => 'designer',
+                'model_role' => 'reasoning',
+                'from_agent' => 'orchestrator',
+                'to_agent' => 'designer',
+                'summary' => 'Designer is producing UI/UX spec before implementation.',
+                'message' => 'Design phase started for frontend work.',
+            ]));
+            $designResult = $this->designer->design($agentPrompt, $plan, $modelRoute, $run->id);
+            $designMs = (int) round((microtime(true) - $designStart) * 1000);
+            $designTokens = $this->estimateTokens(json_encode($designResult) ?: '');
+            $designModel = (string) ($designResult['_designer_model'] ?? $modelsResolved['orchestrator'] ?? '');
+            if (($designResult['error'] ?? false) !== true) {
+                $plan['design_spec'] = $designResult;
+            }
+            $this->logStep(
+                $run,
+                2,
+                'designer',
+                $designModel,
+                LlmTelemetry::resolveStepProvider($designResult),
+                null,
+                ($designResult['error'] ?? false) === true ? 'failed' : 'success',
+                $agentPrompt,
+                json_encode(['plan_summary' => $plan['summary'] ?? '']),
+                json_encode($designResult),
+                null,
+                null,
+                null,
+                $designMs,
+                $designTokens,
+                ($designResult['error'] ?? false) === true ? (string) ($designResult['message'] ?? 'design failed') : null,
+                $this->events->metadata(
+                    'designer',
+                    'reasoning',
+                    StringCoercion::toString($designResult['design_summary'] ?? null, 'Design spec ready.'),
+                    StringCoercion::toString($designResult['handoff_message'] ?? null, 'Handing off to Executor.'),
+                    ['design_spec' => $designResult],
+                    'orchestrator',
+                    'executor'
+                )
+            );
+            $tokenAcc += $designTokens;
+            $modelsResolved['designer'] = $designModel;
+            $this->emit($emit, $this->basePayload($run, 'designer_step_done', [
+                'status' => ($designResult['error'] ?? false) === true ? 'failed' : 'success',
+                'agent' => 'designer',
+                'model' => $designModel,
+                'latency_ms' => $designMs,
+                'summary' => StringCoercion::toString($designResult['design_summary'] ?? null, 'Design phase complete.'),
+            ]));
+        }
 
         if (RepoTaskDetector::requiresRepositoryAccess($userPrompt)) {
             $auditMode = RepoTaskDetector::isFullRepositoryAudit($userPrompt) ? 'full' : 'repo';
@@ -1470,7 +1587,7 @@ class OrchestratorService
         ]);
 
         $memoryMode = (string) ($modelRoute['memory_mode'] ?? 'read_only');
-        $this->writeMemoryIfNeeded($memoryMode, $prompt, $modelRoute, $modelsResolved, ['patch_summary' => Str::limit($body, 2000)], [], null, null);
+        $this->writeMemoryIfNeeded($memoryMode, $prompt, $modelRoute, $modelsResolved, ['patch_summary' => Str::limit($body, 2000)], [], null, null, $run);
         $learningResult = $this->userSelfLearning->processAfterRun(
             $run,
             $prompt,
@@ -1573,10 +1690,12 @@ class OrchestratorService
             if ($prompt === '') {
                 continue;
             }
+            $recommended = trim((string) ($item['recommended'] ?? ''));
             $questions[] = [
                 'id' => (string) ($item['id'] ?? 'pq-'.($idx + 1)),
                 'prompt' => $prompt,
                 'why_it_matters' => trim((string) ($item['why'] ?? $item['why_it_matters'] ?? '')),
+                'recommended' => $recommended !== '' ? $recommended : 'a',
                 'options' => $this->clarification->normalizeOptionsToThree([], 'planner_questions'),
                 'allow_free_text' => true,
             ];
@@ -1901,7 +2020,10 @@ class OrchestratorService
             return $execResult;
         }
 
-        $outcome = $this->projectCommands->runAllowedProjectCommands($commandsRun);
+        $outcome = $this->projectCommands->runAllowedProjectCommands(
+            $commandsRun,
+            $this->paths->executionContext(),
+        );
         $execResult['_commands_executed'] = $outcome['executed'];
         $execResult['git_status_after'] = $outcome['post_git_status'];
 
@@ -2144,7 +2266,8 @@ class OrchestratorService
         array $execResult,
         array $lastAudit,
         ?array $lastSecurity,
-        ?array $lastFinal
+        ?array $lastFinal,
+        ?Run $run = null,
     ): void {
         if (! $this->settings->memoryStorageEnabled()) {
             return;
@@ -2167,6 +2290,10 @@ class OrchestratorService
             'ts' => now()->toIso8601String(),
         ];
 
+        $scopePath = $run !== null
+            ? app(\App\Services\BosskuAi\MemoryWorktreeScope::class)->pathForRun($run)
+            : null;
+
         try {
             $this->memory->store(
                 json_encode($summary, JSON_THROW_ON_ERROR),
@@ -2174,7 +2301,8 @@ class OrchestratorService
                 ['routing' => true],
                 Str::limit($prompt, 200),
                 ['bosskuai', 'routing'],
-                'orchestrator'
+                'orchestrator',
+                scopeWorktreePath: $scopePath,
             );
         } catch (\Throwable) {
             //
@@ -2273,7 +2401,8 @@ class OrchestratorService
             $executorOutputs[0] ?? ['patch_summary' => ''],
             $lastAudit,
             $lastSecurity,
-            $lastFinal
+            $lastFinal,
+            $run,
         );
 
         $storedConversation = is_array($run->metadata['conversation'] ?? null)
@@ -2363,6 +2492,10 @@ class OrchestratorService
 
         $this->obsidianSync->sync($run, $modelRoute, $finalOutput);
 
+        if ($run->run_kind === 'child' || $this->runExecution->workspaceForRun((string) $run->getKey()) !== null) {
+            \App\Jobs\CleanupRunWorktreeJob::dispatch((string) $run->getKey());
+        }
+
         $skillsUsed = collect($plan['selected_skills'] ?? [])
             ->filter(fn ($s) => is_array($s))
             ->map(fn ($s) => $s['name'] ?? null)
@@ -2374,6 +2507,8 @@ class OrchestratorService
             $skillsUsed = array_values(array_filter($skillsUsed));
         }
         $rulesUsed = collect($routerCtx['rules'] ?? [])->map(fn ($r) => $r['name'] ?? '')->filter()->values()->all();
+
+        $this->runExecution->clear();
 
         return [
             'run_id' => $run->id,
@@ -3109,5 +3244,46 @@ class OrchestratorService
         }
 
         return implode("\n\n", $lines);
+    }
+
+    /**
+     * @param  array<string, mixed>  $options
+     */
+    protected function shouldProvisionWorktree(Run $run, array $options): bool
+    {
+        if ($this->runExecution->workspaceForRun((string) $run->getKey()) !== null) {
+            return false;
+        }
+
+        if (($options['use_worktree'] ?? null) === false) {
+            return false;
+        }
+
+        if (($options['use_worktree'] ?? null) === true) {
+            return true;
+        }
+
+        if ($run->run_kind === 'child') {
+            return true;
+        }
+
+        return (bool) config('bossku.worktree_auto_provision', false);
+    }
+
+    protected function mustFailOnWorktreeError(string $runKind, array $options): bool
+    {
+        if (($options['use_worktree'] ?? null) === false) {
+            return false;
+        }
+
+        if ($runKind === 'child') {
+            return true;
+        }
+
+        if (($options['use_worktree'] ?? null) === true) {
+            return (bool) config('bossku.worktree_fail_closed', true);
+        }
+
+        return false;
     }
 }

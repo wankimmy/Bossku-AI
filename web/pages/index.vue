@@ -1141,13 +1141,6 @@ watch(showApprovalModal, async (open) => {
             <template #plan>
               <PlanOverview :plan="artifacts.plan" />
             </template>
-            <template #chat-plan>
-              <PlanOverview
-                v-if="artifacts.plan?.goal"
-                :plan="artifacts.plan"
-                compact
-              />
-            </template>
             <template #changes>
               <ChangeTrackerPanel
                 :files-read="artifacts.filesRead"

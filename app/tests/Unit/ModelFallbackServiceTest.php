@@ -48,10 +48,102 @@ class ModelFallbackServiceTest extends TestCase
         );
 
         $guard = $capturedMessages[array_key_last($capturedMessages)] ?? [];
+        $content = (string) ($guard['content'] ?? '');
         $this->assertSame('system', $guard['role'] ?? null);
-        $this->assertStringContainsString('exactly one JSON object', (string) ($guard['content'] ?? ''));
-        $this->assertStringContainsString('no markdown fences', (string) ($guard['content'] ?? ''));
-        $this->assertStringContainsString('no [BOSSKUAI] header', (string) ($guard['content'] ?? ''));
+        $this->assertStringContainsString('exactly one JSON object', $content);
+        $this->assertStringContainsString('markdown fences', $content);
+        $this->assertStringContainsString('[BOSSKUAI]', $content);
+    }
+
+    #[Test]
+    public function structured_calls_request_json_mode_from_the_gateway(): void
+    {
+        $jsonMode = null;
+
+        $gateway = $this->createMock(LlmGateway::class);
+        $gateway->expects($this->once())
+            ->method('chat')
+            ->willReturnCallback(function (
+                string $model,
+                array $messages,
+                ?float $temperature = 0.2,
+                ?int $maxTokensAnthropic = null,
+                ?string $forceProvider = null,
+                string $role = 'coder',
+                ?string $runId = null,
+                ?string $runStepId = null,
+                array $metadata = [],
+                bool $jm = false,
+            ) use (&$jsonMode): array {
+                $jsonMode = $jm;
+
+                return [
+                    'text' => '{"status":"success"}',
+                    'provider' => 'ollama',
+                    'input_tokens' => 2,
+                    'output_tokens' => 1,
+                    'model_logical' => $model,
+                    'model_resolved' => $model.':cloud',
+                ];
+            });
+
+        /** @var LlmGateway $gateway */
+        $svc = new ModelFallbackService($gateway, app(AgentPersonaService::class));
+        $svc->chatWithFallbacks(
+            ['structured-model'],
+            [['role' => 'user', 'content' => 'Return status.']],
+            0.1,
+            0,
+            'test_role',
+            fn (mixed $j): bool => is_array($j) && isset($j['status'])
+        );
+
+        $this->assertTrue($jsonMode, 'Structured-output calls must request json mode (Ollama format:json).');
+    }
+
+    #[Test]
+    public function unstructured_calls_do_not_request_json_mode(): void
+    {
+        $jsonMode = null;
+
+        $gateway = $this->createMock(LlmGateway::class);
+        $gateway->expects($this->once())
+            ->method('chat')
+            ->willReturnCallback(function (
+                string $model,
+                array $messages,
+                ?float $temperature = 0.2,
+                ?int $maxTokensAnthropic = null,
+                ?string $forceProvider = null,
+                string $role = 'coder',
+                ?string $runId = null,
+                ?string $runStepId = null,
+                array $metadata = [],
+                bool $jm = false,
+            ) use (&$jsonMode): array {
+                $jsonMode = $jm;
+
+                return [
+                    'text' => 'Free-form prose reply.',
+                    'provider' => 'ollama',
+                    'input_tokens' => 2,
+                    'output_tokens' => 1,
+                    'model_logical' => $model,
+                    'model_resolved' => $model.':cloud',
+                ];
+            });
+
+        /** @var LlmGateway $gateway */
+        $svc = new ModelFallbackService($gateway, app(AgentPersonaService::class));
+        $svc->chatWithFallbacks(
+            ['prose-model'],
+            [['role' => 'user', 'content' => 'Say hi.']],
+            0.1,
+            0,
+            'test_role',
+        );
+
+        $this->assertFalse($jsonMode, 'Non-structured calls must not force json mode.');
     }
 
     #[Test]

@@ -50,7 +50,7 @@ class RunController extends Controller
             return $this->runNotFoundResponse($id);
         }
 
-        $run->load('steps');
+        $run->load(['steps', 'workspace', 'childRuns.workspace', 'cliSessions', 'parentRun', 'reactionStates']);
 
         return response()->json($run);
     }

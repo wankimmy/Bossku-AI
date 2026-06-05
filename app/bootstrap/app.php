@@ -21,6 +21,15 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withSchedule(function (Schedule $schedule) {
         $schedule->command('bossku:process-learning-events')->everyMinute();
+        $pollJob = $schedule->job(new \App\Jobs\PollScmReactionsJob);
+        $pollSeconds = max(60, (int) config('bossku.reactions_poll_interval_seconds', 60));
+        if ($pollSeconds <= 60) {
+            $pollJob->everyMinute();
+        } elseif ($pollSeconds <= 120) {
+            $pollJob->everyTwoMinutes();
+        } else {
+            $pollJob->everyFiveMinutes();
+        }
     })
     ->withExceptions(function (Exceptions $exceptions) {
         // SSE clients send Accept: text/event-stream; still return JSON errors (not 302 redirects).

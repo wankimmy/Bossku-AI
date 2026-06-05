@@ -35,8 +35,19 @@ use App\Services\Orchestrator\PlannerService;
 use App\Services\Orchestrator\SecurityAuditorService;
 use App\Services\Orchestrator\WriterService;
 use App\Services\Data\DataExplorerService;
+use App\Services\Learning\FeedbackReportService;
+use App\Services\Orchestrator\RunSupervisorService;
+use App\Services\Orchestrator\SupervisorMergeCoordinator;
+use App\Services\BosskuAi\MemoryWorktreeScope;
 use App\Services\Project\ProjectCommandRunner;
+use App\Services\Project\RunExecutionContext;
+use App\Services\Providers\CliSessionService;
+use App\Services\Providers\ProviderCliRegistry;
+use App\Services\Scm\GithubScmService;
+use App\Services\Scm\ReactionEngine;
 use App\Services\Tools\ToolRegistry;
+use App\Services\Workspace\ByoiWorkspaceProvisioner;
+use App\Services\Workspace\WorktreeManager;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -103,6 +114,17 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(DirectAnswerService::class);
         $this->app->singleton(WriterService::class);
         $this->app->singleton(ToolRegistry::class);
+        $this->app->singleton(RunExecutionContext::class);
+        $this->app->singleton(WorktreeManager::class);
+        $this->app->singleton(ByoiWorkspaceProvisioner::class);
+        $this->app->singleton(MemoryWorktreeScope::class);
+        $this->app->singleton(SupervisorMergeCoordinator::class);
+        $this->app->singleton(RunSupervisorService::class);
+        $this->app->singleton(ProviderCliRegistry::class);
+        $this->app->singleton(CliSessionService::class);
+        $this->app->singleton(GithubScmService::class);
+        $this->app->singleton(ReactionEngine::class);
+        $this->app->singleton(FeedbackReportService::class);
         $this->app->singleton(OrchestratorService::class);
         $this->app->singleton(VisionService::class);
         $this->app->singleton(AttachmentIngestionService::class);

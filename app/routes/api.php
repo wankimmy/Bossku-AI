@@ -24,8 +24,13 @@ use App\Http\Controllers\Api\ProjectFilesController;
 use App\Http\Controllers\Api\ProjectRegistryController;
 use App\Http\Controllers\Api\PluginController;
 use App\Http\Controllers\Api\ProviderController;
+use App\Http\Controllers\Api\AgentHookController;
+use App\Http\Controllers\Api\FeedbackReportController;
+use App\Http\Controllers\Api\ProviderCliController;
+use App\Http\Controllers\Api\RemoteExecutionController;
 use App\Http\Controllers\Api\RunActionController;
 use App\Http\Controllers\Api\RunController;
+use App\Http\Controllers\Api\RunSupervisorController;
 use App\Http\Controllers\Api\RuleController;
 use App\Http\Controllers\Api\CodexOAuthController;
 use App\Http\Controllers\Api\InferenceCatalogController;
@@ -43,6 +48,7 @@ use Illuminate\Support\Facades\Route;
 Route::get('/health/ollama', OllamaHealthController::class);
 Route::get('/oauth/codex/callback', [CodexOAuthController::class, 'callback']);
 Route::get('/oauth/codex/authorize', [CodexOAuthController::class, 'authorize']);
+Route::post('/hooks/agent', [AgentHookController::class, 'ingest'])->middleware('throttle:60,1');
 
 Route::middleware('bossku.api')->group(function () {
     $runsRate = max(1, (int) config('bossku.runs_rate_per_minute', 60));
@@ -71,6 +77,21 @@ Route::middleware('bossku.api')->group(function () {
     Route::get('/runs/{id}/audit', [RunController::class, 'auditData']);
     Route::get('/runs/{id}/usage', [RunController::class, 'usageData']);
     Route::get('/runs/{id}/feedback', [RunController::class, 'feedbackData']);
+
+    Route::post('/runs/supervisor/spawn', [RunSupervisorController::class, 'spawn']);
+    Route::get('/runs/{id}/supervisor', [RunSupervisorController::class, 'status']);
+    Route::get('/runs/{runId}/scm', [\App\Http\Controllers\Api\RunScmController::class, 'show']);
+    Route::post('/runs/{runId}/scm', [\App\Http\Controllers\Api\RunScmController::class, 'attach']);
+    Route::post('/runs/{runId}/cli-session', [ProviderCliController::class, 'start']);
+    Route::get('/runs/{runId}/cli-session/{sessionId}', [ProviderCliController::class, 'show']);
+    Route::get('/providers/cli', [ProviderCliController::class, 'index']);
+    Route::get('/remote-execution/status', [RemoteExecutionController::class, 'sshStatus']);
+    Route::post('/runs/{runId}/byoi-workspace', [RemoteExecutionController::class, 'attachByoi']);
+    Route::post('/remote-execution/ssh/preview', [RemoteExecutionController::class, 'previewSshCommand']);
+
+    Route::get('/feedback-reports', [FeedbackReportController::class, 'index']);
+    Route::post('/feedback-reports', [FeedbackReportController::class, 'store']);
+    Route::post('/feedback-reports/{id}/verify', [FeedbackReportController::class, 'verify']);
 
     Route::post('/runs/{runId}/pause', [RunActionController::class, 'pause']);
     Route::post('/runs/{runId}/resume', [RunActionController::class, 'resume']);

@@ -1,3 +1,10 @@
+---
+name: auditor
+description: Adversarial verification of executor output against the plan and evidence.
+tools: ["Read", "Grep", "Glob", "log"]
+model: review
+---
+
 # Auditor Agent
 
 Use after substantive code, config, data, or prompt changes.

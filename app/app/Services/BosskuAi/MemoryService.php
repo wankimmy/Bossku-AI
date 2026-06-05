@@ -3,6 +3,7 @@
 namespace App\Services\BosskuAi;
 
 use App\Models\BosskuAi\Memory;
+use App\Models\BosskuAi\Run;
 use App\Services\Llm\OllamaClient;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -13,7 +14,8 @@ class MemoryService
     public function __construct(
         protected OllamaClient $ollama,
         protected LlmGateway $llmGateway,
-        protected RuntimeSettings $settings
+        protected RuntimeSettings $settings,
+        protected MemoryWorktreeScope $worktreeScope,
     ) {}
 
     protected function databaseDriver(): string
@@ -42,7 +44,11 @@ class MemoryService
         ?string $source = null,
         float $importance = 0.65,
         float $confidence = 0.72,
+        ?string $scopeWorktreePath = null,
     ): Memory {
+        if ((bool) config('bossku.memory_worktree_scoping', true)) {
+            $metadata = $this->worktreeScope->applyToMetadata($metadata, $scopeWorktreePath);
+        }
         $embedding = null;
         if ($this->memoryOllamaEnabled()) {
             try {
@@ -105,6 +111,26 @@ class MemoryService
         return $contextTags !== []
             ? $this->boostByTags($results, $contextTags)
             : $results;
+    }
+
+    /**
+     * Semantic search with worktree isolation: excludes memories scoped to other worktrees.
+     *
+     * @param  list<string>  $contextTags
+     * @return Collection<int, Memory>
+     */
+    public function searchForRun(Run $run, string $query, ?int $topK = null, array $contextTags = []): Collection
+    {
+        $limit = $topK ?? $this->settings->maxMemoryResults();
+        if (! (bool) config('bossku.memory_worktree_scoping', true)) {
+            return $this->search($query, $limit, $contextTags);
+        }
+
+        $fetchLimit = min($limit * 3, 50);
+        $scopedPath = $this->worktreeScope->pathForRun($run);
+        $results = $this->search($query, $fetchLimit, $contextTags);
+
+        return $this->worktreeScope->filter($results, $scopedPath)->take($limit)->values();
     }
 
     /**

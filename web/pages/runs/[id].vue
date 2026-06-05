@@ -6,7 +6,11 @@ definePageMeta({ layout: 'default' })
 const route = useRoute()
 const api = useApi()
 
-const { data, pending } = await useFetch<Record<string, unknown>>(() => apiUrl(`/runs/${route.params.id}`), { server: false })
+const { data, pending, refresh } = await useFetch<Record<string, unknown>>(() => apiUrl(`/runs/${route.params.id}`), { server: false })
+
+async function refreshRun() {
+  await refresh()
+}
 
 type Tab =
   | 'overview'
@@ -112,6 +116,9 @@ const signalEmoji = (s: string) => {
 
     <!-- Overview -->
     <section v-if="tab === 'overview'" class="grid gap-4 lg:grid-cols-2">
+      <SupervisorRunPanel class="lg:col-span-2" :run="data" />
+      <CliSessionsPanel class="lg:col-span-2" :run="data" @refresh="refreshRun" />
+      <ScmReactionsPanel class="lg:col-span-2" :run="data" @refresh="refreshRun" />
       <RoutingDashboard :metadata="metadata" />
       <FinalResultPanel :result="artifacts.finalResult" />
       <AgentHandoffFlow class="lg:col-span-2" :nodes="artifacts.handoffNodes" />

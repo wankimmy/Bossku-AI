@@ -102,6 +102,25 @@ class LearningEventProcessor
             return false;
         }
 
-        return (float) ($event->confidence ?? 0) >= $this->settings->learningAutoPromoteMinConfidence();
+        if ((float) ($event->confidence ?? 0) < $this->settings->learningAutoPromoteMinConfidence()) {
+            return false;
+        }
+
+        if ((bool) config('bossku.learning_require_verification', true)) {
+            $evidence = is_array($event->evidence) ? $event->evidence : [];
+            if (isset($evidence['feedback_report_id'])) {
+                $report = \App\Models\BosskuAi\FeedbackReport::query()->find($evidence['feedback_report_id']);
+
+                return $report !== null && $report->verified;
+            }
+
+            if (! empty($evidence['verification_passed'])) {
+                return true;
+            }
+
+            return false;
+        }
+
+        return true;
     }
 }

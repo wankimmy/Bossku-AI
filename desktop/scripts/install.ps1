@@ -8,8 +8,31 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+# Windows PowerShell 5.1 defaults to TLS 1.0/1.1, which the download hosts reject — force TLS 1.2.
+try {
+    [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+} catch {}
+
 function Write-ProgressLine([string]$Message) {
     Write-Host "BOSSKU: $Message"
+}
+
+# Download a file, trying each URL in turn. PHP for Windows moves superseded patch
+# releases from /releases/ to /releases/archives/, so a pinned version 404s once a
+# newer patch ships — the archive URL is the fallback.
+function Get-RemoteFile([string[]]$Urls, [string]$OutFile) {
+    $lastErr = $null
+    foreach ($u in $Urls) {
+        try {
+            Write-ProgressLine "Downloading $u"
+            Invoke-WebRequest -Uri $u -OutFile $OutFile -UseBasicParsing
+            if (Test-Path $OutFile) { return }
+        } catch {
+            $lastErr = $_
+            Write-ProgressLine "Source failed ($($_.Exception.Message)); trying next..."
+        }
+    }
+    throw "All download sources failed for $OutFile. Last error: $(if ($lastErr) { $lastErr.Exception.Message } else { 'unknown' })"
 }
 
 $RuntimeDir = Join-Path $BosskuHome 'runtime'
@@ -41,16 +64,24 @@ function Ensure-Php {
     }
     Write-ProgressLine "Downloading PHP $PhpVersion..."
     $zip = Join-Path $env:TEMP "bossku-php-$PhpVersion.zip"
-    $url = "https://windows.php.net/downloads/releases/php-$PhpVersion-Win32-vs16-x64.zip"
-    Invoke-WebRequest -Uri $url -OutFile $zip -UseBasicParsing
+    Get-RemoteFile @(
+        "https://windows.php.net/downloads/releases/php-$PhpVersion-Win32-vs16-x64.zip",
+        "https://windows.php.net/downloads/releases/archives/php-$PhpVersion-Win32-vs16-x64.zip"
+    ) $zip
     Expand-Zip $zip (Join-Path $RuntimeDir 'php-extract')
-    $extracted = Get-ChildItem (Join-Path $RuntimeDir 'php-extract') -Directory | Select-Object -First 1
-    if ($extracted) {
-        Move-Item -Force $extracted.FullName $PhpDir
+    $extractRoot = Join-Path $RuntimeDir 'php-extract'
+    # PHP's Windows zip extracts php.exe, php.ini-development and ext\ directly at the root
+    # (no wrapper folder, unlike Node's zip). Only descend into a nested dir if php.exe
+    # isn't at the root — otherwise we'd wrongly move just the ext\ subfolder.
+    if (Test-Path $PhpDir) { Remove-Item -Recurse -Force $PhpDir }
+    if (Test-Path (Join-Path $extractRoot 'php.exe')) {
+        Move-Item -Force $extractRoot $PhpDir
     } else {
-        Move-Item -Force (Join-Path $RuntimeDir 'php-extract\*') $PhpDir
+        $inner = Get-ChildItem $extractRoot -Directory | Where-Object { Test-Path (Join-Path $_.FullName 'php.exe') } | Select-Object -First 1
+        if (-not $inner) { throw 'php.exe not found in extracted PHP archive' }
+        Move-Item -Force $inner.FullName $PhpDir
     }
-    Remove-Item -Recurse -Force (Join-Path $RuntimeDir 'php-extract') -ErrorAction SilentlyContinue
+    Remove-Item -Recurse -Force $extractRoot -ErrorAction SilentlyContinue
   Remove-Item $zip -Force -ErrorAction SilentlyContinue
     # Enable extensions Laravel needs.
     $ini = Join-Path $PhpDir 'php.ini'
@@ -66,6 +97,13 @@ function Ensure-Php {
         'extension=zip'
     )
     Add-Content -Path $ini -Value ($ext -join "`n")
+    # PHP for Windows ships no CA bundle; without one, curl/openssl reject every HTTPS cert
+    # ("self-signed certificate in certificate chain") — breaking composer and the app's
+    # Ollama Cloud calls. Fetch Mozilla's bundle and point php.ini at it.
+    $cacert = Join-Path $PhpDir 'cacert.pem'
+    Get-RemoteFile @('https://curl.se/ca/cacert.pem') $cacert
+    Add-Content -Path $ini -Value ('curl.cainfo = "' + $cacert + '"')
+    Add-Content -Path $ini -Value ('openssl.cafile = "' + $cacert + '"')
     return $phpExe
 }
 
@@ -77,8 +115,7 @@ function Ensure-Node {
     }
     Write-ProgressLine "Downloading Node.js $NodeVersion..."
     $zip = Join-Path $env:TEMP "bossku-node-$NodeVersion.zip"
-    $url = "https://nodejs.org/dist/v$NodeVersion/node-v$NodeVersion-win-x64.zip"
-    Invoke-WebRequest -Uri $url -OutFile $zip -UseBasicParsing
+    Get-RemoteFile @("https://nodejs.org/dist/v$NodeVersion/node-v$NodeVersion-win-x64.zip") $zip
     Expand-Zip $zip (Join-Path $RuntimeDir 'node-extract')
     $inner = Get-ChildItem (Join-Path $RuntimeDir 'node-extract') -Directory | Where-Object { $_.Name -like 'node-v*' } | Select-Object -First 1
     if ($inner) { Move-Item -Force $inner.FullName $NodeDir }
@@ -95,8 +132,7 @@ function Ensure-Git {
     if (Test-Path $bash) { return $bash }
     Write-ProgressLine "Downloading Portable Git..."
     $zip = Join-Path $env:TEMP 'bossku-mingit.zip'
-    $url = "https://github.com/git-for-windows/git/releases/download/v$MinGitVersion.windows.1/MinGit-$MinGitVersion-64-bit.zip"
-    Invoke-WebRequest -Uri $url -OutFile $zip -UseBasicParsing
+    Get-RemoteFile @("https://github.com/git-for-windows/git/releases/download/v$MinGitVersion.windows.1/MinGit-$MinGitVersion-64-bit.zip") $zip
     Expand-Zip $zip $GitDir
     Remove-Item $zip -Force -ErrorAction SilentlyContinue
     if (-not (Test-Path $bash)) {
@@ -109,7 +145,7 @@ function Ensure-Git {
 function Ensure-Composer {
     if (-not (Test-Path $ComposerPhar)) {
         Write-ProgressLine 'Downloading Composer...'
-        Invoke-WebRequest -Uri 'https://getcomposer.org/download/latest-stable/composer.phar' -OutFile $ComposerPhar -UseBasicParsing
+        Get-RemoteFile @('https://getcomposer.org/download/latest-stable/composer.phar') $ComposerPhar
     }
 }
 
@@ -158,7 +194,13 @@ function Invoke-Step([string]$Label, [scriptblock]$Block) {
 Push-Location $AppDir
 try {
     Invoke-Step 'Installing PHP dependencies (composer)' {
-        & $phpExe (Join-Path $BinDir 'composer.phar') install --no-dev --optimize-autoloader --no-interaction --no-progress
+        # Dev deps included on purpose: first-run `db:seed` (DatabaseServiceProvider) needs fakerphp/faker.
+        & $phpExe (Join-Path $BinDir 'composer.phar') install --optimize-autoloader --no-interaction --no-progress
+    }
+    Invoke-Step 'Clearing any stale cached config' {
+        # Belt-and-suspenders: drop a baked config cache so the native .env (file cache/
+        # session, sync queue) wins instead of a Docker config pinned to redis.
+        & $phpExe artisan config:clear
     }
     Invoke-Step 'Generating application key' {
         & $phpExe artisan key:generate --force
@@ -180,11 +222,14 @@ finally {
 Push-Location $WebDir
 try {
     $env:BOSSKU_SKIP_PIXEL_OFFICE_IN_NUXT_BUILD = '1'
+    # npm.cmd is a batch wrapper — invoke it directly. (Passing it to node.exe makes node
+    # try to parse the .cmd as JavaScript: "Unexpected token ':'".)
+    $npmCmd = Join-Path (Split-Path $nodeExe) 'npm.cmd'
     Invoke-Step 'Installing web dependencies (npm)' {
-        & $nodeExe (Join-Path (Split-Path $nodeExe) 'npm.cmd') ci --no-audit --no-fund
+        & $npmCmd ci --no-audit --no-fund
     }
     Invoke-Step 'Building web dashboard (nuxt)' {
-        & $nodeExe (Join-Path (Split-Path $nodeExe) 'npm.cmd') run build
+        & $npmCmd run build
     }
 }
 finally {

@@ -23,4 +23,5 @@ export const SIDEBAR_LINKS: SidebarLink[] = [
   { to: '/feedback', label: '💬 Feedback' },
   { to: '/soul', label: '✨ Soul' },
   { to: '/settings/models', label: '⚙ Settings', tourId: 'nav-settings' },
+  { to: '/settings/orchestrator', label: '🧭 Orchestrator' },
 ]

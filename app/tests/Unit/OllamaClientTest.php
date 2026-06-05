@@ -92,6 +92,90 @@ class OllamaClientTest extends TestCase
     }
 
     #[Test]
+    public function it_sends_format_json_for_structured_calls(): void
+    {
+        $this->fakeChatOk();
+
+        $client = new OllamaClient('http://127.0.0.1:11434');
+        $client->chatWithUsage('kimi-k2.6:cloud', [['role' => 'user', 'content' => 'hi']], 0.2, null, 'json');
+
+        Http::assertSent(fn ($request) => ($request->data()['format'] ?? null) === 'json');
+    }
+
+    #[Test]
+    public function it_omits_format_when_not_requested(): void
+    {
+        $this->fakeChatOk();
+
+        $client = new OllamaClient('http://127.0.0.1:11434');
+        $client->chatWithUsage('kimi-k2.6:cloud', [['role' => 'user', 'content' => 'hi']], 0.2);
+
+        Http::assertSent(fn ($request) => ! array_key_exists('format', $request->data()));
+    }
+
+    #[Test]
+    public function it_reassembles_streamed_ndjson_chunks_and_usage(): void
+    {
+        // Ollama streams one JSON object per line; content accumulates and the final
+        // done:true line carries the usage counts.
+        $ndjson = implode("\n", [
+            json_encode(['message' => ['content' => '{"sta']]),
+            json_encode(['message' => ['content' => 'tus":"ok"}']]),
+            json_encode(['message' => ['content' => ''], 'done' => true, 'prompt_eval_count' => 11, 'eval_count' => 7]),
+        ]);
+        Http::fake(['*/api/chat' => Http::response($ndjson, 200)]);
+
+        $client = new OllamaClient('http://127.0.0.1:11434');
+        $out = $client->chatWithUsage('kimi-k2.6:cloud', [['role' => 'user', 'content' => 'hi']], 0.2);
+
+        $this->assertSame('{"status":"ok"}', $out['text']);
+        $this->assertSame(11, $out['input_tokens']);
+        $this->assertSame(7, $out['output_tokens']);
+    }
+
+    #[Test]
+    public function it_falls_back_to_thinking_when_content_is_empty(): void
+    {
+        // A thinking model that puts its answer in message.thinking and leaves content empty
+        // must not be treated as an empty_response — the thinking text is returned instead.
+        $ndjson = implode("\n", [
+            json_encode(['message' => ['content' => '', 'thinking' => 'Let me reason... ']]),
+            json_encode(['message' => ['content' => '', 'thinking' => '{"status":"ok"}'], 'done' => true, 'prompt_eval_count' => 3, 'eval_count' => 9]),
+        ]);
+        Http::fake(['*/api/chat' => Http::response($ndjson, 200)]);
+
+        $client = new OllamaClient('http://127.0.0.1:11434');
+        $out = $client->chatWithUsage('kimi-k2.6:cloud', [['role' => 'user', 'content' => 'hi']], 0.2);
+
+        $this->assertSame('Let me reason... {"status":"ok"}', $out['text']);
+        $this->assertSame(9, $out['output_tokens']);
+    }
+
+    #[Test]
+    public function it_sends_think_flag_only_when_configured(): void
+    {
+        config(['bossku.ollama_think' => false]);
+        $this->fakeChatOk();
+
+        $client = new OllamaClient('http://127.0.0.1:11434');
+        $client->chatWithUsage('kimi-k2.6:cloud', [['role' => 'user', 'content' => 'hi']], 0.2);
+
+        Http::assertSent(fn ($request) => ($request->data()['think'] ?? 'missing') === false);
+    }
+
+    #[Test]
+    public function it_omits_think_flag_when_not_configured(): void
+    {
+        config(['bossku.ollama_think' => null]);
+        $this->fakeChatOk();
+
+        $client = new OllamaClient('http://127.0.0.1:11434');
+        $client->chatWithUsage('kimi-k2.6:cloud', [['role' => 'user', 'content' => 'hi']], 0.2);
+
+        Http::assertSent(fn ($request) => ! array_key_exists('think', $request->data()));
+    }
+
+    #[Test]
     public function it_sanitizes_invalid_utf8_in_message_content(): void
     {
         $this->fakeChatOk();

@@ -63,6 +63,9 @@ class ExecutorService
                 $plan['planner_questions']
             ))
             : '';
+        $designSpec = is_array($plan['design_spec'] ?? null) && $plan['design_spec'] !== []
+            ? "\nDESIGN SPEC (from Designer — follow tokens, layout, states, and file scope):\n".$this->jsonEncode($plan['design_spec'])
+            : '';
         $planConfidence = is_numeric($plan['confidence'] ?? null) ? (float) $plan['confidence'] : null;
         if ($planConfidence !== null && $planConfidence < 0.50) {
             $confidenceNote = "\nCRITICAL WARNING: Planner confidence is very low ({$planConfidence}). The plan may be incomplete or based on incorrect assumptions. Read every target file before making any changes. If you cannot find the files described in the plan, STOP and report back rather than guessing.";
@@ -105,6 +108,7 @@ Workspace (mandatory — use relative paths only):
 {$workspaceContext}
 {$confidenceNote}
 {$plannerQuestions}
+{$designSpec}
 Prior memory context (lessons from past runs — you MUST apply these):
 {$memBlock}
 

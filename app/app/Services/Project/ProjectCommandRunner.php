@@ -107,7 +107,7 @@ class ProjectCommandRunner
      *   ran_restore: bool,
      * }
      */
-    public function runAllowedProjectCommands(array $commandsRun): array
+    public function runAllowedProjectCommands(array $commandsRun, ?ExecutionContext $context = null): array
     {
         $executed = [];
         $ranRestore = false;
@@ -124,7 +124,7 @@ class ProjectCommandRunner
             ];
         }
 
-        $defaultCwd = $this->repoRoot();
+        $defaultCwd = $context?->repoRoot ?? $this->repoRoot();
 
         foreach ($this->normalizeCommandEntries($commandsRun) as $entry) {
             $command = $entry['command'];
@@ -137,7 +137,7 @@ class ProjectCommandRunner
                 continue;
             }
 
-            $validation = $this->validateCommand($command, $defaultCwd);
+            $validation = $this->validateCommand($command, $defaultCwd, $context);
             if ($validation !== null) {
                 $executed[] = $this->skippedRow($command, $validation);
 
@@ -216,14 +216,14 @@ class ProjectCommandRunner
         return $out;
     }
 
-    public function validateCommand(string $command, ?string $repoRoot = null): ?string
+    public function validateCommand(string $command, ?string $repoRoot = null, ?ExecutionContext $context = null): ?string
     {
         $command = trim(preg_replace('/\s+/', ' ', $command) ?? $command);
         if ($command === '') {
             return 'Empty command.';
         }
 
-        $repoRoot = $repoRoot ?? $this->repoRoot();
+        $repoRoot = $repoRoot ?? $context?->repoRoot ?? $this->repoRoot();
 
         $lower = strtolower($command);
         foreach (self::FORBIDDEN_SUBSTRINGS as $forbidden) {
@@ -405,9 +405,9 @@ class ProjectCommandRunner
         return null;
     }
 
-    protected function repoRoot(): string
+    protected function repoRoot(?ExecutionContext $context = null): string
     {
-        return $this->paths->repoRoot();
+        return $context?->repoRoot ?? $this->paths->repoRoot();
     }
 
     /**

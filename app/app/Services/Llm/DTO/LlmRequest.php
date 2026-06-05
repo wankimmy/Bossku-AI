@@ -14,6 +14,8 @@ class LlmRequest
         public readonly ?string $runId = null,
         public readonly ?string $runStepId = null,
         public readonly array $metadata = [],
+        /** Response format hint for providers that support constrained decoding (e.g. Ollama "json"). */
+        public readonly ?string $responseFormat = null,
     ) {}
 
     public static function make(string $model, array $messages, array $options = []): self
@@ -28,6 +30,7 @@ class LlmRequest
             runId: $options['run_id'] ?? null,
             runStepId: $options['run_step_id'] ?? null,
             metadata: $options['metadata'] ?? [],
+            responseFormat: $options['response_format'] ?? null,
         );
     }
 }

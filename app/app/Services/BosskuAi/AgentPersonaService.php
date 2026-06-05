@@ -5,6 +5,7 @@ namespace App\Services\BosskuAi;
 use App\Models\BosskuAi\AgentPersona;
 use App\Services\Project\BosskuToolkitDetector;
 use App\Services\Project\BosskuToolkitPersonas;
+use App\Support\AgentTools;
 use Illuminate\Support\Facades\File;
 
 class AgentPersonaService
@@ -19,6 +20,7 @@ class AgentPersonaService
     public const PIPELINE_ROLES = [
         'router',
         'orchestrator',
+        'designer',
         'executor',
         'auditor',
         'security_auditor',
@@ -64,26 +66,36 @@ class AgentPersonaService
 
     public function appendToSystem(string $role, string $builtinSystem): string
     {
+        $role = $this->normalizeRole($role);
+        $prefix = '';
+
         $row = $this->forRole($role);
-        if ($row === null || ! $row->enabled) {
-            return $builtinSystem;
-        }
-        $content = trim((string) $row->content);
-        if ($content === '') {
-            return $builtinSystem;
-        }
-        $name = $row->display_name ?: $role;
+        if ($row !== null && $row->enabled) {
+            $content = trim((string) $row->content);
+            if ($content !== '') {
+                $name = $row->display_name ?: $role;
+                $block = "## Agent persona ({$name})\n{$content}";
 
-        $block = "## Agent persona ({$name})\n{$content}";
+                if ($this->toolkitDetector->isBosskuToolkitRepository()) {
+                    $overlay = trim(BosskuToolkitPersonas::forRole($role));
+                    if ($overlay !== '') {
+                        $block .= "\n\n## Bossku toolkit self-improvement\n{$overlay}";
+                    }
+                }
 
-        if ($this->toolkitDetector->isBosskuToolkitRepository()) {
-            $overlay = trim(BosskuToolkitPersonas::forRole($role));
-            if ($overlay !== '') {
-                $block .= "\n\n## Bossku toolkit self-improvement\n{$overlay}";
+                $prefix = $block."\n\n";
             }
         }
 
-        return $block."\n\n---\n\n{$builtinSystem}";
+        if (in_array($role, self::PIPELINE_ROLES, true)) {
+            $prefix .= AgentTools::formatToolsBlock($role, $this->readRawAgentsMd($role))."\n\n";
+        }
+
+        if ($prefix === '') {
+            return $builtinSystem;
+        }
+
+        return $prefix."---\n\n{$builtinSystem}";
     }
 
     /**
@@ -293,17 +305,7 @@ class AgentPersonaService
 
     public function defaultContentFromAgentsMd(string $role): ?string
     {
-        $map = [
-            'router' => 'model-router.md',
-            'orchestrator' => 'orchestrator.md',
-            'executor' => 'executor.md',
-            'auditor' => 'auditor.md',
-            'security_auditor' => 'security-reviewer.md',
-            'final_reviewer' => 'final-reviewer.md',
-            'writer' => 'writer.md',
-            'direct_answer' => 'direct-answer.md',
-            'clarification' => 'clarification.md',
-        ];
+        $map = self::agentsMdMap();
         $file = $map[$role] ?? null;
         if ($file === null) {
             return null;
@@ -337,6 +339,7 @@ class AgentPersonaService
         return [
             'router' => 'Router',
             'orchestrator' => 'Orchestrator',
+            'designer' => 'Designer',
             'executor' => 'Executor',
             'auditor' => 'Auditor',
             'security_auditor' => 'Security Auditor',
@@ -345,5 +348,34 @@ class AgentPersonaService
             'direct_answer' => 'Direct Answer',
             'clarification' => 'Clarification',
         ];
+    }
+
+    /** @return array<string, string> */
+    public static function agentsMdMap(): array
+    {
+        return [
+            'router' => 'model-router.md',
+            'orchestrator' => 'orchestrator.md',
+            'designer' => 'designer.md',
+            'executor' => 'executor.md',
+            'auditor' => 'auditor.md',
+            'security_auditor' => 'security-reviewer.md',
+            'final_reviewer' => 'final-reviewer.md',
+            'writer' => 'writer.md',
+            'direct_answer' => 'direct-answer.md',
+            'clarification' => 'clarification.md',
+        ];
+    }
+
+    public function readRawAgentsMd(string $role): ?string
+    {
+        $role = $this->normalizeRole($role);
+        $file = self::agentsMdMap()[$role] ?? null;
+        if ($file === null) {
+            return null;
+        }
+        $path = rtrim((string) config('bossku.repo_root'), '/\\').'/agents/'.$file;
+
+        return is_file($path) ? (string) File::get($path) : null;
     }
 }

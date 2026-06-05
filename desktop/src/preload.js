@@ -15,4 +15,8 @@ contextBridge.exposeInMainWorld('bossku', {
   },
   retry: () => ipcRenderer.send('retry'),
   quit: () => ipcRenderer.send('quit'),
+  // Returns the selected absolute folder path, or null if cancelled.
+  openFolder: () => ipcRenderer.invoke('dialog:openFolder'),
+  // Lets the web UI detect it's running inside the BosskuAI desktop shell.
+  isDesktop: true,
 })

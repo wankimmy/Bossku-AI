@@ -1,3 +1,10 @@
+---
+name: router
+description: Classifies tasks and routes to the lightest correct workflow and model tier.
+tools: ["Read", "Grep", "Glob", "log"]
+model: fast
+---
+
 # Model Router Agent
 
 Use for role/model selection and workflow routing.
@@ -30,6 +37,9 @@ Classify task type, risk, skill, workflow, memory mode, and token level. Use fas
 |---|---|
 | Router | fast |
 | Orchestrator | reasoning |
+| Planner | reasoning |
+| Designer | reasoning |
+| Clarification | reasoning |
 | Executor | coding |
 | Auditor | review |
 | Security auditor | review |

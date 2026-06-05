@@ -124,6 +124,80 @@ services:
       - "${BOSSKU_PORT_REDIS:-28379}:6379"
     networks: [bossku]
 
+  queue:
+    build:
+      context: ./docker/php
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    working_dir: /var/www/html
+    env_file:
+      - ./app/.env
+    environment:
+      TZ: ${APP_TIMEZONE:-Asia/Kuala_Lumpur}
+      BOSSKU_REPO_PATH: /repo
+      BOSSKU_WORKSPACE_WRITABLE: ${BOSSKU_WORKSPACE_WRITABLE:-true}
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: bossku
+      DB_USERNAME: bossku
+      DB_PASSWORD: bossku
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      CACHE_STORE: redis
+      SESSION_DRIVER: redis
+      QUEUE_CONNECTION: redis
+    volumes:
+      - ./app:/var/www/html
+      - ./:/repo
+      - ../:/workspace
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      backend:
+        condition: service_healthy
+    command: ["php", "artisan", "queue:work", "redis", "--sleep=3", "--tries=3", "--timeout=3600"]
+    networks: [bossku]
+
+  scheduler:
+    build:
+      context: ./docker/php
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    working_dir: /var/www/html
+    env_file:
+      - ./app/.env
+    environment:
+      TZ: ${APP_TIMEZONE:-Asia/Kuala_Lumpur}
+      BOSSKU_REPO_PATH: /repo
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: bossku
+      DB_USERNAME: bossku
+      DB_PASSWORD: bossku
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      CACHE_STORE: redis
+      SESSION_DRIVER: redis
+      QUEUE_CONNECTION: redis
+    volumes:
+      - ./app:/var/www/html
+      - ./:/repo
+      - ../:/workspace
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      backend:
+        condition: service_healthy
+    command: ["php", "artisan", "schedule:work"]
+    networks: [bossku]
+
 volumes:
   node_modules:
 

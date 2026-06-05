@@ -82,6 +82,7 @@ class ModelFallbackService
                         $runId,
                         $runStepId,
                         $callMetadata,
+                        $structuredOutput,
                     );
                     $text = trim($out['text']);
                     $responseText = $text;
@@ -190,7 +191,7 @@ class ModelFallbackService
     {
         $messages[] = [
             'role' => 'system',
-            'content' => 'Structured machine-output mode is active. Return exactly one JSON object that satisfies the requested schema. Use no markdown fences, no prose, no commentary, and no [BOSSKUAI] header.',
+            'content' => 'Structured machine-output mode is active. Reply with exactly one JSON object that satisfies the requested schema and NOTHING else: the first character of your reply must be "{" and the last must be "}". Do not emit markdown fences, prose, commentary, or a [BOSSKUAI] indicator header. Any [BOSSKUAI] header shown in the conversation history is for user-facing replies only — never reproduce it here.',
         ];
 
         return $messages;

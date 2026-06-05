@@ -41,7 +41,10 @@ class AgentPersonaServiceTest extends TestCase
         ]);
 
         $svc = app(AgentPersonaService::class);
-        $this->assertSame('Built-in only.', $svc->appendToSystem('executor', 'Built-in only.'));
+        $out = $svc->appendToSystem('executor', 'Built-in only.');
+        $this->assertStringNotContainsString('Ignored.', $out);
+        $this->assertStringContainsString('## Allowed tools (executor)', $out);
+        $this->assertStringContainsString('Built-in only.', $out);
     }
 
     #[Test]

@@ -19,6 +19,7 @@ class Run extends Model
         'prompt', 'final_output', 'status', 'total_latency_ms',
         'total_token_estimate', 'metadata',
         'audit_score', 'risk_level', 'soul_version_id', 'estimated_cost', 'selected_skill_name',
+        'parent_run_id', 'run_kind', 'supervisor_slot',
     ];
 
     protected function casts(): array
@@ -77,6 +78,31 @@ class Run extends Model
     public function soulVersion(): BelongsTo
     {
         return $this->belongsTo(SoulVersion::class, 'soul_version_id');
+    }
+
+    public function parentRun(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_run_id');
+    }
+
+    public function childRuns(): HasMany
+    {
+        return $this->hasMany(self::class, 'parent_run_id')->orderBy('supervisor_slot');
+    }
+
+    public function workspace(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(RunWorkspace::class, 'run_id');
+    }
+
+    public function cliSessions(): HasMany
+    {
+        return $this->hasMany(CliSession::class, 'run_id');
+    }
+
+    public function reactionStates(): HasMany
+    {
+        return $this->hasMany(ReactionState::class, 'run_id');
     }
 
     protected static function newFactory(): BosskuAiRunFactory

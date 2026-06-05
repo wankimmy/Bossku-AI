@@ -10,6 +10,10 @@ const { PORTS, runtimePaths } = require('./config')
 let apiChild = null
 /** @type {import('node:child_process').ChildProcess | null} */
 let webChild = null
+/** @type {import('node:child_process').ChildProcess | null} */
+let queueChild = null
+/** @type {import('node:child_process').ChildProcess | null} */
+let schedulerChild = null
 
 function pipeChild(child, label, onLog) {
   const push = (chunk) => {
@@ -30,11 +34,19 @@ function pipeChild(child, label, onLog) {
  */
 function buildNativeEnv(stackDir) {
   const rt = runtimePaths()
-  const pathPrefix = [path.dirname(rt.php), path.dirname(rt.node)].join(path.delimiter)
+  const gitRoot = path.join(rt.home, 'runtime', 'git')
+  const pathPrefix = [
+    path.dirname(rt.php),
+    path.dirname(rt.node),
+    path.join(gitRoot, 'cmd'),
+    path.join(gitRoot, 'bin'),
+  ].filter((p) => p && fs.existsSync(p)).join(path.delimiter)
+
   return {
     ...process.env,
     PATH: `${pathPrefix}${path.delimiter}${process.env.PATH || ''}`,
     BOSSKU_REPO_PATH: stackDir,
+    BOSSKU_DESKTOP: 'true',
   }
 }
 
@@ -69,6 +81,20 @@ async function startNative(stackDir, onLog) {
   )
   pipeChild(apiChild, 'api', onLog)
 
+  queueChild = spawn(
+    rt.php,
+    ['artisan', 'queue:work', 'database', '--sleep=3', '--tries=3', '--timeout=3600'],
+    { cwd: appDir, env: baseEnv, windowsHide: true },
+  )
+  pipeChild(queueChild, 'queue', onLog)
+
+  schedulerChild = spawn(
+    rt.php,
+    ['artisan', 'schedule:work'],
+    { cwd: appDir, env: baseEnv, windowsHide: true },
+  )
+  pipeChild(schedulerChild, 'scheduler', onLog)
+
   webChild = spawn(rt.node, [serverJs], {
     cwd: webDir,
     env: {
@@ -83,7 +109,7 @@ async function startNative(stackDir, onLog) {
   })
   pipeChild(webChild, 'web', onLog)
 
-  if (onLog) onLog('Native API and web servers started.')
+  if (onLog) onLog('Native API, queue worker, scheduler, and web servers started.')
 }
 
 /**
@@ -93,6 +119,8 @@ async function stopNative(onLog) {
   for (const [label, child] of [
     ['api', apiChild],
     ['web', webChild],
+    ['queue', queueChild],
+    ['scheduler', schedulerChild],
   ]) {
     if (child && !child.killed) {
       try {
@@ -105,10 +133,19 @@ async function stopNative(onLog) {
   }
   apiChild = null
   webChild = null
+  queueChild = null
+  schedulerChild = null
 }
 
 function nativeRunning() {
-  return apiChild !== null && webChild !== null && apiChild.exitCode === null && webChild.exitCode === null
+  return apiChild !== null
+    && webChild !== null
+    && queueChild !== null
+    && schedulerChild !== null
+    && apiChild.exitCode === null
+    && webChild.exitCode === null
+    && queueChild.exitCode === null
+    && schedulerChild.exitCode === null
 }
 
 async function restartNative(stackDir, onLog) {

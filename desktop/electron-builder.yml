@@ -6,6 +6,15 @@ directories:
   output: dist
   buildResources: assets
 
+# Auto-update feed. electron-updater reads the latest.yml + installer that
+# `npm run release` (or the desktop-release CI workflow) publishes to GitHub
+# Releases for the wankimmy/Bossku-AI repo. The installed app polls this feed
+# and shows an update popup when a newer version is published.
+publish:
+  - provider: github
+    owner: wankimmy
+    repo: Bossku-AI
+
 # App code that ships inside the asar.
 files:
   - src/**/*
@@ -26,6 +35,10 @@ extraResources:
       - "!.env"
       - "!vendor/**"
       - "!node_modules/**"
+      # Never ship a baked config/route/event cache — a Docker-built config.php pins
+      # cache/session/queue to redis, which the native portable PHP can't load
+      # ("Class Redis not found"). install.ps1 regenerates these on first run.
+      - "!bootstrap/cache/*.php"
       - "!storage/logs/*.log"
       - "!storage/framework/cache/data/**"
       - "!storage/framework/sessions/**"

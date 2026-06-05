@@ -17,6 +17,7 @@ class LearningEventProcessorTest extends TestCase
     #[Test]
     public function auto_eligible_pattern_dispatches_job(): void
     {
+        config(['bossku.learning_require_verification' => false]);
         Queue::fake();
 
         $event = LearningEvent::create([
@@ -53,6 +54,7 @@ class LearningEventProcessorTest extends TestCase
     #[Test]
     public function batch_processes_only_auto_eligible_pending_events(): void
     {
+        config(['bossku.learning_require_verification' => false]);
         $auto = LearningEvent::create([
             'type' => 'preference',
             'content' => 'User prefers concise answers.',
@@ -78,8 +80,25 @@ class LearningEventProcessorTest extends TestCase
     }
 
     #[Test]
+    public function verification_required_blocks_auto_promote_without_verified_feedback(): void
+    {
+        config(['bossku.learning_require_verification' => true]);
+
+        $processor = app(LearningEventProcessor::class);
+        $event = LearningEvent::create([
+            'type' => 'pattern',
+            'content' => 'Unverified pattern.',
+            'confidence' => 0.95,
+            'status' => 'pending',
+        ]);
+
+        $this->assertFalse($processor->isAutoPromoteEligible($event));
+    }
+
+    #[Test]
     public function low_confidence_pattern_is_not_auto_eligible(): void
     {
+        config(['bossku.learning_require_verification' => false]);
         $processor = app(LearningEventProcessor::class);
 
         $event = LearningEvent::create([

@@ -215,7 +215,9 @@ final class LlmJsonParser
     protected static function stripMarkdownFences(string $text): string
     {
         $clean = trim($text);
-        $clean = preg_replace('/^```(?:json)?\s*/i', '', $clean) ?? $clean;
+        // Strip the opening fence with any language tag (```json, ```text, ```markdown, …)
+        // so JSON wrapped in a mislabelled fence is still recovered.
+        $clean = preg_replace('/^```[a-zA-Z0-9_+-]*\s*/i', '', $clean) ?? $clean;
         $clean = preg_replace('/\s*```\s*$/', '', $clean) ?? $clean;
 
         return trim($clean);

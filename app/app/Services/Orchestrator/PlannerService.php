@@ -4,6 +4,7 @@ namespace App\Services\Orchestrator;
 
 use App\Services\BosskuAi\CodebaseIndexService;
 use App\Services\BosskuAi\LlmErrorFormatter;
+use App\Support\AgentTools;
 use App\Support\LlmTelemetry;
 use App\Support\StringCoercion;
 use App\Services\BosskuAi\ModelFallbackService;
@@ -13,6 +14,7 @@ use App\Services\Project\ProjectFileDiscovery;
 use App\Services\Project\ProjectPathResolver;
 use App\Services\Project\ProjectService;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\File;
 
 class PlannerService
 {
@@ -66,7 +68,7 @@ PIPELINE CONTEXT:
 WHAT YOU MUST DO:
 1. READ the full conversation history — understand what has been tried, what failed, and what the user's actual intent is.
 2. READ all prior memory context — identify lessons from past runs that are directly relevant. Cite them by [Memory N] in memory_applied.
-3. IDENTIFY unknowns — if any assumption you'd make could cause the Executor to take the wrong action, surface it as a planner_question.
+3. QUESTION EVERYTHING — if any assumption could cause the Executor or Designer to take the wrong action, surface it as a planner_question with a recommended default answer. Never guess on product intent, data behavior, UX bar, or risk tolerance.
 4. ASSESS confidence — how sure are you about the target files and approach? Be explicit.
 5. PRODUCE a concrete, audit-ready plan — every checklist item must have a named owner (executor or auditor) and a concrete, verifiable completion criterion.
 6. MAKE the plan executor-ready and audit-ready: executable by the Executor without guessing and verifiable by the Auditor with concrete evidence.
@@ -121,7 +123,9 @@ constraints (string[]),
 handoff_message (string — tell the executor exactly what to do first, what files to touch, and what evidence to provide),
 execution_mode ("answer_only"|"delegate_executor"|"user_must_run_commands"),
 user_commands (string[]),
-planner_questions (array of {id: string, question: string, why: string} — surface to user when task is ambiguous; empty if confident),
+planner_questions (array of {id: string, question: string, why: string, recommended: string} — surface to user when task is ambiguous; each question must include your recommended answer; empty only when fully confident),
+design_phase_required (boolean — true when UI/UX, styling, layout, or component work needs a Designer pass before the Executor),
+execution_phases (array of {phase: number, name: string, parallel: boolean, tasks: array of {agent: "executor"|"designer", description: string, files: string[], depends_on: string[]}} — file-scoped delegation; steps with no overlapping files may run in parallel within a phase),
 memory_applied (string[] — cite specific [Memory N] lessons and how they shaped this plan; empty if none relevant).
 
 Use relative paths from the repository root only. handoff_message must cite target paths and first action.
@@ -134,6 +138,14 @@ When `semantic_code_context` is present in the user payload, treat it as the mos
 - Anchor your plan's key_design_decisions and risk_notes to actual code you can see.
 - Set confidence higher when relevant code is visible.
 SYS;
+        $plannerMd = $this->loadPlannerAgentsMd();
+        $system .= "\n\n".AgentTools::formatToolsBlock('planner', $plannerMd);
+        if ($plannerMd !== null && preg_match('/<!--\s*runtime-core:start\s*-->(.*?)<!--\s*runtime-core:end\s*-->/s', $plannerMd, $coreMatch)) {
+            $plannerCore = trim($coreMatch[1]);
+            if ($plannerCore !== '') {
+                $system .= "\n\n## Planner persona\n".$plannerCore;
+            }
+        }
         $system .= "\n\n".$this->projects->evidenceRuleForPrompt();
 
         $formattedMemory = $this->buildMemoryBlock($memoryContext);
@@ -294,6 +306,11 @@ SYS;
             ? min(1.0, max(0.0, (float) $decoded['confidence']))
             : 0.7;
         $decoded['planner_questions'] = is_array($decoded['planner_questions'] ?? null) ? $decoded['planner_questions'] : [];
+        $decoded['execution_phases'] = is_array($decoded['execution_phases'] ?? null) ? $decoded['execution_phases'] : [];
+        $decoded['design_phase_required'] = (bool) ($decoded['design_phase_required'] ?? false);
+        if ($decoded['executor_profile'] === 'frontend_ui') {
+            $decoded['design_phase_required'] = true;
+        }
         $decoded['memory_applied'] = is_array($decoded['memory_applied'] ?? null) ? $decoded['memory_applied'] : [];
         $decoded['key_design_decisions'] = $this->normalizeStringList($decoded['key_design_decisions'] ?? null);
         $decoded['flow_steps'] = $this->normalizeStringList($decoded['flow_steps'] ?? null);
@@ -357,6 +374,13 @@ SYS;
      * them as a compact block the planner can read to anchor its file-path recommendations.
      * Returns an empty string when the index is empty or embeddings are disabled.
      */
+    protected function loadPlannerAgentsMd(): ?string
+    {
+        $path = rtrim((string) config('bossku.repo_root'), '/\\').'/agents/planner.md';
+
+        return is_file($path) ? (string) File::get($path) : null;
+    }
+
     protected function buildSemanticCodeContext(string $prompt): string
     {
         try {

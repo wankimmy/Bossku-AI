@@ -7,8 +7,20 @@ use Illuminate\Support\Str;
 
 class ProjectPathResolver
 {
+    public function __construct(
+        private readonly ?RunExecutionContext $runContext = null,
+    ) {}
 
     public function repoRoot(): string
+    {
+        if ($this->runContext !== null) {
+            return $this->runContext->executionContext($this)->repoRoot;
+        }
+
+        return $this->repoRootWithoutRun();
+    }
+
+    public function repoRootWithoutRun(): string
     {
         $active = Project::query()->where('is_active', true)->first();
         $root = $active?->container_path ?: (string) config('bossku.repo_root');
@@ -23,6 +35,15 @@ class ProjectPathResolver
         }
 
         return $real;
+    }
+
+    public function executionContext(): ExecutionContext
+    {
+        if ($this->runContext !== null) {
+            return $this->runContext->executionContext($this);
+        }
+
+        return ExecutionContext::fromRepoRoot($this->repoRootWithoutRun());
     }
 
     public function activeProject(): ?Project

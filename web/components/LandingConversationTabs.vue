@@ -129,7 +129,6 @@ defineExpose({
         :key="turn.id"
         :turn="turn"
       />
-      <slot name="chat-plan" />
     </div>
 
     <div
