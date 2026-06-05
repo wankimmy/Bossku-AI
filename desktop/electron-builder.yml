@@ -14,6 +14,9 @@ publish:
   - provider: github
     owner: wankimmy
     repo: Bossku-AI
+    # Publish a real (non-draft) release so electron-updater can see it. Default is
+    # "draft", which the auto-updater ignores until manually published.
+    releaseType: release
 
 # App code that ships inside the asar.
 files:

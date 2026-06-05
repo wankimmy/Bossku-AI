@@ -193,9 +193,15 @@ function Invoke-Step([string]$Label, [scriptblock]$Block) {
 
 Push-Location $AppDir
 try {
-    Invoke-Step 'Installing PHP dependencies (composer)' {
-        # Dev deps included on purpose: first-run `db:seed` (DatabaseServiceProvider) needs fakerphp/faker.
-        & $phpExe (Join-Path $BinDir 'composer.phar') install --optimize-autoloader --no-interaction --no-progress
+    Write-ProgressLine 'Installing PHP dependencies (composer)'
+    # Dev deps included on purpose: first-run db:seed (DatabaseServiceProvider) needs fakerphp/faker.
+    # If composer.lock drifts from composer.json, install aborts ("lock not up to date");
+    # fall back to `update` so a slightly-stale lock can't block the whole install.
+    & $phpExe (Join-Path $BinDir 'composer.phar') install --optimize-autoloader --no-interaction --no-progress
+    if ($LASTEXITCODE -ne 0) {
+        Write-ProgressLine 'composer install failed (lock out of date?) - running composer update'
+        & $phpExe (Join-Path $BinDir 'composer.phar') update --optimize-autoloader --no-interaction --no-progress
+        if ($LASTEXITCODE -ne 0) { throw 'composer install/update failed' }
     }
     Invoke-Step 'Clearing any stale cached config' {
         # Belt-and-suspenders: drop a baked config cache so the native .env (file cache/
