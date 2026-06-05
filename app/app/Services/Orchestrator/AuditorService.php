@@ -11,6 +11,8 @@ use App\Services\Project\ProjectService;
 
 class AuditorService
 {
+    use AgentConversationTrait;
+
     public function __construct(
         protected ModelFallbackService $fallback,
         protected ModelRoutingConfig $modelConfig,
@@ -236,26 +238,6 @@ SYS;
             'verdict_trail' => is_array($parsed['verdict_trail'] ?? null) ? $parsed['verdict_trail'] : [],
             'user_questions' => is_array($parsed['user_questions'] ?? null) ? $parsed['user_questions'] : [],
         ];
-    }
-
-    /** @param list<array{role: string, content: string}> $conversation */
-    protected function buildConversationBlock(array $conversation): string
-    {
-        if ($conversation === []) {
-            return '(no prior conversation — this is the first turn)';
-        }
-        $total = count($conversation);
-        $recent = array_slice($conversation, -10);
-        $offset = max(0, $total - 10);
-        $lines = [];
-        foreach ($recent as $idx => $turn) {
-            $role = strtolower((string) ($turn['role'] ?? 'user'));
-            $cap = $role === 'assistant' ? 1200 : 800;
-            $content = mb_substr((string) ($turn['content'] ?? ''), 0, $cap);
-            $lines[] = '[Turn '.($offset + $idx).'] '.strtoupper($role).': '.$content;
-        }
-
-        return implode("\n\n", $lines);
     }
 
     /** @param list<array<string,mixed>> $memories */

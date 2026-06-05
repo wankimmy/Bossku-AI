@@ -63,31 +63,45 @@ case "$1" in php-fpm*|php*)
     exit 1
   fi
 
-  # Run migrations (idempotent)
+  # Run migrations every boot. This is idempotent and NON-destructive: it applies only the
+  # *pending* migrations and never drops, resets, or empties tables. It is `migrate`, never
+  # `migrate:fresh`/`migrate:refresh`, so existing runs, conversations and memory are kept.
   echo "[bossku] Running migrations..."
   php artisan migrate --force --no-interaction
 
-  # Import all skills, rules, playbooks, checklists from /repo
-  echo "[bossku] Importing BosskuAI knowledge (skills, rules, playbooks, checklists)..."
-  php artisan bosskuai:import-knowledge --no-interaction || echo "[bossku] Knowledge import skipped or partial (non-fatal)"
+  # First-boot initialization: import markdown knowledge, seed spec/demo data, sync agent
+  # personas, and bootstrap the soul. On an already-initialized database these steps are
+  # SKIPPED so a normal restart never re-seeds or re-imports — your existing data is left
+  # untouched. Re-run them explicitly (e.g. after editing skills/rules/personas markdown)
+  # by setting BOSSKU_FORCE_REINIT=true.
+  skills_exist="$(PGPASSWORD="${DB_PASSWORD:-bossku}" psql -h "${DB_HOST:-postgres}" -U "${DB_USERNAME:-bossku}" -d "${DB_DATABASE:-bossku}" -tAc 'SELECT EXISTS (SELECT 1 FROM bossku_ai_skills)' 2>/dev/null | tr -d '[:space:]')"
+  if [ "${BOSSKU_FORCE_REINIT:-false}" = "true" ] || [ "$skills_exist" != "t" ]; then
+    echo "[bossku] Initializing knowledge base (first boot or BOSSKU_FORCE_REINIT=true)..."
 
-  # Seed spec demo data (idempotent — errors logged to storage/logs/laravel.log)
-  echo "[bossku] Seeding spec data..."
-  php artisan db:seed --class=BosskuAiSpecSeeder --force --no-interaction
+    # Import all skills, rules, playbooks, checklists from /repo
+    echo "[bossku] Importing BosskuAI knowledge (skills, rules, playbooks, checklists)..."
+    php artisan bosskuai:import-knowledge --no-interaction || echo "[bossku] Knowledge import skipped or partial (non-fatal)"
 
-  # Sync pipeline agent personas from agents/*.md → DB (auto-propagates edits on every up).
-  # Safe by default: migrates legacy/stale rows and pulls in .md changes, but preserves
-  # personas a user edited in the UI. Set BOSSKU_FORCE_PERSONA_SYNC=true to overwrite those too.
-  echo "[bossku] Syncing agent personas from agents/*.md..."
-  if [ "${BOSSKU_FORCE_PERSONA_SYNC:-false}" = "true" ]; then
-    php artisan bosskuai:sync-personas --force --no-interaction || echo "[bossku] Persona sync skipped (non-fatal)"
+    # Seed spec demo data (idempotent — errors logged to storage/logs/laravel.log)
+    echo "[bossku] Seeding spec data..."
+    php artisan db:seed --class=BosskuAiSpecSeeder --force --no-interaction
+
+    # Sync pipeline agent personas from agents/*.md → DB.
+    # Safe by default: migrates legacy/stale rows and pulls in .md changes, but preserves
+    # personas a user edited in the UI. Set BOSSKU_FORCE_PERSONA_SYNC=true to overwrite those too.
+    echo "[bossku] Syncing agent personas from agents/*.md..."
+    if [ "${BOSSKU_FORCE_PERSONA_SYNC:-false}" = "true" ]; then
+      php artisan bosskuai:sync-personas --force --no-interaction || echo "[bossku] Persona sync skipped (non-fatal)"
+    else
+      php artisan bosskuai:sync-personas --no-interaction || echo "[bossku] Persona sync skipped (non-fatal)"
+    fi
+
+    # Bootstrap soul.md into soul_versions table
+    echo "[bossku] Bootstrapping soul..."
+    php artisan bosskuai:soul-bootstrap --no-interaction || echo "[bossku] Soul bootstrap skipped (already exists)"
   else
-    php artisan bosskuai:sync-personas --no-interaction || echo "[bossku] Persona sync skipped (non-fatal)"
+    echo "[bossku] Existing data detected — skipping knowledge import / seed / persona sync (set BOSSKU_FORCE_REINIT=true to refresh)."
   fi
-
-  # Bootstrap soul.md into soul_versions table
-  echo "[bossku] Bootstrapping soul..."
-  php artisan bosskuai:soul-bootstrap --no-interaction || echo "[bossku] Soul bootstrap skipped (already exists)"
 
   # Cache config + routes for performance
   echo "[bossku] Caching config and routes..."

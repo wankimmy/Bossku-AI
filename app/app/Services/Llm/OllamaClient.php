@@ -25,12 +25,14 @@ class OllamaClient
             $http = $http->withToken($this->apiKey);
         }
 
-        $res = $http->post($url, [
+        // stream:true → Ollama sends NDJSON chunks; Guzzle stream option buffers at socket
+        // level so very large completions don't load into memory as one giant string.
+        $res = $http->withOptions(['stream' => true])->post($url, self::withKeepAlive([
             'model' => $model,
             'messages' => self::sanitizeMessages($messages),
-            'stream' => false,
+            'stream' => true,
             'options' => self::buildOptions($temperature, $maxTokens),
-        ]);
+        ]));
 
         try {
             $res->throw();
@@ -41,13 +43,43 @@ class OllamaClient
             );
         }
 
-        // Ollama may omit usage in older versions
-        $j = $res->json();
+        return self::parseStreamedNdjson($res->body());
+    }
+
+    /**
+     * Reassemble an Ollama NDJSON stream into the same shape as a non-streamed response.
+     * Each line is a JSON object; content tokens accumulate and the final `done:true` line
+     * carries `prompt_eval_count` / `eval_count` (usage stats).
+     *
+     * @return array{text: string, input_tokens: int|null, output_tokens: int|null}
+     */
+    private static function parseStreamedNdjson(string $rawBody): array
+    {
+        $text = '';
+        $inputTokens = null;
+        $outputTokens = null;
+
+        foreach (explode("\n", $rawBody) as $line) {
+            $line = trim($line);
+            if ($line === '') {
+                continue;
+            }
+            /** @var array<string,mixed>|null $chunk */
+            $chunk = json_decode($line, true);
+            if (! is_array($chunk)) {
+                continue;
+            }
+            $text .= (string) data_get($chunk, 'message.content', '');
+            if ($chunk['done'] ?? false) {
+                $inputTokens = isset($chunk['prompt_eval_count']) ? (int) $chunk['prompt_eval_count'] : null;
+                $outputTokens = isset($chunk['eval_count']) ? (int) $chunk['eval_count'] : null;
+            }
+        }
 
         return [
-            'text' => (string) data_get($j, 'message.content', ''),
-            'input_tokens' => data_get($j, 'prompt_eval_count'),
-            'output_tokens' => data_get($j, 'eval_count'),
+            'text' => $text,
+            'input_tokens' => $inputTokens,
+            'output_tokens' => $outputTokens,
         ];
     }
 
@@ -92,12 +124,12 @@ class OllamaClient
             $http = $http->withToken($this->apiKey);
         }
 
-        $res = $http->post($url, [
+        $res = $http->post($url, self::withKeepAlive([
             'model' => $model,
             'messages' => self::sanitizeMessages($payloadMessages),
             'stream' => false,
             'options' => self::buildOptions($temperature, null),
-        ]);
+        ]));
 
         try {
             $res->throw();
@@ -170,7 +202,31 @@ class OllamaClient
             $options['num_predict'] = $maxTokens;
         }
 
+        $numCtx = config('bossku.ollama_num_ctx');
+        if (is_int($numCtx) && $numCtx > 0) {
+            $options['num_ctx'] = $numCtx;
+        }
+
         return $options;
+    }
+
+    /**
+     * Add `keep_alive` to a request payload so local Ollama keeps the model warm between
+     * pipeline stages (no cold reloads). Cloud ignores it harmlessly. Skipped when the
+     * configured value is an empty string (let Ollama use its own default).
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    protected static function withKeepAlive(array $payload): array
+    {
+        $keepAlive = config('bossku.ollama_keep_alive', '30m');
+        if ($keepAlive === '' || $keepAlive === null) {
+            return $payload;
+        }
+        $payload['keep_alive'] = is_numeric($keepAlive) ? (int) $keepAlive : (string) $keepAlive;
+
+        return $payload;
     }
 
     /**

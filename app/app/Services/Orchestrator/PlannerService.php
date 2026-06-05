@@ -2,6 +2,7 @@
 
 namespace App\Services\Orchestrator;
 
+use App\Services\BosskuAi\CodebaseIndexService;
 use App\Services\BosskuAi\LlmErrorFormatter;
 use App\Support\LlmTelemetry;
 use App\Support\StringCoercion;
@@ -9,17 +10,21 @@ use App\Services\BosskuAi\ModelFallbackService;
 use App\Services\BosskuAi\ModelRoutingConfig;
 use App\Services\BosskuAi\RuntimeSettings;
 use App\Services\Project\ProjectFileDiscovery;
+use App\Services\Project\ProjectPathResolver;
 use App\Services\Project\ProjectService;
 use Illuminate\Support\Arr;
 
 class PlannerService
 {
+    use AgentConversationTrait;
     public function __construct(
         protected ModelFallbackService $fallback,
         protected ModelRoutingConfig $modelConfig,
         protected RuntimeSettings $settings,
         protected ProjectService $projects,
         protected ProjectFileDiscovery $discovery,
+        protected CodebaseIndexService $codeIndex,
+        protected ProjectPathResolver $paths,
     ) {}
 
     /**
@@ -122,20 +127,31 @@ memory_applied (string[] — cite specific [Memory N] lessons and how they shape
 Use relative paths from the repository root only. handoff_message must cite target paths and first action.
 When routing.needs_executor is false, set execution_mode to answer_only.
 When docker/host commands are needed, set execution_mode to user_must_run_commands and list them in user_commands.
+
+SEMANTIC CODE CONTEXT:
+When `semantic_code_context` is present in the user payload, treat it as the most relevant code from the active project retrieved via vector similarity search. Use it to:
+- Populate target_file_list with paths from these chunks (they are already ranked by relevance — do not invent other paths).
+- Anchor your plan's key_design_decisions and risk_notes to actual code you can see.
+- Set confidence higher when relevant code is visible.
 SYS;
         $system .= "\n\n".$this->projects->evidenceRuleForPrompt();
 
+        $formattedMemory = $this->buildMemoryBlock($memoryContext);
+        $conversationSummary = $this->buildConversationBlock($conversation);
+        $semanticCodeContext = $this->buildSemanticCodeContext($prompt);
+
+        // When semantic context is present the model already sees relevant file contents;
+        // send a lighter repo header (root + dirs only) to save ~2 k tokens per call.
         $repoIndex = '';
         try {
-            $repoIndex = $this->discovery->repoIndexForPlanner();
+            $repoIndex = $semanticCodeContext !== ''
+                ? $this->discovery->repoIndexForPlanner(0)   // header only, no sample paths
+                : $this->discovery->repoIndexForPlanner();
         } catch (\Throwable $e) {
             $repoIndex = 'Repo index unavailable: '.$e->getMessage();
         }
 
-        $formattedMemory = $this->buildMemoryBlock($memoryContext);
-        $conversationSummary = $this->buildConversationBlock($conversation);
-
-        $user = json_encode([
+        $userPayload = [
             'prompt' => $prompt,
             'conversation_history' => $conversationSummary,
             'conversation_turns' => count($conversation),
@@ -143,7 +159,11 @@ SYS;
             'skill_router' => Arr::except($routerContext, ['_scores']),
             'routing' => $modelRoute,
             'repo_index' => $repoIndex,
-        ], JSON_THROW_ON_ERROR);
+        ];
+        if ($semanticCodeContext !== '') {
+            $userPayload['semantic_code_context'] = $semanticCodeContext;
+        }
+        $user = json_encode($userPayload, JSON_THROW_ON_ERROR);
 
         $messages = [
             ['role' => 'system', 'content' => $system],
@@ -332,23 +352,36 @@ SYS;
         return implode("\n", $lines);
     }
 
-    /** @param list<array{role: string, content: string}> $conversation */
-    protected function buildConversationBlock(array $conversation): string
+    /**
+     * Retrieve the top semantically-relevant code chunks for the current prompt and format
+     * them as a compact block the planner can read to anchor its file-path recommendations.
+     * Returns an empty string when the index is empty or embeddings are disabled.
+     */
+    protected function buildSemanticCodeContext(string $prompt): string
     {
-        if ($conversation === []) {
-            return '(no prior conversation — this is the first turn)';
-        }
-        $total = count($conversation);
-        $recent = array_slice($conversation, -10);
-        $offset = max(0, $total - 10);
-        $lines = [];
-        foreach ($recent as $idx => $turn) {
-            $role = strtolower((string) ($turn['role'] ?? 'user'));
-            $cap = $role === 'assistant' ? 1200 : 800;
-            $content = mb_substr((string) ($turn['content'] ?? ''), 0, $cap);
-            $lines[] = '[Turn '.($offset + $idx).'] '.strtoupper($role).': '.$content;
-        }
+        try {
+            $activeProject = $this->paths->activeProject();
+            $chunks = $this->codeIndex->retrieve($prompt, 8, $activeProject?->id);
+            if ($chunks === []) {
+                return '';
+            }
 
-        return implode("\n\n", $lines);
+            $lines = ['=== Semantically Relevant Code (ranked by similarity) ==='];
+            foreach ($chunks as $chunk) {
+                $loc = $chunk['path'];
+                if (($chunk['start_line'] ?? null) !== null) {
+                    $loc .= ':'.$chunk['start_line'].'-'.($chunk['end_line'] ?? $chunk['start_line']);
+                }
+                $score = isset($chunk['similarity']) ? ' score='.round((float) $chunk['similarity'], 2) : '';
+                $lines[] = "[$loc$score]";
+                $lines[] = mb_substr((string) $chunk['content'], 0, 1500);
+                $lines[] = '---';
+            }
+
+            return implode("\n", $lines);
+        } catch (\Throwable) {
+            return '';
+        }
     }
+
 }

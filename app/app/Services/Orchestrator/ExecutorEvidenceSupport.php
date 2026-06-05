@@ -283,6 +283,9 @@ class ExecutorEvidenceSupport
             'files_read' => $execResult['files_read'] ?? [],
             'files_changed' => $execResult['files_changed'] ?? [],
             'commands_run' => $execResult['commands_run'] ?? [],
+            'commands_executed' => self::summariseExecutedCommands(
+                is_array($execResult['_commands_executed'] ?? null) ? $execResult['_commands_executed'] : []
+            ),
             'read_previews' => self::readPreviewsForAudit(
                 $preflightReads,
                 $previewMaxFiles,
@@ -479,6 +482,42 @@ class ExecutorEvidenceSupport
             'security_issues' => [],
             '_deterministic' => true,
         ];
+    }
+
+    /**
+     * Condense the raw command execution log into a compact summary the Auditor can reason over.
+     * Keeps the full output of failed commands (for root-cause analysis) and trims success output.
+     *
+     * @param  list<array<string, mixed>>  $executed
+     * @return list<array<string, mixed>>
+     */
+    public static function summariseExecutedCommands(array $executed): array
+    {
+        $out = [];
+        foreach ($executed as $row) {
+            $ok = (bool) ($row['ok'] ?? false);
+            $skipped = (bool) ($row['skipped'] ?? false);
+            $summary = [
+                'command' => (string) ($row['command'] ?? ''),
+                'ok' => $ok,
+                'exit_code' => $row['exit_code'] ?? null,
+            ];
+            if ($skipped) {
+                $summary['skipped'] = true;
+                $summary['reason'] = (string) ($row['reason'] ?? 'skipped');
+            } elseif (! $ok) {
+                // Preserve full output for failed commands so Auditor can diagnose
+                $summary['stdout'] = mb_substr((string) ($row['stdout'] ?? ''), 0, 2000);
+                $summary['stderr'] = mb_substr((string) ($row['stderr'] ?? ''), 0, 2000);
+            } else {
+                // Cap successful output
+                $stdout = (string) ($row['stdout'] ?? '');
+                $summary['stdout_snippet'] = $stdout !== '' ? mb_substr($stdout, 0, 500) : '';
+            }
+            $out[] = $summary;
+        }
+
+        return $out;
     }
 
     /**

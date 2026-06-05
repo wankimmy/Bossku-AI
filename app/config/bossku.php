@@ -18,7 +18,25 @@ return [
     'workspace_host_prefix' => env('BOSSKU_WORKSPACE_HOST_PREFIX', ''),
     'ollama_base_url' => env('OLLAMA_BASE_URL', 'http://127.0.0.1:11434'),
     'ollama_api_key' => env('OLLAMA_API_KEY'),
+    /**
+     * How long Ollama keeps a model loaded in memory after a request. Keeping it warm
+     * across the planner→executor→auditor pipeline avoids cold-reload latency between
+     * agents (local Ollama). Accepts a duration ("30m"), seconds (int), 0 (unload now),
+     * or -1 (keep forever). Empty string = let Ollama use its default.
+     */
+    'ollama_keep_alive' => env('OLLAMA_KEEP_ALIVE', '30m'),
+    /**
+     * Context window (num_ctx) for local Ollama models. Default null = do not send
+     * (Ollama Cloud sizes this server-side; only set for local models that need a
+     * larger window than the Ollama default).
+     */
+    'ollama_num_ctx' => env('OLLAMA_NUM_CTX') !== null ? (int) env('OLLAMA_NUM_CTX') : null,
     'max_revision_rounds' => env('BOSSKUAI_MAX_REVISION_ROUNDS', 3),
+    /**
+     * Soft token budget per run (estimated tokens). When exceeded, a warning event is emitted
+     * so the Nuxt UI can show an alert. 0 = no limit. Default ~100k tokens.
+     */
+    'token_budget_per_run' => (int) env('BOSSKU_TOKEN_BUDGET_PER_RUN', 100000),
     /** Max executor re-proposal rounds after user code-review "request changes" on approvals. */
     'max_approval_review_rounds' => (int) env('BOSSKU_MAX_APPROVAL_REVIEW_ROUNDS', 3),
     'show_raw_json' => env('BOSSKUAI_SHOW_RAW_JSON', true),

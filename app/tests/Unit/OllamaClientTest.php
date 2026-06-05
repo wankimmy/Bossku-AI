@@ -56,6 +56,42 @@ class OllamaClientTest extends TestCase
     }
 
     #[Test]
+    public function it_sends_keep_alive_to_keep_the_model_warm(): void
+    {
+        config(['bossku.ollama_keep_alive' => '30m']);
+        $this->fakeChatOk();
+
+        $client = new OllamaClient('http://127.0.0.1:11434');
+        $client->chatWithUsage('kimi-k2.6:cloud', [['role' => 'user', 'content' => 'hi']], 0.2);
+
+        Http::assertSent(fn ($request) => ($request->data()['keep_alive'] ?? null) === '30m');
+    }
+
+    #[Test]
+    public function it_omits_keep_alive_when_configured_empty(): void
+    {
+        config(['bossku.ollama_keep_alive' => '']);
+        $this->fakeChatOk();
+
+        $client = new OllamaClient('http://127.0.0.1:11434');
+        $client->chatWithUsage('kimi-k2.6:cloud', [['role' => 'user', 'content' => 'hi']], 0.2);
+
+        Http::assertSent(fn ($request) => ! array_key_exists('keep_alive', $request->data()));
+    }
+
+    #[Test]
+    public function it_sends_num_ctx_only_when_configured(): void
+    {
+        config(['bossku.ollama_num_ctx' => 16384]);
+        $this->fakeChatOk();
+
+        $client = new OllamaClient('http://127.0.0.1:11434');
+        $client->chatWithUsage('llama3.2', [['role' => 'user', 'content' => 'hi']], 0.2);
+
+        Http::assertSent(fn ($request) => ($request->data()['options']['num_ctx'] ?? null) === 16384);
+    }
+
+    #[Test]
     public function it_sanitizes_invalid_utf8_in_message_content(): void
     {
         $this->fakeChatOk();

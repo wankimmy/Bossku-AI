@@ -69,11 +69,23 @@ class RunController extends Controller
 
     public function clarification(string $id, OrchestratorService $orchestrator)
     {
+        // A missing run here is expected (e.g. the browser is polling a run id left over
+        // from a previous DB state). Return a clean 404 instead of letting the orchestrator
+        // throw a RuntimeException, which Laravel renders as a 500 and logs as an ERROR on
+        // every poll.
+        if ($this->findRun($id) === null) {
+            return $this->runNotFoundResponse($id);
+        }
+
         return response()->json($orchestrator->clarificationForRun($id));
     }
 
     public function approvals(string $id, OrchestratorService $orchestrator)
     {
+        if ($this->findRun($id) === null) {
+            return $this->runNotFoundResponse($id);
+        }
+
         return response()->json($orchestrator->approvalsForRun($id));
     }
 

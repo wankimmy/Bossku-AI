@@ -4,6 +4,7 @@ namespace App\Services\Orchestrator;
 
 use App\Models\BosskuAi\Memory;
 use App\Models\BosskuAi\MemoryRunLink;
+use App\Services\BosskuAi\CodebaseIndexService;
 use App\Models\BosskuAi\Run;
 use App\Models\BosskuAi\RunStep;
 use App\Models\BosskuAi\Skill;
@@ -72,6 +73,7 @@ class OrchestratorService
         protected SpecialistAgentRunner $specialistRunner,
         protected SpecialistAgentDraftingService $specialistDrafting,
         protected ResumeIntentClassifier $resumeIntentClassifier,
+        protected CodebaseIndexService $codeIndex,
     ) {}
 
     /**
@@ -747,6 +749,7 @@ class OrchestratorService
         }
 
         $preflightReads = $this->preflightReadTargetFiles($run, $plan, $emit, $modelRoute);
+        $preflightReads = $this->mergeSemanticPreflightReads($preflightReads, $agentPrompt, $activeProject);
 
         $skillName = (string) ($routerCtx['primary_skill']['name'] ?? 'cofounder');
         $step = [
@@ -800,6 +803,8 @@ class OrchestratorService
             $specialistContext,
         );
         $execResult = ExecutorEvidenceSupport::mergePreflightReads($execResult, $preflightReads);
+        $execResult = $this->applyExecutorCommands($run, $execResult, $emit);
+        $this->maybeReindexAfterWrites($execResult, $activeProject);
         $execResult = $this->ensureExecutorEvidence($run, $plan, $execResult, $userPrompt, $emit);
         $modelsResolved['executor'] = (string) ($execResult['_executor_model'] ?? $modelsResolved['executor'] ?? '');
         $approvalPipeline = $this->buildExecutorPipelineSnapshot(
@@ -849,6 +854,7 @@ class OrchestratorService
             'executor',
             'auditor'
         ));
+        $this->maybeEmitBudgetWarning($run, $tokenAcc, $tokenAcc + $exTok, $emit);
         $tokenAcc += $exTok;
         $this->emit($emit, $this->events->executorDone($run, $execResult, $modelsResolved['executor'], (int) ($execResult['latency_ms'] ?? 0), $exTok));
 
@@ -1260,6 +1266,21 @@ class OrchestratorService
                 );
                 $auditFeedback['original_prompt'] = $agentPrompt;
 
+                // Auto-escalate: on the second+ revision round, switch to the high_risk profile
+                // so a smarter model gets a crack at fixing what the cheaper model couldn't.
+                $revProfileKey = ($revisionRoundsUsed >= 1 && in_array($execProfileKey, ['default', 'backend', 'frontend_ui'], true))
+                    ? 'high_risk'
+                    : $execProfileKey;
+                if ($revProfileKey !== $execProfileKey) {
+                    $this->emit($emit, $this->basePayload($run, 'model_escalated', [
+                        'status' => 'info',
+                        'agent' => 'executor',
+                        'summary' => 'Escalating to high_risk model profile for revision round '.($revisionRoundsUsed + 1).'.',
+                        'from_profile' => $execProfileKey,
+                        'to_profile' => $revProfileKey,
+                    ]));
+                }
+
                 $revisionResult = $this->executor->execute(
                     $revisionStep,
                     $skillRow,
@@ -1269,7 +1290,7 @@ class OrchestratorService
                     null,
                     $plan,
                     $modelRoute,
-                    $execProfileKey,
+                    $revProfileKey,
                     $this->projects->agentWorkspaceContext(),
                     $preflightReads,
                     $auditFeedback,
@@ -1278,6 +1299,7 @@ class OrchestratorService
                     $run->id,
                 );
                 $revisionResult = ExecutorEvidenceSupport::mergePreflightReads($revisionResult, $preflightReads);
+                $revisionResult = $this->applyExecutorCommands($run, $revisionResult, $emit);
                 $revisionResult = $this->ensureExecutorEvidence($run, $plan, $revisionResult, $userPrompt, $emit);
                 $modelsResolved['executor'] = (string) ($revisionResult['_executor_model'] ?? $modelsResolved['executor'] ?? '');
                 $revPipeline = $this->buildExecutorPipelineSnapshot(
@@ -1332,6 +1354,7 @@ class OrchestratorService
         $needsSecurityPass = (
             (($modelRoute['needs_security_auditor'] ?? false) && WorkflowRouteHelper::workflowIncludesSecurityAuditor($workflow))
             || ($lastAudit['requires_security_audit'] ?? false)
+            || self::execResultHasCodeChanges($execResult)
         );
 
         if ($needsSecurityPass) {
@@ -2813,6 +2836,123 @@ class OrchestratorService
     protected function promptMentionsRepo(string $prompt): bool
     {
         return RepoTaskDetector::requiresRepositoryAccess($prompt);
+    }
+
+    /**
+     * Returns true when the executor changed at least one source-code file, so the
+     * security auditor runs unconditionally (not just when the router flagged it).
+     * Covers PHP, JS/TS/Vue, Python, Ruby, Go, Java, C#, Rust, and C/C++.
+     *
+     * @param  array<string, mixed>  $execResult
+     */
+    private static function execResultHasCodeChanges(array $execResult): bool
+    {
+        static $codeExts = ['php', 'js', 'ts', 'tsx', 'jsx', 'vue', 'py', 'rb', 'go', 'java', 'cs', 'rs', 'cpp', 'c', 'h'];
+        $files = is_array($execResult['files_changed'] ?? null) ? $execResult['files_changed'] : [];
+        foreach ($files as $path) {
+            if (! is_string($path)) {
+                continue;
+            }
+            if (in_array(strtolower(pathinfo($path, PATHINFO_EXTENSION)), $codeExts, true)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Emit a warning event if the accumulated token count has crossed the soft budget.
+     * Only fires once per run (caller passes the previous token count so we can detect
+     * the crossing edge rather than emitting on every call).
+     */
+    protected function maybeEmitBudgetWarning(
+        Run $run,
+        int $tokenAccBefore,
+        int $tokenAccAfter,
+        ?callable $emit,
+    ): void {
+        $budget = (int) config('bossku.token_budget_per_run', 0);
+        if ($budget <= 0 || $emit === null) {
+            return;
+        }
+        if ($tokenAccBefore < $budget && $tokenAccAfter >= $budget) {
+            $this->emit($emit, $this->basePayload($run, 'token_budget_warning', [
+                'status' => 'warning',
+                'agent' => 'orchestrator',
+                'summary' => 'This run has used ~'.number_format($tokenAccAfter).' estimated tokens (budget: '.number_format($budget).'). Further pipeline stages will use additional tokens.',
+                'token_count' => $tokenAccAfter,
+                'budget' => $budget,
+            ]));
+        }
+    }
+
+    /**
+     * Retrieve semantically-relevant code chunks and convert them to the standard preflight-read
+     * format so the Executor sees them in `preflightReads` alongside file-system reads.
+     * Deduplicates against paths already present in $existing.
+     *
+     * @param  list<array<string, mixed>>  $existing
+     * @return list<array<string, mixed>>
+     */
+    protected function mergeSemanticPreflightReads(
+        array $existing,
+        string $query,
+        ?\App\Models\BosskuAi\Project $activeProject,
+    ): array {
+        try {
+            $existingPaths = array_flip(
+                array_filter(array_map(static fn ($r) => is_array($r) ? ($r['path'] ?? '') : '', $existing))
+            );
+
+            $chunks = $this->codeIndex->retrieve($query, 5, $activeProject?->id);
+            foreach ($chunks as $chunk) {
+                $path = (string) ($chunk['path'] ?? '');
+                if ($path === '' || isset($existingPaths[$path])) {
+                    continue;
+                }
+                $score = isset($chunk['similarity']) ? round((float) $chunk['similarity'], 2) : null;
+                $existing[] = [
+                    'path' => $path,
+                    'found' => true,
+                    'preview' => mb_substr((string) ($chunk['content'] ?? ''), 0, 2000),
+                    'reason' => 'semantic search'.($score !== null ? " (score=$score)" : ''),
+                    'tool_status' => 'success',
+                    'start_line' => $chunk['start_line'] ?? null,
+                    'end_line' => $chunk['end_line'] ?? null,
+                ];
+                $existingPaths[$path] = true;
+            }
+        } catch (\Throwable) {
+            // never block the pipeline on index errors
+        }
+
+        return $existing;
+    }
+
+    /**
+     * Fire-and-forget: re-index any files the Executor just wrote so the next run's Planner
+     * sees up-to-date code rather than stale chunks. Errors are silently swallowed.
+     *
+     * @param  array<string, mixed>  $execResult
+     */
+    protected function maybeReindexAfterWrites(
+        array $execResult,
+        ?\App\Models\BosskuAi\Project $activeProject,
+    ): void {
+        try {
+            $changed = is_array($execResult['files_changed'] ?? null) ? $execResult['files_changed'] : [];
+            if ($changed === [] || $activeProject === null) {
+                return;
+            }
+            $root = $activeProject->container_path ?: (string) config('bossku.repo_root');
+            if (! is_dir((string) $root)) {
+                return;
+            }
+            $this->codeIndex->indexDirectory((string) $root, $activeProject->id);
+        } catch (\Throwable) {
+            // best-effort — never let index errors surface to the pipeline
+        }
     }
 
     /**

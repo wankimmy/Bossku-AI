@@ -6,6 +6,7 @@ use App\Services\Attachments\AttachmentIngestionService;
 use App\Services\Attachments\AttachmentRunContextService;
 use App\Services\Attachments\VisionService;
 use App\Services\BosskuAi\AgentPersonaService;
+use App\Services\BosskuAi\CodebaseIndexService;
 use App\Services\BosskuAi\ContextBudgetGuard;
 use App\Services\BosskuAi\DeterministicTaskClassifier;
 use App\Services\BosskuAi\KnowledgeImportService;
@@ -92,6 +93,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(PromptRouteClassifier::class);
 
         $this->app->singleton(MemoryService::class);
+        $this->app->singleton(CodebaseIndexService::class);
         $this->app->singleton(SkillRouterService::class);
         $this->app->singleton(PlannerService::class);
         $this->app->singleton(ExecutorService::class);

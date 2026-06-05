@@ -144,7 +144,12 @@ class AnthropicProvider implements LlmProviderInterface
         ];
 
         if ($system !== null && $system !== '') {
-            $payload['system'] = $system;
+            // Use extended-thinking block format so Anthropic can cache the static system prompt.
+            // cache_control type "ephemeral" is billed at 10% of input tokens after a cache hit —
+            // large system prompts (1k+ tokens) save significant cost on repeated calls.
+            $payload['system'] = [
+                ['type' => 'text', 'text' => $system, 'cache_control' => ['type' => 'ephemeral']],
+            ];
         }
 
         return $payload;
@@ -155,8 +160,9 @@ class AnthropicProvider implements LlmProviderInterface
         return Http::timeout(120)
             ->acceptJson()
             ->withHeaders([
-                'x-api-key'         => $this->apiKey,
-                'anthropic-version' => '2023-06-01',
+                'x-api-key'             => $this->apiKey,
+                'anthropic-version'     => '2023-06-01',
+                'anthropic-beta'        => 'prompt-caching-2024-07-31',
             ]);
     }
 }

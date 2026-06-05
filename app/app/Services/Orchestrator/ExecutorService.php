@@ -10,6 +10,8 @@ use App\Support\StringCoercion;
 
 class ExecutorService
 {
+    use AgentConversationTrait;
+
     public function __construct(
         protected ModelFallbackService $fallback,
         protected ModelRoutingConfig $modelConfig,
@@ -161,9 +163,12 @@ memory_lessons_applied (string[] — cite which [Memory N] lessons you applied a
 checklist_status (array of {id: string, status: "completed"|"partial"|"failed"|"skipped", notes: string} — one entry per plan checklist item).
 
 File write rules:
-- For modify/create, `after` MUST be complete final file contents OR a valid unified `diff`.
-- NEVER put placeholders in `after`.
-- If you do not have the full file, read it via files_read first or set needs_user_input.
+- For MODIFY operations on existing files: return a valid unified diff in the `diff` key (not `after`). Format: `--- path\n+++ path\n @@ ... @@\n -old\n +new\n context`. This saves tokens and lets the system apply targeted patches.
+- For CREATE operations (new file): return the complete file contents in `after`.
+- For DELETE operations: set change_type to "deleted" and omit `after` and `diff`.
+- NEVER put placeholders, "...", or "rest of file unchanged" in `after` or `diff`.
+- If you do not have enough context to write a correct diff, set `after` to the complete file instead of guessing.
+- Only include the changed hunks in the diff — no need to include the full file.
 SYS;
 
         $isRejectedRevert = is_array($auditFeedback)
@@ -329,26 +334,6 @@ SYS;
         }
 
         return $result;
-    }
-
-    /** @param list<array{role: string, content: string}> $conversation */
-    protected function buildConversationBlock(array $conversation): string
-    {
-        if ($conversation === []) {
-            return '(no prior conversation — this is the first turn)';
-        }
-        $total = count($conversation);
-        $recent = array_slice($conversation, -10);
-        $offset = max(0, $total - 10);
-        $lines = [];
-        foreach ($recent as $idx => $turn) {
-            $role = strtolower((string) ($turn['role'] ?? 'user'));
-            $cap = $role === 'assistant' ? 1200 : 800;
-            $content = mb_substr((string) ($turn['content'] ?? ''), 0, $cap);
-            $lines[] = '[Turn '.($offset + $idx).'] '.strtoupper($role).': '.$content;
-        }
-
-        return implode("\n\n", $lines);
     }
 
     /** @param list<array<string,mixed>> $memories */

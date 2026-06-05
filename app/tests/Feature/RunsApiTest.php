@@ -342,6 +342,22 @@ class RunsApiTest extends TestCase
     }
 
     #[Test]
+    public function clarification_and_approvals_for_unknown_run_return_json_404_not_500(): void
+    {
+        // A stale run id left in the browser must not flood the logs with 500 ERRORs;
+        // these endpoints return a clean 404 like /runs/{id} and /stream-events do.
+        $missingId = '00000000-0000-4000-8000-0000000000cc';
+
+        $this->getJson("/api/runs/{$missingId}/clarification")
+            ->assertStatus(404)
+            ->assertJsonPath('run_id', $missingId);
+
+        $this->getJson("/api/runs/{$missingId}/approvals")
+            ->assertStatus(404)
+            ->assertJsonPath('run_id', $missingId);
+    }
+
+    #[Test]
     public function runs_require_token_when_auth_enabled(): void
     {
         config([
