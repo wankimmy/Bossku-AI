@@ -66,7 +66,7 @@ class MemoryService
             'confidence' => $confidence,
         ]);
 
-        if ($embedding && count($embedding) >= 64 && $this->databaseDriver() === 'pgsql') {
+        if ($embedding && count($embedding) >= 64 && $this->supportsVectorEmbeddings()) {
             $this->persistEmbedding($row->getKey(), $embedding);
         }
 
@@ -83,7 +83,7 @@ class MemoryService
 
         if (
             $this->memoryOllamaEnabled()
-            && $this->databaseDriver() === 'pgsql'
+            && $this->supportsVectorEmbeddings()
         ) {
             try {
                 $physical = $this->settings->ollamaEmbeddingPhysicalModel();
@@ -215,22 +215,46 @@ class MemoryService
         return $vec;
     }
 
+    protected function supportsVectorEmbeddings(): bool
+    {
+        return in_array($this->databaseDriver(), ['pgsql', 'sqlite'], true);
+    }
+
     /** @param list<float> $vec */
     protected function persistEmbedding(string $id, array $vec): void
     {
-        if ($this->databaseDriver() !== 'pgsql') {
+        $slice = array_slice($vec, 0, 1536);
+        $driver = $this->databaseDriver();
+
+        if ($driver === 'pgsql') {
+            $literal = '['.implode(',', array_map(fn (float $f) => sprintf('%.8f', $f), $slice)).']';
+            DB::update(
+                'UPDATE bossku_ai_memories SET embedding = ?::vector WHERE id = ?::uuid',
+                [$literal, $id]
+            );
+
             return;
         }
-        $slice = array_slice($vec, 0, 1536);
-        $literal = '['.implode(',', array_map(fn (float $f) => sprintf('%.8f', $f), $slice)).']';
-        DB::update(
-            'UPDATE bossku_ai_memories SET embedding = ?::vector WHERE id = ?::uuid',
-            [$literal, $id]
-        );
+
+        if ($driver === 'sqlite') {
+            Memory::query()->whereKey($id)->update([
+                'embedding_json' => json_encode($slice, JSON_THROW_ON_ERROR),
+            ]);
+        }
     }
 
     /** @param list<float> $vec */
     protected function vectorSearch(array $vec, int $limit): Collection
+    {
+        return match ($this->databaseDriver()) {
+            'pgsql' => $this->vectorSearchPgsql($vec, $limit),
+            'sqlite' => $this->vectorSearchSqlite($vec, $limit),
+            default => collect(),
+        };
+    }
+
+    /** @param list<float> $vec */
+    protected function vectorSearchPgsql(array $vec, int $limit): Collection
     {
         $slice = array_slice($vec, 0, 1536);
         $literal = '['.implode(',', array_map(fn (float $f) => sprintf('%.8f', $f), $slice)).']';
@@ -242,7 +266,7 @@ class MemoryService
                AND (1 - (embedding <=> ?::vector)) > 0.35
              ORDER BY (1 - (embedding <=> ?::vector)) * 0.65 + COALESCE(confidence, 0.72) * 0.35 DESC
              LIMIT '.$limit,
-            [$literal, $literal]
+            [$literal, $literal, $literal]
         );
         if ($rows === []) {
             return collect();
@@ -260,5 +284,75 @@ class MemoryService
             ->get()
             ->sortByDesc(fn ($m) => $scores[$m->getKey()] ?? 0)
             ->values();
+    }
+
+    /** @param list<float> $vec */
+    protected function vectorSearchSqlite(array $vec, int $limit): Collection
+    {
+        $queryVec = array_slice($vec, 0, 1536);
+        $candidates = Memory::query()
+            ->where('is_active', true)
+            ->whereNotNull('embedding_json')
+            ->get();
+
+        $ranked = [];
+        foreach ($candidates as $memory) {
+            $raw = $memory->embedding_json;
+            if (! is_string($raw) || $raw === '') {
+                continue;
+            }
+            try {
+                /** @var mixed $decoded */
+                $decoded = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+            } catch (\Throwable) {
+                continue;
+            }
+            if (! is_array($decoded) || count($decoded) < 64) {
+                continue;
+            }
+            /** @var list<float> $stored */
+            $stored = array_values(array_map(static fn ($v): float => (float) $v, $decoded));
+            $similarity = $this->cosineSimilarity($queryVec, $stored);
+            if ($similarity <= 0.35) {
+                continue;
+            }
+            $confidence = (float) ($memory->confidence ?? 0.72);
+            $ranked[] = [
+                'memory' => $memory,
+                'score' => $similarity * 0.65 + $confidence * 0.35,
+            ];
+        }
+
+        usort($ranked, static fn (array $a, array $b): int => $b['score'] <=> $a['score']);
+
+        /** @var Collection<int, Memory> */
+        return collect(array_slice($ranked, 0, $limit))
+            ->map(static fn (array $row) => $row['memory'])
+            ->values();
+    }
+
+    /**
+     * @param  list<float>  $a
+     * @param  list<float>  $b
+     */
+    protected function cosineSimilarity(array $a, array $b): float
+    {
+        $len = min(count($a), count($b));
+        if ($len === 0) {
+            return 0.0;
+        }
+        $dot = 0.0;
+        $normA = 0.0;
+        $normB = 0.0;
+        for ($i = 0; $i < $len; $i++) {
+            $dot += $a[$i] * $b[$i];
+            $normA += $a[$i] * $a[$i];
+            $normB += $b[$i] * $b[$i];
+        }
+        if ($normA <= 0.0 || $normB <= 0.0) {
+            return 0.0;
+        }
+
+        return $dot / (sqrt($normA) * sqrt($normB));
     }
 }

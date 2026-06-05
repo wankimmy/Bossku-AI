@@ -19,24 +19,70 @@ trait OrchestratorUserLocalCommandsTrait
             if (! is_array($row)) {
                 continue;
             }
-            if (($row['ok'] ?? false) === true) {
+            if (! $this->rowRequiresUserRun($row)) {
                 continue;
             }
             $command = trim(StringCoercion::toString($row['command'] ?? null, ''));
             if ($command === '') {
                 continue;
             }
-            $reason = trim(StringCoercion::toString(
-                $row['reason'] ?? $row['stderr'] ?? null,
-                'Command could not run inside Bossku.',
-            ));
-            if (! $this->reasonRequiresUserRun($reason)) {
-                continue;
-            }
-            $out[] = ['command' => $command, 'reason' => $reason];
+            $out[] = ['command' => $command, 'reason' => $this->describeUserRunReason($row)];
         }
 
         return $out;
+    }
+
+    /**
+     * A failed command should be handed to the user only when Bossku physically
+     * cannot run it in the container: a missing binary (exit 127 / "command not
+     * found"), Docker being unavailable, or project commands disabled. Genuine
+     * failures (failing tests, lint, build errors, registry/network errors)
+     * stay with the agent to fix.
+     *
+     * @param  array<string, mixed>  $row
+     */
+    protected function rowRequiresUserRun(array $row): bool
+    {
+        if (($row['ok'] ?? false) === true) {
+            return false;
+        }
+
+        if ((int) ($row['exit_code'] ?? 0) === 127) {
+            return true;
+        }
+
+        $reason = trim(StringCoercion::toString($row['reason'] ?? $row['stderr'] ?? null, ''));
+
+        return $this->reasonRequiresUserRun($reason)
+            || $this->reasonIndicatesMissingBinary($reason);
+    }
+
+    protected function reasonIndicatesMissingBinary(string $reason): bool
+    {
+        if ($reason === '') {
+            return false;
+        }
+
+        // Shell "command not found" signatures only — not generic non-zero
+        // exits like npm registry "404 Not Found" or bundler "Module not found".
+        return (bool) preg_match(
+            '/(?:command not found|: not found\b|no such file or directory|not recognized as an internal or external command|executable file not found)/i',
+            $reason,
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    protected function describeUserRunReason(array $row): string
+    {
+        $raw = trim(StringCoercion::toString($row['reason'] ?? $row['stderr'] ?? null, ''));
+
+        if ((int) ($row['exit_code'] ?? 0) === 127 || $this->reasonIndicatesMissingBinary($raw)) {
+            return 'Not available in the Bossku container (exit 127): '.($raw !== '' ? $raw : 'command not found');
+        }
+
+        return $raw !== '' ? $raw : 'Command could not run inside Bossku.';
     }
 
     protected function reasonRequiresUserRun(string $reason): bool
@@ -73,7 +119,7 @@ trait OrchestratorUserLocalCommandsTrait
             $n = $idx + 1;
             $questions[] = [
                 'id' => 'user_cmd_'.$n,
-                'prompt' => "Run this command on your machine (Bossku runs in Docker and cannot execute it in the container):\n\n{$command}",
+                'prompt' => "Run this command on your machine — Bossku can't run it inside its container (the tool isn't installed there, or it needs Docker/host access):\n\n{$command}",
                 'why_it_matters' => 'Paste the full terminal output below so the agent can analyze it and continue the run.',
                 'options' => [
                     [
@@ -95,8 +141,8 @@ trait OrchestratorUserLocalCommandsTrait
             ],
             'ready_to_proceed' => false,
             'summary' => $count === 1
-                ? 'Bossku could not run 1 command in Docker. Please run it locally and paste the output.'
-                : "Bossku could not run {$count} commands in Docker. Please run each locally and paste the output.",
+                ? 'Bossku could not run 1 command in its container. Please run it locally and paste the output.'
+                : "Bossku could not run {$count} commands in its container. Please run each locally and paste the output.",
         ];
     }
 
@@ -156,11 +202,13 @@ trait OrchestratorUserLocalCommandsTrait
         $clarification = $this->buildUserLocalCommandsClarification($commands);
         $proof = [
             'from_agent' => $fromAgent,
+            'needs_user_input' => true,
             'commands_run' => $blocked,
             'blockers' => array_map(
                 static fn (array $row) => $row['command'].': '.$row['reason'],
                 $blocked,
             ),
+            'checklist_status' => $this->userLocalCommandChecklistStatus($pipeline, $blocked),
         ];
 
         return $this->pauseForClarification(
@@ -173,6 +221,68 @@ trait OrchestratorUserLocalCommandsTrait
             'user_local_commands',
             $proof,
         );
+    }
+
+    /**
+     * @param  array<string, mixed>  $pipeline
+     * @param  list<array{command: string, reason: string}>  $blocked
+     * @return list<array<string, string>>
+     */
+    protected function userLocalCommandChecklistStatus(array $pipeline, array $blocked): array
+    {
+        $plan = is_array($pipeline['plan'] ?? null) ? $pipeline['plan'] : [];
+        $planChecklist = is_array($plan['checklist'] ?? null) ? $plan['checklist'] : [];
+        $execResult = is_array($pipeline['exec_result'] ?? null) ? $pipeline['exec_result'] : [];
+        $execChecklist = is_array($execResult['checklist_status'] ?? null) ? $execResult['checklist_status'] : [];
+        $commands = implode(', ', array_map(
+            static fn (array $row) => $row['command'],
+            $blocked,
+        ));
+        $notes = $commands !== ''
+            ? 'Awaiting local command output before executor can verify this item: '.$commands
+            : 'Awaiting local command output before executor can verify this item.';
+
+        $rows = [];
+        foreach ($planChecklist as $idx => $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+
+            $owner = strtolower(StringCoercion::toString($item['owner'] ?? null, 'executor'));
+            if ($owner !== '' && ! str_contains($owner, 'executor')) {
+                continue;
+            }
+
+            $id = StringCoercion::toString($item['id'] ?? null, 'plan-'.($idx + 1));
+            $rows[] = [
+                'id' => $id,
+                'title' => StringCoercion::toString($item['title'] ?? $item['description'] ?? null, $id),
+                'owner' => StringCoercion::toString($item['owner'] ?? null, 'executor'),
+                'status' => 'awaiting_input',
+                'notes' => $notes,
+            ];
+        }
+
+        if ($rows !== []) {
+            return $rows;
+        }
+
+        foreach ($execChecklist as $idx => $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+
+            $id = StringCoercion::toString($item['id'] ?? null, 'executor-checklist-'.($idx + 1));
+            $rows[] = [
+                'id' => $id,
+                'title' => StringCoercion::toString($item['title'] ?? $item['description'] ?? null, $id),
+                'owner' => StringCoercion::toString($item['owner'] ?? null, 'executor'),
+                'status' => 'awaiting_input',
+                'notes' => $notes,
+            ];
+        }
+
+        return $rows;
     }
 
     /**
@@ -246,7 +356,7 @@ trait OrchestratorUserLocalCommandsTrait
             }
             $command = trim(StringCoercion::toString($row['command'] ?? null, ''));
             $reason = StringCoercion::toString($row['reason'] ?? $row['stderr'] ?? null, '');
-            if ($command === '' || ! $this->reasonRequiresUserRun($reason)) {
+            if ($command === '' || ! $this->rowRequiresUserRun($row)) {
                 $merged[] = $row;
 
                 continue;

@@ -17,7 +17,7 @@ trait OrchestratorClarificationTrait
         string $reviewDecision = 'approve',
         ?string $codeReviewComment = null,
     ): array {
-        $run = Run::query()->findOrFail($runId);
+        $run = $this->requireExistingRun($runId);
         if ($run->status !== 'awaiting_input') {
             throw new \InvalidArgumentException('Run is not awaiting user input (status: '.$run->status.').');
         }
@@ -135,7 +135,7 @@ trait OrchestratorClarificationTrait
 
     public function clarificationForRun(string $runId): array
     {
-        $run = Run::query()->findOrFail($runId);
+        $run = $this->requireExistingRun($runId);
         /** @var array<string, mixed> $meta */
         $meta = is_array($run->metadata) ? $run->metadata : [];
         /** @var array<string, mixed> $checkpoint */
@@ -999,5 +999,17 @@ trait OrchestratorClarificationTrait
             (int) ($pipeline['token_acc'] ?? 0),
             (float) ($pipeline['t_run'] ?? microtime(true)),
         );
+    }
+
+    protected function requireExistingRun(string $runId): Run
+    {
+        $run = Run::query()->find($runId);
+        if ($run === null) {
+            throw new \RuntimeException(
+                'This run no longer exists in BosskuAI. It may have been removed during a database reset or while knowledge was re-imported. Start a new chat run.'
+            );
+        }
+
+        return $run;
     }
 }

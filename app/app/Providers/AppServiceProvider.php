@@ -23,6 +23,7 @@ use App\Services\Llm\Providers\AnthropicProvider;
 use App\Services\Llm\Providers\CodexOAuthProvider;
 use App\Services\Llm\Providers\OllamaProvider;
 use App\Services\Llm\UsageTracker;
+use App\Services\Runs\RunExistenceGuard;
 use App\Services\OAuth\CodexOAuthService;
 use App\Services\Orchestrator\AuditorService;
 use App\Services\Orchestrator\DirectAnswerService;
@@ -42,6 +43,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(RuntimeSettings::class);
+        $this->app->singleton(RunExistenceGuard::class);
         $this->app->singleton(CodexOAuthService::class);
 
         $this->app->singleton(OllamaClient::class, function ($app) {

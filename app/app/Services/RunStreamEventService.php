@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\BosskuAi\Run;
 use App\Models\BosskuAi\RunStreamEvent;
+use App\Services\Runs\RunExistenceGuard;
+use Illuminate\Database\QueryException;
 
 class RunStreamEventService
 {
@@ -11,6 +13,10 @@ class RunStreamEventService
 
     /** @var array<string, int> */
     private array $nextSeqByRun = [];
+
+    public function __construct(
+        private readonly RunExistenceGuard $runGuard,
+    ) {}
 
     /**
      * @param  array<string, mixed>  $payload
@@ -24,14 +30,33 @@ class RunStreamEventService
             return;
         }
 
+        // The stream-event log is best-effort telemetry. If the parent run no
+        // longer exists (e.g. it was deleted while a terminal event was still
+        // being emitted), skip the write rather than throwing a foreign-key
+        // violation that would crash the stream.
+        if (! $this->runGuard->exists($runId)) {
+            return;
+        }
+
         $seq = $this->nextSeq($runId);
 
-        RunStreamEvent::query()->create([
-            'run_id' => $runId,
-            'seq' => $seq,
-            'payload' => $payload,
-            'created_at' => now(),
-        ]);
+        try {
+            RunStreamEvent::query()->create([
+                'run_id' => $runId,
+                'seq' => $seq,
+                'payload' => $payload,
+                'created_at' => now(),
+            ]);
+        } catch (QueryException $e) {
+            if (RunExistenceGuard::isIntegrityViolation($e)) {
+                // Run was deleted between the existence check and the insert.
+                $this->runGuard->markMissing($runId);
+
+                return;
+            }
+
+            throw $e;
+        }
 
         $this->pruneOldEvents($runId);
     }

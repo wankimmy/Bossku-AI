@@ -7,12 +7,8 @@ use App\Models\BosskuAi\Checklist;
 use App\Models\BosskuAi\Memory;
 use App\Models\BosskuAi\Playbook;
 use App\Models\BosskuAi\Rule;
-use App\Models\BosskuAi\Run;
-use App\Models\BosskuAi\RunStep;
 use App\Models\BosskuAi\Skill;
 use App\Models\BosskuAi\SkillLink;
-use App\Models\BosskuAi\MemoryRunLink;
-use App\Models\BosskuAi\ToolCall;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
@@ -23,6 +19,14 @@ use App\Services\BosskuAi\MemoryService;
 
 class KnowledgeImportService
 {
+    /**
+     * Artifact `type` values produced by the knowledge importer. Only these are
+     * cleared on `--fresh`; run-produced artifacts (other types) are preserved.
+     *
+     * @var list<string>
+     */
+    private const KNOWLEDGE_ARTIFACT_TYPES = ['config', 'reference', 'command', 'knowledge_chunk'];
+
     /** @var array<string, mixed> */
     protected array $skillIndex = [];
 
@@ -90,16 +94,19 @@ class KnowledgeImportService
         return $stats;
     }
 
+    /**
+     * Refresh the imported knowledge base only. Run history (runs, steps, tool
+     * calls, artifacts they produced) and memory are preserved — deleting them
+     * here previously cascaded into bossku_ai_run_stream_events and caused
+     * foreign-key violations for any run that emitted events around the wipe.
+     */
     protected function truncateBosskuTables(): void
     {
         DB::transaction(function () {
-            ToolCall::query()->delete();
-            RunStep::query()->delete();
-            Run::query()->delete();
-            MemoryRunLink::query()->delete();
-            Memory::query()->delete();
             SkillLink::query()->delete();
-            Artifact::query()->delete();
+            Artifact::query()
+                ->whereIn('type', self::KNOWLEDGE_ARTIFACT_TYPES)
+                ->delete();
             Skill::query()->delete();
             Rule::query()->delete();
             Playbook::query()->delete();

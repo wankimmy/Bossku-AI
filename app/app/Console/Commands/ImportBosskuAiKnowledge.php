@@ -7,7 +7,7 @@ use Illuminate\Console\Command;
 
 class ImportBosskuAiKnowledge extends Command
 {
-    protected $signature = 'bosskuai:import-knowledge {--fresh : Truncate BosskuAI tables before import}';
+    protected $signature = 'bosskuai:import-knowledge {--fresh : Clear existing knowledge (skills, rules, playbooks, checklists, references) before import; run history and memory are preserved}';
 
     protected $description = 'Import BosskuAI markdown knowledge (skills, rules, playbooks, checklists, references)';
 

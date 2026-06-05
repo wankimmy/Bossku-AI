@@ -1,13 +1,62 @@
 # Installation
 
-BosskuAI has two installation paths.
+BosskuAI has three installation paths.
 
 | Path | Best for |
 |---|---|
-| Local web app | Running the dashboard and API on your machine |
-| Repo toolkit | Adding BosskuAI skills, rules, and helper files to another repo |
+| **Desktop app (Windows .exe)** | End users — one installer, no Docker (Hermes-style) |
+| **Docker stack** | Developers and power users who want Postgres/pgvector + Redis |
+| **Repo toolkit** | Adding BosskuAI skills, rules, and helper files to another repo |
 
-## Local Web App
+## Desktop App (Windows) — recommended
+
+Download and run **BosskuAI Setup** (same experience as [Hermes Desktop](https://hermes-agent.nousresearch.com/docs/user-guide/desktop)): a small installer that opens BosskuAI in a native window. **Docker is not required.**
+
+### Requirements
+
+- Windows 10 or 11
+- Internet on first launch (downloads portable PHP 8.3, Node 22, and Git into `%LOCALAPPDATA%\BosskuAI\`)
+- At least one model connection (Ollama Cloud, Anthropic, or Codex) after setup
+
+### Install and run
+
+1. Run `BosskuAI Setup <version>.exe` from `desktop/dist/` (or your release channel).
+2. Launch BosskuAI. First run will:
+   - copy the app to `%LOCALAPPDATA%\BosskuAI\stack`,
+   - download and install portable PHP, Node, and Git,
+   - run `composer install`, build the Nuxt dashboard, migrate SQLite, seed, and import knowledge,
+   - start the API (`localhost:28480`) and web UI (`localhost:28470`).
+3. First launch typically takes **5–15 minutes**. Later launches are much faster.
+
+Semantic memory works on desktop via **SQLite + stored embeddings** (no Postgres). Configure Ollama (or another embedding provider) in Settings so memories get vectorized.
+
+Use the tray icon to open, restart servers, stop servers, or quit.
+
+### Docker mode from the desktop app (optional)
+
+If you prefer the full Docker stack while developing the Electron shell:
+
+```powershell
+$env:BOSSKU_DESKTOP_RUNTIME = "docker"
+cd desktop
+npm start
+```
+
+Requires Docker Desktop running and the same ports (`28470` / `28480`) as below.
+
+### Build the installer from source
+
+```powershell
+cd desktop
+npm install
+npm run dist
+```
+
+Output: `desktop/dist/BosskuAI Setup <version>.exe`. The installer is unsigned by default (SmartScreen may warn). Add `desktop/assets/icon.ico` to brand the app.
+
+Logs: `%LOCALAPPDATA%\BosskuAI\logs\desktop.log`
+
+## Local Web App (Docker)
 
 ### Requirements
 
@@ -63,6 +112,8 @@ docker compose exec backend php artisan migrate --force
 docker compose exec backend php artisan db:seed
 docker compose exec backend php artisan bosskuai:import-knowledge --fresh
 ```
+
+> `--fresh` refreshes the knowledge base only (skills, rules, playbooks, checklists, references). Your run history and memory are preserved, so it is safe to re-run anytime.
 
 Open:
 

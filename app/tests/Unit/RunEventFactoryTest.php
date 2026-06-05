@@ -62,6 +62,39 @@ class RunEventFactoryTest extends TestCase
     }
 
     #[Test]
+    public function executor_done_payload_exposes_checklist_status(): void
+    {
+        $run = new Run([
+            'id' => '00000000-0000-0000-0000-000000000004',
+            'prompt' => 'Scaffold Nuxt app',
+            'status' => 'running',
+            'metadata' => [],
+        ]);
+
+        $factory = new RunEventFactory;
+
+        $payload = $factory->executorDone(
+            $run,
+            [
+                'status' => 'partial',
+                'patch_summary' => 'Waiting for npm install.',
+                'checklist_status' => [[
+                    'id' => 'plan-1',
+                    'status' => 'partial',
+                    'notes' => 'Blocked until npm install output is provided.',
+                ]],
+            ],
+            'qwen3-coder-next',
+            123,
+            45
+        );
+
+        $this->assertSame('executor_step_done', $payload['type']);
+        $this->assertSame('partial', $payload['artifacts']['checklist_status'][0]['status']);
+        $this->assertSame('plan-1', $payload['artifacts']['checklist_status'][0]['id']);
+    }
+
+    #[Test]
     public function post_memory_eval_done_payload_reports_review_metadata(): void
     {
         $run = new Run([

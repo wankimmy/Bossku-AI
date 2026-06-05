@@ -63,9 +63,13 @@ class ProjectFilesControllerTest extends TestCase
     #[Test]
     public function it_blocks_path_traversal(): void
     {
-        $response = $this->getJson('/api/project/file?path=../../../etc/passwd');
+        $this->getJson('/api/project/file?path=../../../etc/passwd')
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'Path denied.');
 
-        $response->assertStatus(500);
+        $this->getJson('/api/project/tree?path=../../../etc/passwd')
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'Path denied.');
     }
 
     #[Test]

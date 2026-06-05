@@ -24,6 +24,7 @@ type EventProgress = {
   executorRunning: boolean
   executorDone: boolean
   executorFailed: boolean
+  executorAwaitingInput: boolean
   auditorRunning: boolean
   auditorDone: boolean
   auditorFailed: boolean
@@ -80,6 +81,12 @@ export function useRunArtifacts(items: UnknownRecord[] = []): NormalizedRunArtif
     }
 
     pushAll(checklist, asChecklist(artifacts.checklist))
+    pushAll(checklist, asChecklistStatus(artifacts.checklist_status))
+    const proof = asRecord(artifacts.proof)
+    pushAll(checklist, asChecklistStatus(proof?.checklist_status))
+    const clarification = asRecord(artifacts.clarification)
+    const clarificationProof = asRecord(clarification?.proof)
+    pushAll(checklist, asChecklistStatus(clarificationProof?.checklist_status))
     pushAll(filesRead, asFileReads(artifacts.files_read))
     pushAll(filesChanged, asFileChanges(artifacts.files_changed))
     pushAll(commandsRun, asCommands(artifacts.commands_run))
@@ -352,7 +359,14 @@ function dedupeChecklistLatest(items: PlanChecklistItem[]): PlanChecklistItem[] 
     const key = item.id || item.title
     if (!key) continue
     if (!byKey.has(key)) order.push(key)
-    byKey.set(key, { ...byKey.get(key), ...item })
+    const previous = byKey.get(key)
+    byKey.set(key, {
+      ...(previous ?? {}),
+      ...item,
+      title: item.title || previous?.title || key,
+      description: item.description || previous?.description,
+      owner: item.owner || previous?.owner || 'executor',
+    })
   }
   return order.map(key => byKey.get(key)).filter(Boolean) as PlanChecklistItem[]
 }
@@ -370,8 +384,9 @@ function resolveChecklistProgress(
 
     const owner = String(item.owner ?? '').toLowerCase()
     if (owner.includes('executor')) {
+      if (progress.executorAwaitingInput) return { ...item, status: 'awaiting_input' }
       if (progress.executorFailed) return { ...item, status: 'failed' }
-      if (progress.executorDone || progress.runCompleted) return { ...item, status: 'completed' }
+      if (progress.executorDone) return { ...item, status: 'completed' }
       if (progress.executorRunning) return { ...item, status: 'running' }
     }
 
@@ -407,6 +422,8 @@ function isTerminalChecklistStatus(status: string): boolean {
   return [
     'completed',
     'passed',
+    'partial',
+    'awaiting_input',
     'failed',
     'needs_revision',
     'skipped',
@@ -423,6 +440,7 @@ function eventProgress(events: UnknownRecord[]): EventProgress {
     executorRunning: false,
     executorDone: false,
     executorFailed: false,
+    executorAwaitingInput: false,
     auditorRunning: false,
     auditorDone: false,
     auditorFailed: false,
@@ -440,6 +458,9 @@ function eventProgress(events: UnknownRecord[]): EventProgress {
     const metadata = asRecord(item.metadata) ?? {}
     const type = String(event.type ?? item.type ?? '').toLowerCase()
     const agent = String(event.agent ?? metadata.agent ?? inferAgent(type)).toLowerCase()
+    const artifacts = mergeArtifacts(event, metadata)
+    const stage = String(event.stage ?? artifacts.stage ?? '').toLowerCase()
+    const origin = String(event.origin ?? artifacts.origin ?? '').toLowerCase()
     const status = normalizeStatus(
       String(event.status ?? item.status ?? metadata.status ?? ''),
     ).toLowerCase()
@@ -449,8 +470,17 @@ function eventProgress(events: UnknownRecord[]): EventProgress {
 
     if (type === 'run_completed') progress.runCompleted = true
     if (type === 'run_failed') progress.runFailed = true
+    if (
+      type === 'clarification_requested'
+      && (stage === 'user_local_commands' || origin === 'user_local_commands')
+    ) {
+      progress.executorAwaitingInput = true
+    }
+    if (type === 'clarification_received') {
+      progress.executorAwaitingInput = false
+    }
 
-    applyAgentProgress(progress, agent, type, running, done, failed, status)
+    applyAgentProgress(progress, agent, type, running, done, failed, status, artifacts)
   }
 
   return progress
@@ -464,6 +494,7 @@ function applyAgentProgress(
   done: boolean,
   failed: boolean,
   status: string,
+  artifacts: UnknownRecord,
 ) {
   const key = `${agent}:${type}`
 
@@ -477,6 +508,7 @@ function applyAgentProgress(
     progress.executorRunning ||= running
     progress.executorDone ||= done
     progress.executorFailed ||= failed
+    progress.executorAwaitingInput ||= status === 'awaiting_input' || artifacts.needs_user_input === true
   }
 
   if (key.includes('auditor') || key.includes('audit')) {
@@ -661,6 +693,20 @@ function asChecklist(value: unknown): PlanChecklistItem[] {
       status: String(record.status ?? 'pending'),
     }
   })
+}
+
+function asChecklistStatus(value: unknown): PlanChecklistItem[] {
+  return asArray(value).map((item, index) => {
+    const record = asRecord(item) ?? {}
+    const id = String(record.id ?? `executor-checklist-${index + 1}`)
+    return {
+      id,
+      title: stringOrUndefined(record.title ?? record.description) ?? '',
+      description: stringOrUndefined(record.description ?? record.notes),
+      owner: stringOrUndefined(record.owner) ?? '',
+      status: String(record.status ?? 'pending'),
+    }
+  }).filter(item => item.id && item.status)
 }
 
 function asFileReads(value: unknown): FileRead[] {

@@ -13,7 +13,7 @@ class Memory extends Model
     protected $table = 'bossku_ai_memories';
 
     protected $fillable = [
-        'type', 'content', 'human_summary', 'metadata', 'tags',
+        'type', 'content', 'human_summary', 'embedding_json', 'metadata', 'tags',
         'confidence', 'source', 'is_active', 'last_used_at', 'usage_count',
         'conflicting_memory_ids_json',
     ];

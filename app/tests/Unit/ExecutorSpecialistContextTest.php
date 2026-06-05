@@ -100,8 +100,16 @@ class ExecutorSpecialistContextTest extends TestCase
         );
 
         $payload = (string) ($captured['messages'][1]['content'] ?? '');
+        $systemPrompt = (string) ($captured['messages'][0]['content'] ?? '');
+        $this->assertStringNotContainsString('[BOSSKUAI]', $payload);
+        $this->assertStringContainsString('Executor metadata', $payload);
+        $this->assertStringContainsString('Skill: checkout', $payload);
+        $this->assertStringContainsString('Orchestrator plan', $payload);
+        $this->assertStringContainsString('Active project context', $payload);
         $this->assertStringContainsString('Specialist agent handoff', $payload);
         $this->assertStringContainsString('Checkout Specialist', $payload);
         $this->assertStringContainsString('Inspect fee rounding', $payload);
+        $this->assertStringContainsString('Only mark a checklist_status item completed when', $systemPrompt);
+        $this->assertStringContainsString('If a required local command blocks progress', $systemPrompt);
     }
 }

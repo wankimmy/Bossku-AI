@@ -7,6 +7,8 @@ withDefaults(
 )
 
 function symbol(status: string) {
+  if (status === 'awaiting_input') return '?'
+  if (status === 'partial') return '...'
   if (['completed', 'success', 'passed'].includes(status)) return '✓'
   if (status === 'running') return '…'
   if (status === 'needs_revision') return '!'
@@ -20,6 +22,10 @@ function symbol(status: string) {
 function rowClasses(status: string) {
   if (['completed', 'success', 'passed'].includes(status))
     return 'border-emerald-700 bg-emerald-950/40'
+  if (status === 'awaiting_input')
+    return 'border-sky-700 bg-sky-950/40'
+  if (status === 'partial')
+    return 'border-amber-700 bg-amber-950/40'
   if (status === 'running')
     return 'border-yellow-600 bg-yellow-950/40'
   if (status === 'disputed')
@@ -34,6 +40,10 @@ function rowClasses(status: string) {
 function checkboxClasses(status: string) {
   if (['completed', 'success', 'passed'].includes(status))
     return 'border-emerald-500 bg-emerald-500 text-white'
+  if (status === 'awaiting_input')
+    return 'border-sky-500 bg-sky-500/20 text-sky-300'
+  if (status === 'partial')
+    return 'border-amber-500 bg-amber-500/20 text-amber-300'
   if (status === 'running')
     return 'border-yellow-400 bg-yellow-400/20 text-yellow-300'
   if (status === 'disputed')
@@ -48,6 +58,10 @@ function checkboxClasses(status: string) {
 function statusBadgeClasses(status: string) {
   if (['completed', 'success', 'passed'].includes(status))
     return 'border-emerald-600 text-emerald-400'
+  if (status === 'awaiting_input')
+    return 'border-sky-600 text-sky-300'
+  if (status === 'partial')
+    return 'border-amber-600 text-amber-300'
   if (status === 'running')
     return 'border-yellow-500 text-yellow-300'
   if (status === 'disputed')
@@ -61,6 +75,8 @@ function statusBadgeClasses(status: string) {
 
 function titleClasses(status: string) {
   if (['completed', 'success', 'passed'].includes(status)) return 'text-emerald-300'
+  if (status === 'awaiting_input') return 'text-sky-200'
+  if (status === 'partial') return 'text-amber-200'
   if (status === 'running') return 'text-yellow-200'
   if (status === 'disputed') return 'text-rose-300'
   if (status === 'unverifiable') return 'text-amber-200'
@@ -85,7 +101,7 @@ function titleClasses(status: string) {
         :key="item.id"
         class="rounded-md border p-2 transition-colors"
         :class="rowClasses(String(item.status))"
-        :open="item.status === 'running' || item.status === 'needs_revision' || item.status === 'disputed' || item.status === 'unverifiable'"
+        :open="item.status === 'running' || item.status === 'awaiting_input' || item.status === 'partial' || item.status === 'needs_revision' || item.status === 'disputed' || item.status === 'unverifiable'"
       >
         <summary class="flex cursor-pointer items-center gap-2 text-sm">
           <span
