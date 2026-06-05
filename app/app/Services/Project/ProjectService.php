@@ -40,9 +40,8 @@ class ProjectService
         $mount = $this->workspaceMount();
 
         if ($prefix === '') {
-            throw new \InvalidArgumentException(
-                'BOSSKU_WORKSPACE_HOST_PREFIX is not configured. Set it in app/.env to the host folder mounted as /workspace in docker-compose.yml.'
-            );
+            // Native desktop mode: no Docker workspace mapping. Use the path directly.
+            return $host;
         }
 
         if (! $this->hostPathUnderWorkspace($host, $prefix)) {
