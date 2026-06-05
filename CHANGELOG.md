@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Docs: agentic orchestration layer — `agents/orchestrator|executor|auditor|final-reviewer|model-router|skill-detector.md`, root `memory/`, `skills/`, `playbooks/`, `integrations/{cursor,claude-code,codex,opencode}`, `ui/*-spec.md`, expanded `docs/*` (installation, quickstart, examples, architecture, FAQ, comparison).
+- Rules: mandatory `[BOSSKUAI]` response indicator in `AGENTS.md`, `.cursor/rules/bosskuai.mdc`, `.claude/rules/bosskuai.md`, `CLAUDE.md`, `.codex/AGENTS.md`, `packages/bossku-ai` SKILL.
+- Routing: align `app/config/bossku_models.php` fallbacks with documented Gemini / Qwen / DeepSeek ordering; extend `ai-assistant/config/model-router.yaml` with backup hints.
+- Audit round 2: merge duplicate model-flow sections in `AGENTS.md`, remove `<claude-mem-context>` footer, `evals/indicator-compliance-fixtures.json` + indicator regex in `scripts/eval_workspace.py` (v1.9.6), expand `agents/skill-detector.md`, `auto_memory` ↔ schema bridge in `memory/schema.md`, **Memory Used** chip in `RoutingDashboard.vue`, decision-tree mermaid in `docs/comparison.md`.
+
 ## v1.9.5 - Reliability Hardening and 5/5 Audit Fixes
 
 - Fixed orchestrator memory subprocess calls so they never inherit stdin and cannot hang during `scripts/bosskuai run`.
@@ -10,7 +17,7 @@
 - Strengthened risk detection and routing for tenant isolation/cross-organization data exposure.
 - Added 9 missing cofounder expert skills: SaaS billing ops, tenant isolation security, observability/SRE, QA automation, Malaysia PDPA privacy, cost optimization, customer success/support, prompt-injection defense, and eval-driven agent improvement.
 - Expanded expert coverage evals from 12 to 21 cases.
-- Updated version to v1.9.5 and skill count to 85.
+- Updated version to v1.9.5 and skill count to 86.
 
 ## v1.9.3 — Permanent vector memory + always-on model router
 

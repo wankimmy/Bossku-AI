@@ -7,7 +7,6 @@ Thumbs.db
 
 # Env
 .env
-.env.*
 
 # Node
 node_modules/
@@ -29,6 +28,9 @@ coverage/
 tmp/
 temp/
 
+# Docker persistent data (bind mounts — never commit)
+data/
+
 # AI assistant (local)
 ai-assistant/memory/*
 !ai-assistant/memory/README.md
@@ -42,3 +44,10 @@ ai-assistant/memory/*
 !ai-assistant/memory/vector-config.json
 ai-assistant/memory/semantic-memory.sqlite3
 **/project-understanding.md
+
+# Laravel orchestrator backend + Nuxt frontend
+app/vendor/
+app/storage/*.key
+web/node_modules/
+web/.nuxt/
+web/.output/

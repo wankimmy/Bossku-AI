@@ -1,5 +1,5 @@
 {
-  "version": "1.9.5",
+  "version": "1.10.0",
   "generated_from": [
     "AGENTS.md",
     "ai-assistant/references/workspace-layer-architecture.md"
@@ -488,6 +488,26 @@
         "error state",
         "microcopy",
         "mobile-first"
+      ]
+    },
+    {
+      "id": "bosskuai-hyperframes",
+      "cluster": "design",
+      "status": "active",
+      "triggers": [
+        "hyperframes composition",
+        "hyperframes-cli",
+        "preview render",
+        "GSAP-assisted animation"
+      ],
+      "keywords": [
+        "hyperframes",
+        "composition authoring",
+        "render workflow",
+        "preview",
+        "timeline",
+        "scene blocks",
+        "animation"
       ]
     },
     {
@@ -1823,6 +1843,225 @@
         "golden cases",
         "failure mode",
         "ratchet loop"
+      ]
+    },
+    {
+      "id": "bosskuai-diagnose-loop",
+      "cluster": "engineering",
+      "status": "active",
+      "triggers": [
+        "diagnose this",
+        "debug this",
+        "reproduce the bug",
+        "why is this failing",
+        "performance regression"
+      ],
+      "keywords": [
+        "diagnose",
+        "debug",
+        "reproduce",
+        "feedback loop",
+        "bisect",
+        "hypothesis",
+        "instrument",
+        "regression test",
+        "flaky bug",
+        "root-cause loop"
+      ]
+    },
+    {
+      "id": "bosskuai-tdd-loop",
+      "cluster": "engineering",
+      "status": "active",
+      "triggers": [
+        "write tests first",
+        "red green refactor",
+        "tdd",
+        "test-driven development",
+        "tracer bullet"
+      ],
+      "keywords": [
+        "tdd",
+        "red-green-refactor",
+        "failing test first",
+        "vertical slice",
+        "behavior test",
+        "integration test",
+        "deep module",
+        "mock boundaries"
+      ]
+    },
+    {
+      "id": "bosskuai-grill-with-docs",
+      "cluster": "orchestration",
+      "status": "active",
+      "triggers": [
+        "grill me with docs",
+        "stress test my plan",
+        "challenge my plan",
+        "sharpen the terminology",
+        "build shared language"
+      ],
+      "keywords": [
+        "grilling",
+        "ubiquitous language",
+        "CONTEXT.md",
+        "ADR",
+        "domain glossary",
+        "plan interrogation",
+        "decision tree",
+        "shared language"
+      ]
+    },
+    {
+      "id": "bosskuai-architecture-deepening",
+      "cluster": "architecture",
+      "status": "active",
+      "triggers": [
+        "improve architecture",
+        "deepen modules",
+        "reduce coupling",
+        "make codebase testable",
+        "rescue ball of mud"
+      ],
+      "keywords": [
+        "deep module",
+        "shallow module",
+        "seam",
+        "deletion test",
+        "architecture review",
+        "refactor opportunity",
+        "locality",
+        "leverage",
+        "ai-navigable"
+      ]
+    },
+    {
+      "id": "bosskuai-zoom-out",
+      "cluster": "engineering",
+      "status": "active",
+      "triggers": [
+        "zoom out",
+        "give me the bigger picture",
+        "map this area",
+        "i don't know this code"
+      ],
+      "keywords": [
+        "zoom out",
+        "higher-level map",
+        "module map",
+        "callers",
+        "orientation",
+        "abstraction layer",
+        "mental model"
+      ]
+    },
+    {
+      "id": "bosskuai-throwaway-prototype",
+      "cluster": "engineering",
+      "status": "active",
+      "triggers": [
+        "prototype this",
+        "let me play with it",
+        "try a few designs",
+        "sanity-check the state machine",
+        "mock up a UI"
+      ],
+      "keywords": [
+        "throwaway prototype",
+        "tracer terminal app",
+        "UI variations",
+        "state machine prototype",
+        "disposable code",
+        "one command run",
+        "answer a question"
+      ]
+    },
+    {
+      "id": "bosskuai-handoff",
+      "cluster": "continuation",
+      "status": "active",
+      "triggers": [
+        "write a handoff",
+        "compact this conversation",
+        "hand off to another agent",
+        "fresh session pickup"
+      ],
+      "keywords": [
+        "handoff document",
+        "conversation summary",
+        "next session",
+        "suggested skills",
+        "redact secrets",
+        "temp-dir doc",
+        "continuation"
+      ]
+    },
+    {
+      "id": "bosskuai-grill-me",
+      "cluster": "orchestration",
+      "status": "active",
+      "triggers": [
+        "grill me",
+        "interview me about this plan",
+        "stress test my design",
+        "interrogate my decisions"
+      ],
+      "keywords": [
+        "grilling",
+        "relentless interview",
+        "decision tree",
+        "one question at a time",
+        "plan alignment",
+        "recommended answer",
+        "alignment session"
+      ]
+    },
+    {
+      "id": "bosskuai-greptile-review-loop",
+      "cluster": "quality",
+      "status": "active",
+      "triggers": [
+        "greploop",
+        "optimize the PR against review",
+        "loop until 5/5",
+        "fix all review comments",
+        "review until clean"
+      ],
+      "keywords": [
+        "greptile",
+        "review loop",
+        "PR review",
+        "MR review",
+        "5/5 confidence",
+        "resolve threads",
+        "iterate until clean",
+        "gh",
+        "glab",
+        "p4"
+      ]
+    },
+    {
+      "id": "bosskuai-pr-check",
+      "cluster": "quality",
+      "status": "active",
+      "triggers": [
+        "check the PR",
+        "check this MR",
+        "review feedback status",
+        "prepare PR for merge",
+        "unresolved comments"
+      ],
+      "keywords": [
+        "check PR",
+        "status checks",
+        "unresolved comments",
+        "PR description",
+        "resolve threads",
+        "actionable vs informational",
+        "gh",
+        "glab",
+        "p4"
       ]
     }
   ]

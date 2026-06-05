@@ -158,3 +158,25 @@ Append new entries in this format:
   2. If future default models change, update `AGENTS.md`, `CLAUDE.md`, `.codex/AGENTS.md`, `.cursor/rules/bosskuai.mdc`, `.claude/rules/bosskuai.md`, and `ai-assistant/skills/bosskuai-ai-model-selection/SKILL.md` together so cross-model escalation stays consistent.
 - **Promotion note:** promoted repeated “model got stuck / needs backup” behavior into a dedicated reusable skill plus rule updates across all tool entry points
 - **Memory files touched:** `learning-log.md`, `project-understanding.md`
+## 2026-06-03 — claude — remember
+
+- **Tool:** claude
+- **Event:** remember
+- **Source:** manual-remember
+- **Kind:** learning
+- **Captured at:** 2026-06-03T03:36:14+00:00
+
+```text
+Added 'Know Your User' profile + smarter chat to Bossku-AI. Profile is a singleton bossku_ai_memories row type='user' (matches type:user format), no migration. Backend: UserProfileService (get/save/generate via plannerModel), UserProfileController, routes GET/PUT/POST /user-profile(+/generate). Orchestrator now always prepends active user profile to memPayload (know-your-user grounding). UI: MemoryUserProfileCard pinned atop MemoryInspectorPanel with Edit+Regenerate, useUserProfile composable. Smart-chat: DeterministicTaskClassifier early-returns direct_answer for deliberative/advisory prompts (should i, what do you think, brainstorm) even when a code verb co-occurs; catch-all stops unmatched no-code-verb prompts defaulting to orchestrator_executor; PromptRouteClassifier::applyRiskPolicy no longer escalates talk-only routes into security pipelines. Verified: 15/15 standalone classifier cases pass, all official BosskuRoutingClassifierTest prompts still route correctly (couldn't run phpunit locally — needs Docker pgsql), nuxi typecheck clean for new files (2 pre-existing errors in JsonViewer/Skeleton unrelated). Next: run app tests inside Docker; optionally enrich profile generation with learning-log files.
+```
+## 2026-06-03 — claude — remember
+
+- **Tool:** claude
+- **Event:** remember
+- **Source:** manual-remember
+- **Kind:** learning
+- **Captured at:** 2026-06-03T16:21:35+00:00
+
+```text
+YouTube caption ingestion: YouTube now blocks caption baseUrl downloads from server/datacenter IPs — tracks ARE listed (watch page + InnerTube) but downloading the caption content returns HTTP 200 with 0 BYTES without a PO token (BotGuard). Verified empirically 2026-06-04: json3/srv3/xml/vtt + Referer/Origin all return 0 bytes for dQw4w9WgXcQ. InnerTube ANDROID client now 400s; WEB client returns 0 caption tracks. So 'lightweight captions-only, no key, no whisper' YouTube transcription does NOT work from cloud IPs — only from residential IPs or with a PO-token provider / transcript API / local whisper. YoutubeTranscriptService was hardened (InnerTube+HTML fallback, ASR ordering, tlang=en translation) and is correct, but blocked by YouTube server-side. Also FIXED a pre-existing chunkText infinite-tail bug: when end>=len, start=end-overlap stayed <len and re-emitted the final chunk up to maxChunks (was 60, raised to 300) — polluting memory with duplicate trailing chunks on every learned URL. Added break when end>=len. WebSearchService (DuckDuckGo, no key) verified working live.
+```

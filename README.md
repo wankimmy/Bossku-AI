@@ -1,230 +1,293 @@
-# BosskuAI
+# BosskuAI 3.0
 
-BosskuAI is a **local AI cofounder layer** for developers.
+BosskuAI is a local AI workspace that makes your AI coding assistant smarter and safer. It adds a structured workflow on top of any AI tool — Claude Code, Cursor, or Codex — so the AI **plans before it edits**, **audits after it edits**, and **remembers what it learns** about your project.
 
-It works with:
+<img width="1895" height="921" alt="image" src="https://github.com/user-attachments/assets/10eb8908-f05e-426a-af68-e83162703f4a" />
 
-* Claude Code
-* Cursor
-* Codex
+<img width="1878" height="911" alt="image" src="https://github.com/user-attachments/assets/f5176bb3-a611-4a51-a7e7-560e65b995f6" />
 
-It keeps your **memory, rules, and workflow consistent across all tools**.
+<img width="1906" height="919" alt="image" src="https://github.com/user-attachments/assets/da80b202-7ab5-4ce5-a504-89cb6bce146c" />
 
----
+<img width="1905" height="916" alt="image" src="https://github.com/user-attachments/assets/fb1a22c8-2d4c-41d3-829c-e43aa6b2b41f" />
 
-## What BosskuAI does
+<img width="1898" height="914" alt="image" src="https://github.com/user-attachments/assets/6b09ffcc-d3b1-47a5-b793-38b79e476a45" />
 
-* Remembers your project decisions
-* Works across multiple AI tools
-* Reduces AI fluff, gives structured answers
-* Helps you plan, build, and decide like a cofounder
-* Uses smart model routing (powerful + cheaper models)
+<img width="1883" height="917" alt="image" src="https://github.com/user-attachments/assets/ecd3433a-bb86-4e2a-b87c-9ea69a57007b" />
 
----
+<img width="1892" height="911" alt="image" src="https://github.com/user-attachments/assets/ee209dc8-11ae-4f71-bb7b-f18303a64ff8" />
 
-## What it is NOT
+<img width="1885" height="894" alt="image" src="https://github.com/user-attachments/assets/38f1d9c6-9a6d-4432-af85-4edd14e48701" />
 
-* Not a SaaS platform
-* Not magic AI
-* Not replacing human thinking
-* Not guaranteed cheaper every time
 
----
+## What you get
 
-# Install BosskuAI
-
-You can install in **2 ways**
+- **Orchestrated runs**: every task goes through planner → executor → auditor → memory, not just a single prompt
+- **Run history**: see every step, file change, and audit result in the web dashboard
+- **Approval gates**: risky operations (payments, auth, migrations) pause and ask you first
+- **Persistent memory**: project decisions, learnings, and context survive across sessions
+- **Skills**: reusable task templates for common workflows (project understanding, security review, etc.)
+- **Local-first**: your code stays on your machine; you choose which AI provider to use
 
 ---
 
-## Option 1 — Command Line (Recommended)
+## Choose your setup
+
+| I want to… | Use this path |
+|---|---|
+| See the full dashboard with run history, memory, and skills | [Path 1 — Docker web app](#path-1-run-the-web-app-docker) |
+| Add BosskuAI rules and skills to an existing project | [Path 2 — Repo toolkit](#path-2-add-bosskuai-to-an-existing-repo) |
+
+Start with Path 1 if you're new. The dashboard shows everything clearly.
+
+---
+
+## Path 1 — Run the web app (Docker)
+
+### Prerequisites
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) running
+- Git
+- At least one of: a local [Ollama](https://ollama.com) instance, an Anthropic API key, or a ChatGPT/Codex connection
+
+### 1 — Clone and configure
 
 ```bash
 git clone https://github.com/wankimmy/Bossku-AI bosskuAI
-./bosskuAI/scripts/install.sh /your/project --profile core
+cd bosskuAI
+cp app/.env.example app/.env
 ```
 
-Windows:
-
+On Windows PowerShell:
 ```powershell
-.\bosskuAI\scripts\install.ps1 C:\your\project -Profile core
+Copy-Item app\.env.example app\.env
+```
+
+Open `app/.env` and add your AI provider credentials. Only one is required to get started:
+
+```env
+# Option A: Local Ollama (most private, free)
+OLLAMA_BASE_URL=http://host.docker.internal:11434
+OLLAMA_API_KEY=
+
+# Option B: Ollama Cloud
+OLLAMA_BASE_URL=https://ollama.com
+OLLAMA_API_KEY=your-ollama-cloud-key
+
+# Option C: Anthropic Claude
+ANTHROPIC_API_KEY=your-anthropic-key
+
+# Option D: Codex / ChatGPT — connect from Settings after launch
+```
+
+### 2 — Start the stack
+
+```bash
+docker compose up -d --build
+docker compose exec backend composer install --no-interaction
+docker compose exec backend php artisan key:generate
+docker compose exec backend php artisan migrate --force
+docker compose exec backend php artisan db:seed
+docker compose exec backend php artisan bosskuai:import-knowledge --fresh
+```
+
+This takes 2–4 minutes on first run while Docker pulls images and installs dependencies.
+
+### 3 — Open the app
+
+| Service | URL |
+|---|---|
+| Web dashboard | http://localhost:28470 |
+| API (direct) | http://localhost:28480 |
+
+### 4 — Run your first task
+
+1. Open http://localhost:28470
+2. Type a task in the prompt box — for example: `bossku, understand this repo and summarize the main architecture`
+3. Press **Run task** and watch the planner, executor, and auditor steps appear in the Agent Process tab
+4. After it finishes, check the **Plan**, **Changes**, and **Audit** tabs
+
+Tip: type `/` in the prompt box to see available slash commands. `/project-understanding` is the best first command for any unfamiliar repo.
+
+### Working with your repos
+
+Docker mounts the parent folder as `/workspace`, so sibling repos appear automatically.
+
+If your repos are outside the default parent folder:
+
+```env
+# app/.env
+BOSSKU_WORKSPACE_HOST_PREFIX="C:\path\to\your\workspace"
+```
+
+Then open **Project** in the sidebar, add your repo path, and activate it before running tasks.
+
+### Rebuilding the frontend after changes
+
+The Docker container serves a pre-built Nuxt app. After editing files in `web/`:
+
+```bash
+docker compose exec -e NUXT_API_PROXY_TARGET=http://nginx/api/** -e NUXT_PUBLIC_API_BASE= frontend npm run build
+docker compose restart frontend
+```
+
+For live hot-reload outside Docker:
+
+```bash
+cd web
+npm install
+npm run dev   # runs at http://localhost:3000
 ```
 
 ---
 
-## Option 2 — UI (Dashboard)
+## Path 2 — Add BosskuAI to an existing repo
 
-Run:
+Use this to add BosskuAI rules, skills, and memory files directly into any project without running the dashboard.
 
+**Linux / macOS:**
 ```bash
+./scripts/install.sh /path/to/your/project --profile core
+```
+
+**Windows PowerShell:**
+```powershell
+.\scripts\install.ps1 C:\path\to\your\project -Profile core
+```
+
+This copies into your project:
+- `AGENTS.md` — multi-tool AI contract (Claude Code, Cursor, Codex)
+- `skill-index.json` — available task skills
+- `ai-assistant/` — memory, orchestrator, and model router scripts
+- Rule files for supported editors
+
+After installing, open the project in your AI tool and start a message with `bossku,` to activate BosskuAI mode.
+
+---
+
+## Useful starting prompts
+
+```text
+bossku, understand this repo and summarize the main architecture.
+```
+```text
+bossku, plan a safe fix for this bug before editing any files.
+```
+```text
+bossku, review the current diff for correctness, security, and missing tests.
+```
+```text
+bossku, run a project understanding pass and tell me the risky areas.
+```
+
+---
+
+## Common commands
+
+**Backend (via Docker):**
+```bash
+docker compose exec backend php artisan migrate
+docker compose exec backend php artisan bosskuai:import-knowledge --fresh
+docker compose exec backend php artisan route:list
+docker compose exec backend php artisan test
+```
+
+> `import-knowledge --fresh` only refreshes knowledge (skills, rules, playbooks, checklists, references); run history and memory are preserved.
+
+**Frontend:**
+```bash
+cd web
+npm run test      # unit tests
+npm run build     # production build
+npm run e2e       # end-to-end tests
+```
+
+**Python memory tools (optional, repo toolkit only):**
+```bash
+# Check current memory state
+python3 ai-assistant/scripts/auto_memory.py query "your question" --limit 5
+
+# Save a note
+python3 ai-assistant/scripts/auto_memory.py remember --tool cursor --kind learning "what you learned"
+
+# Dashboard
 python3 scripts/dashboard.py
 ```
 
-Open:
+---
 
-```text
-http://127.0.0.1:8765
-```
+## Ports
 
-Steps:
+Ports are chosen to avoid conflicts with common local dev tools.
 
-1. Go to **Actions tab**
-2. Click **“Sync skills to project”**
-3. Review (dry-run)
-4. Confirm install
+| Service | Default URL / port |
+|---|---|
+| Web app | http://localhost:28470 |
+| API | http://localhost:28480 |
+| Postgres | 28432 |
+| Redis | 28379 |
+
+Override in the root `.env` with `BOSSKU_PORT_WEB`, `BOSSKU_PORT_API`, `BOSSKU_PORT_POSTGRES`, `BOSSKU_PORT_REDIS`.
 
 ---
 
-## Option 3 — Cursor IDE plugin (marketplace manifest)
+## Security
 
-BosskuAI ships **two plugin systems** side by side:
 
-* **Claude Code** — [`.claude-plugin/`](.claude-plugin/) (`marketplace.json`, `plugin.json`)
-* **Cursor** — [`.cursor-plugin/marketplace.json`](.cursor-plugin/marketplace.json) with `"source": "./"` and [`.cursor-plugin/plugin.json`](.cursor-plugin/plugin.json) (same pattern as official single-repo plugins such as Cloudflare: plugin root is the repository root; no symlinked plugin bundles).
+Local development has no authentication by default — fine for single-machine use.
 
-Until `main` on GitHub includes `.cursor-plugin/`, Cursor’s cached clone may only see [`.claude-plugin/marketplace.json`](.claude-plugin/marketplace.json)—that Claude-only `source` shape triggers **gitPath / unsafe source path**. Fix: use this checkout, **or** remove the GitHub marketplace entry and install locally only, **or** merge and re-add the repo after publish.
+Before exposing BosskuAI outside your machine:
 
-**Team Marketplace:** Dashboard → Settings → Plugins → import this repo’s Git URL (Teams / Enterprise).
+```env
+# app/.env
+BOSSKU_API_AUTH_ENABLED=true
+BOSSKU_API_TOKEN=a-long-random-string
+```
 
-**Local install** — symlink the **repository root** (not a subfolder):
+```env
+# web/.env or set at build time
+NUXT_PUBLIC_API_TOKEN=same-long-random-string
+```
 
+Start with the production overlay:
 ```bash
-mkdir -p ~/.cursor/plugins/local
-ln -sf /path/to/Bossku-AI ~/.cursor/plugins/local/bossku-ai
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ```
 
-**If you still see the error:** remove the stale GitHub sync cache, then reload Cursor:
-
-```bash
-rm -rf ~/.cursor/plugins/marketplaces/github.com/wankimmy/bossku-ai
-```
-
-If `wankimmy/Bossku-AI` on GitHub is still behind your fixed clone, **do not** re-add that marketplace URL until it is updated, or the bad manifest will be downloaded again.
-
-**Cursor shows “66 skills” but the repo has 80+:** The disk tree and [`skill-index.json`](skill-index.json) list **85** skills. Bossku also marks **19** specialists as **manual-only** in `routing.manual_only_skill_ids` (explicit domain tools like Laravel, Nuxt, GSAP, etc.). **`85 − 19 = 66`** — Cursor’s Plugins UI commonly lists only the subset it treats as broadly auto-routable; the rest remain in the bundle and load when you name them (`/skill …` / prompt). This is intentional routing, not a failed update.
-
-Still do a refresh after `git pull` so indexes match disk:
-
-```bash
-git pull   # use your fork/remote if you track updates there
-bash scripts/cursor-plugin-refresh.sh
-python3 -c 'import json; d=json.load(open("skill-index.json")); print(len(d["skills"]), "total;", len(d["routing"]["manual_only_skill_ids"]), "manual-only")'
-```
-
-Then **fully quit Cursor** and reopen (not only Reload Window).
-
-In **Plugins**, remove duplicate Bossku entries (marketplace + local) so you are not mixing an old Marketplace build with `~/.cursor/plugins/local/bossku-ai`.
+See [`docs/production-deploy.md`](docs/production-deploy.md) for TLS, CORS, and hardening.
 
 ---
 
-## After Install (Important)
+## Troubleshooting
 
-Run:
-
-```bash
-bash scripts/check-workspace.sh . --profile full
-python3 scripts/eval_workspace.py
-```
-
----
-
-## Test it
-
-Open your AI tool and type:
-
-```text
-bossku build simple auth system with laravel
-```
-
-or
-
-```text
-bossku what should i build for my saas
-```
+| Symptom | Fix |
+|---|---|
+| **Bootstrap 500 on first load** | `docker compose build backend && docker compose up -d backend` |
+| **502 on `/api/runs/stream` (Bad Gateway)** | Wait until `docker compose logs backend` shows `Bootstrap complete. Starting php-fpm`; test http://localhost:28480/api/health/ollama then retry. Rebuild: `docker compose build backend frontend && docker compose up -d` |
+| **"Run task" gets no events** | Check `docker compose logs -f backend`, then test http://localhost:28480/api/runs |
+| **No skills in the slash menu** | `docker compose exec backend php artisan bosskuai:import-knowledge --fresh` |
+| **Local Ollama unreachable** | Confirm Ollama is running; check `OLLAMA_BASE_URL=http://host.docker.internal:11434` |
+| **Cloud model fails** | Check API key or connection in `app/.env` or the Settings page |
+| **Planner JSON error** | Check selected model, key, and base URL in Settings → Model Routing |
+| **Port already in use** | Set `BOSSKU_PORT_WEB`, `BOSSKU_PORT_API`, etc. in the root `.env` |
 
 ---
 
-## If working correctly
+## Documentation
 
-You will see:
-
-* structured answers
-* clear decisions
-* tradeoffs explained
-* next steps
-
----
-
-# How it works (simple)
-
-Every task follows:
-
-```text
-1. Read memory
-2. Plan (strong model)
-3. Execute (cheaper model)
-4. Audit (strong model)
-5. Save memory
-```
+| Document | What it covers |
+|---|---|
+| [`docs/quickstart.md`](docs/quickstart.md) | Shortest path to a first run |
+| [`docs/what-is-bossku-ai.md`](docs/what-is-bossku-ai.md) | Plain explanation and boundaries |
+| [`docs/architecture.md`](docs/architecture.md) | System map |
+| [`docs/orchestration.md`](docs/orchestration.md) | Planner, executor, auditor, final reviewer |
+| [`docs/skills.md`](docs/skills.md) | Skill system |
+| [`docs/memory.md`](docs/memory.md) | Project memory |
+| [`docs/providers.md`](docs/providers.md) | AI provider setup |
+| [`docs/model-routing.md`](docs/model-routing.md) | Role-based model routing |
+| [`docs/faq.md`](docs/faq.md) | Common questions |
 
 ---
 
-# Memory (Important)
+## License
 
-BosskuAI stores memory locally inside your project.
-
-Types of memory:
-
-* decisions
-* plans
-* bugs
-* learning
-
-Search memory:
-
-```bash
-python3 ai-assistant/scripts/auto_memory.py query "what did we decide?"
-```
-
-Save memory:
-
-```bash
-python3 ai-assistant/scripts/auto_memory.py remember --kind durable "Use PostgreSQL"
-```
-
----
-
-# Multi-step tasks (Advanced)
-
-For harder work (Claude Code):
-
-```text
-/audit      → find issues
-/decide     → make decision
-/implement  → write + review code
-```
-
----
-
-# Why use BosskuAI
-
-* AI forgets → BosskuAI remembers
-* AI tools are separate → BosskuAI unifies
-* AI answers are generic → BosskuAI structures them
-
----
-
-# Honest limitations
-
-* Memory only works if useful data is saved
-* Cross-tool sharing uses files (not magic sync)
-* Deep analysis costs more tokens
-* Still need human judgment
-
----
-
-# Version
-
-v1.9.5
-
----
+See [`LICENSE`](LICENSE).

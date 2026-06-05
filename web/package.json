@@ -1,0 +1,47 @@
+{
+  "name": "bosskuai-web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "fetch:zep-furniture": "cd pixel-office && npm run fetch:zep-furniture",
+    "export:zep-furniture": "cd pixel-office && npm run export:zep-furniture",
+    "sync:zep-assets": "cd pixel-office && npm run sync:zep-assets",
+    "build:pixel-office:bundle": "cd pixel-office && npm ci && npm run build",
+    "prepare:pixel-office": "cd pixel-office && npm ci && npm run export:zep-furniture && npm run sync:zep-assets && npm run build",
+    "build:pixel-office": "npm run prepare:pixel-office",
+    "build": "node ./scripts/build.mjs",
+    "start": "node .output/server/index.mjs",
+    "dev": "nuxt dev",
+    "preview": "nuxt preview --host 0.0.0.0 --port 3000",
+    "postinstall": "nuxt prepare",
+    "test": "vitest run",
+    "e2e": "playwright test",
+    "e2e:install": "playwright install chromium",
+    "e2e:mock": "tsx ./e2e/server/api-mock.ts"
+  },
+  "dependencies": {
+    "@nuxtjs/tailwindcss": "^6.14.0",
+    "cytoscape": "^3.30.0",
+    "cytoscape-fcose": "^2.2.0",
+    "d3": "^7.9.0",
+    "diff": "^7.0.0",
+    "mermaid": "^11.15.0",
+    "nuxt": "^3.14.0",
+    "vue": "^3.5.0",
+    "vue-router": "^4.4.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.1",
+    "@types/d3": "^7.4.3",
+    "@vitejs/plugin-vue": "^6.0.6",
+    "@vue/test-utils": "^2.4.6",
+    "happy-dom": "^15.11.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0",
+    "vue-tsc": "^2.2.0"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-win32-x64-msvc": "^4.60.4"
+  }
+}

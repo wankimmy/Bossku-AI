@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';" />
+    <title>BosskuAI</title>
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; height: 100%; }
+      body {
+        font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        background: radial-gradient(1200px 600px at 50% -10%, #11321f 0%, #0a0a0a 60%);
+        color: #e5e7eb;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        padding: 28px 30px;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+      .brand { display: flex; align-items: center; gap: 12px; }
+      .logo {
+        width: 38px; height: 38px; border-radius: 10px;
+        background: linear-gradient(135deg, #10b981, #059669);
+        display: grid; place-items: center; font-weight: 800; color: #052e1b;
+        font-size: 18px;
+      }
+      .brand h1 { font-size: 18px; margin: 0; letter-spacing: 0.3px; }
+      .brand small { display: block; color: #9ca3af; font-weight: 400; font-size: 12px; }
+      .status {
+        margin-top: 22px; display: flex; align-items: center; gap: 10px;
+        font-size: 14px; min-height: 22px;
+      }
+      .spinner {
+        width: 16px; height: 16px; border-radius: 50%;
+        border: 2px solid rgba(16,185,129,0.25); border-top-color: #10b981;
+        animation: spin 0.8s linear infinite;
+      }
+      .status.error .spinner { display: none; }
+      .status.error .text { color: #fca5a5; }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      .log {
+        margin-top: 16px; flex: 1; overflow: auto;
+        background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 8px; padding: 10px 12px;
+        font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+        font-size: 11.5px; color: #9ca3af; white-space: pre-wrap; line-height: 1.5;
+      }
+      .log .line { word-break: break-word; }
+      .actions { margin-top: 14px; display: flex; gap: 10px; justify-content: flex-end; }
+      button {
+        font: inherit; font-size: 13px; padding: 8px 16px; border-radius: 8px;
+        border: 1px solid rgba(255,255,255,0.12); background: #10b981; color: #04241a;
+        font-weight: 600; cursor: pointer;
+      }
+      button.secondary { background: transparent; color: #cbd5e1; }
+      button:hover { filter: brightness(1.05); }
+      .hidden { display: none !important; }
+      .hint { margin-top: 8px; font-size: 12px; color: #6b7280; }
+    </style>
+  </head>
+  <body>
+    <div class="brand">
+      <div class="logo">B</div>
+      <h1>BosskuAI<small>Local AI workspace</small></h1>
+    </div>
+
+    <div id="status" class="status">
+      <div class="spinner"></div>
+      <div class="text" id="statusText">Starting…</div>
+    </div>
+    <div class="hint" id="hint"></div>
+
+    <div class="log" id="log" aria-live="polite"></div>
+
+    <div class="actions">
+      <button class="secondary hidden" id="quitBtn">Quit</button>
+      <button class="hidden" id="retryBtn">Retry</button>
+    </div>
+
+    <script>
+      const statusEl = document.getElementById('status')
+      const statusText = document.getElementById('statusText')
+      const hintEl = document.getElementById('hint')
+      const logEl = document.getElementById('log')
+      const retryBtn = document.getElementById('retryBtn')
+      const quitBtn = document.getElementById('quitBtn')
+
+      const MAX_LINES = 400
+
+      window.bossku.onStatus((p) => {
+        statusText.textContent = p.message || ''
+        hintEl.textContent = p.hint || ''
+        const isError = p.state === 'error'
+        statusEl.classList.toggle('error', isError)
+        retryBtn.classList.toggle('hidden', !isError)
+        quitBtn.classList.toggle('hidden', !isError)
+      })
+
+      window.bossku.onLog((line) => {
+        const div = document.createElement('div')
+        div.className = 'line'
+        div.textContent = line
+        logEl.appendChild(div)
+        while (logEl.childElementCount > MAX_LINES) logEl.removeChild(logEl.firstChild)
+        logEl.scrollTop = logEl.scrollHeight
+      })
+
+      retryBtn.addEventListener('click', () => {
+        retryBtn.classList.add('hidden')
+        quitBtn.classList.add('hidden')
+        statusEl.classList.remove('error')
+        window.bossku.retry()
+      })
+      quitBtn.addEventListener('click', () => window.bossku.quit())
+    </script>
+  </body>
+</html>

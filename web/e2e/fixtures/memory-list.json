@@ -1,0 +1,15 @@
+{
+  "data": [
+    {
+      "id": "m1",
+      "human_summary": "Remember to run Playwright after UI changes.",
+      "content": "Full body of mock memory entry one.",
+      "type": "learning",
+      "source": "e2e",
+      "is_active": true,
+      "updated_at": "2026-01-02T00:00:00.000000Z"
+    }
+  ],
+  "current_page": 1,
+  "last_page": 1
+}

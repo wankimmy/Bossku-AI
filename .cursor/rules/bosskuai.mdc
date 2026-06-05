@@ -1,13 +1,49 @@
----
+﻿---
 alwaysApply: true
 ---
+
 # BosskuAI Rules
 
 Use [`AGENTS.md`](mdc:AGENTS.md) as the canonical contract.
 
+## Mandatory indicator
+
+Every response must start with:
+
+```text
+[BOSSKUAI]
+Skill: <detected-skill>
+Agent: <orchestrator|executor|auditor|final-reviewer>
+Model Role: <planner|coder|reviewer|researcher>
+Memory Used: <yes|no>
+```
+
+See [`agents/skill-detector.md`](mdc:agents/skill-detector.md) for skill detection.
+
+## Behavior
+
 - `bossku` activates BosskuAI mode for the current request.
-- For meaningful work: classify, load the minimum relevant skill set, plan first, then execute.
+- **Orchestrator** mindset first for complex / multi-file work; **executor** only after scope and plan are clear.
+- After code changes, apply **auditor** checks before finishing; use **final-reviewer** for completion summaries on substantive work.
+- Classify tasks, load the minimum relevant skill set from `skill-index.json`, prefer small diffs, avoid scanning the whole repo unless needed.
+- Query project memory only when relevant; follow [`memory/memory-policy.md`](mdc:memory/memory-policy.md) and [`playbooks/token-saving.md`](mdc:playbooks/token-saving.md).
 - Ask clarification questions before broad multi-file changes when scope is unclear.
 - Read [`ai-assistant/memory/active-continuation.md`](mdc:ai-assistant/memory/active-continuation.md) first when it contains live work.
 - If [`semantic-memory.sqlite3`](mdc:ai-assistant/memory/semantic-memory.sqlite3) exists, query it before opening broad memory files.
-- Keep protocol chatter minimal unless the user asks for it or a handoff needs it.
+
+## Obsidian session log (mandatory at session end)
+
+After completing any meaningful task, append **one JSON line** to the journal file.
+This is the only required action — a background watcher syncs it to Obsidian automatically.
+
+**PowerShell (preferred):**
+```powershell
+Add-Content "$env:USERPROFILE\.cursor\obsidian-journal.jsonl" ('{"tool":"Cursor","project":"Bossku-AI","prompt":"FIRST_PROMPT","summary":"ONE_LINE_SUMMARY","ts":"' + (Get-Date -Format 'o') + '"}')
+```
+
+**Rules:**
+- Replace `Bossku-AI` with the repo folder name (e.g. `festivent-app`, `Bossku-AI`, `iman-quest`)
+- Replace `FIRST_PROMPT` with the user's first message (max 300 chars, escape inner quotes with `\"`)
+- Replace `ONE_LINE_SUMMARY` with a one-line description of what was done
+- Run **once per session** at the very end — not after every reply
+- Skip trivial sessions (single lookups, typo fixes, one-liner answers)

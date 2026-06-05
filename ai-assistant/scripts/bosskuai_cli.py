@@ -269,6 +269,12 @@ def cmd_model_route(args: argparse.Namespace) -> int:
     return run_py(r, "ai-assistant/scripts/model_router.py", [args.task]).returncode
 
 
+def cmd_route_detailed(args: argparse.Namespace) -> int:
+    r = root(args.root)
+    task = " ".join(args.task).strip()
+    return run_py(r, "ai-assistant/scripts/model_router.py", ["--detailed", "--lines", task]).returncode
+
+
 def cmd_eval_latest(args: argparse.Namespace) -> int:
     r = root(args.root)
     scripts = [
@@ -349,6 +355,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     model = sub.add_parser("model"); model_sub = model.add_subparsers(dest="model_cmd", required=True)
     route = model_sub.add_parser("route"); route.add_argument("task"); route.set_defaults(fn=cmd_model_route)
+
+    rt = sub.add_parser("route"); rt.add_argument("task", nargs="+", help="Prompt to classify"); rt.set_defaults(fn=cmd_route_detailed)
 
     cont = sub.add_parser("continuation"); cont_sub = cont.add_subparsers(dest="cont_cmd", required=True)
     cshow = cont_sub.add_parser("show"); cshow.set_defaults(fn=cmd_continuation)

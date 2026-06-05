@@ -14,6 +14,15 @@ def load_script(name):
     return module
 
 
+def load_ai_script(name: str):
+    script_path = ROOT / "ai-assistant" / "scripts" / f"{name}.py"
+    spec = importlib.util.spec_from_file_location(name.replace(".py", ""), script_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader
+    spec.loader.exec_module(module)
+    return module
+
+
 class ScriptTests(unittest.TestCase):
     def test_route_prompt_prefers_exact_skill_match(self):
         eval_workspace = load_script("eval_workspace")
@@ -90,6 +99,19 @@ class ScriptTests(unittest.TestCase):
 
         self.assertIn("Routing cleanup", summary)
         self.assertIn("Keep routing lightweight.", summary)
+
+    def test_model_router_v2_laravel_question(self):
+        mr = load_ai_script("model_router.py")
+        out = mr.route_detailed("Explain Laravel policy vs gate")
+        self.assertEqual(out["workflow"], "direct_answer")
+        self.assertFalse(out["needs_executor"])
+
+    def test_model_router_v2_payment_high_risk(self):
+        mr = load_ai_script("model_router.py")
+        out = mr.route_detailed("Fix payment webhook signature validation")
+        self.assertEqual(out["risk_level"], "high")
+        self.assertTrue(out["needs_final_reviewer"])
+        self.assertIn("gpt", out["models"]["executor"].lower())
 
 
 if __name__ == "__main__":

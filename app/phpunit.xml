@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         colors="true"
+>
+    <testsuites>
+        <testsuite name="Unit">
+            <directory>tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Feature">
+            <directory>tests/Feature</directory>
+        </testsuite>
+    </testsuites>
+    <source>
+        <include>
+            <directory>app</directory>
+        </include>
+    </source>
+    <php>
+        <env name="APP_ENV" value="testing"/>
+        <env name="APP_MAINTENANCE_DRIVER" value="file"/>
+        <env name="BCRYPT_ROUNDS" value="4"/>
+        <env name="CACHE_STORE" value="array"/>
+        <env name="DB_CONNECTION" value="sqlite" force="true"/>
+        <env name="DB_DATABASE" value=":memory:" force="true"/>
+        <env name="MAIL_MAILER" value="array"/>
+        <env name="PULSE_ENABLED" value="false"/>
+        <env name="QUEUE_CONNECTION" value="sync"/>
+        <env name="SESSION_DRIVER" value="array"/>
+        <env name="TELESCOPE_ENABLED" value="false"/>
+        <!-- BosskuAI overrides: compose may inject conflicting env (DB_* and BOSSKU_*). Force test defaults. -->
+        <env name="BOSSKU_ROUTER_LLM_ENABLED" value="false" force="true"/>
+        <env name="BOSSKU_MEMORY_OLLAMA_ENABLED" value="false" force="true"/>
+        <env name="BOSSKU_REQUIRE_USER_APPROVAL" value="false" force="true"/>
+        <env name="BOSSKU_API_AUTH_ENABLED" value="false" force="true"/>
+        <env name="BOSSKU_ROUTER_MODEL" value="kimi-k2.6" force="true"/>
+        <env name="BOSSKU_ORCHESTRATOR_MODEL" value="kimi-k2.6" force="true"/>
+        <env name="BOSSKU_EXECUTOR_DEFAULT_MODEL" value="glm-5.1" force="true"/>
+        <env name="BOSSKU_EXECUTOR_HIGH_RISK_MODEL" value="deepseek-v4-pro" force="true"/>
+        <env name="BOSSKU_OLLAMA_MODEL_PATTERNS" value="llama|mistral|codellama|phi|gemma|qwen|kimi|deepseek|glm|gpt|claude|gemini|o1|o3|o4|chatgpt|cloud|nomic" force="true"/>
+        <env name="BOSSKU_ALIAS_GPT_5_5" value="kimi-k2.6:cloud" force="true"/>
+        <env name="CODEX_OAUTH_CLIENT_ID" value="app_EMoamEEZ73f0CkXaXp7hrann" force="true"/>
+        <env name="BOSSKU_ALIAS_CLAUDE_OPUS_4_7" value="deepseek-v4-pro:cloud" force="true"/>
+    </php>
+</phpunit>

@@ -1,32 +1,17 @@
 {
   "name": "bosskuai-marketplace",
   "owner": {
-    "name": "wankimmy"
+    "name": "BosskuAI"
   },
   "metadata": {
-    "description": "BosskuAI plugins for Cursor, Claude Code, and Codex.",
-    "version": "1.1.1"
+    "description": "BosskuAI plugins for Cursor.",
+    "version": "1.0.0"
   },
   "plugins": [
     {
       "name": "bossku-ai",
       "source": "./",
-      "description": "85 skills on disk; UI may show ~66 (routing.manual_only_skill_ids excludes 19 specialists). Invoke by name after refresh.",
-      "version": "1.1.1",
-      "author": {
-        "name": "wankimmy"
-      },
-      "homepage": "https://github.com/wankimmy/Bossku-AI",
-      "repository": "https://github.com/wankimmy/Bossku-AI",
-      "license": "MIT",
-      "keywords": [
-        "cursor",
-        "claude-code",
-        "ai-cofounder",
-        "skills",
-        "agents",
-        "workflow"
-      ]
+      "description": "AI cofounder plugin with reusable skills, subagents, and memory-first workflows."
     }
   ]
 }

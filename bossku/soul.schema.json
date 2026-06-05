@@ -1,0 +1,60 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://bossku.ai/schemas/soul.schema.json",
+  "title": "BosskuAI Soul Document Schema",
+  "description": "Validates that a soul.md document contains all required sections and well-formed content.",
+  "type": "object",
+  "required": ["content", "sections"],
+  "additionalProperties": false,
+  "properties": {
+    "content": {
+      "type": "string",
+      "description": "The full raw text content of the soul.md file.",
+      "minLength": 100
+    },
+    "sections": {
+      "type": "array",
+      "description": "List of section names parsed from the soul document. All required sections must be present.",
+      "minItems": 7,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "contains": {
+        "type": "string",
+        "enum": [
+          "Identity",
+          "Core Values",
+          "Behaviour Guidelines",
+          "Decision Principles",
+          "Communication Style",
+          "Red Lines",
+          "Learning Preferences"
+        ]
+      },
+      "allOf": [
+        {
+          "contains": { "const": "Identity" }
+        },
+        {
+          "contains": { "const": "Core Values" }
+        },
+        {
+          "contains": { "const": "Behaviour Guidelines" }
+        },
+        {
+          "contains": { "const": "Decision Principles" }
+        },
+        {
+          "contains": { "const": "Communication Style" }
+        },
+        {
+          "contains": { "const": "Red Lines" }
+        },
+        {
+          "contains": { "const": "Learning Preferences" }
+        }
+      ]
+    }
+  }
+}

@@ -22,7 +22,7 @@ Use this skill when the task involves Lenis smooth scrolling: installing it, wir
 
 ## Source posture
 
-This skill was shaped from the local Lenis repo at `/Users/safwanyacob/Documents/Safwan/lenis`, currently package version `1.3.21` in its `package.json`. Check the local repo or official package docs again when exact options or exports matter.
+This skill was shaped from the upstream [Lenis](https://github.com/darkroomengineering/lenis) package (check `package.json` in your project for the pinned version). Prefer official Lenis docs when exact options or exports matter.
 
 ## Mindset
 

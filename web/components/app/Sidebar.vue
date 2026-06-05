@@ -1,0 +1,74 @@
+<script setup lang="ts">
+import { SIDEBAR_LINKS } from '~/utils/sidebarLinks'
+
+defineProps<{ open?: boolean }>()
+const emit = defineEmits<{ toggle: [] }>()
+
+const { collapsed, toggle: toggleCollapsed } = useSidebarCollapsed()
+
+const links = SIDEBAR_LINKS
+</script>
+
+<template>
+  <!-- Desktop sidebar -->
+  <aside
+    class="hidden lg:flex flex-col w-[220px] min-h-screen bg-zinc-950 border-r border-zinc-800 fixed left-0 top-0 z-30 transition-transform duration-200 ease-out"
+    :class="collapsed ? '-translate-x-full' : 'translate-x-0'"
+  >
+    <div class="flex items-center justify-between gap-2 px-3 h-12 border-b border-zinc-800 shrink-0">
+      <span class="text-sm font-bold text-emerald-400 tracking-tight truncate">BosskuAI</span>
+      <button
+        type="button"
+        class="shrink-0 rounded-md border border-zinc-700 p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+        title="Hide sidebar"
+        aria-label="Hide sidebar"
+        @click="toggleCollapsed"
+      >
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+        </svg>
+      </button>
+    </div>
+    <nav class="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
+      <NuxtLink
+        v-for="link in links"
+        :key="link.to"
+        :to="link.to"
+        :data-tour="link.tourId"
+        class="flex items-center px-3 py-2 rounded-md text-sm text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors"
+        active-class="bg-zinc-800 text-zinc-100 font-medium"
+      >
+        {{ link.label }}
+      </NuxtLink>
+    </nav>
+  </aside>
+
+  <!-- Mobile overlay -->
+  <Teleport to="body">
+    <div
+      v-if="open"
+      class="lg:hidden fixed inset-0 z-40 flex"
+    >
+      <div class="fixed inset-0 bg-black/60" @click="emit('toggle')" />
+      <aside class="relative flex flex-col w-[220px] min-h-screen bg-zinc-950 border-r border-zinc-800 z-50">
+        <div class="flex items-center justify-between px-4 h-12 border-b border-zinc-800 shrink-0">
+          <span class="text-sm font-bold text-emerald-400 tracking-tight">BosskuAI</span>
+          <button type="button" class="text-zinc-400 hover:text-zinc-100 text-xs" @click="emit('toggle')">✕</button>
+        </div>
+        <nav class="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
+          <NuxtLink
+            v-for="link in links"
+            :key="link.to"
+            :to="link.to"
+            :data-tour="link.tourId"
+            class="flex items-center px-3 py-2 rounded-md text-sm text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors"
+            active-class="bg-zinc-800 text-zinc-100 font-medium"
+            @click="emit('toggle')"
+          >
+            {{ link.label }}
+          </NuxtLink>
+        </nav>
+      </aside>
+    </div>
+  </Teleport>
+</template>

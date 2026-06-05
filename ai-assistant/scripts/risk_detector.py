@@ -22,6 +22,7 @@ RISK_PATTERNS = {
     "legal_compliance": [r"legal", r"compliance", r"terms", r"policy", r"contract", r"ssm", r"tax"],
 }
 
+
 @dataclass
 class RiskResult:
     level: str

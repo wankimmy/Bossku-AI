@@ -3,11 +3,11 @@
   "version": "1.0.0",
   "description": "AI cofounder plugin for Claude Code with product, engineering, growth, research, and memory-first workflows.",
   "author": {
-    "name": "wankimmy",
-    "url": "https://github.com/wankimmy"
+    "name": "BosskuAI",
+    "url": "https://github.com/bossku-ai"
   },
-  "homepage": "https://github.com/wankimmy/Bossku-AI",
-  "repository": "https://github.com/wankimmy/Bossku-AI",
+  "homepage": "https://github.com/bossku-ai/Bossku-AI",
+  "repository": "https://github.com/bossku-ai/Bossku-AI",
   "license": "MIT",
   "keywords": [
     "claude-code",

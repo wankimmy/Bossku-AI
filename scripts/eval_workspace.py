@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """
-BosskuAI workspace eval — v1.8.2
+BosskuAI workspace eval — v1.9.6
+
+Adds: [BOSSKUAI] indicator compliance checks on fixture snippets.
 
 Key fix vs v1.7.0: retrieval now uses vector_memory.retrieve_text_files()
 so the eval tests the SAME scoring path as production, not a separate mock retriever.
@@ -8,6 +10,15 @@ so the eval tests the SAME scoring path as production, not a separate mock retri
 from __future__ import annotations
 import argparse, json, re, sys
 from pathlib import Path
+
+# Matches the mandatory Bossku indicator block when it appears first in assistant output.
+BOSSKUAI_INDICATOR_RE = re.compile(
+    r"\A\[BOSSKUAI\]\r?\n"
+    r"Skill:\s+\S.*\r?\n"
+    r"Agent:\s+(orchestrator|executor|auditor|final-reviewer)\r?\n"
+    r"Model Role:\s+(planner|coder|reviewer|researcher)\r?\n"
+    r"Memory Used:\s+(yes|no)\b",
+)
 
 TOKEN_RE = re.compile(r"[A-Za-z0-9_./:-]{2,}")
 ROUTE_RE = re.compile(r"[A-Za-z0-9]+")
@@ -165,6 +176,32 @@ def pct(before, after):
     return 0 if before == 0 else round(((after - before) / before) * 100, 2)
 
 
+def eval_indicator_cases(root: Path) -> tuple[list[dict], int, int]:
+    fixture = root / "evals/indicator-compliance-fixtures.json"
+    if not fixture.exists():
+        results = [{"name": "(missing fixtures)", "expect_pass": None, "matched": False, "pass": False}]
+        return results, 0, 1
+
+    raw = load_json(fixture)
+    if not isinstance(raw, list):
+        results = [{"name": "(invalid fixtures JSON)", "expect_pass": None, "matched": False, "pass": False}]
+        return results, 0, 1
+
+    results = []
+    passed_n = 0
+    total = len(raw)
+    for c in raw:
+        name = str(c.get("name", "?"))
+        text = str(c.get("text", ""))
+        exp = bool(c.get("expect_pass"))
+        stripped = text.lstrip("\ufeff").strip()
+        matched = BOSSKUAI_INDICATOR_RE.match(stripped) is not None
+        ok = matched == exp
+        passed_n += int(ok)
+        results.append({"name": name, "expect_pass": exp, "matched": matched, "pass": ok})
+    return results, passed_n, total
+
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -221,6 +258,8 @@ def main():
         workflow.append({"name": c["name"], "expected_skill": c["expected_skill"], "predicted_skill": pred,
                          "expected_path": c["expected_path"], "retrieval_rank": rank, "pass": ok})
 
+    indicator_rows, indicator_ip, indicator_total = eval_indicator_cases(root)
+
     report = {
         "retrieval_engine": "production (vector_memory.retrieve_text_files)",
         "prompt_surface": {"before_tokens": before, "after_tokens": after,
@@ -228,13 +267,14 @@ def main():
         "routing_fit": {"passed": rp, "total": len(routing), "results": routing},
         "retrieval_relevance": {"passed": relp, "top1_passed": top1, "total": len(retrieval), "results": retrieval},
         "workflow_proxy": {"passed": wp, "total": len(workflow), "results": workflow},
+        "indicator_compliance": {"passed": indicator_ip, "total": indicator_total, "results": indicator_rows},
     }
 
     if args.json:
         print(json.dumps(report, indent=2))
         return 0
 
-    print("BosskuAI workspace eval v1.8.2\n")
+    print("BosskuAI workspace eval v1.9.6\n")
     print(f"Retrieval engine: {report['retrieval_engine']}\n")
     print("Prompt surface")
     print(f"  before approx tokens: {before}")
@@ -250,6 +290,11 @@ def main():
     print(f"\nWorkflow proxy\n  score: {wp}/{len(workflow)}")
     for r in workflow:
         print(f"  {'PASS' if r['pass'] else 'FAIL'} {r['name']}: skill={r['predicted_skill']} rank={r['retrieval_rank']}")
+    print(f"\nIndicator compliance\n  score: {indicator_ip}/{indicator_total}")
+    for r in indicator_rows:
+        exp_e = str(r["expect_pass"])
+        got_e = str(r["matched"])
+        print(f"  {'PASS' if r['pass'] else 'FAIL'} {r['name']}: expect_match={exp_e} got_match={got_e}")
     return 0
 
 

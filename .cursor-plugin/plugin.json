@@ -1,21 +1,21 @@
 {
   "name": "bossku-ai",
-  "version": "1.1.1",
-  "description": "AI cofounder plugin for Cursor: 85 skills on disk under ai-assistant/skills; Cursor may show ~66 in Plugins (85 minus manual-only specialists in skill-index routing). Invoke specialists by name. Run scripts/cursor-plugin-refresh.sh after git pull.",
+  "displayName": "BosskuAI",
+  "description": "AI cofounder plugin with reusable skills, subagents, and memory-first workflows.",
+  "version": "1.0.0",
   "author": {
-    "name": "wankimmy"
+    "name": "BosskuAI",
+    "url": "https://github.com/bossku-ai"
   },
-  "homepage": "https://github.com/wankimmy/Bossku-AI",
-  "repository": "https://github.com/wankimmy/Bossku-AI",
+  "homepage": "https://github.com/bossku-ai/Bossku-AI",
+  "repository": "https://github.com/bossku-ai/Bossku-AI",
   "license": "MIT",
   "keywords": [
-    "cursor",
     "skills",
-    "ai-cofounder",
-    "product-strategy",
-    "engineering"
+    "subagents",
+    "memory",
+    "workflows"
   ],
-  "skills": "./ai-assistant/skills/",
-  "rules": ["./rules", "./.cursor/rules"],
-  "agents": "./agents"
+  "skills": "./packages/bossku-ai/skills/",
+  "agents": "./agents/"
 }
