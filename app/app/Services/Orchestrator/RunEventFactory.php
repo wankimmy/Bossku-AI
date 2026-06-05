@@ -385,6 +385,7 @@ class RunEventFactory
             'commands_executed' => $result['_commands_executed'] ?? [],
             'git_status_after' => $result['git_status_after'] ?? null,
             'tests_run' => $result['tests_run'] ?? [],
+            'checklist_status' => is_array($result['checklist_status'] ?? null) ? $result['checklist_status'] : [],
             'needs_user_input' => (bool) ($result['needs_user_input'] ?? false),
             'blockers' => is_array($result['blockers'] ?? null) ? $result['blockers'] : [],
             'suggested_options' => is_array($result['suggested_options'] ?? null) ? $result['suggested_options'] : [],
@@ -402,6 +403,7 @@ class RunEventFactory
             'files_changed' => [],
             'commands_run' => [],
             'tests_run' => [],
+            'checklist_status' => [],
             'audit_findings' => [],
         ], $artifacts);
     }

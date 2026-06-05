@@ -17,6 +17,8 @@ export type StepStatus =
   | 'passed'
   | 'failed'
   | 'fail'
+  | 'partial'
+  | 'awaiting_input'
   | 'needs_revision'
   | 'skipped'
   | 'disputed'

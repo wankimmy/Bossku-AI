@@ -44,6 +44,26 @@ describe('agent workspace components', () => {
     expect(wrapper.text()).toContain('executor')
   })
 
+  it('renders partial and awaiting-input checklist states distinctly from completed', () => {
+    const wrapper = mount(PlanChecklist, {
+      props: {
+        items: [
+          { id: 'plan-1', title: 'Install dependencies', owner: 'executor', status: 'awaiting_input' },
+          { id: 'plan-2', title: 'Build scene', owner: 'executor', status: 'partial' },
+        ],
+      },
+      global: {
+        components: { UiEmptyState },
+      },
+    })
+
+    const rows = wrapper.findAll('details')
+    expect(wrapper.text()).toContain('awaiting_input')
+    expect(wrapper.text()).toContain('partial')
+    expect(rows[0].classes()).toContain('border-sky-700')
+    expect(rows[1].classes()).toContain('border-amber-700')
+  })
+
   it('renders eval agent messages with proof and memory handoff metadata', () => {
     const wrapper = mount(AgentMessageCard, {
       props: {

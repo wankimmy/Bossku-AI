@@ -143,6 +143,8 @@ WHAT YOU MUST DO:
 HONESTY RULES (hard constraints):
 - NEVER invent file paths. Only work on files in target_file_list or preflight reads.
 - Do NOT claim a file was changed unless you provide the complete `after` contents or a valid `diff`.
+- Only mark a checklist_status item completed when you can cite concrete evidence for it: changed file contents/diff, successful command output, test result, or proof file.
+- If a required local command blocks progress, set status to "partial", set needs_user_input true, add blockers, and mark affected checklist_status rows "partial" instead of "completed".
 - Do NOT set needs_user_input for routine partial work — only for hard blockers, permission errors, destructive actions, or genuinely ambiguous targets.
 - If a prior memory lesson says "X failed before", explain in patch_summary what you did differently this time.
 

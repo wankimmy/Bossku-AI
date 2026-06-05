@@ -202,11 +202,13 @@ trait OrchestratorUserLocalCommandsTrait
         $clarification = $this->buildUserLocalCommandsClarification($commands);
         $proof = [
             'from_agent' => $fromAgent,
+            'needs_user_input' => true,
             'commands_run' => $blocked,
             'blockers' => array_map(
                 static fn (array $row) => $row['command'].': '.$row['reason'],
                 $blocked,
             ),
+            'checklist_status' => $this->userLocalCommandChecklistStatus($pipeline, $blocked),
         ];
 
         return $this->pauseForClarification(
@@ -219,6 +221,68 @@ trait OrchestratorUserLocalCommandsTrait
             'user_local_commands',
             $proof,
         );
+    }
+
+    /**
+     * @param  array<string, mixed>  $pipeline
+     * @param  list<array{command: string, reason: string}>  $blocked
+     * @return list<array<string, string>>
+     */
+    protected function userLocalCommandChecklistStatus(array $pipeline, array $blocked): array
+    {
+        $plan = is_array($pipeline['plan'] ?? null) ? $pipeline['plan'] : [];
+        $planChecklist = is_array($plan['checklist'] ?? null) ? $plan['checklist'] : [];
+        $execResult = is_array($pipeline['exec_result'] ?? null) ? $pipeline['exec_result'] : [];
+        $execChecklist = is_array($execResult['checklist_status'] ?? null) ? $execResult['checklist_status'] : [];
+        $commands = implode(', ', array_map(
+            static fn (array $row) => $row['command'],
+            $blocked,
+        ));
+        $notes = $commands !== ''
+            ? 'Awaiting local command output before executor can verify this item: '.$commands
+            : 'Awaiting local command output before executor can verify this item.';
+
+        $rows = [];
+        foreach ($planChecklist as $idx => $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+
+            $owner = strtolower(StringCoercion::toString($item['owner'] ?? null, 'executor'));
+            if ($owner !== '' && ! str_contains($owner, 'executor')) {
+                continue;
+            }
+
+            $id = StringCoercion::toString($item['id'] ?? null, 'plan-'.($idx + 1));
+            $rows[] = [
+                'id' => $id,
+                'title' => StringCoercion::toString($item['title'] ?? $item['description'] ?? null, $id),
+                'owner' => StringCoercion::toString($item['owner'] ?? null, 'executor'),
+                'status' => 'awaiting_input',
+                'notes' => $notes,
+            ];
+        }
+
+        if ($rows !== []) {
+            return $rows;
+        }
+
+        foreach ($execChecklist as $idx => $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+
+            $id = StringCoercion::toString($item['id'] ?? null, 'executor-checklist-'.($idx + 1));
+            $rows[] = [
+                'id' => $id,
+                'title' => StringCoercion::toString($item['title'] ?? $item['description'] ?? null, $id),
+                'owner' => StringCoercion::toString($item['owner'] ?? null, 'executor'),
+                'status' => 'awaiting_input',
+                'notes' => $notes,
+            ];
+        }
+
+        return $rows;
     }
 
     /**

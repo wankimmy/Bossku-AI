@@ -72,6 +72,56 @@ class UserLocalCommandsTest extends TestCase
     }
 
     #[Test]
+    public function local_command_pause_carries_awaiting_input_checklist_status(): void
+    {
+        $run = Run::factory()->create(['prompt' => 'test', 'status' => 'running']);
+        $service = app(OrchestratorService::class);
+        $method = new ReflectionMethod(OrchestratorService::class, 'maybePauseForUserLocalCommands');
+        $method->setAccessible(true);
+
+        $events = [];
+        $execResult = [
+            'status' => 'success',
+            'checklist_status' => [[
+                'id' => 'plan-1',
+                'status' => 'completed',
+                'notes' => 'Executor should not stay completed while npm install is blocked.',
+            ]],
+            '_commands_executed' => [[
+                'command' => 'npm install',
+                'ok' => false,
+                'exit_code' => 127,
+                'stderr' => 'sh: 1: npm: not found',
+            ]],
+        ];
+        $pipeline = [
+            'plan' => [
+                'checklist' => [[
+                    'id' => 'plan-1',
+                    'title' => 'Scaffold Nuxt project with dependencies',
+                    'owner' => 'executor',
+                    'status' => 'pending',
+                ]],
+            ],
+        ];
+
+        $result = $method->invoke($service, $run, $execResult, $pipeline, function (array $event) use (&$events): void {
+            $events[] = $event;
+        });
+
+        $this->assertTrue($result['awaiting_clarification']);
+        $this->assertSame('user_local_commands', $events[0]['stage']);
+        $proof = $events[0]['artifacts']['proof'];
+        $this->assertTrue($proof['needs_user_input']);
+        $this->assertSame('awaiting_input', $proof['checklist_status'][0]['status']);
+        $this->assertSame('plan-1', $proof['checklist_status'][0]['id']);
+        $this->assertStringContainsString('npm install', $proof['blockers'][0]);
+
+        $checkpointProof = $run->fresh()->metadata['checkpoint']['clarification']['proof'];
+        $this->assertSame('awaiting_input', $checkpointProof['checklist_status'][0]['status']);
+    }
+
+    #[Test]
     public function detects_command_not_found_exit_127(): void
     {
         $service = app(OrchestratorService::class);

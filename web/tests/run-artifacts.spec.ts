@@ -263,6 +263,83 @@ describe('useRunArtifacts', () => {
     expect(normalized.checklist[1].status).toBe('unverifiable')
   })
 
+  it('marks executor checklist awaiting input during user-local command pauses', () => {
+    const normalized = useRunArtifacts([
+      {
+        type: 'planner_done',
+        agent: 'orchestrator',
+        status: 'success',
+        artifacts: {
+          checklist: [
+            { id: 'plan-1', title: 'Scaffold Nuxt project with dependencies', owner: 'executor', status: 'pending' },
+            { id: 'plan-2', title: 'Review implementation', owner: 'auditor', status: 'pending' },
+          ],
+        },
+      },
+      {
+        type: 'executor_step_started',
+        agent: 'executor',
+        status: 'running',
+      },
+      {
+        type: 'clarification_requested',
+        agent: 'executor',
+        status: 'awaiting_input',
+        stage: 'user_local_commands',
+        origin: 'user_local_commands',
+        artifacts: {
+          proof: {
+            checklist_status: [
+              { id: 'plan-1', status: 'awaiting_input', notes: 'Run npm install locally and paste the output.' },
+            ],
+            commands_run: [{ command: 'npm install', reason: 'exit 127' }],
+            blockers: ['npm install: exit 127'],
+          },
+        },
+      },
+    ])
+
+    expect(normalized.checklist[0].title).toBe('Scaffold Nuxt project with dependencies')
+    expect(normalized.checklist[0].owner).toBe('executor')
+    expect(normalized.checklist[0].status).toBe('awaiting_input')
+    expect(normalized.checklist[1].status).toBe('pending')
+  })
+
+  it('keeps explicit partial executor checklist status through run completion', () => {
+    const normalized = useRunArtifacts([
+      {
+        type: 'planner_done',
+        agent: 'orchestrator',
+        status: 'success',
+        artifacts: {
+          checklist: [
+            { id: 'plan-1', title: 'Build GarageScene 3D environment', owner: 'executor', status: 'pending' },
+          ],
+        },
+      },
+      {
+        type: 'executor_step_done',
+        agent: 'executor',
+        status: 'success',
+        artifacts: {
+          checklist_status: [
+            { id: 'plan-1', status: 'partial', notes: 'Dependencies are not installed yet.' },
+          ],
+        },
+      },
+      {
+        type: 'run_completed',
+        agent: 'final-reviewer',
+        status: 'success',
+        output: 'Waiting for local command output.',
+      },
+    ])
+
+    expect(normalized.checklist[0].title).toBe('Build GarageScene 3D environment')
+    expect(normalized.checklist[0].owner).toBe('executor')
+    expect(normalized.checklist[0].status).toBe('partial')
+  })
+
   it('parses next prompt section from final output', () => {
     const normalized = useRunArtifacts([
       {
