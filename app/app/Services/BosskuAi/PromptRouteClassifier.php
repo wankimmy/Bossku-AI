@@ -49,6 +49,7 @@ skill (one of: laravel, php, nuxt, vue, react, docker, nginx, mysql, mariadb, po
 workflow (one of: direct_answer, writer_only, orchestrator_only, orchestrator_executor, orchestrator_executor_auditor, orchestrator_executor_auditor_security, orchestrator_executor_auditor_security_final_reviewer).
 Use orchestrator_executor for typical code create/fix/update (plan + implement + tests) WITHOUT needs_auditor.
 Use orchestrator_executor_auditor only when the user asks for audit/review/scan or the change is broad and needs independent review.
+Use orchestrator_only (read-only: no executor, no auditor) when the user only wants to understand, summarize, or explain a repository/project without changing code.
 needs_repo_context (boolean),
 needs_file_edit (boolean),
 needs_test_run (boolean),

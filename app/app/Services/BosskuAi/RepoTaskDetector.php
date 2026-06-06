@@ -50,6 +50,35 @@ class RepoTaskDetector
     }
 
     /**
+     * Read-only "understand / summarize / explain this project" requests.
+     *
+     * These need repository CONTEXT so the orchestrator can answer, but must NOT be
+     * pushed through the executor + auditor pipeline — the user wants a synthesized
+     * overview, not a code review. An explicit audit/review/scan or build/mutation
+     * verb disqualifies the prompt and lets it fall back to the audit/executor path.
+     */
+    public static function isReadOnlyUnderstanding(string $prompt): bool
+    {
+        $lower = mb_strtolower(trim($prompt));
+
+        // Audit / review / mutation intent wins — those belong in the executor pipeline.
+        if (preg_match('/\b(audit|review|scan|analyse|analyze|refactor|implement|deploy|migrate|optimi[sz]e|vulnerabilit|owasp|pentest|penetration)\b/u', $lower)) {
+            return false;
+        }
+
+        $understands = (bool) preg_match(
+            '/\b(understand|understanding|summari[sz]e|summary|explain|describe|overview|orient|onboard|familiari[sz]e|get familiar|walk me through|tell me about|what (is|are|does)|map the (stack|repo|repository|codebase|project)|get up to speed)\b/u',
+            $lower,
+        );
+
+        if (! $understands) {
+            return false;
+        }
+
+        return (bool) preg_match('/\b(repo|repository|codebase|code base|project|workspace|this code|the code)\b/u', $lower);
+    }
+
+    /**
      * Full repo audit: functionality, design, performance, tests, then dedicated security pass.
      * Default for repository audit prompts unless the user asks for security-only review.
      */
@@ -98,6 +127,13 @@ class RepoTaskDetector
      */
     public static function enforceExecutorForRepo(array $route, string $prompt): array
     {
+        // Read-only understanding needs repo context, never the executor/auditor pipeline.
+        if (self::isReadOnlyUnderstanding($prompt)) {
+            $route['needs_repo_context'] = true;
+
+            return $route;
+        }
+
         $requiresAudit = self::requiresRepositoryAccess($prompt);
         $needsRepoContext = (bool) ($route['needs_repo_context'] ?? false);
 

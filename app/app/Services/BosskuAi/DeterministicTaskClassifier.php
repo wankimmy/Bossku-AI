@@ -35,6 +35,34 @@ class DeterministicTaskClassifier
             $lower
         );
 
+        // Read-only repository understanding ("summarize / explain this project") — the
+        // orchestrator answers from repo context; no executor edits, no audit pipeline.
+        // Must precede the repository-audit branch below, which would otherwise force
+        // executor + auditor for any prompt that merely mentions the repo.
+        if (RepoTaskDetector::isReadOnlyUnderstanding($prompt)) {
+            $det = (new RiskRuleEngine)->deterministicRisk($prompt);
+
+            return [
+                'task_type' => 'question',
+                'audit_mode' => 'standard',
+                'risk_level' => $det['risk'],
+                'skill' => 'bosskuai-project-understanding',
+                'workflow' => 'orchestrator_only',
+                'needs_repo_context' => true,
+                'needs_file_edit' => false,
+                'needs_test_run' => false,
+                'needs_executor' => false,
+                'needs_auditor' => false,
+                'needs_security_auditor' => false,
+                'needs_final_reviewer' => false,
+                'executor_profile' => 'none',
+                'memory_mode' => 'read_only',
+                'estimated_token_level' => 'low',
+                'reason' => 'Read-only repository understanding — orchestrator answers from repo context without code changes or an audit pipeline.',
+                '_deterministic_risk' => $det,
+            ];
+        }
+
         // Repository audit / review — must run executor + read files (never orchestrator_only)
         if (RepoTaskDetector::requiresRepositoryAccess($prompt)) {
             $auditMode = RepoTaskDetector::isFullRepositoryAudit($prompt) ? 'full' : 'repo';

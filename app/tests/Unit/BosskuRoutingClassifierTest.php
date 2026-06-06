@@ -65,6 +65,30 @@ class BosskuRoutingClassifierTest extends TestCase
     }
 
     #[Test]
+    public function repo_understanding_prompt_is_read_only_no_audit_pipeline(): void
+    {
+        $r = $this->classify('Inspect the active repository and summarize the project purpose, structure, conventions, stack, and risks. Do not edit files.');
+        $this->assertSame('orchestrator_only', $r['workflow']);
+        $this->assertSame('bosskuai-project-understanding', $r['skill']);
+        $this->assertTrue($r['needs_repo_context']);
+        $this->assertFalse($r['needs_file_edit']);
+        $this->assertFalse($r['needs_executor']);
+        $this->assertFalse($r['needs_auditor']);
+        $this->assertFalse($r['needs_security_auditor']);
+        $this->assertFalse($r['needs_final_reviewer']);
+    }
+
+    #[Test]
+    public function review_request_still_audits_even_with_summarize_wording(): void
+    {
+        // "review" is an audit verb — it must NOT be misread as read-only understanding.
+        $r = $this->classify('Review the repo and summarize the findings');
+        $this->assertStringContainsString('orchestrator_executor', (string) $r['workflow']);
+        $this->assertTrue($r['needs_executor']);
+        $this->assertTrue($r['needs_auditor']);
+    }
+
+    #[Test]
     public function smoke_test_prompt_uses_direct_answer(): void
     {
         $r = $this->classify('test');
