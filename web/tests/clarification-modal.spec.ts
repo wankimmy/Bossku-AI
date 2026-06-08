@@ -81,4 +81,22 @@ describe('ClarificationModal', () => {
     expect(payload.answers[0].question_id).toBe('q1')
     expect(payload.answers[0].option_id).toBe('a')
   })
+
+  it('uses master plan review copy for planner review stage', () => {
+    const wrapper = mount(ClarificationModal, {
+      props: {
+        open: true,
+        request: {
+          ...sampleRequest,
+          stage: 'planner_review',
+          summary: 'Review the master plan before execution.',
+        },
+      },
+      global: modalGlobal,
+    })
+
+    expect(wrapper.text()).toContain('Review master plan')
+    expect(wrapper.text()).toContain('Plan feedback')
+    expect(wrapper.text()).toContain('Approve plan & execute')
+  })
 })

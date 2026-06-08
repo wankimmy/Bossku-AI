@@ -335,6 +335,18 @@ class RuntimeSettings
         };
     }
 
+    /** @return 'always'|'questions'|'off' */
+    public function orchestratorPlanConfirmationMode(): string
+    {
+        $default = strtolower((string) config('bossku.orchestrator_plan_confirmation_mode', 'always'));
+        $mode = strtolower($this->getString('orchestrator_plan_confirmation_mode', $default));
+
+        return match ($mode) {
+            'questions', 'off' => $mode,
+            default => 'always',
+        };
+    }
+
     /** @deprecated Use orchestratorModelForRouting() */
     public function orchestratorModelOverride(): ?string
     {
@@ -413,6 +425,7 @@ class RuntimeSettings
             'embedding_model' => $this->embeddingModel(),
             'routing_llm_enabled' => $this->routingLlmEnabled() ? '1' : '0',
             'orchestrator_clarification_mode' => $this->orchestratorClarificationMode(),
+            'orchestrator_plan_confirmation_mode' => $this->orchestratorPlanConfirmationMode(),
             'orchestrator_model' => $this->orchestratorModelForRouting(),
             'model_aliases' => json_encode($this->modelAliases(), JSON_THROW_ON_ERROR),
             'allowed_cloud_models' => json_encode(config('bossku_models.allowed_cloud_models', []), JSON_THROW_ON_ERROR),

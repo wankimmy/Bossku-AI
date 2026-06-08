@@ -4,9 +4,11 @@ namespace Tests\Unit;
 
 use App\Services\BosskuAi\ModelFallbackService;
 use App\Services\BosskuAi\ModelRoutingConfig;
+use App\Services\BosskuAi\CodebaseIndexService;
 use App\Services\BosskuAi\RuntimeSettings;
 use App\Services\Orchestrator\PlannerService;
 use App\Services\Project\ProjectFileDiscovery;
+use App\Services\Project\ProjectPathResolver;
 use App\Services\Project\ProjectService;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -106,7 +108,7 @@ class PlannerServiceTest extends TestCase
                 ->andReturn('Repository root: /workspace');
         });
 
-        $service = new PlannerService($fallback, $routing, $settings, $projects, $discovery);
+        $service = $this->makePlannerService($fallback, $routing, $settings, $projects, $discovery);
         $out = $service->plan(
             'Add a knowledge tab.',
             [['type' => 'memory', 'summary' => 'existing knowledge']],
@@ -181,7 +183,7 @@ class PlannerServiceTest extends TestCase
             $mock->shouldReceive('repoIndexForPlanner')->once()->andReturn('Repository root: /workspace');
         });
 
-        $service = new PlannerService($fallback, $routing, $settings, $projects, $discovery);
+        $service = $this->makePlannerService($fallback, $routing, $settings, $projects, $discovery);
         $out = $service->plan(
             'Do something sparse.',
             [],
@@ -238,7 +240,7 @@ class PlannerServiceTest extends TestCase
             $mock->shouldReceive('repoIndexForPlanner')->once()->andReturn('Repository root: /workspace');
         });
 
-        $service = new PlannerService($fallback, $routing, $settings, $projects, $discovery);
+        $service = $this->makePlannerService($fallback, $routing, $settings, $projects, $discovery);
         $out = $service->plan('Ship it.', [], ['primary_skill' => ['name' => 'general']], [
             'workflow' => 'orchestrator_executor',
             'skill' => 'general',
@@ -250,5 +252,25 @@ class PlannerServiceTest extends TestCase
         $this->assertStringContainsString('flowchart TD', $out['flow_diagram']);
         $this->assertStringNotContainsString('```', $out['flow_diagram']);
         $this->assertSame(['Start', 'Done'], $out['flow_steps']);
+    }
+
+    private function makePlannerService(
+        ModelFallbackService $fallback,
+        ModelRoutingConfig $routing,
+        RuntimeSettings $settings,
+        ProjectService $projects,
+        ProjectFileDiscovery $discovery,
+    ): PlannerService {
+        $codeIndex = $this->createMock(CodebaseIndexService::class);
+        $codeIndex->expects($this->once())
+            ->method('retrieve')
+            ->willReturn([]);
+
+        $paths = $this->createMock(ProjectPathResolver::class);
+        $paths->expects($this->once())
+            ->method('activeProject')
+            ->willReturn(null);
+
+        return new PlannerService($fallback, $routing, $settings, $projects, $discovery, $codeIndex, $paths);
     }
 }

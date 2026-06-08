@@ -126,6 +126,10 @@ return [
      * Pre-execution clarification: smart (default), always (every run), or off.
      */
     'orchestrator_clarification_mode' => env('BOSSKU_ORCHESTRATOR_CLARIFICATION_MODE', 'smart'),
+    /**
+     * Post-planner confirmation: always (default), questions (only when planner asks), or off.
+     */
+    'orchestrator_plan_confirmation_mode' => env('BOSSKU_ORCHESTRATOR_PLAN_CONFIRMATION_MODE', 'always'),
 
     /**
      * Obsidian vault sync — set these to write run prompts/outputs to your Obsidian vault.

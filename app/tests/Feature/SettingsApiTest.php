@@ -106,4 +106,28 @@ class SettingsApiTest extends TestCase
             ->assertJsonPath('anthropic_configured', '1')
             ->assertJsonStructure(['anthropic_api_key_masked']);
     }
+
+    #[Test]
+    public function settings_exposes_and_updates_plan_confirmation_mode(): void
+    {
+        $this->getJson('/api/settings')
+            ->assertOk()
+            ->assertJsonPath('orchestrator_plan_confirmation_mode', 'always');
+
+        $this->putJson('/api/settings', [
+            'orchestrator_plan_confirmation_mode' => 'questions',
+        ])
+            ->assertOk()
+            ->assertJsonPath('orchestrator_plan_confirmation_mode', 'questions');
+
+        $this->assertSame('questions', app(RuntimeSettings::class)->orchestratorPlanConfirmationMode());
+    }
+
+    #[Test]
+    public function settings_rejects_invalid_plan_confirmation_mode(): void
+    {
+        $this->putJson('/api/settings', [
+            'orchestrator_plan_confirmation_mode' => 'sometimes',
+        ])->assertStatus(422);
+    }
 }

@@ -485,6 +485,9 @@ class OrchestratorService
         ?callable $emit,
         int $tokenAcc,
         float $tRun,
+        ?array $approvedPlan = null,
+        ?array $approvedRouterCtx = null,
+        bool $skipPlanReview = false,
     ): array {
         $activeProject = $this->paths->activeProject();
         $workflow = (string) ($modelRoute['workflow'] ?? 'orchestrator_executor_auditor');
@@ -519,31 +522,35 @@ class OrchestratorService
             );
         }
 
-        $t0 = microtime(true);
-        $routerCtx = $this->router->route($agentPrompt, collect([]));
-        $routerMs2 = (int) round((microtime(true) - $t0) * 1000);
-        $routerTokens2 = $this->estimateTokens(json_encode($routerCtx) ?: '');
+        if ($approvedRouterCtx !== null) {
+            $routerCtx = $approvedRouterCtx;
+        } else {
+            $t0 = microtime(true);
+            $routerCtx = $this->router->route($agentPrompt, collect([]));
+            $routerMs2 = (int) round((microtime(true) - $t0) * 1000);
+            $routerTokens2 = $this->estimateTokens(json_encode($routerCtx) ?: '');
 
-        $this->logStep($run, 1, 'skill_router', null, null, null, 'success', null, $prompt, json_encode($routerCtx), null, null, null, $routerMs2, $routerTokens2, null, [
-            'memory_used' => $memPayload,
-        ]);
-        $tokenAcc += $routerTokens2;
+            $this->logStep($run, 1, 'skill_router', null, null, null, 'success', null, $prompt, json_encode($routerCtx), null, null, null, $routerMs2, $routerTokens2, null, [
+                'memory_used' => $memPayload,
+            ]);
+            $tokenAcc += $routerTokens2;
 
-        $this->emit($emit, $this->basePayload($run, 'skill_router_done', [
-            'status' => 'success',
-            'agent' => 'router',
-            'model_role' => 'fast',
-            'summary' => 'Skill router selected the execution context.',
-            'message' => (string) ($routerCtx['primary_skill']['name'] ?? 'No primary skill selected.'),
-            'latency_ms' => $routerMs2,
-            'token_estimate' => $routerTokens2,
-            'input' => $prompt,
-            'output' => json_encode($routerCtx),
-            'artifacts' => [
-                'routing_context' => $routerCtx,
-                'skills_used' => [$routerCtx['primary_skill']['name'] ?? null],
-            ],
-        ]));
+            $this->emit($emit, $this->basePayload($run, 'skill_router_done', [
+                'status' => 'success',
+                'agent' => 'router',
+                'model_role' => 'fast',
+                'summary' => 'Skill router selected the execution context.',
+                'message' => (string) ($routerCtx['primary_skill']['name'] ?? 'No primary skill selected.'),
+                'latency_ms' => $routerMs2,
+                'token_estimate' => $routerTokens2,
+                'input' => $prompt,
+                'output' => json_encode($routerCtx),
+                'artifacts' => [
+                    'routing_context' => $routerCtx,
+                    'skills_used' => [$routerCtx['primary_skill']['name'] ?? null],
+                ],
+            ]));
+        }
 
         $matchedSpecialist = $this->specialistRouter->matchForPrompt($agentPrompt, $activeProject);
         $specialistAgentPayload = null;
@@ -603,12 +610,21 @@ class OrchestratorService
             ];
         }
 
-        $this->emit($emit, $this->basePayload($run, 'planner_started', [
-            'status' => 'running',
-            'agent' => 'orchestrator',
-            'model_role' => 'reasoning',
-            'summary' => 'Orchestrator is planning the task.',
-        ]));
+        if ($approvedPlan === null) {
+            $this->emit($emit, $this->basePayload($run, 'planner_started', [
+                'status' => 'running',
+                'agent' => 'orchestrator',
+                'model_role' => 'reasoning',
+                'summary' => 'Orchestrator is planning the task.',
+            ]));
+        } else {
+            $this->emit($emit, $this->basePayload($run, 'planner_review_approved', [
+                'status' => 'success',
+                'agent' => 'planner',
+                'model_role' => 'reasoning',
+                'summary' => 'Master plan approved; executor can start.',
+            ]));
+        }
         $t0 = microtime(true);
         try {
             $this->emit($emit, $this->basePayload($run, 'active_project', [
@@ -624,56 +640,61 @@ class OrchestratorService
             //
         }
 
-        $plan = $this->planner->plan($agentPrompt, $memPayload, $routerCtx, $modelRoute, $conversation, $run->id);
-        $planMs = (int) round((microtime(true) - $t0) * 1000);
-        $planTokens = $this->estimateTokens(json_encode($plan) ?: '');
+        if ($approvedPlan !== null) {
+            $plan = $approvedPlan;
+            $orchModel = (string) ($modelsResolved['orchestrator'] ?? $this->settings->plannerModel());
+        } else {
+            $plan = $this->planner->plan($agentPrompt, $memPayload, $routerCtx, $modelRoute, $conversation, $run->id);
+            $planMs = (int) round((microtime(true) - $t0) * 1000);
+            $planTokens = $this->estimateTokens(json_encode($plan) ?: '');
 
-        if (! empty($plan['error'])) {
-            $orchModel = (string) ($plan['_planner_model'] ?? $modelsResolved['orchestrator'] ?? '');
-            $plannerErr = StringCoercion::toString($plan['message'] ?? null, 'Planner failed');
-            $this->logStep($run, 2, 'planner', $orchModel, null, null, 'failed', $prompt, json_encode(['router' => $routerCtx, 'route' => $modelRoute]), json_encode($plan), null, null, null, $planMs, $planTokens, $plannerErr, null);
-            $run->update(['status' => 'failed', 'total_latency_ms' => (int) round((microtime(true) - $tRun) * 1000), 'total_token_estimate' => $tokenAcc + $planTokens]);
+            if (! empty($plan['error'])) {
+                $orchModel = (string) ($plan['_planner_model'] ?? $modelsResolved['orchestrator'] ?? '');
+                $plannerErr = StringCoercion::toString($plan['message'] ?? null, 'Planner failed');
+                $this->logStep($run, 2, 'planner', $orchModel, null, null, 'failed', $prompt, json_encode(['router' => $routerCtx, 'route' => $modelRoute]), json_encode($plan), null, null, null, $planMs, $planTokens, $plannerErr, null);
+                $run->update(['status' => 'failed', 'total_latency_ms' => (int) round((microtime(true) - $tRun) * 1000), 'total_token_estimate' => $tokenAcc + $planTokens]);
 
-            $this->emit($emit, $this->basePayload($run, 'planner_failed', [
-                'status' => 'fail',
-                'latency_ms' => $planMs,
-                'model' => $orchModel,
-                'error' => $plannerErr,
-            ]));
-            $this->emit($emit, $this->basePayload($run, 'run_failed', [
-                'status' => 'fail',
-                'stage' => 'planner',
-                'error' => $plannerErr,
-            ]));
+                $this->emit($emit, $this->basePayload($run, 'planner_failed', [
+                    'status' => 'fail',
+                    'latency_ms' => $planMs,
+                    'model' => $orchModel,
+                    'error' => $plannerErr,
+                ]));
+                $this->emit($emit, $this->basePayload($run, 'run_failed', [
+                    'status' => 'fail',
+                    'stage' => 'planner',
+                    'error' => $plannerErr,
+                ]));
 
-            return [
-                'run_id' => $run->id,
-                'final_output' => '',
-                'steps' => [],
-                'memory_used' => $memPayload,
-                'skills_used' => [],
-                'rules_used' => [],
-                'playbooks_used' => [],
-                'audit' => $plan,
-                'routing' => $modelRoute,
-            ];
+                return [
+                    'run_id' => $run->id,
+                    'final_output' => '',
+                    'steps' => [],
+                    'memory_used' => $memPayload,
+                    'skills_used' => [],
+                    'rules_used' => [],
+                    'playbooks_used' => [],
+                    'audit' => $plan,
+                    'routing' => $modelRoute,
+                ];
+            }
+
+            $orchModel = (string) ($plan['_planner_model'] ?? $modelsResolved['orchestrator'] ?? $this->settings->plannerModel());
+            $this->logStep($run, 2, 'planner', $orchModel, LlmTelemetry::resolveStepProvider($plan), null, 'success', $prompt, json_encode(['router' => $routerCtx, 'route' => $modelRoute]), json_encode($plan), null, null, null, $planMs, $planTokens, null, $this->events->metadata(
+                'orchestrator',
+                'reasoning',
+                'Planner created '.count($plan['checklist'] ?? []).'-step execution checklist.',
+                StringCoercion::toString($plan['handoff_message'] ?? null, 'Sending execution task to Executor.'),
+                ['plan' => $plan, 'checklist' => $plan['checklist'] ?? []],
+                'orchestrator',
+                'executor'
+            ));
+            $tokenAcc += $planTokens;
+
+            $modelsResolved['orchestrator'] = $orchModel;
+
+            $this->emit($emit, $this->events->plannerDone($run, $plan, $orchModel, $planMs, $planTokens));
         }
-
-        $orchModel = (string) ($plan['_planner_model'] ?? $modelsResolved['orchestrator'] ?? $this->settings->plannerModel());
-        $this->logStep($run, 2, 'planner', $orchModel, LlmTelemetry::resolveStepProvider($plan), null, 'success', $prompt, json_encode(['router' => $routerCtx, 'route' => $modelRoute]), json_encode($plan), null, null, null, $planMs, $planTokens, null, $this->events->metadata(
-            'orchestrator',
-            'reasoning',
-            'Planner created '.count($plan['checklist'] ?? []).'-step execution checklist.',
-            StringCoercion::toString($plan['handoff_message'] ?? null, 'Sending execution task to Executor.'),
-            ['plan' => $plan, 'checklist' => $plan['checklist'] ?? []],
-            'orchestrator',
-            'executor'
-        ));
-        $tokenAcc += $planTokens;
-
-        $modelsResolved['orchestrator'] = $orchModel;
-
-        $this->emit($emit, $this->events->plannerDone($run, $plan, $orchModel, $planMs, $planTokens));
 
         // Surface planner's clarification questions as events and persist to run
         $plannerQuestions = is_array($plan['planner_questions'] ?? null) ? $plan['planner_questions'] : [];
@@ -728,6 +749,31 @@ class OrchestratorService
                     );
                 }
             }
+        }
+
+        if ($this->shouldPauseForPlannerReview($plan, $modelRoute, $workflow, $skipPlanReview)) {
+            return $this->pauseForClarification(
+                $run,
+                $this->buildPlannerReviewClarification($plan, $plannerQuestions),
+                'planner_review',
+                [
+                    'user_prompt' => $userPrompt,
+                    'effective_prompt' => $prompt,
+                    'agent_prompt' => $agentPrompt,
+                    'conversation' => $conversation,
+                    'model_route' => $modelRoute,
+                    'models_resolved' => $modelsResolved,
+                    'router_meta' => $routerMeta,
+                    'router_ctx' => $routerCtx,
+                    'mem_payload' => $memPayload,
+                    'token_acc' => $tokenAcc,
+                    't_run' => $tRun,
+                    'plan' => $plan,
+                ],
+                $emit,
+                'planner',
+                'planner_review',
+            );
         }
 
         $execProfileKey = (string) ($plan['executor_profile'] ?? $modelRoute['executor_profile'] ?? 'default');
@@ -1710,6 +1756,84 @@ class OrchestratorService
             'ready_to_proceed' => false,
             'summary' => $summary !== '' ? $summary : 'Planner needs your input before execution continues.',
         ];
+    }
+
+    protected function shouldPauseForPlannerReview(array $plan, array $modelRoute, string $workflow, bool $skipPlanReview): bool
+    {
+        if ($skipPlanReview) {
+            return false;
+        }
+
+        $mode = $this->settings->orchestratorPlanConfirmationMode();
+        if ($mode === 'off') {
+            return false;
+        }
+
+        if (! in_array('executor', WorkflowRouteHelper::pipelineAgentsForWorkflow($workflow), true)) {
+            return false;
+        }
+
+        if (($modelRoute['needs_executor'] ?? true) === false) {
+            return false;
+        }
+
+        if (($plan['execution_mode'] ?? '') === 'answer_only') {
+            return false;
+        }
+
+        if ($mode === 'questions') {
+            return is_array($plan['planner_questions'] ?? null) && $plan['planner_questions'] !== [];
+        }
+
+        return true;
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $plannerQuestions
+     * @return array{questions: list<array<string, mixed>>, assumptions: list<string>, ready_to_proceed: bool, summary: string}
+     */
+    protected function buildPlannerReviewClarification(array $plan, array $plannerQuestions): array
+    {
+        if ($plannerQuestions !== []) {
+            $clarification = $this->plannerQuestionsToClarification(
+                $plannerQuestions,
+                'Review the master plan before execution.',
+            );
+            if ($clarification['questions'] !== []) {
+                return $clarification;
+            }
+        }
+
+        return [
+            'questions' => [[
+                'id' => 'planner-review',
+                'prompt' => 'Review the master plan. Approve it to start execution, or request changes with feedback.',
+                'why_it_matters' => 'The executor will use this plan as the source of truth.',
+                'options' => [
+                    ['id' => 'approve', 'label' => 'Approve plan', 'recommendation' => true],
+                    ['id' => 'revise', 'label' => 'Revise plan'],
+                    ['id' => 'hold', 'label' => 'Hold execution'],
+                ],
+                'allow_free_text' => true,
+            ]],
+            'assumptions' => $this->plannerReviewAssumptions($plan),
+            'ready_to_proceed' => false,
+            'summary' => 'Review the master plan before execution.',
+        ];
+    }
+
+    /** @return list<string> */
+    protected function plannerReviewAssumptions(array $plan): array
+    {
+        $items = [];
+        foreach (['goal', 'summary', 'handoff_message'] as $key) {
+            $value = trim(StringCoercion::toString($plan[$key] ?? null));
+            if ($value !== '') {
+                $items[] = $value;
+            }
+        }
+
+        return array_values(array_unique(array_slice($items, 0, 3)));
     }
 
     protected function reconcilePlanChecklist(array $plan, array $execResult, array $lastAudit): array

@@ -69,6 +69,7 @@ const SETTINGS_SAVE_KEYS = [
   'memory_storage_enabled',
   'memory_ollama_enabled',
   'routing_llm_enabled',
+  'orchestrator_plan_confirmation_mode',
 ] as const
 
 const ollamaEmbedModels = [
@@ -605,6 +606,14 @@ onMounted(() => {
         <label class="flex cursor-pointer items-center gap-3 text-sm text-zinc-300">
           <input v-model="form.memory_ollama_enabled" type="checkbox" true-value="1" false-value="0" class="rounded border-zinc-700 bg-zinc-950 text-emerald-500">
           Memory embeddings via Ollama
+        </label>
+        <label class="block text-sm text-zinc-300">
+          Plan Mode
+          <select v-model="form.orchestrator_plan_confirmation_mode" class="mt-1.5 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100">
+            <option value="always">Always review master plan before execution</option>
+            <option value="questions">Only pause when planner asks questions</option>
+            <option value="off">Off</option>
+          </select>
         </label>
       </div>
 

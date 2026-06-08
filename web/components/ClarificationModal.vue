@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onUnmounted, watch } from 'vue'
+import { computed, onUnmounted, watch } from 'vue'
 import type { ClarificationAnswer, ClarificationRequest } from '~/types/clarification'
 
 const props = defineProps<{
@@ -15,6 +15,12 @@ const emit = defineEmits<{
     code_review_comment?: string
   }]
 }>()
+
+const title = computed(() => {
+  if (props.request.stage === 'user_local_commands') return 'Run a command on your machine'
+  if (props.request.stage === 'planner_review') return 'Review master plan'
+  return 'BosskuAI needs your input'
+})
 
 watch(
   () => props.open,
@@ -51,7 +57,7 @@ onUnmounted(() => {
             <span class="text-lg text-amber-400" aria-hidden="true">?</span>
             <div class="min-w-0 flex-1">
               <h2 id="clarification-modal-title" class="text-sm font-semibold text-zinc-100">
-                {{ request.stage === 'user_local_commands' ? 'Run a command on your machine' : 'BosskuAI needs your input' }}
+                {{ title }}
               </h2>
               <p v-if="request.stage" class="mt-0.5 text-xs text-zinc-500 capitalize">
                 {{ request.stage.replaceAll('_', ' ') }}

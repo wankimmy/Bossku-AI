@@ -17,6 +17,7 @@ const props = defineProps<{
 }>()
 
 const isLocalCommandsStage = computed(() => props.stage === 'user_local_commands')
+const isPlannerReviewStage = computed(() => props.stage === 'planner_review')
 
 const emit = defineEmits<{
   submit: [payload: {
@@ -178,14 +179,15 @@ function submit(decision: ClarificationReviewDecision) {
     <div class="space-y-2 border-t border-zinc-700/80 pt-3">
       <template v-if="!isLocalCommandsStage">
         <label class="block">
-          <span class="text-xs text-zinc-400">Code review instructions</span>
+          <span v-if="isPlannerReviewStage" class="text-xs text-zinc-400">Plan feedback</span>
+          <span v-else class="text-xs text-zinc-400">Code review instructions</span>
           <span class="text-zinc-600 text-xs"> (required for request changes)</span>
           <textarea
             v-model="codeReviewComment"
             rows="3"
             data-testid="clarification-code-review"
             class="mt-1.5 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600"
-            placeholder="Tell the executor what to change before continuing…"
+            :placeholder="isPlannerReviewStage ? 'Tell the planner what to change before execution…' : 'Tell the executor what to change before continuing…'"
           />
         </label>
       </template>
@@ -197,7 +199,7 @@ function submit(decision: ClarificationReviewDecision) {
           :disabled="submitting || (!canApprove() && !codeReviewComment.trim())"
           @click="submit('approve')"
         >
-          {{ submitting ? 'Continuing…' : (isLocalCommandsStage ? 'Submit output & continue' : 'Approve & continue') }}
+          {{ submitting ? 'Continuing…' : (isLocalCommandsStage ? 'Submit output & continue' : (isPlannerReviewStage ? 'Approve plan & execute' : 'Approve & continue')) }}
         </button>
         <button
           v-if="!isLocalCommandsStage"

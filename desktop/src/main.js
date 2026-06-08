@@ -1,6 +1,7 @@
 'use strict'
 
 const path = require('node:path')
+const fsp = require('node:fs/promises')
 const { app, BrowserWindow, Tray, Menu, shell, nativeImage, ipcMain, dialog } = require('electron')
 
 const {
@@ -8,6 +9,7 @@ const {
   HEALTH_TIMEOUT_MS,
   bundledStackDir,
   userStackDir,
+  versionStampPath,
 } = require('./config')
 const {
   dockerStatus,
@@ -21,7 +23,7 @@ const { syncStack } = require('./stackSync')
 const { isBootstrapped, ensureEnv, runBootstrap } = require('./bootstrap')
 const { resolveRuntimeMode } = require('./runtimeMode')
 const { startNative, stopNative, restartNative, runMigrations } = require('./nativeRuntime')
-const { ensureNativeBootstrap } = require('./bootstrapNative')
+const { ensureNativeBootstrap, stackLooksReady } = require('./bootstrapNative')
 const { initAutoUpdater, checkForUpdatesNow } = require('./updater')
 
 // 1x1 emerald pixel — a valid tray image without shipping a binary asset.
@@ -74,6 +76,26 @@ function sendLog(line) {
     splashWindow.webContents.send('log', line)
   }
   console.log('[bossku]', line)
+}
+
+async function preparedDesktopVersionMatches(stackDir) {
+  if (!app.isPackaged || !stackLooksReady(stackDir)) {
+    return false
+  }
+
+  try {
+    const preparedVersion = (await fsp.readFile(versionStampPath(), 'utf8')).trim()
+    return preparedVersion === app.getVersion()
+  } catch {
+    return false
+  }
+}
+
+async function markDesktopVersionPrepared() {
+  if (!app.isPackaged) return
+  const stamp = versionStampPath()
+  await fsp.mkdir(path.dirname(stamp), { recursive: true })
+  await fsp.writeFile(stamp, app.getVersion(), 'utf8')
 }
 
 function createMainWindow() {
@@ -264,10 +286,15 @@ async function bootDocker() {
 
 async function bootNative() {
   const stackDir = userStackDir()
+  const sameVersionPrepared = await preparedDesktopVersionMatches(stackDir)
 
   if (app.isPackaged) {
-    sendStatus('busy', 'Preparing application files...')
-    await syncStack(bundledStackDir(), stackDir, sendLog)
+    if (sameVersionPrepared) {
+      sendLog(`Application files already prepared for version ${app.getVersion()}.`)
+    } else {
+      sendStatus('busy', 'Preparing application files...')
+      await syncStack(bundledStackDir(), stackDir, sendLog)
+    }
   }
 
   const needsSetup = !isBootstrapped()
@@ -286,12 +313,16 @@ async function bootNative() {
     }
   }
 
-  sendStatus('busy', 'Running database migrations...')
-  try {
-    await runMigrations(stackDir, sendLog)
-  } catch (err) {
-    sendStatus('error', 'Database migration failed', String(err && err.message ? err.message : err))
-    return false
+  if (sameVersionPrepared) {
+    sendLog('Skipping migrations; this app version was already prepared.')
+  } else {
+    sendStatus('busy', 'Running database migrations...')
+    try {
+      await runMigrations(stackDir, sendLog)
+    } catch (err) {
+      sendStatus('error', 'Database migration failed', String(err && err.message ? err.message : err))
+      return false
+    }
   }
 
   sendStatus('busy', 'Starting BosskuAI servers...')
@@ -318,6 +349,10 @@ async function bootNative() {
   if (!webOk) {
     sendStatus('error', 'The web dashboard did not respond in time', 'Click Retry to keep waiting.')
     return false
+  }
+
+  if (!sameVersionPrepared) {
+    await markDesktopVersionPrepared()
   }
 
   return true

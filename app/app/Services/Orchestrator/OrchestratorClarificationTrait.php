@@ -56,7 +56,8 @@ trait OrchestratorClarificationTrait
             if ($comment === '') {
                 throw new \InvalidArgumentException('code_review_comment is required when review_decision is request_changes.');
             }
-            $answerBlock = trim($answerBlock."\n\n## Code review instructions\n".$comment);
+            $heading = $stage === 'planner_review' ? 'Plan feedback' : 'Code review instructions';
+            $answerBlock = trim($answerBlock."\n\n## ".$heading."\n".$comment);
         }
 
         $meta['clarification_answers'] = $allAnswers;
@@ -101,6 +102,14 @@ trait OrchestratorClarificationTrait
             return $this->resumeFromUserLocalCommands($run, $pipeline, $allAnswers, $questions, $emit);
         }
 
+        if ($stage === 'planner_review') {
+            if ($reviewDecision === 'request_changes') {
+                return $this->resumeWithReplan($run, $pipeline, $answerBlock, $emit);
+            }
+
+            return $this->resumeFromPlannerReview($run, $pipeline, $answerBlock, $emit);
+        }
+
         $userPrompt = (string) ($pipeline['user_prompt'] ?? $run->prompt);
         /** @var list<array{role: string, content: string}> $conversation */
         $conversation = is_array($pipeline['conversation'] ?? null) ? $pipeline['conversation'] : [];
@@ -130,6 +139,55 @@ trait OrchestratorClarificationTrait
             $emit,
             (int) ($pipeline['token_acc'] ?? 0),
             (float) ($pipeline['t_run'] ?? microtime(true)),
+        );
+    }
+
+    protected function resumeFromPlannerReview(Run $run, array $pipeline, string $answerBlock, ?callable $emit): array
+    {
+        $plan = is_array($pipeline['plan'] ?? null) ? $pipeline['plan'] : [];
+        if ($plan === []) {
+            throw new \InvalidArgumentException('Planner review checkpoint is missing the approved plan.');
+        }
+
+        /** @var array<string, mixed> $meta */
+        $meta = is_array($run->metadata) ? $run->metadata : [];
+        $meta['planner_review_approved'] = true;
+        $run->update(['metadata' => $meta]);
+
+        $userPrompt = (string) ($pipeline['user_prompt'] ?? $run->prompt);
+        /** @var list<array{role: string, content: string}> $conversation */
+        $conversation = is_array($pipeline['conversation'] ?? null) ? $pipeline['conversation'] : [];
+        $prompt = trim((string) ($pipeline['effective_prompt'] ?? $userPrompt)."\n\n".$answerBlock);
+        $agentPrompt = trim($prompt."\n\n".$this->projects->agentWorkspaceContext());
+        /** @var array<string, mixed> $modelRoute */
+        $modelRoute = is_array($pipeline['model_route'] ?? null) ? $pipeline['model_route'] : [];
+        /** @var array<string, string> $modelsResolved */
+        $modelsResolved = is_array($pipeline['models_resolved'] ?? null) ? $pipeline['models_resolved'] : [];
+        /** @var array<string, mixed> $routerMeta */
+        $routerMeta = is_array($pipeline['router_meta'] ?? null)
+            ? $pipeline['router_meta']
+            : (is_array($pipeline['router_ctx'] ?? null) ? $pipeline['router_ctx'] : []);
+        /** @var array<string, mixed> $routerCtx */
+        $routerCtx = is_array($pipeline['router_ctx'] ?? null) ? $pipeline['router_ctx'] : $routerMeta;
+        /** @var list<array<string, mixed>> $memPayload */
+        $memPayload = is_array($pipeline['mem_payload'] ?? null) ? $pipeline['mem_payload'] : [];
+
+        return $this->runPipelineAfterMemory(
+            $run,
+            $userPrompt,
+            $prompt,
+            $agentPrompt,
+            $conversation,
+            $modelRoute,
+            $modelsResolved,
+            $routerMeta,
+            $memPayload,
+            $emit,
+            (int) ($pipeline['token_acc'] ?? 0),
+            (float) ($pipeline['t_run'] ?? microtime(true)),
+            $plan,
+            $routerCtx,
+            true,
         );
     }
 

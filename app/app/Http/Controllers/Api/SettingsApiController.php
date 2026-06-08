@@ -32,6 +32,7 @@ class SettingsApiController extends Controller
         'ollama_base_url',
         'memory_humanize_model',
         'orchestrator_clarification_mode',
+        'orchestrator_plan_confirmation_mode',
     ];
 
     /** @var list<string> */
@@ -73,6 +74,7 @@ class SettingsApiController extends Controller
         $rules['ollama_api_key'] = 'sometimes|nullable|string|max:512';
         $rules['anthropic_api_key'] = 'sometimes|nullable|string|max:512';
         $rules['orchestrator_clarification_mode'] = 'sometimes|nullable|string|in:smart,always,off';
+        $rules['orchestrator_plan_confirmation_mode'] = 'sometimes|nullable|string|in:always,questions,off';
 
         $data = $request->validate($rules);
 
