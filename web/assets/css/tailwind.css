@@ -7,5 +7,64 @@ html {
 }
 
 body {
-  @apply bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100 antialiased;
+  @apply bg-zinc-50 text-zinc-900 dark:bg-slate-950 dark:text-slate-100 antialiased;
+}
+
+@layer components {
+  /* ── Esports HUD nav ───────────────────────────────────────────────── */
+
+  /* Brand wordmark: emerald → cyan neon gradient. */
+  .hud-brand {
+    @apply bg-gradient-to-r from-emerald-300 via-emerald-400 to-cyan-400 bg-clip-text font-extrabold tracking-tight text-transparent;
+  }
+
+  /* A single left-nav item. Default + hover live here; active state below. */
+  .hud-link {
+    @apply relative flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm font-medium text-slate-400 transition-colors duration-150;
+  }
+  .hud-link:hover {
+    @apply bg-slate-800/60 text-slate-100;
+  }
+
+  /* The "inventory slot" tile that holds each icon. */
+  .hud-slot {
+    @apply grid h-7 w-7 shrink-0 place-items-center rounded-md border border-slate-700/70 bg-slate-900/70 text-[13px] leading-none transition-all duration-150;
+  }
+  .hud-link:hover .hud-slot {
+    @apply border-slate-600 bg-slate-800;
+  }
+
+  /* Active = neon. Vue Router adds .router-link-active to the matched link. */
+  .hud-link.router-link-active {
+    @apply bg-slate-800/80 text-white;
+  }
+  .hud-link.router-link-active .hud-slot {
+    @apply border-emerald-400/60 bg-emerald-500/10 text-emerald-200;
+    box-shadow: 0 0 14px -3px rgba(16, 185, 129, 0.65);
+  }
+  .hud-link.router-link-active::before {
+    content: '';
+    @apply absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-gradient-to-b from-emerald-400 to-cyan-400;
+    box-shadow: 0 0 10px 0 rgba(34, 211, 238, 0.7);
+  }
+
+  /* Section heading between nav groups. */
+  .hud-section {
+    @apply px-2.5 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500;
+  }
+
+  /* Slim, themed scrollbar for the nav rail. */
+  .hud-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(51 65 85) transparent;
+  }
+  .hud-scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+  .hud-scroll::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-slate-700;
+  }
+  .hud-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
 }

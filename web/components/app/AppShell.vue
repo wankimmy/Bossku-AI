@@ -53,7 +53,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-zinc-950 text-zinc-100">
+  <div class="min-h-screen bg-slate-950 text-slate-100">
     <!-- Sidebar -->
     <AppSidebar :open="sidebarOpen" @toggle="sidebarOpen = !sidebarOpen" />
 

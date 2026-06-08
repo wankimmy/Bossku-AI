@@ -57,6 +57,15 @@ For meaningful work:
 
 Prefer small diffs, avoid full-repo scans unless required, and follow [`playbooks/token-saving.md`](playbooks/token-saving.md).
 
+### Two kinds of agents (don't conflate them)
+
+BosskuAI defines agents at **two layers**. They share names and intent but run in different places:
+
+1. **Runtime pipeline agents** — implemented in code and dispatched automatically by the Docker/Laravel orchestrator. These are the agents that actually execute inside the web app: `orchestrator`, `planner`, `designer`, `executor`, `auditor`, `security-auditor`, `final-reviewer`, plus the short-path `direct-answer`, `writer`, and `clarification` roles, and the project-scoped `specialist` agents (matched or spawned at runtime). Source: [`app/app/Services/Orchestrator/`](app/app/Services/Orchestrator/) and [`app/app/Services/Specialists/`](app/app/Services/Specialists/).
+2. **Editor-driven agent contracts** — the Markdown files in [`agents/`](agents/). These are instructions an external tool (Claude Code, Cursor, Codex, OpenCode) follows **manually** when there is no Laravel runtime to dispatch them. The folder also describes specialist roles (e.g. `browser-agent`, `e2e-runner`, `build-fixer`, `tdd-guide`, `refactor-cleaner`, `code-reviewer`) that are **contracts/playbooks, not running services** — an editor adopts them when the task calls for it.
+
+So: the `agents/` set is broader than the runtime pipeline. If you are reasoning about what the **app** does, use layer 1; if you are an editor following the workspace contract, use layer 2. The pipeline shape itself is owned by [`app/app/Services/BosskuAi/WorkflowRouteHelper.php`](app/app/Services/BosskuAi/WorkflowRouteHelper.php) (the single source of truth for which stages run).
+
 If broad scope is unclear, ask 1-3 numbered clarification questions before editing many files.
 
 ## Routing

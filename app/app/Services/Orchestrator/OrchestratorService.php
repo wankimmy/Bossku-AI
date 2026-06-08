@@ -465,6 +465,67 @@ class OrchestratorService
     }
 
     /**
+     * Dynamically spawn a project-scoped specialist mid-run when no approved one
+     * matched. Opt-in (Setting `dynamic_specialist_spawn`, default off) so existing
+     * behaviour is unchanged. The specialist is drafted from the current plan and
+     * run immediately; the draft is persisted for later human approval (it does not
+     * auto-approve). Failures are swallowed so a spawn never breaks the run.
+     *
+     * @param  array<string, mixed>  $plan
+     * @param  array<string, mixed>  $routerCtx
+     */
+    protected function maybeSpawnDynamicSpecialist(
+        Run $run,
+        string $agentPrompt,
+        ?\App\Models\BosskuAi\Project $activeProject,
+        array $plan,
+        array $routerCtx,
+        ?callable $emit,
+    ): ?SpecialistAgent {
+        if ($activeProject === null) {
+            return null;
+        }
+        if (! $this->settings->getBool('dynamic_specialist_spawn', false)) {
+            return null;
+        }
+
+        // Only worth specialising when there is a concrete plan to specialise on.
+        $hasPlan = ($plan['target_file_list'] ?? []) !== [] || ($plan['checklist'] ?? []) !== [];
+        if (! $hasPlan) {
+            return null;
+        }
+
+        $skillName = StringCoercion::toString(
+            $routerCtx['primary_skill']['name'] ?? $run->selected_skill_name ?? null
+        );
+
+        try {
+            $agent = $this->specialistDrafting->draftFromRun($run, [
+                'skill_name' => $skillName,
+                'router_context' => $routerCtx,
+                'planner_output' => $plan,
+            ], force: true);
+        } catch (\Throwable $e) {
+            return null;
+        }
+
+        $this->emit($emit, $this->basePayload($run, 'specialist_agent_spawned', [
+            'status' => 'success',
+            'agent' => $agent->role_slug,
+            'model_role' => 'reasoning',
+            'from_agent' => 'orchestrator',
+            'to_agent' => $agent->role_slug,
+            'summary' => $agent->display_name.' was spawned on demand for this task.',
+            'message' => 'No approved specialist matched, so the orchestrator drafted one from the plan. Review and approve it under Agents to reuse it next time.',
+            'artifacts' => [
+                'specialist_agent' => $this->specialistRouter->payloadForAgent($agent),
+            ],
+        ]));
+
+        return $agent;
+    }
+
+    /**
      * @param  list<array{role: string, content: string}>  $conversation
      * @param  array<string, mixed>  $modelRoute
      * @param  array<string, string>  $modelsResolved
@@ -889,6 +950,16 @@ class OrchestratorService
                 $tokenAcc,
                 $tRun
             );
+        }
+
+        // No approved specialist matched? When dynamic spawning is enabled, draft one
+        // on demand from the plan so this run still gets specialist guidance (and the
+        // draft is surfaced under Agents for review).
+        if ($matchedSpecialist === null) {
+            $matchedSpecialist = $this->maybeSpawnDynamicSpecialist($run, $agentPrompt, $activeProject, $plan, $routerCtx, $emit);
+            if ($matchedSpecialist !== null) {
+                $specialistAgentPayload = $this->specialistRouter->payloadForAgent($matchedSpecialist);
+            }
         }
 
         $specialistContext = [];
