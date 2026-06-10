@@ -1,7 +1,7 @@
 {
   "name": "bossku-ai",
-  "version": "1.1.1",
-  "description": "AI cofounder plugin for Cursor: 85 skills on disk under ai-assistant/skills; Cursor may show ~66 in Plugins (85 minus manual-only specialists in skill-index routing). Invoke specialists by name. Run scripts/cursor-plugin-refresh.sh after git pull.",
+  "version": "1.3.0",
+  "description": "AI cofounder plugin for Cursor: 105 skills on disk under ai-assistant/skills; Cursor may show fewer in Plugins (105 minus manual-only specialists in skill-index routing). Invoke specialists by name. Run scripts/cursor-plugin-refresh.sh after git pull.",
   "author": {
     "name": "wankimmy"
   },

@@ -19,7 +19,34 @@ Use this skill when recent work produced a lesson worth keeping beyond the curre
 - `agent-profile.md` / `project-understanding.md`: durable workspace facts
 - `bug-patterns.md`: repeated defect class or high-severity near miss
 - `market-notes.md`: durable GTM or competitor lesson
+- `instincts/`: atomic behavioral lesson with a confidence score (see below)
 - checklist / pitfall / playbook / skill / rule: when the lesson should change future behavior beyond one repo note
+
+## Instinct model (confidence-weighted micro-lessons)
+
+When a lesson is a small repeatable behavior rather than a fact or a log entry, store it as an **instinct**: one trigger, one action, confidence-weighted. Adapted from ECC continuous-learning-v2.
+
+One file per instinct in `ai-assistant/memory/instincts/`, named by id:
+
+```yaml
+---
+id: prefer-runtime-core-blocks
+trigger: "when adding or editing a pipeline agent persona"
+confidence: 0.7   # 0.3 tentative → 0.9 near certain
+domain: workflow  # code-style | testing | git | debugging | workflow | ops
+scope: project    # project (default) or global (true in 2+ projects)
+evidence: "2026-05-29 persona token audit: full-file injection cost 6,801 tokens; runtime-core cut it 79%"
+---
+Action: include a <!-- runtime-core:start/end --> block; verify with bosskuai:sync-personas --dry-run.
+```
+
+Rules:
+
+- **Atomic** — one trigger, one action; split anything compound.
+- **Confidence moves on evidence** — raise by ~0.1 when the instinct is confirmed again, lower when contradicted; delete below 0.3.
+- **Promote at high confidence** — an instinct that stays ≥0.8 and keeps firing should graduate up the ladder into a checklist, rule, or skill section; record the promotion and remove the instinct.
+- **Scope before sharing** — keep instincts project-scoped by default; mark `scope: global` only when the same behavior proved out in 2+ repos.
+- **Runtime parallel** — the in-app equivalent is `LearningEngine` pattern/failure/preference events scored by `PostMemoryEvaluationService`; do not duplicate what the app already captures, but an app-side failure pattern may justify an editor-side instinct.
 
 ## Workflow
 

@@ -1,5 +1,21 @@
 # Changelog
 
+## v1.12.0 - Loop architectures, prompt optimizer, 5 new agents, and flows
+
+- Added `bosskuai-autonomous-loops` (ECC port): loop architecture catalogue — sequential `claude -p` pipelines, infinite agentic loop, continuous PR loop, de-sloppify pattern, Ralphinho RFC-driven DAG — plus a new section documenting BosskuAI's own runtime revise loop (`max_revision_rounds`, ExecutorStuckDetector) as the built-in pattern.
+- Added `bosskuai-prompt-optimizer` (ECC port, heavily remapped): advisory-only prompt diagnosis and rewriting that matches intent/scope/stack to the bosskuai skill+agent roster and outputs ready-to-paste optimized prompts.
+- Added 5 editor-mode agent contracts: `loop-operator` (drives autonomous loop architectures: exit conditions, context bridging, stall detection), `performance-optimizer` (measure → change one variable → re-measure ratchet), `database-reviewer` (migration/rollback/index/tenant-scope gate), `code-simplifier` (de-sloppify pass after green, separate context from author), `incident-responder` (stabilize → verify → prevent with blameless postmortem).
+- Enhanced core agents: orchestrator gained a **Flows table** (10 task-shape → chain → loop-owner routes) and council/introspection wiring in runtime-core; planner gained DAG decomposition rules + complexity-tier table; executor gained de-sloppify handoff + introspection-on-cap + Laravel skill wiring; security-reviewer gained laravel-security/prompt-injection-defense/tenant-isolation wiring; auditor gained agent-architecture-audit, laravel-verification gate, and database-reviewer delegation.
+- skill-index.json v1.12.0 (105 skills); AGENTS.md roster and specialist list updated; plugin.json 1.3.0.
+
+## v1.11.0 - ECC agent-stack, decision, and Laravel skills
+
+- Added 4 agent-stack/decision skills ported from ECC (affaan-m/ECC): `bosskuai-agent-architecture-audit` (12-layer agent diagnostic, grounded to the BosskuAI pipeline), `bosskuai-agent-introspection` (capture → diagnose → contained recovery for stuck/degraded agent runs), `bosskuai-council` (four-voice decision council), `bosskuai-context-budget` (context overhead audit incl. runtime persona injection).
+- Added 3 manual-only Laravel specialists for the `app/` backend and any Laravel repo: `bosskuai-laravel-security`, `bosskuai-laravel-tdd`, `bosskuai-laravel-verification`.
+- Folded the ECC continuous-learning-v2 instinct model into `bosskuai-continuous-learning`: atomic confidence-weighted instincts under `ai-assistant/memory/instincts/`, promotion ladder, runtime parallel to `LearningEngine`.
+- Registered all 7 skills in `skill-index.json` (v1.11.0, 103 skills) and `AGENTS.md` (new "Agent-stack & decision skills" and "Laravel stack specialists" rosters).
+- Verified greptile skills (`bosskuai-greptile-review-loop`, `bosskuai-pr-check`) remain in sync with upstream greptile-skills (latest: edited-comment handling, GitLab + Perforce support).
+
 ## Unreleased
 
 - Docs: agentic orchestration layer — `agents/orchestrator|executor|auditor|final-reviewer|model-router|skill-detector.md`, root `memory/`, `skills/`, `playbooks/`, `integrations/{cursor,claude-code,codex,opencode}`, `ui/*-spec.md`, expanded `docs/*` (installation, quickstart, examples, architecture, FAQ, comparison).

@@ -31,6 +31,8 @@ Memory Used: <yes|no>
 - `bosskuai-tdd-loop` — for behavior changes: red → green → refactor on vertical slices.
 - `bosskuai-diagnose-loop` — when the change is a bug fix or something fails mid-implementation.
 - `bosskuai-coding-best-practices` — naming, error handling, and conventions.
+- `bosskuai-agent-introspection` — when you hit the iteration cap or keep circling the same failure: capture → diagnose → contained recovery instead of another blind retry.
+- `bosskuai-laravel-tdd` / `bosskuai-laravel-verification` — when the target is the `app/` Laravel backend.
 
 ## Contract
 
@@ -41,6 +43,7 @@ Memory Used: <yes|no>
 5. Never expose secrets or commit credentials.
 6. Run the narrowest useful verification before handing off.
 7. If blocked, report the exact blocker and the command or file that exposed it.
+8. Be thorough while implementing; slop is removed afterwards by a separate `code-simplifier` pass (de-sloppify pattern) — do not self-censor tests or checks mid-implementation, and do not skip the cleanup pass on non-trivial diffs.
 
 ## Loop Until Green
 

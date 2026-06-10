@@ -42,6 +42,9 @@ ai-assistant/memory/*
 !ai-assistant/memory/plan-log.md
 !ai-assistant/memory/project-understanding.md
 !ai-assistant/memory/vector-config.json
+!ai-assistant/memory/instincts/
+ai-assistant/memory/instincts/*
+!ai-assistant/memory/instincts/README.md
 ai-assistant/memory/semantic-memory.sqlite3
 **/project-understanding.md
 

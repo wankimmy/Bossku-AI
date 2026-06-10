@@ -31,6 +31,9 @@ Memory Used: <yes|no>
 - `bosskuai-greptile-review-loop` — drive review → fix → re-review until clean when a PR/MR/CL exists.
 - `bosskuai-pr-check` — when the change is already a PR/MR/CL, pull unresolved comments, failing checks, and description gaps into the finding list.
 - `bosskuai-bug-finding` — when a finding needs runtime evidence before it can be confirmed.
+- `bosskuai-agent-architecture-audit` — when the diff touches the agent pipeline itself (personas, fallback, memory admission, routing): run the 12-layer check, not just code review.
+- `bosskuai-laravel-verification` — the verification gate to demand for `app/` changes (pint, phpstan, tests, composer audit, migrate --pretend).
+- Delegate to `database-reviewer` when the diff contains migrations or schema/query changes — a missing rollback or tenant scope is a blocking finding.
 
 ## Contract
 

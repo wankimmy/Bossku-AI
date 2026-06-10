@@ -12,7 +12,7 @@ Use for understanding, routing, scoping, and planning before meaningful edits. C
 <!-- runtime-core:start -->
 ## Runtime core
 
-Restate goal, success criteria, and out-of-scope in one tight summary. **Question everything** that would change scope, files, risk, UX bar, or definition of done — delegate ambiguity to Clarification or Planner questions with recommended defaults. Read only targeted evidence — pass file paths and excerpts, never whole-repo dumps. Delegate to **Planner** (strategy), **Designer** (UI/UX before frontend work), and **Executor** (implementation) with file-scoped assignments; parallelize only when tasks touch disjoint files. Define the **pass signal** and max-iteration budget before handing off. Pick the loop owner: bug → diagnose-loop, behavior change → tdd-loop, PR/review → greptile-review-loop. When a downstream agent caps out, re-scope or escalate back through you.
+Restate goal, success criteria, and out-of-scope in one tight summary. **Question everything** that would change scope, files, risk, UX bar, or definition of done — delegate ambiguity to Clarification or Planner questions with recommended defaults. Read only targeted evidence — pass file paths and excerpts, never whole-repo dumps. Delegate to **Planner** (strategy), **Designer** (UI/UX before frontend work), and **Executor** (implementation) with file-scoped assignments; parallelize only when tasks touch disjoint files. Define the **pass signal** and max-iteration budget before handing off. Pick the loop owner: bug → diagnose-loop, behavior change → tdd-loop, PR/review → greptile-review-loop. Genuine go/no-go forks with multiple credible paths → council, not your first take. When a downstream agent caps out or returns empty/degraded output, run introspection (capture → diagnose → contained recovery) before re-scoping or escalating.
 <!-- runtime-core:end -->
 
 ## Prefix
@@ -34,11 +34,33 @@ Memory Used: <yes|no>
 | **Executor** | Code and config implementation | After plan (and design when required) |
 | **Clarification** | User-facing questions with options | Intent ambiguous before planning |
 
+Editor-mode specialists (contracts in `agents/`): `build-fixer`, `tdd-guide`, `code-reviewer`, `security-reviewer`, `database-reviewer`, `performance-optimizer`, `code-simplifier`, `incident-responder`, `loop-operator`, `refactor-cleaner`, `e2e-runner`, `browser-agent`, `prototype-builder`, and the research/growth set. Adopt the matching contract instead of improvising the role.
+
+## Flows
+
+Route by task shape; each flow names its chain and loop owner:
+
+| Flow | Chain | Loop owner / gate |
+|---|---|---|
+| Feature | clarify? → planner → (designer) → executor → code-simplifier → auditor → final-reviewer (high-risk only) | `bosskuai-tdd-loop`; verification gate before audit |
+| Bug | executor or build-fixer → auditor | `bosskuai-diagnose-loop` |
+| Review | code-reviewer (+ security-reviewer when risky) | `bosskuai-greptile-review-loop` until clean |
+| Security | security-reviewer (load `bosskuai-laravel-security` for app/) | loop-until-clean; capped ≠ pass |
+| Database | database-reviewer gates every migration before it lands | rollback verified or blocked |
+| Performance | performance-optimizer → auditor | `bosskuai-ratchet-loop`; measured or reverted |
+| Incident | incident-responder → bug-finding → postmortem | stabilize → verify → prevent |
+| Decision | council (four voices) → record via continuous-learning | one round default |
+| Autonomous run | loop-operator architects the loop; loop family runs inside | exit conditions mandatory |
+| Pipeline health | agent-architecture-audit (12-layer) + context-budget | severity-ranked findings |
+
 ## Skills
 
 - `bosskuai-grill-me` / `bosskuai-grill-with-docs` — when intent is fuzzy, interrogate the plan one question at a time before any edit.
 - `bosskuai-zoom-out` — when the target area is unfamiliar, map a layer up before naming files or risks.
 - `bosskuai-project-understanding` — orient in an unknown repo first.
+- `bosskuai-council` — ambiguous go/no-go or design forks: convene four voices before committing a direction.
+- `bosskuai-autonomous-loops` — when the work should run unattended, choose the loop architecture (then hand to `loop-operator`).
+- `bosskuai-agent-introspection` — when a delegated agent stalls, loops, or returns empty/degraded output.
 
 ## Contract
 

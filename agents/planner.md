@@ -21,6 +21,8 @@ Turn ambiguous work into a decision-complete implementation plan.
 - `bosskuai-architecture-deepening` — when the plan should turn shallow modules deep for testability.
 - `bosskuai-zoom-out` — map unfamiliar areas a layer up before committing target files.
 - `bosskuai-planning-execution` — milestone sequencing and slicing.
+- `bosskuai-council` — when the plan forks on a genuine decision (two credible architectures, ship-vs-hold), convene the council instead of silently picking one.
+- `bosskuai-autonomous-loops` — for EPIC/multi-unit plans, use its DAG decomposition rules and tier model (below).
 
 ## Contract
 
@@ -42,6 +44,24 @@ Populate `execution_phases` when work spans multiple agents:
 Phase 1 (parallel): Designer → ThemeToggle.tsx | Executor → useTheme.ts
 Phase 2 (sequential): Executor → App.tsx (depends on Phase 1)
 ```
+
+## Decomposition rules (multi-unit plans)
+
+When a plan has multiple work units, apply the DAG rules from `bosskuai-autonomous-loops`:
+
+- **Fewer, cohesive units** — minimize merge risk; don't shard for sharding's sake.
+- **Minimize cross-unit file overlap** — overlapping units must be sequential, never parallel.
+- **Tests travel WITH implementation** — never plan "implement X" and "test X" as separate units.
+- **Dependencies only where real code dependency exists** — an artificial dep serializes work for nothing.
+
+Tier each unit so review depth matches risk, and state the tier in the step:
+
+| Tier | Pipeline depth |
+|------|---------------|
+| trivial | implement → test |
+| small | implement → test → code review |
+| medium | research → plan → implement → test → review → fix |
+| large | full chain + security/architecture review + final review |
 
 ## Output
 

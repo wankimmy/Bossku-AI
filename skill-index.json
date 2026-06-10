@@ -1,5 +1,5 @@
 {
-  "version": "1.10.0",
+  "version": "1.12.0",
   "generated_from": [
     "AGENTS.md",
     "ai-assistant/references/workspace-layer-architecture.md"
@@ -43,7 +43,10 @@
       "bosskuai-database-engineering",
       "bosskuai-vps-docker-deployment",
       "bosskuai-redis-caching-queues",
-      "bosskuai-content-calendar"
+      "bosskuai-content-calendar",
+      "bosskuai-laravel-security",
+      "bosskuai-laravel-tdd",
+      "bosskuai-laravel-verification"
     ],
     "archived_alias_skill_ids": [
       "bosskuai-root-cause-investigation",
@@ -2062,6 +2065,230 @@
         "gh",
         "glab",
         "p4"
+      ]
+    },
+    {
+      "id": "bosskuai-agent-architecture-audit",
+      "cluster": "architecture",
+      "status": "active",
+      "triggers": [
+        "agent architecture audit",
+        "audit the agent stack",
+        "the agent is getting worse",
+        "works in playground but breaks in the app",
+        "hidden repair loop",
+        "wrapper regression",
+        "12-layer audit"
+      ],
+      "keywords": [
+        "agent stack",
+        "wrapper",
+        "persona injection",
+        "memory pollution",
+        "tool discipline",
+        "repair loop",
+        "rendering corruption",
+        "model fallback",
+        "12-layer",
+        "LLM app audit"
+      ]
+    },
+    {
+      "id": "bosskuai-agent-introspection",
+      "cluster": "orchestration",
+      "status": "active",
+      "triggers": [
+        "agent run keeps failing",
+        "agent is looping",
+        "burning tokens without progress",
+        "self-debug the agent",
+        "agent drifted from the task",
+        "empty agent results",
+        "pipeline run degraded"
+      ],
+      "keywords": [
+        "introspection",
+        "self-debug",
+        "failure capture",
+        "contained recovery",
+        "loop limit",
+        "token burn",
+        "stuck agent",
+        "retry storm",
+        "degraded run",
+        "introspection report"
+      ]
+    },
+    {
+      "id": "bosskuai-council",
+      "cluster": "orchestration",
+      "status": "active",
+      "triggers": [
+        "convene a council",
+        "second opinions",
+        "multiple perspectives",
+        "go or no-go",
+        "ship now or hold",
+        "structured disagreement",
+        "devil's advocate"
+      ],
+      "keywords": [
+        "council",
+        "skeptic",
+        "pragmatist",
+        "critic",
+        "tradeoff",
+        "dissent",
+        "ambiguous decision",
+        "anti-anchoring",
+        "verdict",
+        "four voices"
+      ]
+    },
+    {
+      "id": "bosskuai-context-budget",
+      "cluster": "compression",
+      "status": "active",
+      "triggers": [
+        "context budget",
+        "audit context overhead",
+        "how much context am I using",
+        "token overhead audit",
+        "do I have room for more MCP servers",
+        "what is eating my context window"
+      ],
+      "keywords": [
+        "context window",
+        "token overhead",
+        "MCP tools",
+        "bloat",
+        "headroom",
+        "component audit",
+        "persona tokens",
+        "runtime-core",
+        "context creep"
+      ]
+    },
+    {
+      "id": "bosskuai-laravel-security",
+      "cluster": "security",
+      "status": "active",
+      "triggers": [
+        "Laravel security review",
+        "harden Laravel",
+        "Sanctum auth security",
+        "mass assignment",
+        "Laravel production security"
+      ],
+      "keywords": [
+        "Sanctum",
+        "policy",
+        "gate",
+        "CSRF",
+        "XSS",
+        "mass assignment",
+        "SQL injection",
+        "APP_DEBUG",
+        "env security",
+        "rate limiting",
+        "secure deployment"
+      ]
+    },
+    {
+      "id": "bosskuai-laravel-tdd",
+      "cluster": "engineering",
+      "status": "active",
+      "triggers": [
+        "Laravel tests",
+        "Pest tests",
+        "PHPUnit feature test",
+        "test this Laravel feature",
+        "factory states"
+      ],
+      "keywords": [
+        "PHPUnit",
+        "Pest",
+        "factory",
+        "RefreshDatabase",
+        "feature test",
+        "HTTP fake",
+        "queue fake",
+        "Sanctum actingAs",
+        "coverage",
+        "mocking"
+      ]
+    },
+    {
+      "id": "bosskuai-laravel-verification",
+      "cluster": "quality",
+      "status": "active",
+      "triggers": [
+        "verify the Laravel app",
+        "pre-deploy checks",
+        "Laravel verification loop",
+        "is the backend ready to ship",
+        "run the verification gate"
+      ],
+      "keywords": [
+        "pint",
+        "phpstan",
+        "composer audit",
+        "migrate pretend",
+        "config cache",
+        "queue failed",
+        "schedule list",
+        "deploy readiness",
+        "verification gate"
+      ]
+    },
+    {
+      "id": "bosskuai-autonomous-loops",
+      "cluster": "orchestration",
+      "status": "active",
+      "triggers": [
+        "autonomous loop",
+        "run unattended",
+        "continuous loop",
+        "overnight run",
+        "loop architecture",
+        "keep iterating until done",
+        "de-sloppify",
+        "RFC-driven pipeline"
+      ],
+      "keywords": [
+        "autonomous",
+        "loop pattern",
+        "sequential pipeline",
+        "claude -p",
+        "merge queue",
+        "DAG",
+        "work units",
+        "exit condition",
+        "completion signal",
+        "context bridge",
+        "max_revision_rounds"
+      ]
+    },
+    {
+      "id": "bosskuai-prompt-optimizer",
+      "cluster": "orchestration",
+      "status": "active",
+      "triggers": [
+        "optimize this prompt",
+        "improve my prompt",
+        "rewrite this prompt",
+        "help me prompt",
+        "how should I ask for",
+        "better prompt for"
+      ],
+      "keywords": [
+        "prompt optimization",
+        "prompt diagnosis",
+        "intent detection",
+        "component matching",
+        "optimized prompt",
+        "prompt engineering",
+        "advisory only"
       ]
     }
   ]

@@ -62,7 +62,7 @@ Prefer small diffs, avoid full-repo scans unless required, and follow [`playbook
 BosskuAI defines agents at **two layers**. They share names and intent but run in different places:
 
 1. **Runtime pipeline agents** — implemented in code and dispatched automatically by the Docker/Laravel orchestrator. These are the agents that actually execute inside the web app: `orchestrator`, `planner`, `designer`, `executor`, `auditor`, `security-auditor`, `final-reviewer`, plus the short-path `direct-answer`, `writer`, and `clarification` roles, and the project-scoped `specialist` agents (matched or spawned at runtime). Source: [`app/app/Services/Orchestrator/`](app/app/Services/Orchestrator/) and [`app/app/Services/Specialists/`](app/app/Services/Specialists/).
-2. **Editor-driven agent contracts** — the Markdown files in [`agents/`](agents/). These are instructions an external tool (Claude Code, Cursor, Codex, OpenCode) follows **manually** when there is no Laravel runtime to dispatch them. The folder also describes specialist roles (e.g. `browser-agent`, `e2e-runner`, `build-fixer`, `tdd-guide`, `refactor-cleaner`, `code-reviewer`) that are **contracts/playbooks, not running services** — an editor adopts them when the task calls for it.
+2. **Editor-driven agent contracts** — the Markdown files in [`agents/`](agents/). These are instructions an external tool (Claude Code, Cursor, Codex, OpenCode) follows **manually** when there is no Laravel runtime to dispatch them. The folder also describes specialist roles (e.g. `browser-agent`, `e2e-runner`, `build-fixer`, `tdd-guide`, `refactor-cleaner`, `code-reviewer`, `database-reviewer`, `performance-optimizer`, `code-simplifier`, `incident-responder`, `loop-operator`) that are **contracts/playbooks, not running services** — an editor adopts them when the task calls for it. The orchestrator contract's **Flows table** ([`agents/orchestrator.md`](agents/orchestrator.md)) maps task shape → agent chain → loop owner; route through it instead of improvising chains.
 
 So: the `agents/` set is broader than the runtime pipeline. If you are reasoning about what the **app** does, use layer 1; if you are an editor following the workspace contract, use layer 2. The pipeline shape itself is owned by [`app/app/Services/BosskuAi/WorkflowRouteHelper.php`](app/app/Services/BosskuAi/WorkflowRouteHelper.php) (the single source of truth for which stages run).
 
@@ -100,6 +100,23 @@ These power the **loop-until-fixed** discipline that every agent now follows (se
 - `bosskuai-zoom-out` — map an unfamiliar area up a layer of abstraction before editing. Used by `orchestrator`, `planner`, `docs-lookup`.
 - `bosskuai-throwaway-prototype` — disposable code that answers one design question (logic terminal app or toggleable UI variations). Used by `prototype-builder`.
 - `bosskuai-handoff` — compact the session into a pickup doc when stopping mid-task. Used by `writer`, pairs with `bosskuai-context-limit-continuation`.
+
+### Agent-stack & decision skills
+
+Ported from ECC for working **on** agent systems (including this one) and for ambiguous calls:
+
+- `bosskuai-agent-architecture-audit` — 12-layer diagnostic for agent/LLM apps: wrapper regression, memory pollution, tool discipline, hidden repair loops. Point it at the BosskuAI pipeline itself (persona injection, `ModelFallbackService`, `LearningEngine`). Used by `auditor`, `harness-optimizer`.
+- `bosskuai-agent-introspection` — capture → diagnose → contained recovery → report when an agent run loops, burns tokens, or returns empty/degraded results. Used by `orchestrator`, `executor`, any stuck agent.
+- `bosskuai-council` — four-voice council (Architect/Skeptic/Pragmatist/Critic) for go/no-go and tradeoff decisions; anti-anchoring via fresh subagent voices. Used by `orchestrator`, `planner`, pairs with `cofounder`.
+- `bosskuai-context-budget` — quantify context overhead across agents, skills, MCP, rules, and runtime persona injection; ranked savings. Pairs with `bosskuai-token-saver`, `bosskuai-skill-stocktake`.
+- `bosskuai-autonomous-loops` — loop ARCHITECTURE catalogue (sequential pipeline, continuous PR loop, de-sloppify, RFC-driven DAG, plus the built-in runtime revise loop). Driven by `loop-operator`; the loop-family skills own the discipline inside each iteration.
+- `bosskuai-prompt-optimizer` — advisory-only: diagnose a draft prompt, match it to bosskuai skills/agents, emit an optimized ready-to-paste prompt. Never executes the task.
+
+### Laravel stack specialists (manual-only, for `app/` and any Laravel repo)
+
+- `bosskuai-laravel-security` — auth/authz, Eloquent safety, CSRF/XSS, API security, production config.
+- `bosskuai-laravel-tdd` — PHPUnit/Pest, factories, HTTP + Sanctum tests, fakes, coverage.
+- `bosskuai-laravel-verification` — env → lint/static analysis → tests → security → migrations → deploy-readiness gate.
 
 ## Model flow
 

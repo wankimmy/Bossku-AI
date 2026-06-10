@@ -19,6 +19,9 @@ Define assets, actors, trust boundaries, and data flow first. Check authn/authz,
 
 - `bosskuai-cybersecurity-risk` — threat modelling, abuse cases, and trust-boundary analysis.
 - `bosskuai-agent-security-hardening` — when the change touches instruction files, MCP, memory, or prompt-injection surfaces.
+- `bosskuai-prompt-injection-defense` — when reviewing surfaces that ingest external/untrusted content into LLM context.
+- `bosskuai-laravel-security` — the concrete checklist for Laravel codebases (Sanctum, policies, mass assignment, CSRF/XSS, production config); load it for any `app/` review.
+- `bosskuai-tenant-isolation-security` — multi-tenant data: every query/policy checked for tenant scoping.
 - `bosskuai-greptile-review-loop` / `bosskuai-pr-check` — when the change is a PR/MR/CL, drive security fixes to resolution and confirm checks pass.
 - `bosskuai-bug-finding` — to build a proof-of-concept that confirms an exploit path.
 

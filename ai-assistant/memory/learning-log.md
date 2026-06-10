@@ -180,3 +180,47 @@ Added 'Know Your User' profile + smarter chat to Bossku-AI. Profile is a singlet
 ```text
 YouTube caption ingestion: YouTube now blocks caption baseUrl downloads from server/datacenter IPs — tracks ARE listed (watch page + InnerTube) but downloading the caption content returns HTTP 200 with 0 BYTES without a PO token (BotGuard). Verified empirically 2026-06-04: json3/srv3/xml/vtt + Referer/Origin all return 0 bytes for dQw4w9WgXcQ. InnerTube ANDROID client now 400s; WEB client returns 0 caption tracks. So 'lightweight captions-only, no key, no whisper' YouTube transcription does NOT work from cloud IPs — only from residential IPs or with a PO-token provider / transcript API / local whisper. YoutubeTranscriptService was hardened (InnerTube+HTML fallback, ASR ordering, tlang=en translation) and is correct, but blocked by YouTube server-side. Also FIXED a pre-existing chunkText infinite-tail bug: when end>=len, start=end-overlap stayed <len and re-emitted the final chunk up to maxChunks (was 60, raised to 300) — polluting memory with duplicate trailing chunks on every learned URL. Added break when end>=len. WebSearchService (DuckDuckGo, no key) verified working live.
 ```
+## 2026-06-10 — claude — remember
+
+- **Tool:** claude
+- **Event:** remember
+- **Source:** manual-remember
+- **Kind:** learning
+- **Captured at:** 2026-06-10T01:54:34+00:00
+
+```text
+Executor quality upgrade shipped (P1+P2+apply-feedback), all opt-in flags default OFF: executor_strict_validation (plan-aware gate in ExecutorResponseParser rejects success-without-content, hallucinated no-op success on write-intent tasks, placeholder-elided diffs), executor_apply_feedback (file auto-apply errors/skips fold into known_issues + status downgrade via ExecutorEvidenceSupport::mergeApplyReport), executor_revision_escalation (first audit-failed revision escalates to high_risk profile via OrchestratorService::revisionProfileKey; old round-2+ condition was dead code at default max_revision_rounds=1). maxRevisionRounds now reads config('bossku.max_revision_rounds') fallback (default reconciled 3->1 to preserve behavior). Verified: 30 targeted tests + full suite (only the 3 known pre-existing failures: AnthropicProvider, ApiAuthMiddleware, ProjectFiles path traversal). Next candidates: P3 risk-aware first-pass profile, P4 deterministic patch pre-check, P5 same-model retry with raised max_tokens on JSON truncation.
+```
+## 2026-06-10 — claude — remember
+
+- **Tool:** claude
+- **Event:** remember
+- **Source:** manual-remember
+- **Kind:** learning
+- **Captured at:** 2026-06-10T06:33:27+00:00
+
+```text
+Executor quality batch 2 shipped (P3-P5 + critical bugfix). CRITICAL: FileWriteApplier::applyUnifiedDiff was broken pre-existing — returned null on any standard '@@' hunk header (all modify-via-diff silently skipped) and would corrupt mid-file hunks; rewritten as hunk-aware context-verified patcher with fuzzy offset recovery (stale LLM line numbers located by content), 13 golden tests. P4: ExecutorPatchPreflight (flag executor_patch_precheck) validates patches deterministically pre-audit (missing content, placeholders, conflict markers, dry-run diff apply) -> deterministicPatchPrecheckFailed needs_revision verdict with zero LLM cost. P3: firstPassProfileKey (flag executor_risk_aware_profile) — planner cannot downgrade router high_risk; high risk_level or plan confidence <0.5 runs FIRST pass on high_risk profile. P5: truncation retry boost (flag llm_truncation_retry_boost) — invalid_json_parse retry doubles max_tokens (cap 32000) on the SAME model before fallback; note LlmJsonParser repairs truncated objects so only brace-less responses fail parse. All 6 flags now: executor_strict_validation, executor_apply_feedback, executor_revision_escalation, executor_risk_aware_profile, executor_patch_precheck, llm_truncation_retry_boost — all default OFF, in Settings API BOOL_KEYS + allPublic. Suite: 443 tests, only the 3 known pre-existing failures.
+```
+## 2026-06-10 — claude — remember
+
+- **Tool:** claude
+- **Event:** remember
+- **Source:** manual-remember
+- **Kind:** learning
+- **Captured at:** 2026-06-10T06:52:41+00:00
+
+```text
+ECC integration v1.11.0 shipped: 7 skills ported from /Users/safwanyacob/Documents/Safwan/ECC into ai-assistant/skills/ — bosskuai-agent-architecture-audit (12-layer agent diagnostic, BosskuAI-grounded: AgentPersonaService/ModelFallbackService/LearningEngine), bosskuai-agent-introspection (capture-diagnose-recover for stuck/degraded runs incl. near-empty fallback responses), bosskuai-council (4-voice decision council), bosskuai-context-budget (context overhead audit incl. runtime-core persona cost), plus manual-only Laravel trio bosskuai-laravel-security/tdd/verification for app/ backend. Instinct model from ECC continuous-learning-v2 folded into bosskuai-continuous-learning (atomic confidence-weighted instincts at ai-assistant/memory/instincts/, promote at >=0.8, delete <0.3). skill-index.json v1.11.0 = 103 skills; AGENTS.md gained 'Agent-stack & decision skills' + 'Laravel stack specialists' rosters; plugin.json 1.2.0. All validators PASS: skill-index, references, workspace full, evals 18/18+8/8+3/3+4/4. greptile-skills upstream verified already in sync (edited-comments/GitLab/Perforce included since 2026-05-29 port). Uncommitted, layered over unrelated executor-batch-2 app/ changes.
+```
+## 2026-06-10 — claude — remember
+
+- **Tool:** claude
+- **Event:** remember
+- **Source:** manual-remember
+- **Kind:** learning
+- **Captured at:** 2026-06-10T18:41:51+00:00
+
+```text
+v1.12.0 shipped: ported final 2 ECC skills + agent layer expansion. bosskuai-autonomous-loops (loop ARCHITECTURE catalogue: sequential claude -p pipeline, infinite agentic loop, continuous PR loop, de-sloppify, Ralphinho RFC-DAG; NanoClaw section replaced with BosskuAI runtime revise loop docs: max_revision_rounds default 1, ExecutorStuckDetector, near-empty fallback warning). bosskuai-prompt-optimizer (advisory-only prompt diagnosis, 6-phase pipeline remapped to bosskuai skill/agent roster, Laravel example). 5 new editor-mode agents in agents/: loop-operator (exit conditions mandatory, context bridge, stall detection, burn guard), performance-optimizer (baseline->profile->one-variable->re-measure ratchet, flat=revert), database-reviewer (down() verified, migrate --pretend SQL read, tenant-scope blocking finding, EXPLAIN evidence), code-simplifier (de-sloppify after green in separate context from author, 3-pass cap, behavior-preserving only), incident-responder (stabilize->verify->prevent, mitigation cap 3, closed only when prevention items exist). Core agents enhanced: orchestrator has Flows table (10 task-shape->chain->loop-owner routes) + council/introspection in runtime-core; planner has DAG decomposition rules + tier table (trivial/small/medium/large pipeline depth); executor: introspection-on-cap, de-sloppify handoff, laravel-tdd/verification wiring; security-reviewer: +laravel-security, prompt-injection-defense, tenant-isolation; auditor: +agent-architecture-audit for pipeline diffs, laravel-verification gate, database-reviewer delegation. skill-index v1.12.0 = 105 skills, plugin.json 1.3.0. All validators PASS, evals 18/18+8/8+3/3+4/4 unchanged. NOTE: only pipeline agents carry runtime-core blocks; the 5 new agents are editor-layer only (no DB persona, no sync impact). Still uncommitted.
+```
