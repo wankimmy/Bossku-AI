@@ -5,6 +5,7 @@ namespace App\Services\Orchestrator;
 use App\Services\BosskuAi\AgentPersonaService;
 use App\Services\BosskuAi\ModelFallbackService;
 use App\Services\BosskuAi\ModelRoutingConfig;
+use App\Services\BosskuAi\RuntimeSettings;
 use App\Support\LlmTelemetry;
 use App\Support\StringCoercion;
 
@@ -12,10 +13,14 @@ class ExecutorService
 {
     use AgentConversationTrait;
 
+    /** Task types where a successful run is expected to change files or run commands. */
+    private const READ_ONLY_TASK_TYPES = ['question', 'unknown', ''];
+
     public function __construct(
         protected ModelFallbackService $fallback,
         protected ModelRoutingConfig $modelConfig,
-        protected AgentPersonaService $personas
+        protected AgentPersonaService $personas,
+        protected ?RuntimeSettings $settings = null,
     ) {}
 
     /**
@@ -195,6 +200,9 @@ SYS;
             ['role' => 'user', 'content' => $userContent],
         ];
 
+        $strict = $this->settings?->executorStrictValidation() ?? false;
+        $expectsChanges = $strict && $this->planExpectsFileChanges($plan, $modelRoute);
+
         $t0 = microtime(true);
         try {
             $out = $this->fallback->chatWithFallbacks(
@@ -203,7 +211,7 @@ SYS;
                 (float) ($profile['temperature'] ?? 0.2),
                 $retry,
                 'executor',
-                fn (mixed $j): bool => is_array($j) && ExecutorResponseParser::validateForFallback($j),
+                fn (mixed $j): bool => is_array($j) && ExecutorResponseParser::validateForFallback($j, $strict, $expectsChanges),
                 (int) ($profile['max_tokens'] ?? 8192),
                 $runId,
             );
@@ -338,6 +346,26 @@ SYS;
         }
 
         return $result;
+    }
+
+    /**
+     * Write intent: the plan targets concrete files and the route classified the
+     * task as something other than a read-only question. Used by the strict
+     * validation gate to reject "success" responses that touched nothing.
+     *
+     * @param  array<string, mixed>  $plan
+     * @param  array<string, mixed>  $modelRoute
+     */
+    protected function planExpectsFileChanges(array $plan, array $modelRoute): bool
+    {
+        $targets = is_array($plan['target_file_list'] ?? null) ? $plan['target_file_list'] : [];
+        if ($targets === []) {
+            return false;
+        }
+
+        $taskType = strtolower(StringCoercion::toString($modelRoute['task_type'] ?? null, ''));
+
+        return ! in_array($taskType, self::READ_ONLY_TASK_TYPES, true);
     }
 
     /** @param list<array<string,mixed>> $memories */

@@ -58,7 +58,13 @@ class AgentPersonaService
     {
         $role = $this->normalizeRole($role);
         if (! array_key_exists($role, $this->cache)) {
-            $this->cache[$role] = AgentPersona::query()->find($role);
+            // A missing persona must degrade to "no persona" (use the builtin
+            // prompt), never crash the LLM pipeline — e.g. before migrations run.
+            try {
+                $this->cache[$role] = AgentPersona::query()->find($role);
+            } catch (\Illuminate\Database\QueryException) {
+                return null;
+            }
         }
 
         return $this->cache[$role];

@@ -254,7 +254,73 @@ class RuntimeSettings
 
     public function maxRevisionRounds(): int
     {
-        return $this->getInt('max_revision_rounds', 1);
+        return max(0, $this->getInt(
+            'max_revision_rounds',
+            (int) config('bossku.max_revision_rounds', 1),
+        ));
+    }
+
+    /**
+     * Strict executor output gate: reject "success" responses that claim file
+     * changes without diff/after content, touch nothing on a write-intent task,
+     * or contain placeholder-elided file content. On by default; disable via
+     * Settings.
+     */
+    public function executorStrictValidation(): bool
+    {
+        return $this->getBool('executor_strict_validation', true);
+    }
+
+    /**
+     * Fold file auto-apply errors/skips back into the executor result
+     * (known_issues + status downgrade) so the auditor sees them. On by
+     * default; disable via Settings.
+     */
+    public function executorApplyFeedback(): bool
+    {
+        return $this->getBool('executor_apply_feedback', true);
+    }
+
+    /**
+     * Escalate the first audit-failed revision round to the high_risk model
+     * profile instead of waiting for round 2+. On by default; disable via
+     * Settings.
+     */
+    public function executorRevisionEscalation(): bool
+    {
+        return $this->getBool('executor_revision_escalation', true);
+    }
+
+    /**
+     * Risk-aware first-pass executor profile: high route risk, a router
+     * high_risk decision, or a low-confidence plan run the FIRST executor pass
+     * on the high_risk profile instead of escalating reactively. On by
+     * default; disable via Settings.
+     */
+    public function executorRiskAwareProfile(): bool
+    {
+        return $this->getBool('executor_risk_aware_profile', true);
+    }
+
+    /**
+     * Deterministic patch pre-check between executor and auditor: missing
+     * content, placeholder elisions, conflict markers, and diffs that do not
+     * apply dry-run cleanly become an immediate needs_revision verdict without
+     * spending an LLM audit call. On by default; disable via Settings.
+     */
+    public function executorPatchPrecheck(): bool
+    {
+        return $this->getBool('executor_patch_precheck', true);
+    }
+
+    /**
+     * On a truncated structured response (invalid JSON parse), retry the same
+     * model with doubled max_tokens before moving to a fallback model. On by
+     * default; disable via Settings.
+     */
+    public function llmTruncationRetryBoost(): bool
+    {
+        return $this->getBool('llm_truncation_retry_boost', true);
     }
 
     public function maxApprovalReviewRounds(): int
@@ -420,6 +486,12 @@ class RuntimeSettings
             'max_memory_results' => (string) $this->maxMemoryResults(),
             'max_revision_rounds' => (string) $this->maxRevisionRounds(),
             'audit_enabled' => $this->auditEnabled() ? '1' : '0',
+            'executor_strict_validation' => $this->executorStrictValidation() ? '1' : '0',
+            'executor_apply_feedback' => $this->executorApplyFeedback() ? '1' : '0',
+            'executor_revision_escalation' => $this->executorRevisionEscalation() ? '1' : '0',
+            'executor_risk_aware_profile' => $this->executorRiskAwareProfile() ? '1' : '0',
+            'executor_patch_precheck' => $this->executorPatchPrecheck() ? '1' : '0',
+            'llm_truncation_retry_boost' => $this->llmTruncationRetryBoost() ? '1' : '0',
             'memory_storage_enabled' => $this->memoryStorageEnabled() ? '1' : '0',
             'memory_ollama_enabled' => $this->memoryOllamaEnabled() ? '1' : '0',
             'embedding_model' => $this->embeddingModel(),

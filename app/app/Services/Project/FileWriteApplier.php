@@ -95,7 +95,16 @@ class FileWriteApplier
     }
 
     /**
-     * Best-effort patch when the model only returned a unified diff.
+     * Apply a unified diff to $before and return the patched content, or null
+     * when the diff is malformed or does not match the file.
+     *
+     * Hunk-aware: honours `@@ -a,b +c,d @@` headers, verifies context and
+     * removed lines against the actual file, and preserves all content outside
+     * the hunks. Hunk offsets are treated as hints — if the context does not
+     * match at the declared line, the hunk body is located by content from the
+     * current cursor forward (LLM diffs frequently carry stale line numbers
+     * with correct context). Header-less diffs are treated as one implicit
+     * hunk located by content.
      */
     public function applyUnifiedDiff(string $before, string $diff): ?string
     {
@@ -104,51 +113,189 @@ class FileWriteApplier
             return null;
         }
 
-        if (! str_contains($diff, "\n--- ") && ! str_starts_with($diff, '--- ')) {
+        $hunks = $this->parseUnifiedDiffHunks($diff);
+        if ($hunks === null || $hunks === []) {
             return null;
         }
 
-        $lines = preg_split("/\r\n|\n|\r/", $diff) ?: [];
-        $out = [];
         $oldLines = preg_split("/\r\n|\n|\r/", $before) ?: [];
-        $oldIndex = 0;
+        $hadTrailingNewline = $before !== '' && (str_ends_with($before, "\n") || str_ends_with($before, "\r"));
+        if ($hadTrailingNewline && $oldLines !== [] && end($oldLines) === '') {
+            array_pop($oldLines);
+        }
+        if ($before === '') {
+            $oldLines = [];
+        }
+
+        $out = [];
+        $cursor = 0;
+
+        foreach ($hunks as $hunk) {
+            $expectedOld = $hunk['old'];
+
+            if ($expectedOld === []) {
+                // Pure-insertion hunk: anchor on the header position when sane,
+                // otherwise append at the end of the remaining content.
+                $insertAt = $hunk['old_start'] !== null
+                    ? min(max($hunk['old_start'], $cursor), count($oldLines))
+                    : count($oldLines);
+                $matchPos = $insertAt;
+            } else {
+                $matchPos = $this->locateHunk($oldLines, $expectedOld, $cursor, $hunk['old_start']);
+                if ($matchPos === null) {
+                    return null;
+                }
+            }
+
+            for ($i = $cursor; $i < $matchPos; $i++) {
+                $out[] = $oldLines[$i];
+            }
+            $cursor = $matchPos;
+
+            foreach ($hunk['ops'] as [$op, $payload]) {
+                if ($op === '+') {
+                    $out[] = $payload;
+
+                    continue;
+                }
+                // Context and removals consume a verified old line; context is kept.
+                if ($op === ' ') {
+                    $out[] = $oldLines[$cursor];
+                }
+                $cursor++;
+            }
+        }
+
+        for ($i = $cursor; $i < count($oldLines); $i++) {
+            $out[] = $oldLines[$i];
+        }
+
+        $result = implode("\n", $out);
+        if ($hadTrailingNewline || ($before === '' && $result !== '')) {
+            $result .= "\n";
+        }
+
+        return $result;
+    }
+
+    /**
+     * @return list<array{old_start: int|null, old: list<string>, ops: list<array{0: string, 1: string}>}>|null
+     */
+    protected function parseUnifiedDiffHunks(string $diff): ?array
+    {
+        $lines = preg_split("/\r\n|\n|\r/", $diff) ?: [];
+        $hunks = [];
+        $current = null;
+        $sawHunkHeader = false;
 
         foreach ($lines as $line) {
-            if ($line === '' || str_starts_with($line, '--- ') || str_starts_with($line, '+++ ')) {
+            if (str_starts_with($line, '--- ') || str_starts_with($line, '+++ ')
+                || str_starts_with($line, 'diff ') || str_starts_with($line, 'index ')
+                || str_starts_with($line, '\\')) {
                 continue;
             }
 
-            $prefix = $line[0] ?? '';
-            $payload = substr($line, 1);
-
-            if ($prefix === ' ') {
-                $out[] = $payload;
-                $oldIndex++;
-
-                continue;
-            }
-
-            if ($prefix === '+') {
-                $out[] = $payload;
-
-                continue;
-            }
-
-            if ($prefix === '-') {
-                $oldIndex++;
+            if (preg_match('/^\s*@@\s*-(\d+)(?:,(\d+))?\s+\+(\d+)(?:,\d+)?\s*@@/', $line, $m) === 1) {
+                $sawHunkHeader = true;
+                if ($current !== null) {
+                    $hunks[] = $current;
+                }
+                // 0-based content index. For `-N,0` (pure insertion) the diff
+                // convention is "insert after line N", so the index is N itself.
+                $oldStart = (int) $m[1];
+                $oldCount = isset($m[2]) && $m[2] !== '' ? (int) $m[2] : 1;
+                $current = [
+                    'old_start' => $oldCount === 0 ? $oldStart : max(0, $oldStart - 1),
+                    'old' => [],
+                    'ops' => [],
+                ];
 
                 continue;
             }
 
+            if ($current === null) {
+                // Header-less diff: implicit single hunk located purely by content.
+                if ($line === '') {
+                    continue;
+                }
+                $current = ['old_start' => null, 'old' => [], 'ops' => []];
+            }
+
+            $prefix = $line === '' ? ' ' : $line[0];
+            $payload = $line === '' ? '' : substr($line, 1);
+
+            if ($prefix === ' ' || $prefix === '-') {
+                $current['old'][] = $payload;
+                $current['ops'][] = [$prefix, $payload];
+            } elseif ($prefix === '+') {
+                $current['ops'][] = ['+', $payload];
+            } else {
+                return null;
+            }
+        }
+
+        if ($current !== null) {
+            $hunks[] = $current;
+        }
+
+        // A diff with neither hunk headers nor file headers is too ambiguous to
+        // trust unless it actually verifies against content (handled by caller),
+        // but require at least some structure: file headers or @@ markers.
+        if (! $sawHunkHeader && ! str_contains($diff, '--- ') && ! str_contains($diff, '+++ ')) {
             return null;
         }
 
-        while ($oldIndex < count($oldLines)) {
-            $out[] = $oldLines[$oldIndex];
-            $oldIndex++;
+        return $hunks;
+    }
+
+    /**
+     * Find where a hunk's expected old lines occur. Tries the declared header
+     * position first (exact, then whitespace-relaxed), then scans forward from
+     * the cursor, accepting only an unambiguous content match.
+     *
+     * @param  list<string>  $oldLines
+     * @param  list<string>  $expectedOld
+     */
+    protected function locateHunk(array $oldLines, array $expectedOld, int $cursor, ?int $declaredStart): ?int
+    {
+        if ($declaredStart !== null
+            && $declaredStart >= $cursor
+            && $this->hunkMatchesAt($oldLines, $expectedOld, $declaredStart)) {
+            return $declaredStart;
         }
 
-        return implode("\n", $out);
+        $matches = [];
+        $limit = count($oldLines) - count($expectedOld);
+        for ($pos = $cursor; $pos <= $limit; $pos++) {
+            if ($this->hunkMatchesAt($oldLines, $expectedOld, $pos)) {
+                $matches[] = $pos;
+                if (count($matches) > 1) {
+                    return null;
+                }
+            }
+        }
+
+        return $matches[0] ?? null;
+    }
+
+    /**
+     * @param  list<string>  $oldLines
+     * @param  list<string>  $expectedOld
+     */
+    protected function hunkMatchesAt(array $oldLines, array $expectedOld, int $pos): bool
+    {
+        if ($pos < 0 || $pos + count($expectedOld) > count($oldLines)) {
+            return false;
+        }
+
+        foreach ($expectedOld as $i => $expected) {
+            $actual = $oldLines[$pos + $i];
+            if ($actual !== $expected && rtrim($actual) !== rtrim($expected)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**

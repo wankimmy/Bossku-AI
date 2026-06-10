@@ -79,6 +79,7 @@ class OrchestratorService
         protected CodebaseIndexService $codeIndex,
         protected RunExecutionContext $runExecution,
         protected WorktreeManager $worktrees,
+        protected ExecutorPatchPreflight $patchPreflight,
     ) {}
 
     /**
@@ -838,6 +839,19 @@ class OrchestratorService
         }
 
         $execProfileKey = (string) ($plan['executor_profile'] ?? $modelRoute['executor_profile'] ?? 'default');
+        if ($this->settings->executorRiskAwareProfile()) {
+            $riskAwareKey = self::firstPassProfileKey($execProfileKey, $modelRoute, $plan);
+            if ($riskAwareKey !== $execProfileKey) {
+                $this->emit($emit, $this->basePayload($run, 'model_escalated', [
+                    'status' => 'info',
+                    'agent' => 'executor',
+                    'summary' => 'Risk-aware routing: first executor pass uses the '.$riskAwareKey.' profile.',
+                    'from_profile' => $execProfileKey,
+                    'to_profile' => $riskAwareKey,
+                ]));
+                $execProfileKey = $riskAwareKey;
+            }
+        }
         $plan = $this->budgetGuard->narrowPlan($plan, $execProfileKey);
 
         if ($this->designer->shouldRun($plan, $execProfileKey)) {
@@ -1299,6 +1313,13 @@ class OrchestratorService
                     );
                     $auditMs = (int) round((microtime(true) - $tA) * 1000);
                 }
+                elseif ($this->settings->executorPatchPrecheck()
+                    && ($precheckProblems = $this->patchPreflight->problems($execResult)) !== []) {
+                    // Malformed/inapplicable patches bounce straight back to the
+                    // executor with per-file feedback — no LLM audit call spent.
+                    $lastAudit = ExecutorEvidenceSupport::deterministicPatchPrecheckFailed($precheckProblems);
+                    $auditMs = (int) round((microtime(true) - $tA) * 1000);
+                }
                 else {
                     $lastAudit = $this->auditor->auditStep(
                         $agentPrompt,
@@ -1500,11 +1521,11 @@ class OrchestratorService
                 );
                 $auditFeedback['original_prompt'] = $agentPrompt;
 
-                // Auto-escalate: on the second+ revision round, switch to the high_risk profile
-                // so a smarter model gets a crack at fixing what the cheaper model couldn't.
-                $revProfileKey = ($revisionRoundsUsed >= 1 && in_array($execProfileKey, ['default', 'backend', 'frontend_ui'], true))
-                    ? 'high_risk'
-                    : $execProfileKey;
+                $revProfileKey = self::revisionProfileKey(
+                    $execProfileKey,
+                    $revisionRoundsUsed,
+                    $this->settings->executorRevisionEscalation(),
+                );
                 if ($revProfileKey !== $execProfileKey) {
                     $this->emit($emit, $this->basePayload($run, 'model_escalated', [
                         'status' => 'info',
@@ -2208,6 +2229,55 @@ class OrchestratorService
      * @param  array<string, mixed>  $execResult
      * @return array<string, mixed>
      */
+    /**
+     * Risk-aware first-pass profile (`executor_risk_aware_profile`). Two rules:
+     * the planner may not silently downgrade the router's high_risk decision,
+     * and high route risk or a low-confidence plan sends the FIRST pass to the
+     * high_risk profile instead of paying a cheap-model failure + audit round
+     * to escalate reactively. Devops/none/high_risk profiles pass through.
+     *
+     * @param  array<string, mixed>  $modelRoute
+     * @param  array<string, mixed>  $plan
+     */
+    public static function firstPassProfileKey(string $planProfileKey, array $modelRoute, array $plan): string
+    {
+        if (! in_array($planProfileKey, ['default', 'backend', 'frontend_ui'], true)) {
+            return $planProfileKey;
+        }
+
+        if ((string) ($modelRoute['executor_profile'] ?? '') === 'high_risk') {
+            return 'high_risk';
+        }
+
+        if ((string) ($modelRoute['risk_level'] ?? '') === 'high') {
+            return 'high_risk';
+        }
+
+        $confidence = is_numeric($plan['confidence'] ?? null) ? (float) $plan['confidence'] : null;
+        if ($confidence !== null && $confidence < 0.50) {
+            return 'high_risk';
+        }
+
+        return $planProfileKey;
+    }
+
+    /**
+     * Which executor profile a revision round should use. Cheap profiles escalate
+     * to high_risk so a stronger model gets a crack at what the cheaper one
+     * couldn't fix. Historically this waited for round 2+ — which never runs at
+     * the default max_revision_rounds of 1, so escalation was dead code. With
+     * early escalation enabled (`executor_revision_escalation`), the first
+     * audit-failed revision already runs on the high_risk profile.
+     */
+    public static function revisionProfileKey(string $execProfileKey, int $revisionRoundsUsed, bool $escalateEarly): string
+    {
+        if (! in_array($execProfileKey, ['default', 'backend', 'frontend_ui'], true)) {
+            return $execProfileKey;
+        }
+
+        return $revisionRoundsUsed >= ($escalateEarly ? 0 : 1) ? 'high_risk' : $execProfileKey;
+    }
+
     protected function applyExecutorCommands(Run $run, array $execResult, ?callable $emit): array
     {
         $commandsRun = is_array($execResult['commands_run'] ?? null) ? $execResult['commands_run'] : [];
@@ -2294,6 +2364,10 @@ class OrchestratorService
                     'artifacts' => ['files_apply_errors' => $report['errors']],
                 ]));
             }
+        }
+
+        if ($this->settings->executorApplyFeedback()) {
+            $execResult = ExecutorEvidenceSupport::mergeApplyReport($execResult, $report);
         }
 
         return $execResult;

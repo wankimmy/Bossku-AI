@@ -38,7 +38,13 @@ return [
      * its answer in `message.thinking` and leaves `message.content` empty).
      */
     'ollama_think' => env('OLLAMA_THINK') !== null ? filter_var(env('OLLAMA_THINK'), FILTER_VALIDATE_BOOLEAN) : null,
-    'max_revision_rounds' => env('BOSSKUAI_MAX_REVISION_ROUNDS', 3),
+    /**
+     * Audit→revise loop budget when the `max_revision_rounds` Setting row is absent.
+     * Default 2 gives the high_risk escalation profile a full round after a
+     * cheap-model revision fails (round 1 = cheap fix, round 2 = escalated model
+     * when `executor_revision_escalation` waits, or both escalated when it is on).
+     */
+    'max_revision_rounds' => (int) env('BOSSKUAI_MAX_REVISION_ROUNDS', 2),
     /**
      * Soft token budget per run (estimated tokens). When exceeded, a warning event is emitted
      * so the Nuxt UI can show an alert. 0 = no limit. Default ~100k tokens.

@@ -30,6 +30,18 @@
         <env name="SESSION_DRIVER" value="array"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <!-- BosskuAI overrides: compose may inject conflicting env (DB_* and BOSSKU_*). Force test defaults. -->
+        <!-- Never inherit a host/Docker BOSSKU_REPO_PATH (e.g. /repo). Empty makes
+             config('bossku.repo_root') fall back to dirname(base_path()) — the real
+             checkout — so tests resolve agents/*.md and the repo root the same way
+             locally and in CI. -->
+        <env name="BOSSKU_REPO_PATH" value="" force="true"/>
+        <!-- Tests must run with a clean provider environment (like CI's fresh
+             checkout), never the developer's real app/.env secrets. Otherwise a
+             local ANTHROPIC_API_KEY makes anthropicConfigured() true and provider
+             routing/catalog tests diverge from CI. -->
+        <env name="ANTHROPIC_API_KEY" value="" force="true"/>
+        <env name="OPENAI_API_KEY" value="" force="true"/>
+        <env name="OLLAMA_API_KEY" value="" force="true"/>
         <env name="BOSSKU_ROUTER_LLM_ENABLED" value="false" force="true"/>
         <env name="BOSSKU_MEMORY_OLLAMA_ENABLED" value="false" force="true"/>
         <env name="BOSSKU_REQUIRE_USER_APPROVAL" value="false" force="true"/>

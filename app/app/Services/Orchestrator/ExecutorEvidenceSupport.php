@@ -536,4 +536,73 @@ class ExecutorEvidenceSupport
             '_deterministic' => true,
         ];
     }
+
+    /**
+     * Deterministic needs_revision verdict from the patch pre-check — same shape
+     * the LLM auditor produces, so the audit→revise loop consumes it unchanged.
+     * Zero LLM cost: malformed patches bounce straight back to the executor with
+     * precise per-file feedback instead of burning an audit round.
+     *
+     * @param  list<string>  $problems
+     * @return array<string, mixed>
+     */
+    public static function deterministicPatchPrecheckFailed(array $problems): array
+    {
+        $summary = 'Deterministic patch pre-check failed: '.count($problems).' file change problem(s) must be fixed before audit.';
+
+        return [
+            'status' => 'needs_revision',
+            'summary' => $summary,
+            'findings' => array_map(static fn (string $p): array => [
+                'issue' => $p,
+                'severity' => 'high',
+                'status' => 'open',
+            ], $problems),
+            'required_fixes' => $problems,
+            'optional_improvements' => [],
+            'risk_level' => 'medium',
+            'requires_security_audit' => false,
+            'requires_final_reviewer' => false,
+            'final_output' => $summary,
+            '_legacy_pass' => false,
+            '_deterministic' => true,
+        ];
+    }
+
+    /**
+     * Fold file auto-apply failures back into the executor result so the auditor
+     * and the revision loop see them — mirrors how failed commands_run already
+     * downgrade the result. Without this, a diff that never landed on disk still
+     * reads as status=success downstream.
+     *
+     * @param  array<string, mixed>  $execResult
+     * @param  array{applied?: list<string>, skipped?: list<string>, errors?: list<string>}  $report
+     * @return array<string, mixed>
+     */
+    public static function mergeApplyReport(array $execResult, array $report): array
+    {
+        $problems = [];
+        foreach (is_array($report['errors'] ?? null) ? $report['errors'] : [] as $error) {
+            if (is_string($error) && $error !== '') {
+                $problems[] = 'File write failed: '.$error;
+            }
+        }
+        foreach (is_array($report['skipped'] ?? null) ? $report['skipped'] : [] as $skip) {
+            if (is_string($skip) && $skip !== '') {
+                $problems[] = 'File write skipped: '.$skip;
+            }
+        }
+
+        if ($problems === []) {
+            return $execResult;
+        }
+
+        $issues = is_array($execResult['known_issues'] ?? null) ? $execResult['known_issues'] : [];
+        $execResult['known_issues'] = array_values(array_unique(array_merge($issues, $problems)));
+        if (($execResult['status'] ?? '') !== 'failed') {
+            $execResult['status'] = 'partial';
+        }
+
+        return $execResult;
+    }
 }

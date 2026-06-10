@@ -9,9 +9,13 @@ use Illuminate\Support\Facades\Log;
 
 class ModelFallbackService
 {
+    /** Hard ceiling for the truncation-retry token boost. */
+    private const MAX_BOOSTED_TOKENS = 32000;
+
     public function __construct(
         protected LlmGateway $gateway,
-        protected AgentPersonaService $personas
+        protected AgentPersonaService $personas,
+        protected ?RuntimeSettings $settings = null,
     ) {}
 
     /**
@@ -62,12 +66,20 @@ class ModelFallbackService
                     }
 
                     $attemptMessages = $messages;
+                    $attemptMaxTokens = $maxTokensAnthropic;
                     if ($repairInstruction !== null) {
                         // A parse failure almost always means the JSON was truncated because
                         // the prompt left too little room in the context window. Shrink the
                         // oversized context on this retry instead of growing it.
                         if ($lastError === 'invalid_json_parse') {
                             $attemptMessages = self::compactMessagesForRetry($attemptMessages);
+                            // Give the SAME model more output room before falling back to a
+                            // (often weaker) sibling — truncation is a budget problem, not a
+                            // capability problem.
+                            if ($maxTokensAnthropic !== null
+                                && ($this->settings?->llmTruncationRetryBoost() ?? false)) {
+                                $attemptMaxTokens = min($maxTokensAnthropic * 2, self::MAX_BOOSTED_TOKENS);
+                            }
                         }
                         $attemptMessages = array_merge($attemptMessages, [['role' => 'user', 'content' => $repairInstruction]]);
                     }
@@ -76,7 +88,7 @@ class ModelFallbackService
                         $model,
                         $attemptMessages,
                         $temperature,
-                        $maxTokensAnthropic,
+                        $attemptMaxTokens,
                         null,
                         $role,
                         $runId,

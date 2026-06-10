@@ -5,6 +5,7 @@ namespace Tests\Unit;
 use App\Models\BosskuAi\Memory;
 use App\Services\BosskuAi\LlmGateway;
 use App\Services\BosskuAi\MemoryService;
+use App\Services\BosskuAi\MemoryWorktreeScope;
 use App\Services\BosskuAi\RuntimeSettings;
 use App\Services\Llm\OllamaClient;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -38,6 +39,7 @@ class MemoryServiceVectorTest extends TestCase
             Mockery::mock(OllamaClient::class),
             Mockery::mock(LlmGateway::class),
             Mockery::mock(RuntimeSettings::class),
+            new MemoryWorktreeScope(),
         );
 
         $vec = array_fill(0, 128, 0.25);
@@ -66,7 +68,7 @@ class MemoryServiceVectorTest extends TestCase
         $settings->shouldReceive('maxMemoryResults')->andReturn(5);
         $settings->shouldReceive('ollamaEmbeddingPhysicalModel')->andReturn('nomic-embed-text');
 
-        $service = new MemoryService($ollama, Mockery::mock(LlmGateway::class), $settings);
+        $service = new MemoryService($ollama, Mockery::mock(LlmGateway::class), $settings, new MemoryWorktreeScope());
 
         $near = Memory::query()->create([
             'type' => 'pattern',
@@ -112,7 +114,7 @@ class MemoryServiceVectorTest extends TestCase
         $settings->shouldReceive('memoryOllamaEnabled')->andReturn(true);
         $settings->shouldReceive('ollamaEmbeddingPhysicalModel')->andReturn('nomic-embed-text');
 
-        $service = new MemoryService($ollama, Mockery::mock(LlmGateway::class), $settings);
+        $service = new MemoryService($ollama, Mockery::mock(LlmGateway::class), $settings, new MemoryWorktreeScope());
         $memory = $service->store('test memory content', 'preference');
 
         $raw = Memory::query()->whereKey($memory->id)->value('embedding_json');

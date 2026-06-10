@@ -130,4 +130,46 @@ class SettingsApiTest extends TestCase
             'orchestrator_plan_confirmation_mode' => 'sometimes',
         ])->assertStatus(422);
     }
+
+    #[Test]
+    public function executor_quality_flags_default_on_and_revision_rounds_default_two(): void
+    {
+        $settings = app(RuntimeSettings::class);
+
+        $this->assertTrue($settings->executorStrictValidation());
+        $this->assertTrue($settings->executorApplyFeedback());
+        $this->assertTrue($settings->executorRevisionEscalation());
+        $this->assertTrue($settings->executorRiskAwareProfile());
+        $this->assertTrue($settings->executorPatchPrecheck());
+        $this->assertTrue($settings->llmTruncationRetryBoost());
+        $this->assertSame((int) config('bossku.max_revision_rounds', 2), $settings->maxRevisionRounds());
+    }
+
+    #[Test]
+    public function executor_quality_flags_can_be_disabled_via_settings_api(): void
+    {
+        $this->putJson('/api/settings', [
+            'executor_strict_validation' => '0',
+            'executor_apply_feedback' => '0',
+            'executor_revision_escalation' => '0',
+            'executor_risk_aware_profile' => '0',
+            'executor_patch_precheck' => '0',
+            'llm_truncation_retry_boost' => '0',
+        ])
+            ->assertOk()
+            ->assertJsonPath('executor_strict_validation', '0')
+            ->assertJsonPath('executor_apply_feedback', '0')
+            ->assertJsonPath('executor_revision_escalation', '0')
+            ->assertJsonPath('executor_risk_aware_profile', '0')
+            ->assertJsonPath('executor_patch_precheck', '0')
+            ->assertJsonPath('llm_truncation_retry_boost', '0');
+
+        $settings = app(RuntimeSettings::class);
+        $this->assertFalse($settings->executorStrictValidation());
+        $this->assertFalse($settings->executorApplyFeedback());
+        $this->assertFalse($settings->executorRevisionEscalation());
+        $this->assertFalse($settings->executorRiskAwareProfile());
+        $this->assertFalse($settings->executorPatchPrecheck());
+        $this->assertFalse($settings->llmTruncationRetryBoost());
+    }
 }

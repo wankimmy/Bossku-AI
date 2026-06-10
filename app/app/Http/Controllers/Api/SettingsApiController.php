@@ -41,6 +41,12 @@ class SettingsApiController extends Controller
         'memory_storage_enabled',
         'memory_ollama_enabled',
         'routing_llm_enabled',
+        'executor_strict_validation',
+        'executor_apply_feedback',
+        'executor_revision_escalation',
+        'executor_risk_aware_profile',
+        'executor_patch_precheck',
+        'llm_truncation_retry_boost',
     ];
 
     /** @var list<string> */
