@@ -26,6 +26,12 @@ jobs:
         working-directory: app
         run: composer install --no-interaction --prefer-dist
 
+      - name: Prepare environment
+        working-directory: app
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
       - name: Run tests
         working-directory: app
         run: php artisan test
