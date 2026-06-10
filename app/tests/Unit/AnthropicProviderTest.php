@@ -34,7 +34,10 @@ class AnthropicProviderTest extends TestCase
         Http::assertSent(function ($request) {
             $body = $request->data();
 
-            return ($body['system'] ?? '') === 'You are helpful.'
+            // System prompts are sent as a cacheable block (cache_control: ephemeral),
+            // not a plain string — see AnthropicProvider::buildPayload().
+            return ($body['system'][0]['text'] ?? '') === 'You are helpful.'
+                && ($body['system'][0]['cache_control']['type'] ?? '') === 'ephemeral'
                 && count($body['messages'] ?? []) === 1
                 && ($body['messages'][0]['role'] ?? '') === 'user';
         });

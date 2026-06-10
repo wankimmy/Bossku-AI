@@ -44,7 +44,12 @@ class ApiAuthMiddlewareTest extends TestCase
             'bossku.api_token' => 'secret-token',
         ]);
 
-        $this->getJson('/api/health/ollama')->assertOk();
+        // The health endpoint performs a live Ollama round-trip and may return
+        // 503 when no Ollama is reachable (as in CI). This test only guards the
+        // auth bypass: public routes must never come back 401/403.
+        $health = $this->getJson('/api/health/ollama');
+        $this->assertNotContains($health->status(), [401, 403]);
+
         $this->get('/api/oauth/codex/callback')->assertRedirect();
     }
 }

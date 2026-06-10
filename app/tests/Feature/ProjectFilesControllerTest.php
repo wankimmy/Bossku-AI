@@ -63,13 +63,16 @@ class ProjectFilesControllerTest extends TestCase
     #[Test]
     public function it_blocks_path_traversal(): void
     {
-        $this->getJson('/api/project/file?path=../../../etc/passwd')
-            ->assertStatus(422)
-            ->assertJsonPath('message', 'Path denied.');
+        // ProjectPathResolver throws 'Path denied.' or 'Path denied or not found.'
+        // depending on whether realpath() resolves — environment-dependent, both
+        // are a correct traversal block.
+        $file = $this->getJson('/api/project/file?path=../../../etc/passwd');
+        $file->assertStatus(422);
+        $this->assertStringStartsWith('Path denied', (string) $file->json('message'));
 
-        $this->getJson('/api/project/tree?path=../../../etc/passwd')
-            ->assertStatus(422)
-            ->assertJsonPath('message', 'Path denied.');
+        $tree = $this->getJson('/api/project/tree?path=../../../etc/passwd');
+        $tree->assertStatus(422);
+        $this->assertStringStartsWith('Path denied', (string) $tree->json('message'));
     }
 
     #[Test]
