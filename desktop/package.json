@@ -1,7 +1,7 @@
 {
   "name": "bosskuai-desktop",
   "productName": "BosskuAI",
-  "version": "3.0.8",
+  "version": "3.0.9",
   "description": "BosskuAI desktop app — native Windows installer (PHP+Node, no Docker) or Docker-backed dev mode via BOSSKU_DESKTOP_RUNTIME=docker.",
   "private": true,
   "main": "src/main.js",
