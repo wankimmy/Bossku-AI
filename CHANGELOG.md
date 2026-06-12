@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.13.0 - Cross-repo portability and session token optimization
+
+- **Plugin now carries the full harness**: `.claude-plugin/plugin.json` exposes `commands` (11 commands moved from `.claude/commands/` to `commands/`), `hooks` (new `hooks/hooks.json`), and a curated `agents` array — so skills, commands, agents, and hooks all work in **any** repo the plugin is enabled for, not just this one.
+- **Portable hooks**: plugin hooks use `${CLAUDE_PLUGIN_ROOT}` paths. New `session-start-context.sh` (SessionStart) injects the compact BosskuAI contract + resolved memory home into model context once per session in every repo — replacing the per-prompt stderr reminder that never reached the model. `common.sh` gained `resolve_bossku_home()` ($BOSSKU_HOME → project → sibling Bossku-AI checkout → plugin root) so shared memory works from sibling projects with zero config. `write_hook_output` no longer echoes hook-input JSON to stdout; edit counter is now session-scoped. Repo-local `.claude/settings.json` hooks emptied to avoid double-firing (mcp-health-check stays opt-in there — per-MCP-call bash spawn is too hot for a default).
+- **Curated subagents**: plugin exposes the 24 editor-appropriate agents only; the 10 Laravel runtime pipeline personas (orchestrator, executor, auditor, clarification, designer, model-router, writer, final-reviewer, direct-answer, skill-detector) no longer leak into the editor's Agent list. Frontmatter normalized on editor agents (valid Claude Code `tools`, `model: opus` instead of runtime role names).
+- **Token optimization**: 25 longest/deprecated skill descriptions rewritten as tight trigger statements (7,313 → 4,606 chars; ~680 tokens saved per session, every session, keywords preserved). Deprecated aliases reduced to one-liners.
+- Versions aligned at 1.13.0 across `.claude-plugin/plugin.json`, root `plugin.json`, both marketplaces, and `skill-index.json`. Removed stray broken `Bossku-AI` symlink at repo root.
+
 ## v1.12.0 - Loop architectures, prompt optimizer, 5 new agents, and flows
 
 - Added `bosskuai-autonomous-loops` (ECC port): loop architecture catalogue — sequential `claude -p` pipelines, infinite agentic loop, continuous PR loop, de-sloppify pattern, Ralphinho RFC-driven DAG — plus a new section documenting BosskuAI's own runtime revise loop (`max_revision_rounds`, ExecutorStuckDetector) as the built-in pattern.

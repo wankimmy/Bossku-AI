@@ -1,5 +1,7 @@
 # BosskuAI — Activate
 
+> Path note: `ai-assistant/...`, `AGENTS.md`, and `skill-index.json` resolve against the **BosskuAI home** announced in the `[BosskuAI]` session-start context (when absent, use this plugin/repo root).
+
 Activate BosskuAI mode for this request.
 
 ## What this does

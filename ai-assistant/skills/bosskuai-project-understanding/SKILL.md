@@ -1,6 +1,6 @@
 ---
 name: bosskuai-project-understanding
-description: Use this when reading a codebase or repository to understand what the project is about, who it serves, what defines behavior, and which skills should be loaded next. Prefer oriented reading plus selective source sampling over full-tree dumping.
+description: "Read a repo to learn what the project is, who it serves, what defines behavior, and which skills to load next — oriented reading plus selective sampling over full-tree dumps."
 ---
 
 # BosskuAI Project Understanding

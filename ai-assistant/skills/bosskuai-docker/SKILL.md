@@ -1,6 +1,6 @@
 ---
 name: bosskuai-docker
-description: Use this for Dockerfile and Docker Compose setup or review, including one-command `docker compose up -d` startup, `.env` configuration, no hardcoded credentials in YAML, bind-mounted local volume sync, explicit networks, service health checks, non-root images, and containerized dev/prod workflows.
+description: "Dockerfile and Docker Compose setup or review — one-command 'docker compose up -d', .env config, no hardcoded credentials, bind mounts, explicit networks, health checks, non-root images, dev/prod workflows."
 ---
 
 # BosskuAI Docker

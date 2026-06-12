@@ -32,7 +32,7 @@ Memory Used: <yes|no>
 | Skill detection | [`agents/skill-detector.md`](../../agents/skill-detector.md) |
 | Model routing | [`agents/model-router.md`](../../agents/model-router.md) · `always-on-model-router.md` |
 | Token saving | [`playbooks/token-saving.md`](../../playbooks/token-saving.md) |
-| Audit workflow | [`playbooks/code-audit.md`](../../playbooks/code-audit.md) · **`/implement`** style flows in `.claude/commands/` |
+| Audit workflow | [`playbooks/code-audit.md`](../../playbooks/code-audit.md) · **`/plan`**, **`/verify`**, **`/quality-gate`** flows in `commands/` |
 | Memory summary injection | [`memory/summarizer.md`](../../memory/summarizer.md), `scripts/bosskuai run ...` packets |
 | Deep multi-agent realism | [`docs/multi-agent-architecture.md`](../../docs/multi-agent-architecture.md) |
 

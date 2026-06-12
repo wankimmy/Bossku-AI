@@ -1,6 +1,6 @@
 ---
 name: bosskuai-agent-architecture-audit
-description: Full-stack diagnostic for agent and LLM applications. Audits the 12-layer agent stack for wrapper regression, memory pollution, tool discipline failures, hidden repair loops, and rendering corruption. Produces severity-ranked findings with code-first fixes. Use for the BosskuAI pipeline itself (persona injection, model fallback, learning admission) or any agent/LLM-powered feature.
+description: "12-layer diagnostic for agent/LLM apps — wrapper regression, memory pollution, tool discipline, hidden repair loops. Severity-ranked findings with code-first fixes; covers the BosskuAI pipeline itself."
 license: MIT
 metadata:
   author: affaan-m/ECC (origin oh-my-agent-check)

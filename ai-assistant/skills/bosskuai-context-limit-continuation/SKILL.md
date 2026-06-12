@@ -1,6 +1,6 @@
 ---
 name: bosskuai-context-limit-continuation
-description: Use this when a task risks hitting model context, token limits, or tight usage/quota mid-process. Stop cleanly, write progress into ai-assistant/memory/active-continuation.md, pair with bosskuai-ai-model-selection to recommend which model should complete the remaining work, and tell the user explicitly to open a fresh chat/session with that model. Also contains token-budget guidance for keeping agent sessions efficient.
+description: "Use when context/token/quota limits threaten mid-task — write progress to ai-assistant/memory/active-continuation.md, pick the completion model with bosskuai-ai-model-selection, and tell the user to resume in a fresh session."
 ---
 
 # BosskuAI Context-Limit Continuation

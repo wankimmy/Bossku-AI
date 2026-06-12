@@ -1,6 +1,6 @@
 ---
 name: bosskuai-cross-model-escalation
-description: Use this when the current model is stuck, low-confidence, missing a capability, or repeating failed attempts. It defines how to bring in another model, tool surface, or session for scoped assistance across Claude, Codex, and Cursor without losing ownership of the task.
+description: "Use when the current model is stuck, low-confidence, or repeating failures — defines scoped escalation to another model, tool surface, or session across Claude, Codex, and Cursor without losing task ownership."
 ---
 
 # BosskuAI Cross-Model Escalation

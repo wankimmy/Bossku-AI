@@ -5,7 +5,7 @@
   },
   "metadata": {
     "description": "BosskuAI plugins for Claude Code.",
-    "version": "1.0.0"
+    "version": "1.13.0"
   },
   "plugins": [
     {
@@ -14,8 +14,8 @@
         "source": "url",
         "url": "https://github.com/bossku-ai/Bossku-AI.git"
       },
-      "description": "AI cofounder plugin for Claude Code with reusable skills, agents, and memory-first workflows.",
-      "version": "1.0.0",
+      "description": "AI cofounder plugin for Claude Code with reusable skills, agents, commands, hooks, and memory-first workflows.",
+      "version": "1.13.0",
       "author": {
         "name": "BosskuAI"
       },

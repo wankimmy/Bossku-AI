@@ -1,6 +1,6 @@
 ---
 name: bosskuai-engineering-principles
-description: Use this when starting any non-trivial coding work to apply the four engineering principles — Think Before Coding, Simplicity First, Surgical Changes, Goal-Driven Execution. Pairs with bosskuai-coding-best-practices (which covers code-quality detail) and bosskuai-rigorous-code-review (which audits the result).
+description: "Apply the four principles before non-trivial coding — Think Before Coding, Simplicity First, Surgical Changes, Goal-Driven Execution. Pairs with coding-best-practices and rigorous-code-review."
 ---
 
 # BosskuAI Engineering Principles
@@ -133,4 +133,4 @@ Do not invoke these principles as virtue-signaling. The signal that the principl
 - `../../references/playbooks/cofounder-decision-quality-playbook.md` — when-to-ASK and when-to-push-back rules align with principle 1.
 - `../../skills/bosskuai-coding-best-practices/SKILL.md` — code-quality detail under principle 2.
 - `../../skills/bosskuai-rigorous-code-review/SKILL.md` — review pass under principle 3.
-- `../../../.claude/commands/implement.md` — `/implement` slash command operationalizes principle 4 with author/reviewer separation.
+- `../../skills/bosskuai-engineering-delivery/SKILL.md` — plan → execute → review delivery flow operationalizes principle 4 with author/reviewer separation.

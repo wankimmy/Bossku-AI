@@ -1,6 +1,6 @@
 ---
 name: bosskuai-autonomous-loops
-description: "Patterns and architectures for autonomous agent loops — from simple sequential claude -p pipelines to RFC-driven multi-agent DAG systems. Use when designing how a loop should be ARCHITECTED (exit conditions, context bridging, merge coordination); use the loop-family skills (diagnose/tdd/ratchet/greptile) for the discipline INSIDE a loop."
+description: "Loop ARCHITECTURE patterns — sequential pipelines to RFC-driven DAGs — exit conditions, context bridging, merge coordination. Discipline inside an iteration belongs to the loop-family skills."
 license: MIT
 metadata:
   author: affaan-m/ECC

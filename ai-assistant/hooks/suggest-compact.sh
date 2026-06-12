@@ -12,7 +12,9 @@ source "$script_dir/common.sh"
 
 read_hook_input
 
-COUNTER_FILE="/tmp/bossku_edit_count"
+# Scope the counter to the session so counts don't leak across sessions/projects.
+session_id="$(printf '%s' "${HOOK_INPUT:-}" | sed -n 's/.*"session_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)"
+COUNTER_FILE="/tmp/bossku_edit_count_${session_id:-global}"
 
 # Read current count, default 0
 count=0

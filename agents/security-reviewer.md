@@ -2,7 +2,7 @@
 name: security-reviewer
 description: Security reviewer for auth, authorization, secrets, user data, uploads, dependencies, and deployment risk.
 tools: ["Read", "Grep", "Glob"]
-model: claude-opus-4.7
+model: opus
 ---
 
 # Security Reviewer Agent

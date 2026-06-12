@@ -1,6 +1,6 @@
 ---
 name: bosskuai-3d-web-development
-description: Use this for creating immersive 3D websites, WebGL experiences, Three.js/React Three Fiber scenes, scroll-driven 3D animations, GSAP-powered 3D motion, post-processing effects, Spline integrations, interactive particle systems, and Awwwards-quality 3D web experiences.
+description: "Immersive 3D web work — Three.js/React Three Fiber, WebGL, scroll-driven 3D, GSAP 3D motion, post-processing, Spline, particle systems, Awwwards-level experiences."
 ---
 
 # BosskuAI 3D Web Development Expert

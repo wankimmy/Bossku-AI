@@ -13,7 +13,7 @@ This is the honest architecture. "Every skill is an agent, cofounder is the orch
 | Capability | Claude Code | Codex CLI | Cursor |
 |---|---|---|---|
 | Single-call skill loading | ✅ via skill-index.json | ✅ via AGENTS.md | ✅ via .cursor/rules |
-| Slash commands | ✅ `.claude/commands/*.md` | ❌ (use prompt patterns) | ❌ (use prompt patterns) |
+| Slash commands | ✅ `commands/*.md` (plugin-shipped) | ❌ (use prompt patterns) | ❌ (use prompt patterns) |
 | Sub-agent dispatch (Task tool) | ✅ native | ⚠️ workaround via shell + API | ❌ not supported |
 | Parallel sub-agent execution | ✅ | ⚠️ user-implemented | ❌ |
 | Review/critique as separate call | ✅ via `/decide`, `/implement` | ⚠️ manual prompt chaining | ❌ |

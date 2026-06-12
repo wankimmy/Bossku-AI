@@ -1,6 +1,6 @@
 ---
 name: bosskuai-investor-prep
-description: Use this skill when preparing investor-facing materials — pitch decks, one-pagers, investor memos, financial models, or accelerator applications. Packages the business story for external stakeholders with consistent, defensible numbers.
+description: "Investor-facing materials — pitch decks, one-pagers, investor memos, financial models, accelerator applications — packaged with consistent, defensible numbers."
 ---
 
 # BosskuAI Investor Prep

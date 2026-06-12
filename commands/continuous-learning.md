@@ -1,5 +1,7 @@
 # BosskuAI Continuous Learning Command
 
+> Path note: `ai-assistant/...`, `AGENTS.md`, and `skill-index.json` resolve against the **BosskuAI home** announced in the `[BosskuAI]` session-start context (when absent, use this plugin/repo root).
+
 Use this command after meaningful work, reviews, incidents, or repeated observations to convert lessons into durable repo improvements.
 
 ## Meaningfulness gate (run first — binary)

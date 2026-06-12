@@ -1,6 +1,6 @@
 ---
 name: bosskuai-social-content-calendar
-description: Deprecated alias skill. Use this only to route to `bosskuai-marketing-growth`, which now includes social content calendar planning.
+description: "Deprecated alias — route to bosskuai-marketing-growth."
 ---
 
 # BosskuAI Social Content Calendar (Merged)

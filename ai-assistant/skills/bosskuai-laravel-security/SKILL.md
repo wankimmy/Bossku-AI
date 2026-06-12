@@ -1,6 +1,6 @@
 ---
 name: bosskuai-laravel-security
-description: Laravel security best practices — authentication, authorization, Eloquent safety, CSRF, XSS prevention, API security, and secure deployment configurations. Use for security review or hardening of any Laravel codebase, including the BosskuAI app/ backend.
+description: "Laravel security review and hardening — auth, authorization, Eloquent safety, CSRF/XSS, API security, production config. Any Laravel codebase, including the BosskuAI app/ backend."
 license: MIT
 metadata:
   author: affaan-m/ECC

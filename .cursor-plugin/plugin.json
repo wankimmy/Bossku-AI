@@ -2,7 +2,7 @@
   "name": "bossku-ai",
   "displayName": "BosskuAI",
   "description": "AI cofounder plugin with reusable skills, subagents, and memory-first workflows.",
-  "version": "1.0.0",
+  "version": "1.13.0",
   "author": {
     "name": "BosskuAI",
     "url": "https://github.com/bossku-ai"

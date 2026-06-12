@@ -1,6 +1,6 @@
 ---
 name: bosskuai-subagent-delegation
-description: Use this to automatically delegate heavy, parallelizable, or risky tasks to subagents instead of running them serially in the main session. Covers auto-trigger decision logic and tool-specific patterns for Claude Code (Agent tool + worktree isolation), Cursor (parallel Composer tabs), and Codex (parallel runs).
+description: "Delegate heavy, parallelizable, or risky work to subagents — auto-trigger logic plus patterns for Claude Code (Agent tool + worktrees), Cursor (parallel tabs), and Codex (parallel runs)."
 ---
 
 # BosskuAI Subagent Delegation

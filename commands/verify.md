@@ -1,5 +1,7 @@
 # BosskuAI Verify Command
 
+> Path note: `ai-assistant/...`, `AGENTS.md`, and `skill-index.json` resolve against the **BosskuAI home** announced in the `[BosskuAI]` session-start context (when absent, use this plugin/repo root).
+
 Use this command after implementation, refactoring, or review work to validate the current state before handoff.
 
 ## Intent

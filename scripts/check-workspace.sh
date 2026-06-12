@@ -39,7 +39,7 @@ else
   [[ "$profile" == "growth" || "$profile" == "full" ]] && skills+=("${growth_skills[@]}")
   [[ "$profile" == "design" || "$profile" == "full" ]] && skills+=("${design_skills[@]}")
   if [[ "$profile" == "full" ]]; then
-    required+=(agents .claude/commands/plan.md .claude/settings.json .claude-plugin/plugin.json)
+    required+=(agents commands/plan.md hooks/hooks.json .claude/settings.json .claude-plugin/plugin.json)
   fi
   for s in "${skills[@]}"; do required+=("ai-assistant/skills/$s/SKILL.md"); done
 fi

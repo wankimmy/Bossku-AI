@@ -2,7 +2,7 @@
 name: database-reviewer
 description: Reviews schema design, migrations, queries, and indexes before they land — rollback safety, data-loss prevention, tenant scoping, and query performance.
 tools: ["Read", "Grep", "Glob", "Bash"]
-model: review
+model: opus
 ---
 
 # Database Reviewer Agent

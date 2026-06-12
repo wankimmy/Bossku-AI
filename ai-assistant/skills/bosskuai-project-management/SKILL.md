@@ -1,6 +1,6 @@
 ---
 name: bosskuai-project-management
-description: Deprecated alias skill. Use this only to route to `bosskuai-planning-execution`, which now includes planning plus delivery-management workflows.
+description: "Deprecated alias — route to bosskuai-planning-execution."
 ---
 
 # BosskuAI Project Management (Merged)

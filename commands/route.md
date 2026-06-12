@@ -1,5 +1,7 @@
 # /route — Mandatory Task-Start Ritual
 
+> Path note: `ai-assistant/...`, `AGENTS.md`, and `skill-index.json` resolve against the **BosskuAI home** announced in the `[BosskuAI]` session-start context (when absent, use this plugin/repo root).
+
 Run before any non-trivial task. Do not plan or execute before this completes.
 
 ## Steps

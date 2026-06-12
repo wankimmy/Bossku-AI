@@ -1,5 +1,7 @@
 # BosskuAI Investor Prep
 
+> Path note: `ai-assistant/...`, `AGENTS.md`, and `skill-index.json` resolve against the **BosskuAI home** announced in the `[BosskuAI]` session-start context (when absent, use this plugin/repo root).
+
 Activate the `bosskuai-investor-prep` skill to build or review fundraising materials.
 
 ## Intent

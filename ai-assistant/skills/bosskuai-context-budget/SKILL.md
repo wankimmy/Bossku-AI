@@ -1,6 +1,6 @@
 ---
 name: bosskuai-context-budget
-description: Audits context window consumption across agents, skills, MCP servers, rules, and instruction files. Identifies bloat, redundant components, and produces prioritized token-savings recommendations. For BosskuAI, also covers runtime persona injection cost (runtime-core blocks).
+description: "Audit context-window cost across agents, skills, MCP, rules, and runtime persona injection; output ranked token-savings actions."
 license: MIT
 metadata:
   author: affaan-m/ECC

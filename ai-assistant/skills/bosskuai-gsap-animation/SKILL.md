@@ -1,6 +1,6 @@
 ---
 name: bosskuai-gsap-animation
-description: Use this for GSAP animation work, including timelines, ScrollTrigger, responsive matchMedia motion, React useGSAP/context cleanup, SplitText/Flip-style interactions, performance-safe UI animation, and coordinating GSAP with Lenis smooth scroll.
+description: "GSAP animation — timelines, ScrollTrigger, responsive matchMedia, React useGSAP/context cleanup, SplitText/Flip interactions, performance-safe motion, Lenis smooth-scroll coordination."
 ---
 
 # BosskuAI GSAP Animation

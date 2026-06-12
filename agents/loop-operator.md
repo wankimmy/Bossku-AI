@@ -2,7 +2,7 @@
 name: loop-operator
 description: Designs and drives autonomous multi-iteration loops — exit conditions, context bridging, quality gates, and merge coordination — without losing ownership of the outcome.
 tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob"]
-model: reasoning
+model: opus
 ---
 
 # Loop Operator Agent

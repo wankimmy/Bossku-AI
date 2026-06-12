@@ -1,6 +1,6 @@
 ---
 name: bosskuai-agent-introspection
-description: Structured self-debugging workflow for AI agent failures using capture, diagnosis, contained recovery, and introspection reports. Use when an agent run loops, burns tokens without progress, or drifts from the task — including BosskuAI pipeline runs that return empty or degraded results.
+description: "Self-debugging for agent failures — capture, diagnose, contained recovery, report. Use when an agent run loops, burns tokens, drifts, or returns empty/degraded results."
 license: MIT
 metadata:
   author: affaan-m/ECC

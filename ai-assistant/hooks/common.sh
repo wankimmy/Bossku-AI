@@ -10,15 +10,41 @@ read_hook_input() {
   fi
 }
 
+# Intentionally a no-op. Hook stdin must NOT be echoed back: on context-injecting
+# events (SessionStart/UserPromptSubmit) stdout becomes model context, and on all
+# events it is at best noise. Kept so existing scripts stay call-compatible.
 write_hook_output() {
-  if [[ -n "${HOOK_INPUT:-}" ]]; then
-    printf '%s' "$HOOK_INPUT"
-  fi
+  :
 }
 
 resolve_repo_root() {
   local candidate="${1:-.}"
   (cd "$candidate" && pwd)
+}
+
+# Resolve the BosskuAI home (workspace layer with ai-assistant/memory) so hooks
+# work from any project, not just the Bossku-AI repo itself. Order:
+#   1. $BOSSKU_HOME when it points at a valid workspace layer
+#   2. the current project, when it carries its own ai-assistant/memory
+#   3. a sibling Bossku-AI checkout next to the current project
+#   4. the plugin/checkout root these hooks ship in (read-only fallback)
+resolve_bossku_home() {
+  local project="${CLAUDE_PROJECT_DIR:-$PWD}"
+  if [[ -n "${BOSSKU_HOME:-}" && -d "${BOSSKU_HOME}/ai-assistant/memory" ]]; then
+    echo "$BOSSKU_HOME"
+    return
+  fi
+  if [[ -d "$project/ai-assistant/memory" ]]; then
+    echo "$project"
+    return
+  fi
+  local sibling
+  sibling="$(dirname "$project")/Bossku-AI"
+  if [[ -d "$sibling/ai-assistant/memory" ]]; then
+    echo "$sibling"
+    return
+  fi
+  (cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 }
 
 git_changed_files_summary() {

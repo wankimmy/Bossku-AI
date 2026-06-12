@@ -1,6 +1,6 @@
 ---
 name: bosskuai-root-cause-investigation
-description: Deprecated alias skill. Use this only to route to `bosskuai-bug-finding`, which now includes deep root-cause investigation workflows with runtime evidence.
+description: "Deprecated alias — route to bosskuai-bug-finding."
 ---
 
 # BosskuAI Root Cause Investigation (Merged)

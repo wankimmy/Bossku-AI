@@ -1,8 +1,8 @@
 ---
 name: planner
 description: Planning specialist for complex features, refactors, and architecture decisions touching multiple files or introducing new patterns.
-tools: ["Read", "Grep", "Glob", "memory", "docs_lookup", "log"]
-model: reasoning
+tools: ["Read", "Grep", "Glob"]
+model: opus
 ---
 
 # Planner Agent

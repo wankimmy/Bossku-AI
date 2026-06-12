@@ -1,6 +1,6 @@
 ---
 name: bosskuai-diagnose-loop
-description: Disciplined diagnosis loop for hard bugs and performance regressions. Reproduce → minimise → hypothesise → instrument → fix → regression-test. Use when user says "diagnose this" / "debug this", reports a bug, says something is broken/throwing/failing, or describes a performance regression.
+description: "Diagnosis loop for hard bugs and perf regressions — reproduce, minimise, hypothesise, instrument, fix, regression-test. Triggers: 'diagnose/debug this', bug reports, broken/throwing/failing, perf regressions."
 ---
 
 # Diagnose

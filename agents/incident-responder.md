@@ -1,8 +1,8 @@
 ---
 name: incident-responder
 description: Active incident triage and coordination — severity, mitigation before root cause, timeline reconstruction, and blameless postmortem with learning capture.
-tools: ["Read", "Grep", "Glob", "Bash", "log"]
-model: reasoning
+tools: ["Read", "Grep", "Glob", "Bash"]
+model: opus
 ---
 
 # Incident Responder Agent

@@ -1,6 +1,6 @@
 ---
 name: bosskuai-council
-description: Convene a four-voice council (Architect, Skeptic, Pragmatist, Critic) for ambiguous decisions, tradeoffs, and go/no-go calls. Use when multiple valid paths exist and you need structured disagreement before choosing — product bets, ship-now-vs-hold, scope cuts, architecture forks.
+description: "Four-voice council (Architect, Skeptic, Pragmatist, Critic) for ambiguous tradeoffs and go/no-go calls — product bets, scope cuts, architecture forks — when multiple credible paths need structured disagreement."
 license: MIT
 metadata:
   author: affaan-m/ECC

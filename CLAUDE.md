@@ -37,7 +37,7 @@ Trivial tasks may skip the phase split (still show the indicator).
 - Use `bosskuai-permanent-memory-orchestration` when the task involves memory, vector DB, model routing, or cross-tool context.
 - Ask clarification questions before broad multi-file changes when scope is unclear.
 - Use normal prose when clarity matters; terse output is fine when the task is straightforward.
-- Deep multi-agent flows: see [`.claude/commands/`](.claude/commands/) and [`docs/multi-agent-architecture.md`](docs/multi-agent-architecture.md).
+- Deep multi-agent flows: see [`commands/`](commands/) and [`docs/multi-agent-architecture.md`](docs/multi-agent-architecture.md).
 
 ## Shared memory
 
