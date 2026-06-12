@@ -224,3 +224,22 @@ ECC integration v1.11.0 shipped: 7 skills ported from /Users/safwanyacob/Documen
 ```text
 v1.12.0 shipped: ported final 2 ECC skills + agent layer expansion. bosskuai-autonomous-loops (loop ARCHITECTURE catalogue: sequential claude -p pipeline, infinite agentic loop, continuous PR loop, de-sloppify, Ralphinho RFC-DAG; NanoClaw section replaced with BosskuAI runtime revise loop docs: max_revision_rounds default 1, ExecutorStuckDetector, near-empty fallback warning). bosskuai-prompt-optimizer (advisory-only prompt diagnosis, 6-phase pipeline remapped to bosskuai skill/agent roster, Laravel example). 5 new editor-mode agents in agents/: loop-operator (exit conditions mandatory, context bridge, stall detection, burn guard), performance-optimizer (baseline->profile->one-variable->re-measure ratchet, flat=revert), database-reviewer (down() verified, migrate --pretend SQL read, tenant-scope blocking finding, EXPLAIN evidence), code-simplifier (de-sloppify after green in separate context from author, 3-pass cap, behavior-preserving only), incident-responder (stabilize->verify->prevent, mitigation cap 3, closed only when prevention items exist). Core agents enhanced: orchestrator has Flows table (10 task-shape->chain->loop-owner routes) + council/introspection in runtime-core; planner has DAG decomposition rules + tier table (trivial/small/medium/large pipeline depth); executor: introspection-on-cap, de-sloppify handoff, laravel-tdd/verification wiring; security-reviewer: +laravel-security, prompt-injection-defense, tenant-isolation; auditor: +agent-architecture-audit for pipeline diffs, laravel-verification gate, database-reviewer delegation. skill-index v1.12.0 = 105 skills, plugin.json 1.3.0. All validators PASS, evals 18/18+8/8+3/3+4/4 unchanged. NOTE: only pipeline agents carry runtime-core blocks; the 5 new agents are editor-layer only (no DB persona, no sync impact). Still uncommitted.
 ```
+## 2026-06-10 — claude — remember
+
+- **Tool:** claude
+- **Event:** remember
+- **Source:** manual-remember
+- **Kind:** learning
+- **Captured at:** 2026-06-10T18:58:51+00:00
+
+```text
+Desktop 3.0.8 released + CI made green. 5 commits pushed to main: (1) executor quality batch, (2) ECC v1.11-1.12 integration, (3) release: desktop 3.0.8 bump + tag v3.0.8 (Desktop Release workflow published BosskuAI-Setup-3.0.8.exe + latest.yml auto-update feed, SUCCESS), (4) ci: php-tests.yml now does cp .env.example .env && php artisan key:generate — CI previously had no APP_KEY so almost the whole suite errored MissingAppKeyException since before v3.0.7, (5) test: fixed the 3 known-failing tests — AnthropicProviderTest expects system as cache_control ephemeral block (matches buildPayload prompt-caching), ApiAuthMiddlewareTest health endpoint asserts only not-401/403 (endpoint does live Ollama round-trip, 503 legit without Ollama), ProjectFilesControllerTest asserts 'Path denied' prefix (exact message is realpath/env dependent). Suite now 443 tests 0 failures locally AND in CI (PHP Tests green). Release convention confirmed: desktop/package.json version drives vX.Y.Z tag; npm version X.Y.Z --no-git-tag-version in desktop/; tag push triggers .github/workflows/desktop-release.yml.
+```
+
+## 2026-06-12 — v1.13.0 cross-repo portability + token optimization (claude)
+
+- Plugin now carries the full harness: `commands/` (moved from `.claude/commands/`), `hooks/hooks.json` (`${CLAUDE_PLUGIN_ROOT}`), curated 24-agent array (runtime personas excluded from editor). Commit `518fdb3`, local only.
+- Rules now travel: SessionStart hook `session-start-context.sh` prints contract + memory home to STDOUT (context injection) — the old UserPromptSubmit reminder wrote to stderr and never reached the model.
+- `resolve_bossku_home()`: $BOSSKU_HOME → project ai-assistant/memory → sibling Bossku-AI → plugin root; plugin cache never used as memory home.
+- Skill description load trimmed 7.3KB→4.6KB across 25 skills (~680 tokens/session). Full description load for 105 skills was 22.3KB — next candidate tier is the ~25 skills at 200–250 chars.
+- Lesson: installed plugin cache was a frozen Apr-20 v1.0.0 (66 skills) because plugin.json version never changed — ALWAYS bump `.claude-plugin/plugin.json` version when skills/agents change, then update via /plugin.
