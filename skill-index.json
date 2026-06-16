@@ -22,7 +22,9 @@
       "bosskuai-human-output",
       "bosskuai-continuous-learning",
       "bosskuai-context-limit-continuation",
-      "bosskuai-ratchet-loop"
+      "bosskuai-ratchet-loop",
+      "bosskuai-ponytail",
+      "bosskuai-taste"
     ],
     "manual_only_skill_ids": [
       "cofounder",
@@ -188,6 +190,35 @@
       ]
     },
     {
+      "id": "bosskuai-ponytail",
+      "cluster": "engineering",
+      "status": "active",
+      "triggers": [
+        "ponytail",
+        "be lazy",
+        "lazy mode",
+        "simplest solution",
+        "minimal solution",
+        "yagni",
+        "do less",
+        "shortest path",
+        "over-engineering",
+        "too much boilerplate"
+      ],
+      "keywords": [
+        "ponytail",
+        "lazy senior dev",
+        "minimal",
+        "yagni",
+        "stdlib first",
+        "native platform feature",
+        "fewest files",
+        "no boilerplate",
+        "delete over add",
+        "one line"
+      ]
+    },
+    {
       "id": "bosskuai-human-output",
       "cluster": "writing",
       "status": "active",
@@ -313,6 +344,30 @@
         "delivery management",
         "dependencies",
         "RACI"
+      ]
+    },
+    {
+      "id": "bosskuai-recipes",
+      "cluster": "orchestration",
+      "status": "active",
+      "triggers": [
+        "recipe",
+        "make this repeatable",
+        "parameterize this workflow",
+        "reusable prompt",
+        "cookbook",
+        "saved workflow",
+        "run recipe"
+      ],
+      "keywords": [
+        "recipe",
+        "recipes",
+        "parameterized workflow",
+        "template",
+        "cookbook",
+        "reusable",
+        "shareable workflow",
+        "yaml workflow"
       ]
     },
     {
@@ -491,6 +546,37 @@
         "error state",
         "microcopy",
         "mobile-first"
+      ]
+    },
+    {
+      "id": "bosskuai-taste",
+      "cluster": "design",
+      "status": "active",
+      "triggers": [
+        "landing page",
+        "frontend",
+        "portfolio",
+        "redesign",
+        "ui",
+        "marketing site",
+        "make it look good",
+        "design this page",
+        "avoid ai slop",
+        "hero section",
+        "component"
+      ],
+      "keywords": [
+        "taste",
+        "anti-slop",
+        "frontend design",
+        "landing page",
+        "portfolio",
+        "ui",
+        "typography",
+        "layout",
+        "premium ui",
+        "not templated",
+        "design read"
       ]
     },
     {

@@ -6,7 +6,13 @@ use App\Http\Controllers\Api\AgentPersonaController;
 use App\Http\Controllers\Api\DataExplorerController;
 use App\Http\Controllers\Api\ApprovalController;
 use App\Http\Controllers\Api\BrainController;
+use App\Http\Controllers\Api\AssistantController;
 use App\Http\Controllers\Api\ChecklistController;
+use App\Http\Controllers\Api\CheckpointController;
+use App\Http\Controllers\Api\CronJobController;
+use App\Http\Controllers\Api\GraphController;
+use App\Http\Controllers\Api\ThreadController;
+use App\Http\Controllers\Api\WebhookController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\FeedbackController;
 use App\Http\Controllers\Api\KnowledgeGraphController;
@@ -24,6 +30,7 @@ use App\Http\Controllers\Api\ProjectFilesController;
 use App\Http\Controllers\Api\ProjectRegistryController;
 use App\Http\Controllers\Api\PluginController;
 use App\Http\Controllers\Api\ProviderController;
+use App\Http\Controllers\Api\RecipeController;
 use App\Http\Controllers\Api\AgentHookController;
 use App\Http\Controllers\Api\FeedbackReportController;
 use App\Http\Controllers\Api\ProviderCliController;
@@ -69,6 +76,7 @@ Route::middleware('bossku.api')->group(function () {
     Route::get('/runs/{id}/stream-events', [RunController::class, 'streamEvents']);
     Route::get('/runs/{id}/clarification', [RunController::class, 'clarification']);
     Route::get('/runs/{id}/approvals', [RunController::class, 'approvals']);
+    Route::get('/runs/{id}/checkpoints', [CheckpointController::class, 'index']);
 
     Route::get('/runs/{id}/timeline', [RunController::class, 'timeline']);
     Route::get('/runs/{id}/messages', [RunController::class, 'messages']);
@@ -95,6 +103,7 @@ Route::middleware('bossku.api')->group(function () {
 
     Route::post('/runs/{runId}/pause', [RunActionController::class, 'pause']);
     Route::post('/runs/{runId}/resume', [RunActionController::class, 'resume']);
+    Route::post('/runs/{id}/fork', [CheckpointController::class, 'fork']);
     Route::post('/runs/{runId}/steps/{stepId}/rerun', [RunActionController::class, 'rerunStep']);
     Route::post('/runs/{runId}/create-skill', [RunActionController::class, 'createSkill']);
     Route::post('/runs/{runId}/create-specialist-agent', [RunActionController::class, 'createSpecialistAgent']);
@@ -259,4 +268,36 @@ Route::get('/approvals', [ApprovalController::class, 'index']);
 Route::get('/approvals/{id}', [ApprovalController::class, 'show']);
 Route::post('/approvals/{id}/approve', [ApprovalController::class, 'approve']);
 Route::post('/approvals/{id}/reject', [ApprovalController::class, 'reject']);
+
+// ── Kernel platform (assistants, threads, crons, webhooks, graphs) ────────────
+Route::get('/graphs', [GraphController::class, 'index']);
+Route::get('/graphs/{name}', [GraphController::class, 'show']);
+
+Route::get('/assistants', [AssistantController::class, 'index']);
+Route::post('/assistants', [AssistantController::class, 'store']);
+Route::get('/assistants/{id}', [AssistantController::class, 'show']);
+Route::patch('/assistants/{id}', [AssistantController::class, 'update']);
+Route::delete('/assistants/{id}', [AssistantController::class, 'destroy']);
+
+Route::get('/threads', [ThreadController::class, 'index']);
+Route::post('/threads', [ThreadController::class, 'store']);
+Route::get('/threads/{id}', [ThreadController::class, 'show']);
+Route::delete('/threads/{id}', [ThreadController::class, 'destroy']);
+
+Route::get('/cron-jobs', [CronJobController::class, 'index']);
+Route::post('/cron-jobs', [CronJobController::class, 'store']);
+Route::get('/cron-jobs/{id}', [CronJobController::class, 'show']);
+Route::patch('/cron-jobs/{id}', [CronJobController::class, 'update']);
+Route::delete('/cron-jobs/{id}', [CronJobController::class, 'destroy']);
+
+Route::get('/webhooks', [WebhookController::class, 'index']);
+Route::post('/webhooks', [WebhookController::class, 'store']);
+Route::patch('/webhooks/{id}', [WebhookController::class, 'update']);
+Route::delete('/webhooks/{id}', [WebhookController::class, 'destroy']);
+
+// ── Recipes (parameterized shareable workflows) ───────────────────────────────
+Route::get('/recipes', [RecipeController::class, 'index']);
+Route::get('/recipes/{slug}', [RecipeController::class, 'show']);
+Route::post('/recipes/{slug}/preview', [RecipeController::class, 'preview']);
+Route::post('/recipes/{slug}/run', [RecipeController::class, 'run']);
 });

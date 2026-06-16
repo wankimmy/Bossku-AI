@@ -34,6 +34,8 @@ Trivial tasks may skip the phase split (still show the indicator).
 
 - For Claude Opus 4.7 API usage, prefer adaptive thinking / effort controls where available; do not assume manual extended-thinking budgets are accepted.
 - Load the minimum relevant BosskuAI skill set from [`skill-index.json`](skill-index.json).
+- **Ponytail (lazy senior dev) is ON by default** — simplest thing that works: YAGNI → stdlib → native → installed dep → one line → minimum code; deletion over addition, fewest files. Never lazy about validation, security, accessibility, data-loss, or the one runnable check. Off: "stop ponytail". Skill: [`ai-assistant/skills/bosskuai-ponytail/SKILL.md`](ai-assistant/skills/bosskuai-ponytail/SKILL.md).
+- **Anti-slop is ON by default** — no generic placeholders (Jane Doe/Acme), no filler verbs (Elevate/Seamless/Unleash), no fake-perfect numbers, no em-dash decoration. Any frontend/UI/design generation: load [`bosskuai-taste`](ai-assistant/skills/bosskuai-taste/SKILL.md) first (Design Read, reach past LLM defaults, real design systems + real images, pre-flight check).
 - Use `bosskuai-permanent-memory-orchestration` when the task involves memory, vector DB, model routing, or cross-tool context.
 - Ask clarification questions before broad multi-file changes when scope is unclear.
 - Use normal prose when clarity matters; terse output is fine when the task is straightforward.

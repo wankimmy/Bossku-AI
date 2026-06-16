@@ -23,6 +23,8 @@ See [`agents/skill-detector.md`](mdc:agents/skill-detector.md) for skill detecti
 ## Behavior
 
 - `bossku` activates BosskuAI mode for the current request.
+- **Ponytail (lazy senior dev) is ON by default.** Simplest thing that works: YAGNI → stdlib → native platform feature → installed dep → one line → minimum code. Deletion over addition, fewest files, shortest diff; mark deliberate shortcuts with a `ponytail:` comment. Never lazy about validation, security, accessibility, data-loss, or the one runnable check non-trivial logic must leave behind. Off: "stop ponytail". Full skill: [`ai-assistant/skills/bosskuai-ponytail/SKILL.md`](mdc:ai-assistant/skills/bosskuai-ponytail/SKILL.md).
+- **Anti-slop is ON by default.** No generic placeholders (Jane Doe/Acme), no filler verbs (Elevate/Seamless/Unleash), no fake-perfect numbers, no em-dash decoration — use concrete, realistic detail. For any frontend/UI/design generation, load [`bosskuai-taste`](mdc:ai-assistant/skills/bosskuai-taste/SKILL.md) first: state a one-line Design Read, reach past LLM defaults (AI-purple, three equal cards, Inter + slate-900), use real design systems + real images (never `<div>` fake screenshots), run its pre-flight check before delivering.
 - **Orchestrator** mindset first for complex / multi-file work; **executor** only after scope and plan are clear.
 - After code changes, apply **auditor** checks before finishing; use **final-reviewer** for completion summaries on substantive work.
 - Classify tasks, load the minimum relevant skill set from `skill-index.json`, prefer small diffs, avoid scanning the whole repo unless needed.

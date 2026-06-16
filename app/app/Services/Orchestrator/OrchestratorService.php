@@ -80,7 +80,44 @@ class OrchestratorService
         protected RunExecutionContext $runExecution,
         protected WorktreeManager $worktrees,
         protected ExecutorPatchPreflight $patchPreflight,
+        protected ?\App\Services\Kernel\Pipeline\KernelPipelineCoordinator $kernelCoordinator = null,
     ) {}
+
+    /**
+     * BOSSKU_KERNEL=graph dispatch. Runs the pipeline through the graph kernel
+     * (durable checkpoints, resume, interrupts) instead of the legacy in-method
+     * pipeline. Builds a minimal PipelineContext from the classifier; richer
+     * context assembly (skills, rules, preflight) is the eval-gated finalization.
+     * Default-off: only reachable when the flag is set and the coordinator is wired.
+     *
+     * @param  list<array{role: string, content: string}>  $conversation
+     * @param  array<string, mixed>  $options
+     * @return array<string, mixed>
+     */
+    protected function dispatchToKernel(string $userPrompt, ?callable $emit, array $conversation, array $options): array
+    {
+        $run = Run::query()->create([
+            'prompt' => $userPrompt,
+            'status' => 'running',
+            'run_kind' => is_string($options['run_kind'] ?? null) ? $options['run_kind'] : 'standard',
+            'metadata' => ['engine' => 'graph', 'conversation_turns' => count($conversation)],
+        ]);
+
+        $classified = $this->promptRouteClassifier->classify($userPrompt);
+        $route = is_array($classified['route'] ?? null) ? $classified['route'] : [];
+        $workflow = (string) ($route['workflow'] ?? config('bossku.default_workflow', 'orchestrator_executor'));
+
+        $context = new \App\Services\Kernel\Pipeline\PipelineContext(
+            prompt: $userPrompt,
+            workflow: $workflow,
+            modelRoute: $route,
+            routerContext: is_array($classified['router_meta'] ?? null) ? $classified['router_meta'] : [],
+            conversation: $conversation,
+            runId: (string) $run->id,
+        );
+
+        return $this->kernelCoordinator->run($run, $context, $emit);
+    }
 
     /**
      * @param  callable(array<string,mixed>): void|null  $emit
@@ -96,6 +133,16 @@ class OrchestratorService
         $tRun = microtime(true);
         $tokenAcc = 0;
         $userPrompt = $prompt;
+
+        // BOSSKU_KERNEL=graph: route through the durable graph kernel instead of
+        // the legacy in-method pipeline. Default-off (flag legacy); opt-out per
+        // call with options['force_legacy'] = true.
+        if ($this->kernelCoordinator !== null
+            && \App\Services\Kernel\KernelMode::graph()
+            && ($options['force_legacy'] ?? false) !== true) {
+            return $this->dispatchToKernel($userPrompt, $emit, $conversation, $options);
+        }
+
         $prompt = $this->effectivePrompt($userPrompt, $conversation);
         $routingSeed = trim((string) ($options['routing_prompt'] ?? $userPrompt));
         $routingPrompt = $this->effectivePrompt($routingSeed !== '' ? $routingSeed : $userPrompt, $conversation);

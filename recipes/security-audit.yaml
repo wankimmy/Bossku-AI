@@ -1,0 +1,28 @@
+version: 1.0.0
+title: "Security Audit"
+description: "Adversarial security review of a path or the whole repo — OWASP, authz, secrets, injection, data-loss paths."
+workflow: orchestrator_executor_auditor_security_final_reviewer
+skills:
+  - bosskuai-cybersecurity-risk
+  - bosskuai-bug-finding
+parameters:
+  - key: target
+    input_type: string
+    requirement: optional
+    description: "Path, module, or glob to audit. Empty = whole repo."
+    default: "."
+  - key: depth
+    input_type: select
+    requirement: optional
+    description: "How hard to look."
+    default: "standard"
+    options: ["standard", "full"]
+prompt: |
+  Run a {{ depth }} security audit of: {{ target }}
+
+  Read the real code before claiming anything. For each finding report:
+  - severity (critical/high/medium/low), the file:line, the exploit path, and the smallest fix.
+  Cover at least: authn/authz boundaries, input validation at trust boundaries,
+  secret exposure, injection (SQL/command/template), unsafe deserialization,
+  SSRF/path traversal, and any data-loss path. Skip nothing on the critical list.
+  End with a ranked remediation plan. Do not weaken or skip the audit stage.

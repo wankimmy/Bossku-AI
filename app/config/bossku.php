@@ -129,6 +129,18 @@ return [
      */
     'default_workflow' => env('BOSSKU_DEFAULT_WORKFLOW', 'orchestrator_executor'),
     /**
+     * Execution engine for runs.
+     *   legacy — the existing OrchestratorService pipeline (default, unchanged).
+     *   graph  — the graph kernel (App\Services\Kernel): durable checkpoints,
+     *            resume-from-crash, time-travel, fan-out. Opt-in until the eval
+     *            suite is green on both engines and the default is flipped.
+     */
+    'kernel' => env('BOSSKU_KERNEL', 'legacy'),
+    /**
+     * Max supersteps a single graph run may take before bailing (loop guard).
+     */
+    'kernel_max_steps' => (int) env('BOSSKU_KERNEL_MAX_STEPS', 100),
+    /**
      * Pre-execution clarification: smart (default), always (every run), or off.
      */
     'orchestrator_clarification_mode' => env('BOSSKU_ORCHESTRATOR_CLARIFICATION_MODE', 'smart'),

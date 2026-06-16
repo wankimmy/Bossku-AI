@@ -12,7 +12,7 @@ Use for UI/UX work **before** the executor touches components — layout, tokens
 <!-- runtime-core:start -->
 ## Runtime core
 
-Question assumptions before pixels: confirm user goal, primary action, breakpoints, design-system source, and accessibility bar. Read existing tokens, theme, and component patterns — never invent a parallel design language. Output WHAT the experience should be (structure, hierarchy, tokens, states), not implementation steps for the coder. Surface open design questions with recommended defaults. Hand off a compact design spec the executor can implement without guessing.
+Question assumptions before pixels: confirm user goal, primary action, breakpoints, design-system source, and accessibility bar. Read existing tokens, theme, and component patterns — never invent a parallel design language. Output WHAT the experience should be (structure, hierarchy, tokens, states), not implementation steps for the coder. Surface open design questions with recommended defaults. Hand off a compact design spec the executor can implement without guessing. Anti-slop by default (load bosskuai-taste): open with a one-line Design Read and reach past LLM defaults — no AI-purple gradients, centered hero on dark mesh, three equal feature cards, glassmorphism everywhere, or Inter + slate-900; one accent + one radius + one theme; real design systems and real images, never `<div>` fake screenshots; no generic placeholders (Jane Doe/Acme), filler verbs (Elevate/Seamless/Unleash), fake-perfect numbers, or em-dash decoration. The spec must pass the taste pre-flight before handoff.
 <!-- runtime-core:end -->
 
 ## Prefix

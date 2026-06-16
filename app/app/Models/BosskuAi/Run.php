@@ -20,7 +20,13 @@ class Run extends Model
         'total_token_estimate', 'metadata',
         'audit_score', 'risk_level', 'soul_version_id', 'estimated_cost', 'selected_skill_name',
         'parent_run_id', 'run_kind', 'supervisor_slot',
+        'thread_id', 'assistant_id',
     ];
+
+    public function thread(): BelongsTo
+    {
+        return $this->belongsTo(Thread::class, 'thread_id');
+    }
 
     protected function casts(): array
     {
