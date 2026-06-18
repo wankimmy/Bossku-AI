@@ -4,6 +4,7 @@ namespace App\Services\Orchestrator;
 
 use App\Models\BosskuAi\Memory;
 use App\Models\BosskuAi\MemoryRunLink;
+use App\Models\BosskuAi\Project;
 use App\Services\BosskuAi\CodebaseIndexService;
 use App\Models\BosskuAi\Run;
 use App\Models\BosskuAi\RunStep;
@@ -16,6 +17,8 @@ use App\Services\BosskuAi\BosskuResponseIndicator;
 use App\Services\BosskuAi\ContextBudgetGuard;
 use App\Services\BosskuAi\RepoTaskDetector;
 use App\Services\BosskuAi\WorkflowRouteHelper;
+use App\Services\Company\StaffCouncilService;
+use App\Services\Company\WorkIssueService;
 use App\Services\BosskuAi\MemoryService;
 use App\Services\BosskuAi\ModelRoutingConfig;
 use App\Services\BosskuAi\PromptRouteClassifier;
@@ -62,6 +65,9 @@ class OrchestratorService
         protected ContextBudgetGuard $budgetGuard,
         protected ModelRoutingConfig $modelConfig,
         protected RunEventFactory $events,
+        protected PlanCouncilService $planCouncil,
+        protected StaffCouncilService $staffCouncil,
+        protected WorkIssueService $workIssues,
         protected ProjectPathResolver $paths,
         protected ProjectFileDiscovery $discovery,
         protected ProjectService $projects,
@@ -803,6 +809,24 @@ class OrchestratorService
             $modelsResolved['orchestrator'] = $orchModel;
 
             $this->emit($emit, $this->events->plannerDone($run, $plan, $orchModel, $planMs, $planTokens));
+            $plan = $this->applyPlanCouncilReview(
+                $run,
+                $plan,
+                $modelRoute,
+                $routerCtx,
+                $tokenAcc,
+                is_array($specialistAgentPayload) ? $specialistAgentPayload : [],
+                $emit,
+            );
+            $plan = $this->applyStaffCouncilReview(
+                $run,
+                $plan,
+                $modelRoute,
+                $routerCtx,
+                $tokenAcc,
+                $activeProject,
+                $emit,
+            );
         }
 
         // Surface planner's clarification questions as events and persist to run
@@ -1765,6 +1789,26 @@ class OrchestratorService
         $tok = $this->estimateTokens($body);
 
         $final = $body;
+        if ($kind === 'writer_only') {
+            $review = $this->staffCouncil->reviewContentDeliverable(
+                $run,
+                $prompt,
+                $body,
+                $modelRoute,
+                $this->paths->activeProject(),
+            );
+
+            if (($review['status'] ?? '') === 'completed') {
+                $reviewText = trim($this->formatStaffCouncilForFinal($review));
+                if ($reviewText !== '') {
+                    $final = trim($body)."\n\n## Staff council review\n".$reviewText;
+                }
+                $this->emit($emit, $this->events->staffCouncilDone($run, $review));
+            } elseif (($review['reason'] ?? '') !== 'short_direct_answer') {
+                $this->emit($emit, $this->events->staffCouncilSkipped($run, $review));
+            }
+            $tok = $this->estimateTokens($final);
+        }
 
         $this->logStep($run, 5, $kind, $modelsResolved['direct_answer'] ?? $modelsResolved['writer'] ?? null, null, null, 'success', $prompt, $prompt, $final, null, null, null, $ms, $tok, null, [
             'routing_decision' => $modelRoute,
@@ -1959,6 +2003,112 @@ class OrchestratorService
             'ready_to_proceed' => false,
             'summary' => 'Review the master plan before execution.',
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $plan
+     * @param  array<string, mixed>  $modelRoute
+     * @param  array<string, mixed>  $routerCtx
+     * @param  array<string, mixed>  $specialistAgentPayload
+     * @return array<string, mixed>
+     */
+    protected function applyPlanCouncilReview(
+        Run $run,
+        array $plan,
+        array $modelRoute,
+        array $routerCtx,
+        int $tokenAcc,
+        array $specialistAgentPayload,
+        ?callable $emit,
+    ): array {
+        $this->emit($emit, $this->events->councilReviewStarted($run));
+
+        $review = $this->planCouncil->review(
+            $plan,
+            $modelRoute,
+            $routerCtx,
+            $tokenAcc,
+            $specialistAgentPayload,
+        );
+        $plan['council_review'] = $review;
+
+        if (($review['status'] ?? '') === 'skipped') {
+            $this->emit($emit, $this->events->councilReviewSkipped($run, $review, $plan));
+        } else {
+            $this->emit($emit, $this->events->councilReviewDone($run, $review, $plan));
+        }
+
+        return $plan;
+    }
+
+    /**
+     * @param  array<string, mixed>  $plan
+     * @param  array<string, mixed>  $modelRoute
+     * @param  array<string, mixed>  $routerCtx
+     * @return array<string, mixed>
+     */
+    protected function applyStaffCouncilReview(
+        Run $run,
+        array $plan,
+        array $modelRoute,
+        array $routerCtx,
+        int $tokenAcc,
+        ?Project $project,
+        ?callable $emit,
+    ): array {
+        $this->emit($emit, $this->events->staffCouncilStarted($run));
+
+        $review = $this->staffCouncil->reviewPlan(
+            $run,
+            $plan,
+            $modelRoute,
+            $routerCtx,
+            $tokenAcc,
+            $project,
+        );
+        $plan['staff_council'] = $review;
+
+        if (($review['status'] ?? '') === 'skipped') {
+            $this->emit($emit, $this->events->staffCouncilSkipped($run, $review, $plan));
+        } else {
+            $this->emit($emit, $this->events->staffCouncilDone($run, $review, $plan));
+        }
+
+        return $plan;
+    }
+
+    /** @param array<string, mixed> $review */
+    protected function formatStaffCouncilForFinal(array $review): string
+    {
+        $lines = [];
+        $consensus = trim(StringCoercion::toString($review['consensus'] ?? null));
+        if ($consensus !== '') {
+            $lines[] = 'Consensus: '.$consensus;
+        }
+
+        $recommendations = is_array($review['staff_recommendations'] ?? null) ? $review['staff_recommendations'] : [];
+        if ($recommendations !== []) {
+            $lines[] = 'Recommendations:';
+            foreach (array_slice($recommendations, 0, 5) as $recommendation) {
+                $text = trim(StringCoercion::toString($recommendation));
+                if ($text !== '') {
+                    $lines[] = '- '.$text;
+                }
+            }
+        }
+
+        $stopConditions = is_array($review['stop_conditions'] ?? null) ? $review['stop_conditions'] : [];
+        if ($stopConditions !== []) {
+            $lines[] = 'Stop conditions:';
+            foreach (array_slice($stopConditions, 0, 5) as $condition) {
+                $text = trim(StringCoercion::toString($condition));
+                if ($text !== '') {
+                    $lines[] = '- '.$text;
+                }
+            }
+        }
+
+        return implode("\n", $lines);
     }
 
     /** @return list<string> */

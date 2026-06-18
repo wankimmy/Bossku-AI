@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\BosskuAi\Project;
 use App\Models\BosskuAi\Run;
 use App\Models\BosskuAi\Setting;
+use App\Models\BosskuAi\WorkIssue;
 use App\Services\BosskuAi\PromptRouteClassifier;
 use App\Services\BosskuAi\SkillRouterService;
 use App\Services\Learning\UserSelfLearningService;
@@ -45,6 +46,7 @@ class PlannerConfirmationFlowTest extends TestCase
         Setting::setValue('learning_auto_promote_enabled', '0');
         Setting::setValue('orchestrator_clarification_mode', 'smart');
         Setting::setValue('orchestrator_plan_confirmation_mode', 'always');
+        Setting::setValue('staff_auto_issue_generation_enabled', '1');
     }
 
     protected function tearDown(): void
@@ -79,12 +81,23 @@ class PlannerConfirmationFlowTest extends TestCase
 
         $types = array_column($events, 'type');
         $this->assertContains('planner_done', $types);
+        $this->assertContains('council_review_started', $types);
+        $this->assertContains('council_review_done', $types);
         $this->assertContains('clarification_requested', $types);
+        $this->assertLessThan(
+            array_search('clarification_requested', $types, true),
+            array_search('council_review_done', $types, true),
+        );
 
         $run = Run::query()->findOrFail((string) $result['run_id']);
         $this->assertSame('awaiting_input', $run->status);
         $this->assertSame('planner_review', $run->metadata['checkpoint']['stage'] ?? null);
         $this->assertSame('Master plan ready.', $run->metadata['checkpoint']['pipeline']['plan']['summary'] ?? null);
+        $this->assertSame('completed', $run->metadata['checkpoint']['pipeline']['plan']['council_review']['status'] ?? null);
+        $this->assertSame(
+            ['architect', 'skeptic', 'pragmatist', 'critic'],
+            array_column($run->metadata['checkpoint']['pipeline']['plan']['council_review']['voices'] ?? [], 'id'),
+        );
     }
 
     #[Test]
@@ -111,6 +124,7 @@ class PlannerConfirmationFlowTest extends TestCase
         $this->assertSame($run->id, $result['run_id'] ?? null);
         $this->assertSame('completed', Run::query()->findOrFail($run->id)->status);
         $this->assertContains('executor_step_started', array_column($events, 'type'));
+        $this->assertSame(1, WorkIssue::query()->where('run_id', $run->id)->count());
     }
 
     #[Test]
@@ -124,6 +138,8 @@ class PlannerConfirmationFlowTest extends TestCase
                 ->once()
                 ->withArgs(function (string $agentPrompt): bool {
                     $this->assertStringContainsString('## Plan feedback', $agentPrompt);
+                    $this->assertStringContainsString('## Prior council review', $agentPrompt);
+                    $this->assertStringContainsString('Strongest dissent: Keep scope narrow before executor starts.', $agentPrompt);
                     $this->assertStringNotContainsString('## Code review instructions', $agentPrompt);
 
                     return true;
@@ -148,6 +164,7 @@ class PlannerConfirmationFlowTest extends TestCase
         $this->assertSame('awaiting_input', $result['status'] ?? null);
         $this->assertSame('planner_review', $result['stage'] ?? null);
         $this->assertContains('planner_replan_requested', array_column($events, 'type'));
+        $this->assertSame(0, WorkIssue::query()->where('run_id', $run->id)->count());
     }
 
     private function mockExecutorRoute(): void
@@ -254,6 +271,19 @@ class PlannerConfirmationFlowTest extends TestCase
                 'owner' => 'executor',
                 'status' => 'pending',
             ]],
+            'council_review' => [
+                'status' => 'completed',
+                'voices' => [
+                    ['id' => 'architect', 'label' => 'Architect', 'position' => 'Plan is structurally safe.', 'reasoning' => []],
+                    ['id' => 'skeptic', 'label' => 'Skeptic', 'position' => 'Keep scope narrow before executor starts.', 'reasoning' => []],
+                    ['id' => 'pragmatist', 'label' => 'Pragmatist', 'position' => 'Reuse the existing file approval path.', 'reasoning' => []],
+                    ['id' => 'critic', 'label' => 'Critic', 'position' => 'Stop when revision budget is spent.', 'reasoning' => []],
+                ],
+                'consensus' => 'Use existing plan approval.',
+                'strongest_dissent' => 'Keep scope narrow before executor starts.',
+                'recommended_adjustments' => ['Confirm the plan before execution starts.'],
+                'stop_conditions' => ['Stop when revision rounds are exhausted.'],
+            ],
             'handoff_message' => 'Use the approved plan.',
         ], $overrides);
     }

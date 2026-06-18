@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\BrainController;
 use App\Http\Controllers\Api\AssistantController;
 use App\Http\Controllers\Api\ChecklistController;
 use App\Http\Controllers\Api\CheckpointController;
+use App\Http\Controllers\Api\CompanyStaffController;
 use App\Http\Controllers\Api\CronJobController;
 use App\Http\Controllers\Api\GraphController;
 use App\Http\Controllers\Api\ThreadController;
@@ -46,9 +47,11 @@ use App\Http\Controllers\Api\SkillCandidateController;
 use App\Http\Controllers\Api\SkillController;
 use App\Http\Controllers\Api\SkillsGraphController;
 use App\Http\Controllers\Api\SpecialistAgentController;
+use App\Http\Controllers\Api\StaffCouncilController;
 use App\Http\Controllers\Api\WorkspaceGraphController;
 use App\Http\Controllers\Api\SoulController;
 use App\Http\Controllers\Api\UsageController;
+use App\Http\Controllers\Api\WorkIssueController;
 use Illuminate\Support\Facades\Route;
 
 // Public (no API token) — health probe and OAuth browser redirects
@@ -127,6 +130,15 @@ Route::patch('/specialist-agents/{id}', [SpecialistAgentController::class, 'upda
 Route::post('/specialist-agents/{id}/approve', [SpecialistAgentController::class, 'approve']);
 Route::post('/specialist-agents/{id}/reject', [SpecialistAgentController::class, 'reject']);
 Route::post('/specialist-agents/{id}/archive', [SpecialistAgentController::class, 'archive']);
+
+// Company staff workspace
+Route::get('/company-staff', [CompanyStaffController::class, 'index']);
+Route::post('/company-staff/seed', [CompanyStaffController::class, 'seed']);
+Route::patch('/company-staff/{id}', [CompanyStaffController::class, 'update']);
+Route::get('/staff-council', [StaffCouncilController::class, 'index']);
+Route::get('/work-issues', [WorkIssueController::class, 'index']);
+Route::get('/work-issues/{id}', [WorkIssueController::class, 'show']);
+Route::patch('/work-issues/{id}', [WorkIssueController::class, 'update']);
 
 // ── Rules / Playbooks / Checklists ────────────────────────────────────────────
 Route::get('/rules', [RuleController::class, 'index']);

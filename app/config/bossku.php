@@ -150,6 +150,20 @@ return [
     'orchestrator_plan_confirmation_mode' => env('BOSSKU_ORCHESTRATOR_PLAN_CONFIRMATION_MODE', 'always'),
 
     /**
+     * Council Plan Review V1: deterministic Architect/Skeptic/Pragmatist/Critic
+     * synthesis after planning and before the user approves execution.
+     */
+    'council_plan_review_enabled' => env('BOSSKU_COUNCIL_PLAN_REVIEW_ENABLED', true),
+
+    /**
+     * Company Staff MVP: project-scoped CEO workspace with advisory staff
+     * council and approval-gated issue generation.
+     */
+    'company_staff_enabled' => env('BOSSKU_COMPANY_STAFF_ENABLED', true),
+    'staff_council_enabled' => env('BOSSKU_STAFF_COUNCIL_ENABLED', true),
+    'staff_auto_issue_generation_enabled' => env('BOSSKU_STAFF_AUTO_ISSUE_GENERATION_ENABLED', true),
+
+    /**
      * Obsidian vault sync — set these to write run prompts/outputs to your Obsidian vault.
      * Leave blank to disable (no error thrown, writes are silently skipped).
      * In Docker the vault is typically mounted at /workspace/Safwan-Obsidian-Vault via the

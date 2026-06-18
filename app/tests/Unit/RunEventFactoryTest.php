@@ -41,6 +41,69 @@ class RunEventFactoryTest extends TestCase
     }
 
     #[Test]
+    public function council_review_done_payload_contains_review_artifact(): void
+    {
+        $run = new Run([
+            'id' => '00000000-0000-0000-0000-000000000005',
+            'prompt' => 'Improve planner review',
+            'status' => 'running',
+            'metadata' => [],
+        ]);
+
+        $factory = new RunEventFactory;
+
+        $payload = $factory->councilReviewDone($run, [
+            'status' => 'completed',
+            'voices' => [
+                ['id' => 'skeptic', 'label' => 'Skeptic', 'position' => 'Keep V1 bounded.'],
+            ],
+            'consensus' => 'Reuse planner review.',
+            'strongest_dissent' => 'Keep V1 bounded.',
+            'recommended_adjustments' => ['Show dissent before approval.'],
+            'stop_conditions' => ['Stop after configured revision rounds.'],
+        ]);
+
+        $this->assertSame('council_review_done', $payload['type']);
+        $this->assertSame('orchestrator', $payload['agent']);
+        $this->assertSame('planner', $payload['to_agent']);
+        $this->assertSame('reasoning', $payload['model_role']);
+        $this->assertSame('Keep V1 bounded.', $payload['artifacts']['council_review']['strongest_dissent']);
+        $this->assertSame('Council review prepared 1 voice(s).', $payload['summary']);
+    }
+
+    #[Test]
+    public function staff_council_done_payload_contains_staff_artifacts(): void
+    {
+        $run = new Run([
+            'id' => '00000000-0000-0000-0000-000000000006',
+            'prompt' => 'Build company staff MVP',
+            'status' => 'running',
+            'metadata' => [],
+        ]);
+
+        $factory = new RunEventFactory;
+
+        $payload = $factory->staffCouncilDone($run, [
+            'status' => 'completed',
+            'voices' => [
+                ['role_slug' => 'tech-lead', 'display_name' => 'Tech Lead', 'position' => 'Keep implementation bounded.'],
+            ],
+            'staff_recommendations' => ['Create approved work issues from plan items.'],
+            'issue_breakdown' => [
+                ['plan_item_id' => 'plan-1', 'assignee_role_slug' => 'tech-lead', 'priority' => 'high'],
+            ],
+            'stop_conditions' => ['Wait for CEO approval before starting more work.'],
+        ]);
+
+        $this->assertSame('staff_council_done', $payload['type']);
+        $this->assertSame('orchestrator', $payload['agent']);
+        $this->assertSame('planner', $payload['to_agent']);
+        $this->assertSame('reasoning', $payload['model_role']);
+        $this->assertSame('tech-lead', $payload['artifacts']['staff_council']['voices'][0]['role_slug']);
+        $this->assertSame('Staff council prepared 1 voice(s).', $payload['summary']);
+    }
+
+    #[Test]
     public function metadata_shape_is_consistent_with_sse_payload(): void
     {
         $factory = new RunEventFactory;

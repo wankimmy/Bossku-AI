@@ -124,6 +124,47 @@ class SettingsApiTest extends TestCase
     }
 
     #[Test]
+    public function settings_exposes_and_updates_council_plan_review_toggle(): void
+    {
+        $this->getJson('/api/settings')
+            ->assertOk()
+            ->assertJsonPath('council_plan_review_enabled', '1');
+
+        $this->putJson('/api/settings', [
+            'council_plan_review_enabled' => '0',
+        ])
+            ->assertOk()
+            ->assertJsonPath('council_plan_review_enabled', '0');
+
+        $this->assertFalse(app(RuntimeSettings::class)->councilPlanReviewEnabled());
+    }
+
+    #[Test]
+    public function settings_exposes_and_updates_company_staff_toggles(): void
+    {
+        $this->getJson('/api/settings')
+            ->assertOk()
+            ->assertJsonPath('company_staff_enabled', '1')
+            ->assertJsonPath('staff_council_enabled', '1')
+            ->assertJsonPath('staff_auto_issue_generation_enabled', '1');
+
+        $this->putJson('/api/settings', [
+            'company_staff_enabled' => '0',
+            'staff_council_enabled' => '0',
+            'staff_auto_issue_generation_enabled' => '0',
+        ])
+            ->assertOk()
+            ->assertJsonPath('company_staff_enabled', '0')
+            ->assertJsonPath('staff_council_enabled', '0')
+            ->assertJsonPath('staff_auto_issue_generation_enabled', '0');
+
+        $settings = app(RuntimeSettings::class);
+        $this->assertFalse($settings->companyStaffEnabled());
+        $this->assertFalse($settings->staffCouncilEnabled());
+        $this->assertFalse($settings->staffAutoIssueGenerationEnabled());
+    }
+
+    #[Test]
     public function settings_rejects_invalid_plan_confirmation_mode(): void
     {
         $this->putJson('/api/settings', [

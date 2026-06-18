@@ -331,6 +331,38 @@ class RuntimeSettings
         ));
     }
 
+    public function councilPlanReviewEnabled(): bool
+    {
+        return $this->getBool(
+            'council_plan_review_enabled',
+            (bool) config('bossku.council_plan_review_enabled', true),
+        );
+    }
+
+    public function companyStaffEnabled(): bool
+    {
+        return $this->getBool(
+            'company_staff_enabled',
+            (bool) config('bossku.company_staff_enabled', true),
+        );
+    }
+
+    public function staffCouncilEnabled(): bool
+    {
+        return $this->getBool(
+            'staff_council_enabled',
+            (bool) config('bossku.staff_council_enabled', true),
+        );
+    }
+
+    public function staffAutoIssueGenerationEnabled(): bool
+    {
+        return $this->getBool(
+            'staff_auto_issue_generation_enabled',
+            (bool) config('bossku.staff_auto_issue_generation_enabled', true),
+        );
+    }
+
     public function memoryStorageEnabled(): bool
     {
         return $this->getBool('memory_storage_enabled', true);
@@ -492,6 +524,10 @@ class RuntimeSettings
             'executor_risk_aware_profile' => $this->executorRiskAwareProfile() ? '1' : '0',
             'executor_patch_precheck' => $this->executorPatchPrecheck() ? '1' : '0',
             'llm_truncation_retry_boost' => $this->llmTruncationRetryBoost() ? '1' : '0',
+            'council_plan_review_enabled' => $this->councilPlanReviewEnabled() ? '1' : '0',
+            'company_staff_enabled' => $this->companyStaffEnabled() ? '1' : '0',
+            'staff_council_enabled' => $this->staffCouncilEnabled() ? '1' : '0',
+            'staff_auto_issue_generation_enabled' => $this->staffAutoIssueGenerationEnabled() ? '1' : '0',
             'memory_storage_enabled' => $this->memoryStorageEnabled() ? '1' : '0',
             'memory_ollama_enabled' => $this->memoryOllamaEnabled() ? '1' : '0',
             'embedding_model' => $this->embeddingModel(),

@@ -1,0 +1,129 @@
+<script setup lang="ts">
+import type { CompanyStaffAgent } from '~/types/api'
+
+definePageMeta({ layout: 'default' })
+
+const api = useApi()
+const savingId = ref<string | null>(null)
+const { data, pending, refresh } = await useAsyncData<{ data?: CompanyStaffAgent[] } | CompanyStaffAgent[]>(
+  'company-staff',
+  () => api.get('/company-staff'),
+)
+
+const staff = computed<CompanyStaffAgent[]>(() => {
+  const raw = data.value
+  if (!raw) return []
+  return Array.isArray(raw) ? raw : raw.data ?? []
+})
+
+async function seedStaff() {
+  await api.post('/company-staff/seed')
+  await refresh()
+}
+
+async function patchStaff(agent: CompanyStaffAgent, payload: Partial<CompanyStaffAgent>) {
+  savingId.value = agent.id
+  try {
+    await api.patch(`/company-staff/${agent.id}`, payload)
+    await refresh()
+  }
+  finally {
+    savingId.value = null
+  }
+}
+</script>
+
+<template>
+  <div class="space-y-6">
+    <div class="flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <h1 class="text-xl font-bold text-zinc-100">
+          Staff
+        </h1>
+        <p class="mt-1 text-sm text-zinc-500">
+          Project-scoped company staff who advise the CEO workflow.
+        </p>
+      </div>
+      <button
+        type="button"
+        class="rounded-md border border-emerald-700/70 px-3 py-2 text-sm text-emerald-300 hover:bg-emerald-950"
+        @click="seedStaff"
+      >
+        Seed Product Team Plus
+      </button>
+    </div>
+
+    <div
+      v-if="pending"
+      class="text-sm text-zinc-500"
+    >
+      Loading staff...
+    </div>
+
+    <template v-else>
+      <CompanyStaffRoster :staff="staff" />
+
+      <section
+        v-if="staff.length"
+        class="space-y-3"
+      >
+        <h2 class="text-base font-semibold text-zinc-100">
+          Staff settings
+        </h2>
+        <div class="overflow-hidden rounded-lg border border-zinc-800">
+          <table class="min-w-full divide-y divide-zinc-800 text-sm">
+            <thead class="bg-zinc-900 text-xs uppercase tracking-wider text-zinc-500">
+              <tr>
+                <th class="px-3 py-2 text-left">Role</th>
+                <th class="px-3 py-2 text-left">Active</th>
+                <th class="px-3 py-2 text-left">Council</th>
+                <th class="px-3 py-2 text-left">Runtime</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-zinc-800 bg-zinc-950">
+              <tr
+                v-for="agent in staff"
+                :key="agent.id"
+              >
+                <td class="px-3 py-2 text-zinc-200">
+                  {{ agent.display_name }}
+                </td>
+                <td class="px-3 py-2">
+                  <button
+                    type="button"
+                    class="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:bg-zinc-900"
+                    :disabled="savingId === agent.id"
+                    @click="patchStaff(agent, { staff_active: !agent.staff_active })"
+                  >
+                    {{ agent.staff_active ? 'Pause' : 'Activate' }}
+                  </button>
+                </td>
+                <td class="px-3 py-2">
+                  <button
+                    type="button"
+                    class="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:bg-zinc-900"
+                    :disabled="savingId === agent.id"
+                    @click="patchStaff(agent, { council_enabled: !agent.council_enabled })"
+                  >
+                    {{ agent.council_enabled ? 'Disable' : 'Enable' }}
+                  </button>
+                </td>
+                <td class="px-3 py-2">
+                  <select
+                    class="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-200"
+                    :value="agent.runtime_mode"
+                    :disabled="savingId === agent.id"
+                    @change="patchStaff(agent, { runtime_mode: ($event.target as HTMLSelectElement).value })"
+                  >
+                    <option value="advisory">advisory</option>
+                    <option value="mixed">mixed</option>
+                  </select>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </template>
+  </div>
+</template>

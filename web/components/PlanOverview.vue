@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { PlanOverview } from '~/types/bossku'
 
 const props = withDefaults(
@@ -19,7 +20,9 @@ const hasPlan = computed(() => {
     || p.flowSteps.length
     || p.notes.length
     || p.risks.length
-    || p.todos.length,
+    || p.todos.length
+    || p.councilReview
+    || p.staffCouncil,
   )
 })
 
@@ -151,6 +154,78 @@ const headingClass = 'text-xs font-semibold uppercase tracking-wider text-zinc-5
           </div>
         </div>
       </div>
+
+      <div v-if="plan?.councilReview">
+        <h3 :class="headingClass">
+          Council review
+        </h3>
+        <div
+          class="mt-1.5 space-y-3 text-sm text-zinc-300"
+          :class="compact ? 'max-h-48 overflow-y-auto' : ''"
+        >
+          <p
+            v-if="plan.councilReview.consensus"
+            class="leading-relaxed text-zinc-300"
+          >
+            {{ plan.councilReview.consensus }}
+          </p>
+          <div v-if="plan.councilReview.strongest_dissent">
+            <p class="text-[11px] font-medium text-amber-500/80">
+              Strongest dissent
+            </p>
+            <p class="mt-0.5 leading-relaxed text-amber-100/90">
+              {{ plan.councilReview.strongest_dissent }}
+            </p>
+          </div>
+          <div v-if="plan.councilReview.recommended_adjustments?.length">
+            <p class="text-[11px] font-medium text-zinc-500">
+              Recommended adjustments
+            </p>
+            <ul class="mt-0.5 list-disc space-y-0.5 pl-5">
+              <li
+                v-for="(item, idx) in plan.councilReview.recommended_adjustments"
+                :key="`ca-${idx}`"
+              >
+                {{ item }}
+              </li>
+            </ul>
+          </div>
+          <div v-if="plan.councilReview.stop_conditions?.length">
+            <p class="text-[11px] font-medium text-zinc-500">
+              Stop conditions
+            </p>
+            <ul class="mt-0.5 list-disc space-y-0.5 pl-5">
+              <li
+                v-for="(item, idx) in plan.councilReview.stop_conditions"
+                :key="`cs-${idx}`"
+              >
+                {{ item }}
+              </li>
+            </ul>
+          </div>
+          <div v-if="plan.councilReview.voices?.length">
+            <p class="text-[11px] font-medium text-zinc-500">
+              Voices
+            </p>
+            <ul class="mt-0.5 space-y-1">
+              <li
+                v-for="voice in plan.councilReview.voices"
+                :key="voice.id"
+                class="leading-relaxed"
+              >
+                <span class="font-medium text-zinc-200">{{ voice.label }}:</span>
+                <span> {{ voice.position }}</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <StaffCouncilPanel
+        v-if="plan?.staffCouncil"
+        :council="plan.staffCouncil"
+        :compact="compact"
+      />
 
       <div v-if="plan?.todos?.length">
         <h3 :class="headingClass">

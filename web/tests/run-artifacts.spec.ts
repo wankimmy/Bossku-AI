@@ -514,6 +514,27 @@ describe('useRunArtifacts', () => {
             flow_steps: ['Upload', 'Ingest', 'Run'],
             constraints: ['Keep executor JSON-only'],
             risk_notes: ['Vision model may be unavailable'],
+            council_review: {
+              status: 'completed',
+              voices: [
+                { id: 'skeptic', label: 'Skeptic', position: 'Clarify attachment size limits.' },
+              ],
+              consensus: 'Reuse existing run context.',
+              strongest_dissent: 'Clarify attachment size limits.',
+              recommended_adjustments: ['Confirm file size scope before execution.'],
+              stop_conditions: ['Pause when token budget is crossed.'],
+            },
+            staff_council: {
+              status: 'completed',
+              voices: [
+                { role_slug: 'tech-lead', display_name: 'Tech Lead', position: 'Keep implementation bounded.' },
+              ],
+              staff_recommendations: ['Create approved work issues from plan items.'],
+              issue_breakdown: [
+                { plan_item_id: 'plan-1', title: 'Backend upload API', assignee_role_slug: 'tech-lead', priority: 'high' },
+              ],
+              stop_conditions: ['Wait for CEO approval before starting more work.'],
+            },
             checklist: [
               { id: 'plan-1', title: 'Backend upload API', owner: 'executor', status: 'pending' },
             ],
@@ -531,6 +552,64 @@ describe('useRunArtifacts', () => {
     expect(normalized.plan?.flowSteps).toEqual(['Upload', 'Ingest', 'Run'])
     expect(normalized.plan?.notes).toEqual(['Keep executor JSON-only'])
     expect(normalized.plan?.risks).toEqual(['Vision model may be unavailable'])
+    expect(normalized.plan?.councilReview?.strongest_dissent).toBe('Clarify attachment size limits.')
+    expect(normalized.plan?.councilReview?.stop_conditions).toContain('Pause when token budget is crossed.')
+    expect(normalized.plan?.staffCouncil?.voices[0].role_slug).toBe('tech-lead')
+    expect(normalized.plan?.staffCouncil?.issue_breakdown[0].assignee_role_slug).toBe('tech-lead')
     expect(normalized.plan?.todos[0].title).toBe('Backend upload API')
+  })
+
+  it('keeps council and planner review events visible in agent conversation', () => {
+    const normalized = useRunArtifacts([
+      {
+        type: 'council_review_done',
+        agent: 'orchestrator',
+        status: 'success',
+        summary: 'Council review added dissent and stop conditions.',
+        artifacts: {
+          council_review: {
+            status: 'completed',
+            strongest_dissent: 'Limit the first implementation slice.',
+          },
+        },
+      },
+      {
+        type: 'staff_council_done',
+        agent: 'orchestrator',
+        status: 'success',
+        artifacts: {
+          staff_council: {
+            status: 'completed',
+            voices: [
+              { role_slug: 'project-manager', display_name: 'Project Manager', position: 'Convert approved plan items into issues.' },
+            ],
+            staff_recommendations: ['Wait for CEO approval before starting more work.'],
+            issue_breakdown: [],
+            stop_conditions: ['CEO approval gates follow-up execution.'],
+          },
+        },
+      },
+      {
+        type: 'clarification_requested',
+        agent: 'planner',
+        status: 'awaiting_input',
+        stage: 'planner_review',
+        summary: 'Review the master plan before execution.',
+        artifacts: {
+          clarification: {
+            stage: 'planner_review',
+            from_agent: 'planner',
+            questions: [],
+            assumptions: [],
+          },
+        },
+      },
+    ])
+
+    expect(normalized.agentMessages).toHaveLength(3)
+    expect(normalized.agentMessages[0].summary).toContain('Council review')
+    expect(normalized.agentMessages[1].summary).toContain('Staff council')
+    expect(normalized.agentMessages[2].agent).toBe('planner')
+    expect(normalized.agentMessages[2].summary).toBe('Review the master plan before execution.')
   })
 })

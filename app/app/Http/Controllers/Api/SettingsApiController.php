@@ -47,6 +47,10 @@ class SettingsApiController extends Controller
         'executor_risk_aware_profile',
         'executor_patch_precheck',
         'llm_truncation_retry_boost',
+        'council_plan_review_enabled',
+        'company_staff_enabled',
+        'staff_council_enabled',
+        'staff_auto_issue_generation_enabled',
     ];
 
     /** @var list<string> */

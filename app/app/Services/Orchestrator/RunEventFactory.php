@@ -30,6 +30,143 @@ class RunEventFactory
     }
 
     /** @return array<string, mixed> */
+    public function councilReviewStarted(Run $run): array
+    {
+        return $this->event($run, 'council_review_started', [
+            'agent' => 'orchestrator',
+            'from_agent' => 'orchestrator',
+            'to_agent' => 'planner',
+            'status' => 'running',
+            'model_role' => 'reasoning',
+            'summary' => 'Council review is checking the plan before user approval.',
+            'message' => 'Architect, Skeptic, Pragmatist, and Critic lenses are being synthesized.',
+        ]);
+    }
+
+    /** @return array<string, mixed> */
+    public function councilReviewDone(Run $run, array $review, array $plan = []): array
+    {
+        $count = count(is_array($review['voices'] ?? null) ? $review['voices'] : []);
+        $artifacts = ['council_review' => $review];
+        if ($plan !== []) {
+            $artifacts['plan'] = $plan;
+        }
+
+        return $this->event($run, 'council_review_done', [
+            'agent' => 'orchestrator',
+            'from_agent' => 'orchestrator',
+            'to_agent' => 'planner',
+            'status' => 'success',
+            'model_role' => 'reasoning',
+            'summary' => 'Council review prepared '.$count.' voice(s).',
+            'message' => StringCoercion::toString($review['strongest_dissent'] ?? $review['consensus'] ?? null),
+            'artifacts' => $artifacts,
+            'output' => json_encode($review) ?: '',
+        ]);
+    }
+
+    /** @return array<string, mixed> */
+    public function councilReviewSkipped(Run $run, array $review, array $plan = []): array
+    {
+        $artifacts = ['council_review' => $review];
+        if ($plan !== []) {
+            $artifacts['plan'] = $plan;
+        }
+
+        return $this->event($run, 'council_review_skipped', [
+            'agent' => 'orchestrator',
+            'from_agent' => 'orchestrator',
+            'to_agent' => 'planner',
+            'status' => 'skipped',
+            'model_role' => 'reasoning',
+            'summary' => StringCoercion::toString($review['consensus'] ?? null, 'Council review skipped.'),
+            'message' => StringCoercion::toString($review['reason'] ?? null),
+            'artifacts' => $artifacts,
+            'output' => json_encode($review) ?: '',
+        ]);
+    }
+
+    /** @return array<string, mixed> */
+    public function staffCouncilStarted(Run $run): array
+    {
+        return $this->event($run, 'staff_council_started', [
+            'agent' => 'orchestrator',
+            'from_agent' => 'orchestrator',
+            'to_agent' => 'planner',
+            'status' => 'running',
+            'model_role' => 'reasoning',
+            'summary' => 'Staff council is reviewing the work before CEO approval.',
+            'message' => 'Relevant company staff are preparing recommendations and issue breakdown.',
+        ]);
+    }
+
+    /** @return array<string, mixed> */
+    public function staffCouncilDone(Run $run, array $review, array $plan = []): array
+    {
+        $count = count(is_array($review['voices'] ?? null) ? $review['voices'] : []);
+        $artifacts = ['staff_council' => $review];
+        if ($plan !== []) {
+            $artifacts['plan'] = $plan;
+        }
+
+        return $this->event($run, 'staff_council_done', [
+            'agent' => 'orchestrator',
+            'from_agent' => 'orchestrator',
+            'to_agent' => 'planner',
+            'status' => 'success',
+            'model_role' => 'reasoning',
+            'summary' => 'Staff council prepared '.$count.' voice(s).',
+            'message' => StringCoercion::toString($review['consensus'] ?? null),
+            'artifacts' => $artifacts,
+            'output' => json_encode($review) ?: '',
+        ]);
+    }
+
+    /** @return array<string, mixed> */
+    public function staffCouncilSkipped(Run $run, array $review, array $plan = []): array
+    {
+        $artifacts = ['staff_council' => $review];
+        if ($plan !== []) {
+            $artifacts['plan'] = $plan;
+        }
+
+        return $this->event($run, 'staff_council_skipped', [
+            'agent' => 'orchestrator',
+            'from_agent' => 'orchestrator',
+            'to_agent' => 'planner',
+            'status' => 'skipped',
+            'model_role' => 'reasoning',
+            'summary' => StringCoercion::toString($review['consensus'] ?? null, 'Staff council skipped.'),
+            'message' => StringCoercion::toString($review['reason'] ?? null),
+            'artifacts' => $artifacts,
+            'output' => json_encode($review) ?: '',
+        ]);
+    }
+
+    /** @return array<string, mixed> */
+    public function workIssuesGenerated(Run $run, array $issues): array
+    {
+        return $this->event($run, 'work_issues_generated', [
+            'agent' => 'project-manager',
+            'from_agent' => 'project-manager',
+            'to_agent' => 'user',
+            'status' => 'success',
+            'model_role' => 'reasoning',
+            'summary' => 'Generated '.count($issues).' CEO-approved work issue(s).',
+            'message' => 'Approved plan checklist items were added to the Kanban board.',
+            'artifacts' => [
+                'work_issue_refs' => array_values(array_map(static fn ($issue) => [
+                    'id' => $issue->id ?? null,
+                    'title' => $issue->title ?? null,
+                    'status' => $issue->status ?? null,
+                    'assignee_role_slug' => $issue->assignee_role_slug ?? null,
+                    'priority' => $issue->priority ?? null,
+                ], $issues)),
+            ],
+        ]);
+    }
+
+    /** @return array<string, mixed> */
     public function executorDone(Run $run, array $result, string $model, int $latencyMs, int $tokenEstimate, string $type = 'executor_step_done'): array
     {
         $revision = $type === 'executor_revision_done';

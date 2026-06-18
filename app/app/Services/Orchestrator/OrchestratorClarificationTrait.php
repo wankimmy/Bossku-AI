@@ -3,6 +3,7 @@
 namespace App\Services\Orchestrator;
 
 use App\Models\BosskuAi\Run;
+use App\Support\StringCoercion;
 
 trait OrchestratorClarificationTrait
 {
@@ -153,6 +154,27 @@ trait OrchestratorClarificationTrait
         $meta = is_array($run->metadata) ? $run->metadata : [];
         $meta['planner_review_approved'] = true;
         $run->update(['metadata' => $meta]);
+
+        try {
+            $generatedIssues = $this->workIssues->createFromApprovedPlan(
+                $run,
+                $plan,
+                $this->paths->activeProject(),
+            );
+        } catch (\Throwable) {
+            $generatedIssues = [];
+        }
+
+        if ($generatedIssues !== []) {
+            $plan['generated_issue_refs'] = array_values(array_map(static fn ($issue) => [
+                'id' => $issue->id,
+                'title' => $issue->title,
+                'status' => $issue->status,
+                'assignee_role_slug' => $issue->assignee_role_slug,
+                'priority' => $issue->priority,
+            ], $generatedIssues));
+            $this->emit($emit, $this->events->workIssuesGenerated($run, $generatedIssues));
+        }
 
         $userPrompt = (string) ($pipeline['user_prompt'] ?? $run->prompt);
         /** @var list<array{role: string, content: string}> $conversation */
@@ -967,6 +989,10 @@ trait OrchestratorClarificationTrait
         $userPrompt = (string) ($pipeline['user_prompt'] ?? $run->prompt);
         /** @var list<array{role: string, content: string}> $conversation */
         $conversation = is_array($pipeline['conversation'] ?? null) ? $pipeline['conversation'] : [];
+        $priorCouncilReview = $this->formatPriorCouncilReviewForReplan($pipeline);
+        if ($priorCouncilReview !== '') {
+            $answerBlock = trim($answerBlock."\n\n".$priorCouncilReview);
+        }
         $prompt = trim((string) ($pipeline['effective_prompt'] ?? $userPrompt)."\n\n".$answerBlock);
         $agentPrompt = trim($prompt."\n\n".$this->projects->agentWorkspaceContext());
         /** @var array<string, mixed> $modelRoute */
@@ -1003,6 +1029,65 @@ trait OrchestratorClarificationTrait
             (int) ($pipeline['token_acc'] ?? 0),
             (float) ($pipeline['t_run'] ?? microtime(true)),
         );
+    }
+
+    /**
+     * @param  array<string, mixed>  $pipeline
+     */
+    protected function formatPriorCouncilReviewForReplan(array $pipeline): string
+    {
+        /** @var array<string, mixed> $plan */
+        $plan = is_array($pipeline['plan'] ?? null) ? $pipeline['plan'] : [];
+        /** @var array<string, mixed> $review */
+        $review = is_array($plan['council_review'] ?? null) ? $plan['council_review'] : [];
+        if ($review === []) {
+            return '';
+        }
+
+        $lines = ['## Prior council review'];
+        $consensus = trim(StringCoercion::toString($review['consensus'] ?? null));
+        if ($consensus !== '') {
+            $lines[] = 'Consensus: '.$consensus;
+        }
+
+        $dissent = trim(StringCoercion::toString($review['strongest_dissent'] ?? null));
+        if ($dissent !== '') {
+            $lines[] = 'Strongest dissent: '.$dissent;
+        }
+
+        $adjustments = $this->stringListForReplan($review['recommended_adjustments'] ?? []);
+        if ($adjustments !== []) {
+            $lines[] = 'Recommended adjustments:';
+            foreach ($adjustments as $adjustment) {
+                $lines[] = '- '.$adjustment;
+            }
+        }
+
+        $stopConditions = $this->stringListForReplan($review['stop_conditions'] ?? []);
+        if ($stopConditions !== []) {
+            $lines[] = 'Stop conditions:';
+            foreach ($stopConditions as $condition) {
+                $lines[] = '- '.$condition;
+            }
+        }
+
+        return count($lines) > 1 ? implode("\n", $lines) : '';
+    }
+
+    /**
+     * @param  mixed  $value
+     * @return list<string>
+     */
+    protected function stringListForReplan(mixed $value): array
+    {
+        if (! is_array($value)) {
+            return [];
+        }
+
+        return array_values(array_filter(array_map(
+            fn ($item) => trim(StringCoercion::toString($item)),
+            $value,
+        )));
     }
 
     /**

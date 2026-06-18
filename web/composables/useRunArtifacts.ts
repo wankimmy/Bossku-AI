@@ -11,6 +11,7 @@ import type {
   PlanOverview,
   RiskItem,
   RoutingSummary,
+  StaffCouncilReview,
   TestRun,
 } from '../types/bossku'
 import { formatToolCallSummary, formatToolCallTitle, isToolCallEvent } from '../utils/formatToolCall'
@@ -105,10 +106,6 @@ export function useRunArtifacts(items: UnknownRecord[] = []): NormalizedRunArtif
 
     if (type === 'run_completed' || type === 'final' || agent === 'final-reviewer') {
       finalRaw = String(event.output ?? item.output ?? finalRaw)
-    }
-
-    if (type === 'clarification_requested') {
-      continue
     }
 
     if (agent || type) {
@@ -629,6 +626,25 @@ function normalizeStatus(status: string) {
 }
 
 function summaryFromArtifacts(artifacts: UnknownRecord, type: string) {
+  if (type === 'council_review_done' && asRecord(artifacts.council_review)) {
+    const review = asRecord(artifacts.council_review) ?? {}
+    return review.strongest_dissent
+      ? `Council review prepared dissent: ${String(review.strongest_dissent)}`
+      : 'Council review prepared dissent, adjustments, and stop conditions.'
+  }
+  if (type === 'council_review_skipped' && asRecord(artifacts.council_review)) {
+    const review = asRecord(artifacts.council_review) ?? {}
+    return String(review.consensus ?? 'Council review skipped.')
+  }
+  if (type === 'staff_council_done' && asRecord(artifacts.staff_council)) {
+    const review = asRecord(artifacts.staff_council) ?? {}
+    const count = asArray(review.voices).length
+    return `Staff council prepared ${count} voice(s).`
+  }
+  if (type === 'staff_council_skipped' && asRecord(artifacts.staff_council)) {
+    const review = asRecord(artifacts.staff_council) ?? {}
+    return String(review.consensus ?? 'Staff council skipped.')
+  }
   if (type.includes('planner') && asArray(artifacts.checklist).length) {
     return `Planner created ${asArray(artifacts.checklist).length}-step execution checklist.`
   }
@@ -665,8 +681,10 @@ function buildPlanOverview(
   const goal = stringOrUndefined(raw?.goal)
     ?? stringOrUndefined(raw?.task_summary)
     ?? stringOrUndefined(raw?.summary)
+  const councilReview = asCouncilReview(raw?.council_review)
+  const staffCouncil = asStaffCouncilReview(raw?.staff_council)
 
-  if (!goal && todos.length === 0) {
+  if (!goal && todos.length === 0 && !councilReview && !staffCouncil) {
     return undefined
   }
 
@@ -679,6 +697,63 @@ function buildPlanOverview(
     notes: asStringArray(raw?.constraints),
     risks: asStringArray(raw?.risk_notes),
     todos,
+    councilReview,
+    staffCouncil,
+  }
+}
+
+function asCouncilReview(value: unknown) {
+  const record = asRecord(value)
+  if (!record) return undefined
+
+  return {
+    status: String(record.status ?? 'completed'),
+    reason: stringOrUndefined(record.reason),
+    voices: asArray(record.voices).map((voice, index) => {
+      const item = asRecord(voice) ?? {}
+      return {
+        id: String(item.id ?? `voice-${index + 1}`),
+        label: String(item.label ?? item.id ?? `Voice ${index + 1}`),
+        position: String(item.position ?? ''),
+        reasoning: asStringArray(item.reasoning),
+      }
+    }).filter(voice => voice.position || voice.reasoning.length),
+    consensus: stringOrUndefined(record.consensus),
+    strongest_dissent: stringOrUndefined(record.strongest_dissent),
+    recommended_adjustments: asStringArray(record.recommended_adjustments),
+    stop_conditions: asStringArray(record.stop_conditions),
+  }
+}
+
+function asStaffCouncilReview(value: unknown): StaffCouncilReview | undefined {
+  const record = asRecord(value)
+  if (!record) return undefined
+
+  return {
+    status: String(record.status ?? 'completed'),
+    reason: stringOrUndefined(record.reason),
+    voices: asArray(record.voices).map((voice) => {
+      const item = asRecord(voice) ?? {}
+      return {
+        role_slug: String(item.role_slug ?? ''),
+        display_name: String(item.display_name ?? item.role_slug ?? 'Staff'),
+        runtime_mode: stringOrUndefined(item.runtime_mode),
+        position: String(item.position ?? ''),
+        recommendations: asStringArray(item.recommendations),
+      }
+    }).filter(voice => voice.role_slug || voice.position || voice.recommendations.length),
+    consensus: stringOrUndefined(record.consensus),
+    staff_recommendations: asStringArray(record.staff_recommendations),
+    issue_breakdown: asArray(record.issue_breakdown).map((issue, index) => {
+      const item = asRecord(issue) ?? {}
+      return {
+        plan_item_id: String(item.plan_item_id ?? `plan-${index + 1}`),
+        title: String(item.title ?? `Plan item ${index + 1}`),
+        assignee_role_slug: String(item.assignee_role_slug ?? 'project-manager'),
+        priority: String(item.priority ?? 'medium'),
+      }
+    }),
+    stop_conditions: asStringArray(record.stop_conditions),
   }
 }
 

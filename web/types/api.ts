@@ -158,6 +158,66 @@ export interface SpecialistAgent {
   updated_at?: string
 }
 
+export type CompanyStaffRuntimeMode = 'advisory' | 'mixed' | string
+
+export interface CompanyStaffAgent extends SpecialistAgent {
+  is_company_staff?: boolean
+  staff_active: boolean
+  council_enabled: boolean
+  runtime_mode: CompanyStaffRuntimeMode
+  staff_sort_order?: number
+}
+
+export interface StaffCouncilVoice {
+  role_slug: string
+  display_name: string
+  runtime_mode?: CompanyStaffRuntimeMode
+  position: string
+  recommendations: string[]
+}
+
+export interface StaffIssueBreakdownItem {
+  plan_item_id: string
+  title: string
+  assignee_role_slug: string
+  priority: 'low' | 'medium' | 'high' | 'critical' | string
+}
+
+export interface StaffCouncilReview {
+  status: string
+  reason?: string | null
+  voices: StaffCouncilVoice[]
+  consensus?: string
+  staff_recommendations: string[]
+  issue_breakdown: StaffIssueBreakdownItem[]
+  stop_conditions: string[]
+}
+
+export type KanbanStatus =
+  | 'backlog'
+  | 'todo'
+  | 'in_progress'
+  | 'in_review'
+  | 'blocked'
+  | 'done'
+  | 'cancelled'
+
+export interface WorkIssue {
+  id: string
+  project_id?: string
+  run_id?: string | null
+  source_plan_item_id?: string | null
+  title: string
+  description?: string | null
+  status: KanbanStatus | string
+  priority: 'low' | 'medium' | 'high' | 'critical' | string
+  approval_state: 'draft' | 'approved' | 'rejected' | string
+  assignee_role_slug?: string | null
+  metadata?: Record<string, unknown>
+  created_at?: string
+  updated_at?: string
+}
+
 export interface GraphNode {
   id: string
   label: string

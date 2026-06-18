@@ -33,6 +33,48 @@ export interface PlanChecklistItem {
   status: StepStatus
 }
 
+export interface CouncilVoice {
+  id: string
+  label: string
+  position: string
+  reasoning: string[]
+}
+
+export interface CouncilReview {
+  status: StepStatus
+  reason?: string
+  voices: CouncilVoice[]
+  consensus?: string
+  strongest_dissent?: string
+  recommended_adjustments: string[]
+  stop_conditions: string[]
+}
+
+export interface StaffCouncilVoice {
+  role_slug: string
+  display_name: string
+  runtime_mode?: string
+  position: string
+  recommendations: string[]
+}
+
+export interface StaffIssueBreakdownItem {
+  plan_item_id: string
+  title: string
+  assignee_role_slug: string
+  priority: string
+}
+
+export interface StaffCouncilReview {
+  status: StepStatus
+  reason?: string
+  voices: StaffCouncilVoice[]
+  consensus?: string
+  staff_recommendations: string[]
+  issue_breakdown: StaffIssueBreakdownItem[]
+  stop_conditions: string[]
+}
+
 /** Cursor-style orchestrator plan surfaced in Plan tab and chat. */
 export interface PlanOverview {
   goal?: string
@@ -43,6 +85,8 @@ export interface PlanOverview {
   notes: string[]
   risks: string[]
   todos: PlanChecklistItem[]
+  councilReview?: CouncilReview
+  staffCouncil?: StaffCouncilReview
 }
 
 export interface FileRead {
