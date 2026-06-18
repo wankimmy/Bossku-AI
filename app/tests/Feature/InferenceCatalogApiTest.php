@@ -19,8 +19,10 @@ class InferenceCatalogApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('anthropic_configured', false)
             ->assertJsonPath('codex_connected', false)
+            ->assertJsonPath('cloud_only', true)
             ->assertJsonStructure([
                 'ollama' => [['id', 'label']],
+                'providers' => [['provider', 'name', 'configured']],
             ]);
 
         $ollama = $this->getJson('/api/settings/inference-catalog')->json('ollama');

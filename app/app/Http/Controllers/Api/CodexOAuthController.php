@@ -3,13 +3,15 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\Llm\ProviderRegistry;
 use App\Services\OAuth\CodexOAuthService;
 use Illuminate\Http\Request;
 
 class CodexOAuthController extends Controller
 {
     public function __construct(
-        protected CodexOAuthService $codexOAuth
+        protected CodexOAuthService $codexOAuth,
+        protected ProviderRegistry $providerRegistry,
     ) {}
 
     public function status()
@@ -50,6 +52,7 @@ class CodexOAuthController extends Controller
 
         try {
             $this->codexOAuth->handleCallback($code, $state);
+            $this->providerRegistry->refresh();
 
             return redirect()->away($return.'?codex=connected');
         } catch (\Throwable $e) {
@@ -60,6 +63,7 @@ class CodexOAuthController extends Controller
     public function disconnect()
     {
         $this->codexOAuth->disconnect();
+        $this->providerRegistry->refresh();
 
         return response()->json(['connected' => false]);
     }

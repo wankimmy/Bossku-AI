@@ -18,11 +18,11 @@ use App\Services\BosskuAi\PromptRouteClassifier;
 use App\Services\BosskuAi\RiskRuleEngine;
 use App\Services\BosskuAi\RuntimeSettings;
 use App\Services\BosskuAi\SkillRouterService;
+use App\Services\Llm\ModelAutoSelectorService;
 use App\Services\Llm\ModelRouter;
 use App\Services\Llm\OllamaClient;
-use App\Services\Llm\Providers\AnthropicProvider;
-use App\Services\Llm\Providers\CodexOAuthProvider;
-use App\Services\Llm\Providers\OllamaProvider;
+use App\Services\Llm\ProviderFactory;
+use App\Services\Llm\ProviderRegistry;
 use App\Services\Llm\UsageTracker;
 use App\Services\Runs\RunExistenceGuard;
 use App\Services\OAuth\CodexOAuthService;
@@ -64,26 +64,18 @@ class AppServiceProvider extends ServiceProvider
             return new OllamaClient($s->ollamaBaseUrl(), $s->ollamaApiKey());
         });
 
-        $this->app->singleton(ModelRouter::class, function ($app) {
-            $router = new ModelRouter($app->make(UsageTracker::class));
-            $router->registerProvider(new OllamaProvider($app->make(OllamaClient::class)));
+        $this->app->singleton(ProviderFactory::class);
+        $this->app->singleton(ModelRouter::class, fn ($app) => new ModelRouter($app->make(UsageTracker::class)));
+        $this->app->singleton(ProviderRegistry::class, function ($app) {
+            $registry = new ProviderRegistry(
+                $app->make(ProviderFactory::class),
+                $app->make(ModelRouter::class),
+            );
+            $registry->refresh();
 
-            $settings = $app->make(RuntimeSettings::class);
-            $anthropicKey = $settings->anthropicApiKey();
-            if (is_string($anthropicKey) && $anthropicKey !== '') {
-                $router->registerProvider(new AnthropicProvider($anthropicKey));
-            }
-
-            $codex = $app->make(CodexOAuthService::class);
-            if ($codex->isConnected()) {
-                $router->registerProvider(new CodexOAuthProvider(
-                    $codex,
-                    (string) config('bossku_oauth.codex.api_base_url', 'https://api.openai.com'),
-                ));
-            }
-
-            return $router;
+            return $registry;
         });
+        $this->app->singleton(ModelAutoSelectorService::class);
 
         $this->app->singleton(LlmGateway::class, function ($app) {
             return new LlmGateway(

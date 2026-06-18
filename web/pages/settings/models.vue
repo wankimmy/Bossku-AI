@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { AGENT_ROLE_DEFS, defaultProviderForRole } from '~/composables/useRoleModelDefaults'
+
 definePageMeta({ layout: 'default' })
 
 const route = useRoute()
@@ -7,7 +9,7 @@ const { data, refresh, pending, error } = await useFetch<Record<string, string>>
   lazy: true,
 })
 
-const { optgroups, refresh: refreshCatalog, catalog: inferenceCatalog } = useInferenceCatalog()
+const { optgroups, refresh: refreshCatalog, catalog: inferenceCatalog, providerGroups, applyRecommendedDefaults } = useInferenceCatalog()
 
 type CodexStatus = {
   connected: boolean
@@ -104,30 +106,31 @@ function parseAliases(raw: string | undefined) {
   }
 }
 
-function applyCloudDefaults() {
-  const fields = [
-    'planner_model',
-    'reasoning_model',
-    'orchestrator_model',
-    'router_model',
-    'coding_model',
-    'executor_model',
-    'review_model',
-    'auditor_model',
-    'security_auditor_model',
-    'final_reviewer_model',
-    'writer_model',
-    'direct_answer_model',
-    'executor_default_model',
-    'executor_frontend_model',
-    'executor_backend_model',
-    'executor_devops_model',
-    'executor_high_risk_model',
-  ] as const
-  for (const key of fields) {
-    if (form[key] && !form[key].startsWith('claude-') && !form[key].startsWith('gpt-') && !form[key].startsWith('o')) {
-      form[key] = normalizeCloudModel(form[key])
+const providerByRole = reactive<Record<string, string>>({})
+
+function initProviderSelections() {
+  const groups = providerGroups.value
+  for (const def of AGENT_ROLE_DEFS) {
+    if (!providerByRole[def.role]) {
+      providerByRole[def.role] = defaultProviderForRole(groups, def.role)
     }
+  }
+}
+
+watch(providerGroups, initProviderSelections, { immediate: true })
+
+async function applyCloudDefaults() {
+  try {
+    const applied = await applyRecommendedDefaults()
+    for (const [role, entry] of Object.entries(applied)) {
+      providerByRole[role] = entry.provider
+      const def = AGENT_ROLE_DEFS.find(d => d.role === role)
+      if (def) form[def.formKey] = entry.model
+    }
+    toast.success('Applied recommended cloud models for configured providers.')
+  }
+  catch (err: unknown) {
+    toast.error(settingsErrorMessage(err))
   }
 }
 
@@ -189,6 +192,15 @@ async function save() {
     const v = form[key]
     if (v !== undefined && v !== '') body[key] = v
   }
+  if (form.orchestrator_model) body.reasoning_model = form.orchestrator_model
+  if (form.coding_model) {
+    body.executor_default_model = form.coding_model
+    body.executor_frontend_model = form.coding_model
+    body.executor_backend_model = form.coding_model
+    body.executor_devops_model = form.coding_model
+    body.executor_high_risk_model = form.coding_model
+  }
+  if (form.auditor_model) body.review_model = form.auditor_model
   const ollamaTrimmed = ollamaApiKeyInput.value.trim()
   if (ollamaTrimmed) body.ollama_api_key = ollamaTrimmed
   const anthropicTrimmed = anthropicApiKeyInput.value.trim()
@@ -255,9 +267,20 @@ onMounted(() => {
 <template>
   <div class="mx-auto max-w-2xl space-y-4">
     <p class="text-sm text-zinc-500">
-      Agent models are stored in the database. The gateway picks the provider from each model id
-      (Ollama Cloud, Claude, or Codex) plus the credentials configured below.
+      Cloud-only model routing. Pick a provider per agent, then choose from the best recommended models for that role.
+      API keys live in <NuxtLink to="/settings/providers" class="text-emerald-400 hover:underline">Settings → Providers</NuxtLink>.
+      Codex uses ChatGPT OAuth below.
     </p>
+
+    <div v-if="loaded" class="flex flex-wrap gap-2">
+      <button
+        type="button"
+        class="rounded-md border border-emerald-800 bg-emerald-900/40 px-4 py-2 text-sm text-emerald-300 hover:bg-emerald-800/40"
+        @click="applyCloudDefaults"
+      >
+        Apply recommended cloud defaults
+      </button>
+    </div>
 
     <p v-if="pending && !loaded" class="text-sm text-zinc-500">
       Loading settings…
@@ -346,168 +369,22 @@ onMounted(() => {
 
       <div class="rounded-lg border border-zinc-800 bg-zinc-900 p-4 space-y-4">
         <h2 class="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-          Fast (router &amp; direct answer)
+          Agent models (cloud providers)
         </h2>
-        <label class="block text-sm text-zinc-300">
-          Router model
-          <select v-model="form.router_model" class="mt-1.5 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100">
-            <optgroup
-              v-for="group in optgroups"
-              :key="'r-'+group.label"
-              :label="group.label"
-              :disabled="group.disabled"
-            >
-              <option
-                v-for="m in group.options"
-                :key="'r-'+m.id"
-                :value="m.id"
-                :disabled="group.disabled"
-              >
-                {{ m.label }}
-              </option>
-            </optgroup>
-          </select>
-          <span v-if="optgroups.find(g => g.provider === 'anthropic')?.disabled" class="mt-1 block text-xs text-zinc-600">
-            {{ optgroups.find(g => g.provider === 'anthropic')?.hint }}
-          </span>
-        </label>
-        <label class="block text-sm text-zinc-300">
-          Direct answer model
-          <select v-model="form.direct_answer_model" class="mt-1.5 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100">
-            <optgroup
-              v-for="group in optgroups"
-              :key="'d-'+group.label"
-              :label="group.label"
-              :disabled="group.disabled"
-            >
-              <option v-for="m in group.options" :key="'d-'+m.id" :value="m.id" :disabled="group.disabled">
-                {{ m.label }}
-              </option>
-            </optgroup>
-          </select>
-        </label>
-      </div>
-
-      <div class="rounded-lg border border-zinc-800 bg-zinc-900 p-4 space-y-4">
-        <h2 class="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-          Reasoning (planner / orchestrator / writer / final)
-        </h2>
-        <label class="block text-sm text-zinc-300">
-          Reasoning model (planner)
-          <select v-model="form.reasoning_model" class="mt-1.5 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100">
-            <optgroup v-for="group in optgroups" :key="'p-'+group.label" :label="group.label" :disabled="group.disabled">
-              <option v-for="m in group.options" :key="'p-'+m.id" :value="m.id" :disabled="group.disabled">{{ m.label }}</option>
-            </optgroup>
-          </select>
-        </label>
-        <label class="block text-sm text-zinc-300">
-          Orchestrator override
-          <select v-model="form.orchestrator_model" class="mt-1.5 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100">
-            <optgroup v-for="group in optgroups" :key="'o-'+group.label" :label="group.label" :disabled="group.disabled">
-              <option v-for="m in group.options" :key="'o-'+m.id" :value="m.id" :disabled="group.disabled">{{ m.label }}</option>
-            </optgroup>
-          </select>
-        </label>
-        <label class="block text-sm text-zinc-300">
-          Writer model
-          <select v-model="form.writer_model" class="mt-1.5 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100">
-            <optgroup v-for="group in optgroups" :key="'w-'+group.label" :label="group.label" :disabled="group.disabled">
-              <option v-for="m in group.options" :key="'w-'+m.id" :value="m.id" :disabled="group.disabled">{{ m.label }}</option>
-            </optgroup>
-          </select>
-        </label>
-        <label class="block text-sm text-zinc-300">
-          Final reviewer model
-          <select v-model="form.final_reviewer_model" class="mt-1.5 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100">
-            <optgroup v-for="group in optgroups" :key="'f-'+group.label" :label="group.label" :disabled="group.disabled">
-              <option v-for="m in group.options" :key="'f-'+m.id" :value="m.id" :disabled="group.disabled">{{ m.label }}</option>
-            </optgroup>
-          </select>
-        </label>
-      </div>
-
-      <div class="rounded-lg border border-zinc-800 bg-zinc-900 p-4 space-y-4">
-        <h2 class="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-          Coding (executor profiles)
-        </h2>
-        <label class="block text-sm text-zinc-300">
-          Default coding model
-          <select v-model="form.coding_model" class="mt-1.5 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100">
-            <optgroup v-for="group in optgroups" :key="'c-'+group.label" :label="group.label" :disabled="group.disabled">
-              <option v-for="m in group.options" :key="'c-'+m.id" :value="m.id" :disabled="group.disabled">{{ m.label }}</option>
-            </optgroup>
-          </select>
-        </label>
-        <label class="block text-sm text-zinc-300">
-          Executor — default profile
-          <select v-model="form.executor_default_model" class="mt-1.5 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100">
-            <optgroup v-for="group in optgroups" :key="'ed-'+group.label" :label="group.label" :disabled="group.disabled">
-              <option v-for="m in group.options" :key="'ed-'+m.id" :value="m.id" :disabled="group.disabled">{{ m.label }}</option>
-            </optgroup>
-          </select>
-        </label>
-        <label class="block text-sm text-zinc-300">
-          Executor — frontend UI
-          <select v-model="form.executor_frontend_model" class="mt-1.5 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100">
-            <optgroup v-for="group in optgroups" :key="'ef-'+group.label" :label="group.label" :disabled="group.disabled">
-              <option v-for="m in group.options" :key="'ef-'+m.id" :value="m.id" :disabled="group.disabled">{{ m.label }}</option>
-            </optgroup>
-          </select>
-        </label>
-        <label class="block text-sm text-zinc-300">
-          Executor — backend
-          <select v-model="form.executor_backend_model" class="mt-1.5 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100">
-            <optgroup v-for="group in optgroups" :key="'eb-'+group.label" :label="group.label" :disabled="group.disabled">
-              <option v-for="m in group.options" :key="'eb-'+m.id" :value="m.id" :disabled="group.disabled">{{ m.label }}</option>
-            </optgroup>
-          </select>
-        </label>
-        <label class="block text-sm text-zinc-300">
-          Executor — DevOps
-          <select v-model="form.executor_devops_model" class="mt-1.5 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100">
-            <optgroup v-for="group in optgroups" :key="'edo-'+group.label" :label="group.label" :disabled="group.disabled">
-              <option v-for="m in group.options" :key="'edo-'+m.id" :value="m.id" :disabled="group.disabled">{{ m.label }}</option>
-            </optgroup>
-          </select>
-        </label>
-        <label class="block text-sm text-zinc-300">
-          Executor — high risk
-          <select v-model="form.executor_high_risk_model" class="mt-1.5 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100">
-            <optgroup v-for="group in optgroups" :key="'eh-'+group.label" :label="group.label" :disabled="group.disabled">
-              <option v-for="m in group.options" :key="'eh-'+m.id" :value="m.id" :disabled="group.disabled">{{ m.label }}</option>
-            </optgroup>
-          </select>
-        </label>
-      </div>
-
-      <div class="rounded-lg border border-zinc-800 bg-zinc-900 p-4 space-y-4">
-        <h2 class="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-          Review (auditor &amp; security)
-        </h2>
-        <label class="block text-sm text-zinc-300">
-          Review model (shared default)
-          <select v-model="form.review_model" class="mt-1.5 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100">
-            <optgroup v-for="group in optgroups" :key="'rv-'+group.label" :label="group.label" :disabled="group.disabled">
-              <option v-for="m in group.options" :key="'rv-'+m.id" :value="m.id" :disabled="group.disabled">{{ m.label }}</option>
-            </optgroup>
-          </select>
-        </label>
-        <label class="block text-sm text-zinc-300">
-          Auditor model
-          <select v-model="form.auditor_model" class="mt-1.5 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100">
-            <optgroup v-for="group in optgroups" :key="'a-'+group.label" :label="group.label" :disabled="group.disabled">
-              <option v-for="m in group.options" :key="'a-'+m.id" :value="m.id" :disabled="group.disabled">{{ m.label }}</option>
-            </optgroup>
-          </select>
-        </label>
-        <label class="block text-sm text-zinc-300">
-          Security auditor model
-          <select v-model="form.security_auditor_model" class="mt-1.5 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100">
-            <optgroup v-for="group in optgroups" :key="'sa-'+group.label" :label="group.label" :disabled="group.disabled">
-              <option v-for="m in group.options" :key="'sa-'+m.id" :value="m.id" :disabled="group.disabled">{{ m.label }}</option>
-            </optgroup>
-          </select>
-        </label>
+        <p class="text-xs text-zinc-600">
+          Select provider first. Model dropdown shows only the best cloud models for each agent role.
+        </p>
+        <ProvidersAgentRoleModelRow
+          v-for="def in AGENT_ROLE_DEFS"
+          :key="def.role"
+          :label="def.label"
+          :role="def.role"
+          :model-value="form[def.formKey] ?? ''"
+          :provider-value="providerByRole[def.role] ?? ''"
+          :groups="providerGroups"
+          @update:model-value="form[def.formKey] = $event"
+          @update:provider-value="providerByRole[def.role] = $event"
+        />
       </div>
 
       <div class="rounded-lg border border-zinc-800 bg-zinc-900 p-4 space-y-4">

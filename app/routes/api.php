@@ -165,6 +165,9 @@ Route::post('/user-profile/generate', [UserProfileController::class, 'generate']
 Route::get('/settings', [SettingsApiController::class, 'show']);
 Route::put('/settings', [SettingsApiController::class, 'update']);
 Route::get('/settings/inference-catalog', [InferenceCatalogController::class, 'index']);
+Route::get('/settings/model-recommendations', [InferenceCatalogController::class, 'recommendations']);
+Route::post('/settings/model-recommendations/apply', [InferenceCatalogController::class, 'applyRecommendations']);
+Route::post('/settings/model-assignments', [InferenceCatalogController::class, 'applyModelRoutes']);
 
 Route::get('/oauth/codex/status', [CodexOAuthController::class, 'status']);
 Route::delete('/oauth/codex', [CodexOAuthController::class, 'disconnect']);
@@ -245,6 +248,7 @@ Route::get('/logs/stream', [LogsStreamController::class, 'stream']);
 
 // ── LLM Providers ────────────────────────────────────────────────────────────
 Route::get('/providers', [ProviderController::class, 'index']);
+Route::get('/providers/presets', [ProviderController::class, 'presets']);
 Route::post('/providers', [ProviderController::class, 'store']);
 Route::get('/providers/{id}', [ProviderController::class, 'show']);
 Route::patch('/providers/{id}', [ProviderController::class, 'update']);
@@ -260,7 +264,9 @@ Route::delete('/model-routes/{id}', [ModelRoutingController::class, 'destroy']);
 
 // ── Project (repo browser) ───────────────────────────────────────────────────
 Route::get('/project/list', [ProjectRegistryController::class, 'list']);
+Route::get('/project/workspace-folders', [ProjectRegistryController::class, 'workspaceFolders']);
 Route::post('/project/register', [ProjectRegistryController::class, 'register']);
+Route::post('/project/register-container-path', [ProjectRegistryController::class, 'registerContainerPath']);
 Route::post('/project/skills/bootstrap', [ProjectRegistryController::class, 'bootstrapSkills']);
 Route::post('/project/{id}/activate', [ProjectRegistryController::class, 'activate']);
 Route::delete('/project/{id}', [ProjectRegistryController::class, 'destroy']);

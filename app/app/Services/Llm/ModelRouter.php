@@ -23,6 +23,11 @@ class ModelRouter
         $this->providers[$provider->getSlug()] = $provider;
     }
 
+    public function clearProviders(): void
+    {
+        $this->providers = [];
+    }
+
     /**
      * @return array<string, LlmProviderInterface>
      */
@@ -62,11 +67,17 @@ class ModelRouter
         /** @var list<array{slug: string, model: string}> $candidates */
         $candidates = [];
 
-        $route = ModelRoute::query()
-            ->where('role', $request->role)
-            ->where('is_active', true)
-            ->with(['primaryProvider', 'fallbackProvider'])
-            ->first();
+        $route = null;
+        foreach (RoleAliasHelper::variants($request->role) as $roleVariant) {
+            $route = ModelRoute::query()
+                ->where('role', $roleVariant)
+                ->where('is_active', true)
+                ->with(['primaryProvider', 'fallbackProvider'])
+                ->first();
+            if ($route !== null) {
+                break;
+            }
+        }
 
         if ($route !== null && ! $this->isRouteOverBudget($route)) {
             if ($route->primaryProvider !== null && $route->primary_model !== '') {

@@ -14,6 +14,22 @@ export type WorkspaceMeta = {
   default_repo_root: string
 }
 
+export type WorkspaceFolderEntry = {
+  name: string
+  path: string
+  relative: string
+  has_children: boolean
+}
+
+export type WorkspaceFoldersResponse = {
+  available: boolean
+  path: string
+  absolute?: string
+  folders: WorkspaceFolderEntry[]
+  workspace: WorkspaceMeta
+  message?: string
+}
+
 export function useProjects() {
   const api = useApi()
   const projects = ref<RegisteredProject[]>([])
@@ -61,6 +77,25 @@ export function useProjects() {
     }>('/project/register', { name, host_path: hostPath })
   }
 
+  async function listWorkspaceFolders(path = '') {
+    return api.get<WorkspaceFoldersResponse>('/project/workspace-folders', { path })
+  }
+
+  async function registerContainerPath(name: string, containerPath: string, activate = true) {
+    return api.post<{
+      project: RegisteredProject
+      created: boolean
+      mounted: boolean
+      available: boolean
+      error: string | null
+      manifest_total: number | null
+    }>('/project/register-container-path', {
+      name,
+      container_path: containerPath,
+      activate,
+    })
+  }
+
   async function activate(id: string) {
     return api.post<{
       project: RegisteredProject
@@ -93,6 +128,8 @@ export function useProjects() {
     refresh,
     hostUnderWorkspace,
     register,
+    listWorkspaceFolders,
+    registerContainerPath,
     activate,
     remove,
     bootstrapSkills,

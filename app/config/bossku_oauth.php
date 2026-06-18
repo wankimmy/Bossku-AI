@@ -13,29 +13,24 @@ return [
 
     /** Curated models for Settings dropdown when Codex OAuth is connected. */
     'codex_models' => [
+        ['id' => 'gpt-5.5', 'label' => 'GPT-5.5'],
         ['id' => 'gpt-4o', 'label' => 'GPT-4o'],
-        ['id' => 'gpt-4o-mini', 'label' => 'GPT-4o mini'],
-        ['id' => 'gpt-4.1', 'label' => 'GPT-4.1'],
-        ['id' => 'gpt-4.1-mini', 'label' => 'GPT-4.1 mini'],
         ['id' => 'o3', 'label' => 'o3'],
-        ['id' => 'o3-mini', 'label' => 'o3 mini'],
-        ['id' => 'o4-mini', 'label' => 'o4 mini'],
     ],
 
     'anthropic_models' => [
-        ['id' => 'claude-opus-4-5', 'label' => 'Claude Opus 4.5'],
-        ['id' => 'claude-sonnet-4-5', 'label' => 'Claude Sonnet 4.5'],
-        ['id' => 'claude-haiku-4-5', 'label' => 'Claude Haiku 4.5'],
-        ['id' => 'claude-opus-4', 'label' => 'Claude Opus 4'],
-        ['id' => 'claude-sonnet-4', 'label' => 'Claude Sonnet 4'],
-        ['id' => 'claude-3-5-sonnet-20241022', 'label' => 'Claude 3.5 Sonnet'],
-        ['id' => 'claude-3-5-haiku-20241022', 'label' => 'Claude 3.5 Haiku'],
+        ['id' => 'claude-opus-4-8', 'label' => 'Claude Opus 4.8'],
+        ['id' => 'claude-sonnet-4-6', 'label' => 'Claude Sonnet 4.6'],
+        ['id' => 'claude-haiku-4-5-20251001', 'label' => 'Claude Haiku 4.5'],
     ],
 
     'ollama_cloud_models' => [
         ['id' => 'kimi-k2.6:cloud', 'label' => 'Kimi K2.6 (Cloud)'],
+        ['id' => 'kimi-k2.7-code:cloud', 'label' => 'Kimi K2.7 Code (Cloud)'],
+        ['id' => 'glm-5.2:cloud', 'label' => 'GLM 5.2 (Cloud)'],
         ['id' => 'glm-5.1:cloud', 'label' => 'GLM 5.1 (Cloud)'],
         ['id' => 'deepseek-v4-pro:cloud', 'label' => 'DeepSeek V4 Pro (Cloud)'],
         ['id' => 'qwen3-coder-next:cloud', 'label' => 'Qwen3 Coder Next (Cloud)'],
+        ['id' => 'qwen3.5:cloud', 'label' => 'Qwen 3.5 (Cloud)'],
     ],
 ];

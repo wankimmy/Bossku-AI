@@ -32,32 +32,33 @@ class BosskuAiSpecSeeder extends Seeder
 
         $this->call(AgentPersonaSeeder::class);
 
-        // ── LLM Providers (no demo model routes — configure in Settings) ───────
-        LlmProvider::firstOrCreate(
-            ['slug' => 'ollama-local'],
-            [
-                'name' => 'Ollama (Local)',
-                'type' => 'ollama',
-                'base_url' => env('OLLAMA_BASE_URL', 'http://127.0.0.1:11434'),
-                'api_key_env' => 'OLLAMA_API_KEY',
-                'is_active' => true,
-                'health_status' => 'healthy',
-                'available_models' => ['llama3.2', 'qwen2.5-coder:7b', 'glm-5.1:cloud'],
-            ]
-        );
+        // ── LLM Providers (cloud-only presets) ───────────────────────────────
+        $cloudProviders = [
+            ['slug' => 'ollama-cloud', 'name' => 'Ollama Cloud', 'type' => 'ollama', 'base_url' => 'https://ollama.com', 'api_key_env' => 'OLLAMA_API_KEY', 'is_active' => true],
+            ['slug' => 'anthropic', 'name' => 'Anthropic', 'type' => 'anthropic', 'base_url' => 'https://api.anthropic.com', 'api_key_env' => 'ANTHROPIC_API_KEY', 'is_active' => false],
+            ['slug' => 'openai', 'name' => 'OpenAI', 'type' => 'openai_compatible', 'base_url' => 'https://api.openai.com', 'api_key_env' => 'OPENAI_API_KEY', 'is_active' => false],
+            ['slug' => 'codex', 'name' => 'Codex (ChatGPT)', 'type' => 'codex_oauth', 'base_url' => 'https://api.openai.com', 'is_active' => false],
+            ['slug' => 'deepseek', 'name' => 'DeepSeek', 'type' => 'openai_compatible', 'base_url' => 'https://api.deepseek.com', 'api_key_env' => 'DEEPSEEK_API_KEY', 'is_active' => false],
+            ['slug' => 'moonshot', 'name' => 'Kimi (Moonshot)', 'type' => 'openai_compatible', 'base_url' => 'https://api.moonshot.ai/v1', 'api_key_env' => 'MOONSHOT_API_KEY', 'is_active' => false],
+            ['slug' => 'zai', 'name' => 'GLM (Z.ai)', 'type' => 'openai_compatible', 'base_url' => 'https://api.z.ai/api/paas/v4', 'api_key_env' => 'ZHIPU_API_KEY', 'is_active' => false],
+            ['slug' => 'dashscope', 'name' => 'Qwen (DashScope)', 'type' => 'openai_compatible', 'base_url' => 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1', 'api_key_env' => 'DASHSCOPE_API_KEY', 'is_active' => false],
+            ['slug' => 'openrouter', 'name' => 'OpenRouter', 'type' => 'openai_compatible', 'base_url' => 'https://openrouter.ai/api/v1', 'api_key_env' => 'OPENROUTER_API_KEY', 'is_active' => false],
+        ];
 
-        LlmProvider::firstOrCreate(
-            ['slug' => 'anthropic'],
-            [
-                'name' => 'Anthropic',
-                'type' => 'anthropic',
-                'base_url' => 'https://api.anthropic.com',
-                'api_key_env' => 'ANTHROPIC_API_KEY',
-                'is_active' => false,
-                'health_status' => 'unknown',
-                'available_models' => ['claude-sonnet-4-6', 'claude-opus-4-7', 'claude-haiku-4-5'],
-            ]
-        );
+        foreach ($cloudProviders as $pd) {
+            $catalogModels = array_values(array_filter(
+                config('bossku_inference_catalog.models', []),
+                fn (array $m): bool => ($m['provider'] ?? '') === $pd['slug'],
+            ));
+
+            LlmProvider::firstOrCreate(
+                ['slug' => $pd['slug']],
+                array_merge($pd, [
+                    'health_status' => 'unknown',
+                    'available_models' => array_column($catalogModels, 'id'),
+                ]),
+            );
+        }
 
         // ── Skills ────────────────────────────────────────────────────────────
         $skillData = [

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\BosskuAi\Setting;
 use App\Services\BosskuAi\RuntimeSettings;
+use App\Services\Llm\ProviderRegistry;
 use Illuminate\Http\Request;
 
 class SettingsApiController extends Controller
@@ -64,7 +65,7 @@ class SettingsApiController extends Controller
         return $settings->allPublic();
     }
 
-    public function update(Request $request, RuntimeSettings $settings)
+    public function update(Request $request, RuntimeSettings $settings, ProviderRegistry $providerRegistry)
     {
         $payload = $this->extractUpdatablePayload($request);
         $request->merge($payload);
@@ -125,6 +126,7 @@ class SettingsApiController extends Controller
         }
 
         $settings->clearAliasesCache();
+        $providerRegistry->refresh();
 
         return $settings->allPublic();
     }

@@ -3,6 +3,7 @@
 namespace App\Services\BosskuAi;
 
 use App\Models\BosskuAi\ModelRoute;
+use App\Services\Llm\RoleAliasHelper;
 use App\Services\Llm\DTO\LlmRequest;
 use App\Services\Llm\DTO\LlmResponse;
 use App\Services\Llm\ModelRegistry;
@@ -105,7 +106,13 @@ class LlmGateway
             return true;
         }
 
-        return ModelRoute::where('role', $role)->where('is_active', true)->exists();
+        foreach (RoleAliasHelper::variants($role) as $variant) {
+            if (ModelRoute::where('role', $variant)->where('is_active', true)->exists()) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function resolveProvider(string $model): string

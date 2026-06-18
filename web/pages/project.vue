@@ -16,6 +16,7 @@ const newProjectHostPath = ref('')
 const hostPathInput = ref<HTMLInputElement | null>(null)
 const registerLoading = ref(false)
 const activateLoading = ref<string | null>(null)
+const workspacePickerOpen = ref(false)
 
 const repoRoot = ref('')
 const currentPath = ref('')
@@ -85,6 +86,11 @@ const hostPathWarning = computed(() => {
   const path = newProjectHostPath.value.trim()
   if (!path) return ''
   const workspacePrefix = registry.workspace.value?.workspace_host_prefix?.trim() ?? ''
+  const normalized = path.replace(/\\/g, '/').replace(/\/+$/, '')
+  if (!workspacePrefix && /^[a-z]:/i.test(normalized)) {
+    const mount = registry.workspace.value?.workspace_mount ?? '/workspace'
+    return `Windows paths do not work in Docker without a host prefix. Click Open Folder to browse ${mount}, or set BOSSKU_WORKSPACE_HOST_PREFIX in app/.env.`
+  }
   if (!workspacePrefix) return ''
   if (!registry.hostUnderWorkspace(path)) {
     return 'Outside the mounted workspace. Edit docker-compose.yml to add another bind mount, then run docker compose up -d.'
@@ -159,9 +165,32 @@ async function openFolderHelper() {
     }
     return
   }
-  // Plain browser (not the desktop shell): no native picker available.
-  toast.info('The native folder picker needs the BosskuAI desktop app. Paste the folder path here instead.')
-  hostPathInput.value?.focus()
+  workspacePickerOpen.value = true
+}
+
+async function onWorkspaceFolderSelected(folder: { name: string; path: string; relative: string }) {
+  const name = newProjectName.value.trim() || folder.name
+  try {
+    const res = await registry.registerContainerPath(name, folder.path, true)
+    workspacePickerOpen.value = false
+    newProjectName.value = ''
+    newProjectHostPath.value = ''
+    await reloadProjectWorkspace()
+    if (!res.available && res.error) {
+      toast.error(res.error)
+    }
+    else {
+      const indexed = res.manifest_total != null ? ` (${res.manifest_total} files indexed)` : ''
+      toast.success(
+        res.created
+          ? `Project "${res.project.name}" registered and activated${indexed}.`
+          : `Project "${res.project.name}" updated and activated${indexed}.`,
+      )
+    }
+  }
+  catch (e: unknown) {
+    toast.error(e instanceof Error ? e.message : 'Could not register workspace folder')
+  }
 }
 
 async function activateProject(id: string) {
@@ -441,11 +470,17 @@ onMounted(() => {
             </button>
           </div>
           <p class="sm:col-span-2 text-xs text-zinc-500">
-            Click <strong class="text-zinc-300">Open Folder</strong> to pick a folder with the native Windows dialog, or paste a path. (In a plain browser, paste the path manually.)
+            Click <strong class="text-zinc-300">Open Folder</strong> to browse the Docker workspace mount, or paste a host path for advanced use.
           </p>
         </form>
       </div>
     </section>
+
+    <ProjectWorkspaceFolderPicker
+      :open="workspacePickerOpen"
+      @close="workspacePickerOpen = false"
+      @select="onWorkspaceFolderSelected"
+    />
 
     <div class="flex gap-1 rounded-lg bg-zinc-900 p-1 lg:hidden">
       <button

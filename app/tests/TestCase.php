@@ -24,5 +24,12 @@ abstract class TestCase extends BaseTestCase
                 config(['bossku_oauth' => require $file]);
             }
         }
+
+        if (! is_array(config('bossku_inference_catalog')) || config('bossku_inference_catalog') === []) {
+            $catalogFile = dirname(__DIR__).'/config/bossku_inference_catalog.php';
+            if (is_readable($catalogFile)) {
+                config(['bossku_inference_catalog' => require $catalogFile]);
+            }
+        }
     }
 }

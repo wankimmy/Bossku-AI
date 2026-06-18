@@ -23,6 +23,33 @@ test.describe('slash commands', () => {
     await expect(page.getByText('Slash commands', { exact: true })).toHaveCount(0)
   })
 
+  test('project page workspace folder picker registers and activates a project', async ({ page }) => {
+    await page.request.post('http://127.0.0.1:8001/api/__e2e/reset')
+    await page.addInitScript(() => localStorage.setItem('bossku_onboarding_v1', '1'))
+
+    await page.goto('/project', { waitUntil: 'load' })
+    await page.waitForLoadState('networkidle')
+
+    await page.getByRole('button', { name: 'Open Folder' }).click()
+    await expect(page.getByTestId('workspace-folder-picker')).toBeVisible()
+
+    const foldersResponse = page.waitForResponse(
+      resp => resp.url().includes('/api/project/workspace-folders') && resp.request().method() === 'GET',
+    )
+    await foldersResponse
+
+    const registerResponse = page.waitForResponse(
+      resp => resp.url().includes('/api/project/register-container-path') && resp.request().method() === 'POST',
+    )
+    await page.locator('li').filter({ hasText: 'demo-app/' }).getByTestId('workspace-folder-select').click()
+    const register = await registerResponse
+    expect(register.ok()).toBe(true)
+
+    await expect(page.getByTestId('workspace-folder-picker')).toHaveCount(0)
+    await expect(page.locator('section').filter({ hasText: 'Active project ready' })).toContainText('demo-app')
+    await expect(page.getByRole('button', { name: 'Run /project-understanding' })).toBeVisible()
+  })
+
   test('project page shows project-understanding CTA and manual path registration still works', async ({ page }) => {
     await page.request.post('http://127.0.0.1:8001/api/__e2e/reset')
     await page.addInitScript(() => localStorage.setItem('bossku_onboarding_v1', '1'))

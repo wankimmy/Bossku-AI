@@ -69,6 +69,16 @@ const initialTree: Record<string, { name: string; path: string; type: 'dir' | 'f
   ],
 }
 
+const mockWorkspaceFolders: Record<string, { name: string; path: string; relative: string; has_children: boolean }[]> = {
+  '': [
+    { name: 'Bossku-AI', path: '/repo/Bossku-AI', relative: 'Bossku-AI', has_children: true },
+    { name: 'demo-app', path: '/repo/demo-app', relative: 'demo-app', has_children: false },
+  ],
+  'Bossku-AI': [
+    { name: 'app', path: '/repo/Bossku-AI/app', relative: 'Bossku-AI/app', has_children: false },
+  ],
+}
+
 const initialFiles: Record<string, string> = {
   'README.md': '# Bossku AI\n\nMock workspace used by E2E.',
   'app/main.php': '<?php echo "Bossku AI";',
@@ -417,6 +427,78 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
     return
   }
 
+  if (pathname === '/api/project/workspace-folders' && method === 'GET') {
+    const path = (url.searchParams.get('path') ?? '').replace(/\\/g, '/').replace(/^\/+|\/+$/g, '')
+    if (path.includes('..')) {
+      json(res, {
+        available: false,
+        message: 'Path traversal is not allowed.',
+        workspace: workspaceMeta,
+      }, 422)
+      return
+    }
+    json(res, {
+      available: true,
+      path,
+      absolute: path ? `${workspaceMeta.workspace_mount}/${path}` : workspaceMeta.workspace_mount,
+      folders: mockWorkspaceFolders[path] ?? [],
+      workspace: workspaceMeta,
+    })
+    return
+  }
+
+  if (pathname === '/api/project/register-container-path' && method === 'POST') {
+    const body = JSON.parse(await readBody(req) || '{}') as Record<string, unknown>
+    const name = String(body.name ?? '').trim() || 'New project'
+    const containerPath = String(body.container_path ?? '').trim()
+    const activate = body.activate !== false
+    const mount = workspaceMeta.workspace_mount
+    if (!containerPath.startsWith(mount)) {
+      json(res, {
+        message: `Container path must be under ${mount}.`,
+        workspace: workspaceMeta,
+      }, 422)
+      return
+    }
+    const created = !projectsState.some(project => project.container_path === containerPath)
+    const hostPath = containerPath.replace(mount, workspaceMeta.workspace_host_prefix)
+    const project: MockProject = created
+      ? {
+          id: `proj_${projectsState.length + 1}`,
+          name,
+          host_path: hostPath,
+          container_path: containerPath,
+          is_active: activate,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }
+      : {
+          ...projectsState.find(item => item.container_path === containerPath)!,
+          name,
+          host_path: hostPath,
+          is_active: activate,
+          updated_at: new Date().toISOString(),
+        }
+    projectsState = created
+      ? [project, ...projectsState.map(item => ({ ...item, is_active: activate ? false : item.is_active }))]
+      : projectsState.map(item => {
+        if (item.container_path === containerPath) return project
+        return activate ? { ...item, is_active: false } : item
+      })
+    if (activate) {
+      activeProjectId = project.id
+    }
+    json(res, {
+      project,
+      created,
+      mounted: true,
+      available: true,
+      error: null,
+      manifest_total: 2,
+    }, created ? 201 : 200)
+    return
+  }
+
   if (pathname === '/api/project' && method === 'GET') {
     json(res, {
       root: '/repo',
@@ -757,23 +839,88 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
 
   if (pathname === '/api/settings/inference-catalog' && method === 'GET') {
     json(res, {
+      version: '2026-06-19',
+      cloud_only: true,
+      providers: [
+        {
+          provider: 'ollama-cloud',
+          name: 'Ollama Cloud',
+          auth: 'api_key',
+          configured: true,
+          disabled: false,
+          all_cloud_models: [{ id: 'kimi-k2.6:cloud', label: 'Kimi K2.6 (Cloud)' }],
+          recommended_models: [{ id: 'kimi-k2.6:cloud', label: 'Kimi K2.6 (Cloud)', auto_selected: true }],
+        },
+        {
+          provider: 'anthropic',
+          name: 'Anthropic',
+          auth: 'api_key',
+          configured: true,
+          disabled: false,
+          all_cloud_models: [{ id: 'claude-opus-4-8', label: 'Claude Opus 4.8' }],
+          recommended_models: [{ id: 'claude-opus-4-8', label: 'Claude Opus 4.8', auto_selected: true }],
+        },
+        {
+          provider: 'codex',
+          name: 'Codex (ChatGPT)',
+          auth: 'oauth',
+          configured: true,
+          disabled: false,
+          all_cloud_models: [{ id: 'gpt-5.5', label: 'GPT-5.5 (Codex)' }],
+          recommended_models: [{ id: 'gpt-5.5', label: 'GPT-5.5 (Codex)', auto_selected: true }],
+        },
+      ],
       ollama: [
-        { id: 'qwen3-coder-next', label: 'Qwen 3 Coder Next' },
-        { id: 'kimi-k2.6', label: 'Kimi K2.6' },
-        { id: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro' },
-        { id: 'glm-5.1', label: 'GLM 5.1' },
+        { id: 'kimi-k2.6:cloud', label: 'Kimi K2.6 (Cloud)' },
+        { id: 'glm-5.2:cloud', label: 'GLM 5.2 (Cloud)' },
       ],
       anthropic: [
-        { id: 'claude-sonnet-4-5', label: 'Claude Sonnet 4.5' },
-        { id: 'claude-opus-4-1', label: 'Claude Opus 4.1' },
+        { id: 'claude-opus-4-8', label: 'Claude Opus 4.8' },
+        { id: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6' },
       ],
       codex: [
-        { id: 'gpt-5.1-codex', label: 'GPT-5.1 Codex' },
-        { id: 'gpt-5.1-codex-mini', label: 'GPT-5.1 Codex Mini' },
+        { id: 'gpt-5.5', label: 'GPT-5.5 (Codex)' },
       ],
       anthropic_configured: true,
       codex_connected: true,
     })
+    return
+  }
+
+  if (pathname === '/api/settings/model-recommendations' && method === 'GET') {
+    const role = url.searchParams.get('role') ?? 'orchestrator'
+    const provider = url.searchParams.get('provider') ?? 'ollama-cloud'
+    json(res, {
+      role,
+      provider,
+      recommended_models: [
+        { id: 'kimi-k2.6:cloud', label: 'Kimi K2.6 (Cloud)', score: 72, auto_selected: true },
+      ],
+      auto_selected: 'kimi-k2.6:cloud',
+    })
+    return
+  }
+
+  if (pathname === '/api/settings/model-recommendations/apply' && method === 'POST') {
+    json(res, {
+      applied: {
+        orchestrator: { provider: 'ollama-cloud', model: 'kimi-k2.6:cloud', score: 72 },
+        executor: { provider: 'moonshot', model: 'kimi-k2.7-code', score: 88 },
+      },
+    })
+    return
+  }
+
+  if (pathname === '/api/providers/presets' && method === 'GET') {
+    json(res, [
+      { slug: 'deepseek', name: 'DeepSeek', type: 'openai_compatible', configured: false },
+      { slug: 'moonshot', name: 'Kimi (Moonshot)', type: 'openai_compatible', configured: false },
+    ])
+    return
+  }
+
+  if (pathname === '/api/oauth/codex/status' && method === 'GET') {
+    json(res, { connected: true, configured: true, expires_at: null, account_hint: 'mock@example.com', last_refresh: null })
     return
   }
 

@@ -6,13 +6,19 @@ use App\Http\Controllers\Controller;
 use App\Models\BosskuAi\LlmProvider;
 use App\Services\Llm\ModelRouter;
 use App\Services\Llm\OllamaClient;
+use App\Services\Llm\ProviderFactory;
+use App\Services\Llm\ProviderRegistry;
 use Illuminate\Http\Request;
 
 class ProviderController extends Controller
 {
+    public function __construct(
+        protected ProviderRegistry $registry,
+        protected ProviderFactory $factory,
+    ) {}
+
     public function index()
     {
-        // api_key_encrypted is in $hidden on the model, so it won't be serialised
         return response()->json(LlmProvider::orderBy('name')->get());
     }
 
@@ -33,6 +39,12 @@ class ProviderController extends Controller
             'is_active'   => 'boolean',
         ]);
 
+        if ($data['type'] === 'codex_oauth') {
+            return response()->json([
+                'message' => 'Codex uses OAuth. Connect via Settings → Models.',
+            ], 422);
+        }
+
         $apiKey = $data['api_key'] ?? null;
         unset($data['api_key']);
 
@@ -42,6 +54,8 @@ class ProviderController extends Controller
             $provider->setApiKey($apiKey);
             $provider->save();
         }
+
+        $this->registry->refresh();
 
         return response()->json($provider, 201);
     }
@@ -70,6 +84,7 @@ class ProviderController extends Controller
         }
 
         $provider->save();
+        $this->registry->refresh();
 
         return response()->json($provider);
     }
@@ -77,6 +92,7 @@ class ProviderController extends Controller
     public function destroy(string $id)
     {
         LlmProvider::findOrFail($id)->delete();
+        $this->registry->refresh();
 
         return response()->json(['message' => 'Provider deleted.']);
     }
@@ -90,8 +106,7 @@ class ProviderController extends Controller
         if ($instance === null) {
             return response()->json([
                 'status' => 'unavailable',
-                'message' => "Provider slug '{$provider->slug}' is not registered at runtime. Registered slugs: "
-                    .implode(', ', array_keys($router->registeredProviders())),
+                'message' => "Provider slug '{$provider->slug}' is not registered at runtime. Add API key or activate provider.",
             ], 422);
         }
 
@@ -125,12 +140,47 @@ class ProviderController extends Controller
 
     public function syncModels(string $id)
     {
-        LlmProvider::findOrFail($id);
+        $provider = LlmProvider::findOrFail($id);
+        $normalized = $this->registry->get($provider->slug);
+
+        if ($normalized === null) {
+            return response()->json([
+                'synced' => 0,
+                'message' => 'Provider not configured. Add API key first.',
+            ], 422);
+        }
+
+        $catalogModels = array_values(array_filter(
+            config('bossku_inference_catalog.models', []),
+            fn (array $m): bool => ($m['provider'] ?? '') === $provider->slug,
+        ));
+
+        $liveModels = $normalized->listModels();
+        $merged = array_unique(array_merge(
+            array_column($catalogModels, 'id'),
+            $liveModels,
+        ));
+
+        $provider->available_models = array_values($merged);
+        $provider->save();
 
         return response()->json([
-            'synced' => 0,
-            'not_implemented' => true,
-            'message' => 'Automatic model sync is not implemented yet. Configure models in Settings → Models.',
+            'synced' => count($merged),
+            'models' => $merged,
         ]);
+    }
+
+    public function presets()
+    {
+        $presets = config('bossku_inference_catalog.providers', []);
+
+        return response()->json(array_map(
+            fn (string $slug, array $meta): array => array_merge($meta, [
+                'slug' => $slug,
+                'configured' => $this->factory->isProviderConfigured($slug),
+            ]),
+            array_keys($presets),
+            array_values($presets),
+        ));
     }
 }

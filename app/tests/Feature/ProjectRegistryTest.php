@@ -131,6 +131,88 @@ class ProjectRegistryTest extends TestCase
             ->assertJsonMissing(['name' => 'src']);
     }
 
+    #[Test]
+    public function it_lists_workspace_folders_at_mount_root(): void
+    {
+        config(['bossku.workspace_mount' => $this->workspaceParent]);
+
+        $this->getJson('/api/project/workspace-folders')
+            ->assertOk()
+            ->assertJsonPath('available', true)
+            ->assertJsonPath('path', '')
+            ->assertJsonFragment(['name' => 'project-a', 'relative' => 'project-a'])
+            ->assertJsonFragment(['name' => 'project-b', 'relative' => 'project-b']);
+    }
+
+    #[Test]
+    public function it_lists_workspace_subfolders(): void
+    {
+        config(['bossku.workspace_mount' => $this->workspaceParent]);
+
+        $this->getJson('/api/project/workspace-folders?path=project-a')
+            ->assertOk()
+            ->assertJsonPath('path', 'project-a')
+            ->assertJsonFragment(['name' => 'src', 'relative' => 'project-a/src']);
+    }
+
+    #[Test]
+    public function it_denies_workspace_path_traversal(): void
+    {
+        config(['bossku.workspace_mount' => $this->workspaceParent]);
+
+        $this->getJson('/api/project/workspace-folders?path=../outside')
+            ->assertStatus(422)
+            ->assertJsonPath('available', false);
+    }
+
+    #[Test]
+    public function it_registers_and_activates_container_path(): void
+    {
+        config(['bossku.workspace_mount' => $this->workspaceParent]);
+
+        $containerPath = $this->workspaceParent.'/project-b';
+
+        $this->postJson('/api/project/register-container-path', [
+            'name' => 'Project B',
+            'container_path' => $containerPath,
+            'activate' => true,
+        ])
+            ->assertCreated()
+            ->assertJsonPath('project.name', 'Project B')
+            ->assertJsonPath('project.is_active', true)
+            ->assertJsonPath('available', true);
+
+        $stored = Project::query()->where('name', 'Project B')->first();
+        $this->assertNotNull($stored);
+        $this->assertSame(realpath($containerPath), $stored->container_path);
+        $this->assertTrue((bool) $stored->is_active);
+    }
+
+    #[Test]
+    public function it_rejects_windows_host_path_when_workspace_prefix_is_blank(): void
+    {
+        config(['bossku.workspace_host_prefix' => '']);
+
+        $this->postJson('/api/project/register', [
+            'name' => 'Windows path',
+            'host_path' => 'C:/Users/Admin/Documents/my-app',
+        ])
+            ->assertStatus(422)
+            ->assertJsonPath('under_workspace', false);
+    }
+
+    #[Test]
+    public function it_rejects_container_path_outside_workspace_mount(): void
+    {
+        config(['bossku.workspace_mount' => $this->workspaceParent]);
+
+        $this->postJson('/api/project/register-container-path', [
+            'name' => 'Outside',
+            'container_path' => '/etc/passwd',
+        ])
+            ->assertStatus(422);
+    }
+
     private function normalize(string $path): string
     {
         return str_replace('\\', '/', rtrim($path, '/\\'));

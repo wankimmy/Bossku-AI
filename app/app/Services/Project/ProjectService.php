@@ -70,11 +70,186 @@ class ProjectService
     }
 
     /**
+     * Resolve a path relative to the workspace mount (empty = workspace root).
+     *
+     * @return array{absolute: string, relative: string}
+     */
+    public function resolveWorkspacePath(string $relativePath = ''): array
+    {
+        $mount = $this->workspaceMount();
+        $mountReal = realpath($mount);
+
+        if ($mountReal === false || ! is_dir($mountReal)) {
+            throw new \RuntimeException(
+                'Docker workspace mount is not available at '.$mount.'. '
+                .'Check ../:/workspace in docker-compose.yml and restart containers.'
+            );
+        }
+
+        $rel = $this->normalizeHostPath($relativePath);
+        if (str_contains($rel, '..')) {
+            throw new \InvalidArgumentException('Path traversal is not allowed.');
+        }
+
+        $combined = $rel === '' ? $mountReal : $mountReal.DIRECTORY_SEPARATOR.str_replace('/', DIRECTORY_SEPARATOR, $rel);
+        $real = realpath($combined);
+
+        if ($real === false || ! is_dir($real)) {
+            throw new \InvalidArgumentException('Workspace folder not found.');
+        }
+
+        if (! str_starts_with($real, $mountReal)) {
+            throw new \InvalidArgumentException('Path denied.');
+        }
+
+        $relative = $rel === '' ? '' : ltrim(str_replace($mountReal, '', $real), DIRECTORY_SEPARATOR);
+        $relative = str_replace(DIRECTORY_SEPARATOR, '/', $relative);
+
+        return ['absolute' => $real, 'relative' => $relative];
+    }
+
+    /**
+     * @return list<array{name: string, path: string, relative: string, has_children: bool}>
+     */
+    public function listWorkspaceFolders(string $relativePath = ''): array
+    {
+        $resolved = $this->resolveWorkspacePath($relativePath);
+        $absolute = $resolved['absolute'];
+        $baseRelative = $resolved['relative'];
+        $skipDirs = config('bossku.skip_dirs', []);
+        $entries = [];
+
+        foreach (scandir($absolute) ?: [] as $name) {
+            if ($name === '.' || $name === '..') {
+                continue;
+            }
+            if (is_array($skipDirs) && in_array($name, $skipDirs, true)) {
+                continue;
+            }
+
+            $full = $absolute.DIRECTORY_SEPARATOR.$name;
+            if (! is_dir($full)) {
+                continue;
+            }
+
+            $rel = $baseRelative === '' ? $name : $baseRelative.'/'.$name;
+            $containerPath = $this->workspaceMount().($rel === '' ? '' : '/'.$rel);
+            $hasChildren = false;
+
+            foreach (scandir($full) ?: [] as $child) {
+                if ($child === '.' || $child === '..') {
+                    continue;
+                }
+                if (is_array($skipDirs) && in_array($child, $skipDirs, true)) {
+                    continue;
+                }
+                if (is_dir($full.DIRECTORY_SEPARATOR.$child)) {
+                    $hasChildren = true;
+                    break;
+                }
+            }
+
+            $entries[] = [
+                'name' => $name,
+                'path' => $containerPath,
+                'relative' => $rel,
+                'has_children' => $hasChildren,
+            ];
+        }
+
+        usort($entries, fn (array $a, array $b): int => strcasecmp($a['name'], $b['name']));
+
+        return $entries;
+    }
+
+    public function containerToHost(string $containerPath): string
+    {
+        $container = $this->normalizeHostPath($containerPath);
+        $mount = $this->workspaceMount();
+        $prefix = $this->workspaceHostPrefix();
+
+        if ($prefix === '') {
+            return $container;
+        }
+
+        if (! str_starts_with(strtolower($container), strtolower($mount))) {
+            return $container;
+        }
+
+        $relative = ltrim(substr($container, strlen($mount)), '/');
+
+        return $relative === '' ? $prefix : $prefix.'/'.$relative;
+    }
+
+    /**
+     * @return array{project: Project, created: bool}
+     */
+    public function registerContainerPath(string $name, string $containerPath, bool $autoActivate = true): array
+    {
+        $container = $this->normalizeHostPath($containerPath);
+        $mount = $this->workspaceMount();
+
+        if (! str_starts_with(strtolower($container), strtolower($mount))) {
+            throw new \InvalidArgumentException(
+                'Container path must be under '.$mount.'. Use the workspace folder browser to pick a folder.'
+            );
+        }
+
+        $relative = ltrim(substr($container, strlen($mount)), '/');
+        $this->resolveWorkspacePath($relative);
+
+        $hostPath = $this->containerToHost($container);
+        $realContainer = realpath(str_replace('/', DIRECTORY_SEPARATOR, $container)) ?: $container;
+
+        $existing = Project::query()
+            ->where('container_path', $realContainer)
+            ->orWhere('host_path', $hostPath)
+            ->first();
+
+        if ($existing !== null) {
+            $existing->update([
+                'name' => $name,
+                'host_path' => $hostPath,
+                'container_path' => $realContainer,
+            ]);
+            $project = $existing->fresh();
+
+            if ($autoActivate) {
+                $project = $this->setActive($project->id);
+            }
+
+            return ['project' => $project, 'created' => false];
+        }
+
+        $project = Project::query()->create([
+            'name' => $name,
+            'host_path' => $hostPath,
+            'container_path' => $realContainer,
+            'is_active' => false,
+        ]);
+
+        if ($autoActivate || ! Project::query()->where('is_active', true)->exists()) {
+            $project = $this->setActive($project->id);
+        }
+
+        return ['project' => $project, 'created' => true];
+    }
+
+    /**
      * @return array{project: Project, created: bool}
      */
     public function register(string $name, string $hostPath): array
     {
         $host = $this->normalizeHostPath($hostPath);
+        $prefix = $this->workspaceHostPrefix();
+
+        if ($prefix === '' && preg_match('#^[a-z]:/#i', $host)) {
+            throw new \InvalidArgumentException(
+                'Windows host paths cannot be registered in Docker without BOSSKU_WORKSPACE_HOST_PREFIX. '
+                .'Click Open Folder to browse '.$this->workspaceMount().', or set BOSSKU_WORKSPACE_HOST_PREFIX in app/.env.'
+            );
+        }
+
         $containerPath = $this->hostToContainer($host);
 
         $existing = Project::query()

@@ -19,8 +19,10 @@ $ErrorActionPreference = "SilentlyContinue"
 
 if (-not $Prompt) { exit 0 }
 
-# Config
-$obsidianSessions = "C:\Users\Safwan Hakim\Documents\Safwan\Safwan-Obsidian-Vault\Sessions"
+# Config — vault path resolves per-machine; override with $env:OBSIDIAN_VAULT_PATH
+$vaultRoot = if ($env:OBSIDIAN_VAULT_PATH) { $env:OBSIDIAN_VAULT_PATH }
+             else { Join-Path $env:USERPROFILE "Documents\Safwan\Safwan-Obsidian-Vault" }
+$obsidianSessions = Join-Path $vaultRoot "Sessions"
 $date        = Get-Date -Format "yyyy-MM-dd"
 $time        = Get-Date -Format "HH:mm"
 $sessionFile = Join-Path $obsidianSessions "$date.md"
