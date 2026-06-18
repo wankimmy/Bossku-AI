@@ -121,11 +121,11 @@ profile_skills() {
     dev) printf '%s\n' "${core[@]}" "${dev[@]}" ;;
     growth) printf '%s\n' "${core[@]}" "${growth[@]}" ;;
     design) printf '%s\n' "${core[@]}" "${design[@]}" ;;
-    full) find "$repo_root/ai-assistant/skills" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort ;;
+    full) find "$repo_root/ai-assistant/skills" -mindepth 1 -maxdepth 1 -type d | while IFS= read -r dir; do basename "$dir"; done | sort ;;
   esac
 }
 
-entries=(AGENTS.md CLAUDE.md WORKSPACE-ONBOARDING.md skill-index.json agents mcp-configs .codex .claude .cursor .claude-plugin ai-assistant)
+entries=(AGENTS.md CLAUDE.md WORKSPACE-ONBOARDING.md skill-index.json agents commands hooks mcp-configs .codex .opencode .claude .cursor .claude-plugin ai-assistant)
 
 # Dry-run: show what would change and exit
 if (( dry_run )); then
@@ -137,7 +137,7 @@ if (( dry_run )); then
   exit 0
 fi
 if (( skills_only )); then entries=(ai-assistant); fi
-if (( sync_layer )); then entries=(AGENTS.md CLAUDE.md WORKSPACE-ONBOARDING.md skill-index.json agents mcp-configs .codex .claude .cursor .claude-plugin ai-assistant); fi
+if (( sync_layer )); then entries=(AGENTS.md CLAUDE.md WORKSPACE-ONBOARDING.md skill-index.json agents commands hooks mcp-configs .codex .opencode .claude .cursor .claude-plugin ai-assistant); fi
 
 conflicts=()
 if (( ! sync_layer && ! skills_only )); then
@@ -163,11 +163,12 @@ if (( skills_only )); then
   mkdir -p "$target_dir/ai-assistant"
   for sub in skills references scripts; do copy_path "ai-assistant/$sub"; done
 else
-  for e in AGENTS.md CLAUDE.md WORKSPACE-ONBOARDING.md skill-index.json agents mcp-configs .codex .claude .cursor .claude-plugin; do copy_path "$e"; done
+  for e in AGENTS.md CLAUDE.md WORKSPACE-ONBOARDING.md skill-index.json agents commands hooks mcp-configs .codex .opencode .claude .cursor .claude-plugin; do copy_path "$e"; done
   mkdir -p "$target_dir/ai-assistant"
   for sub in memory references scripts hooks; do copy_path "ai-assistant/$sub"; done
-  mapfile -t selected < <(profile_skills)
-  copy_selected_skills "${selected[@]}"
+  selected=()
+  while IFS= read -r skill; do selected+=("$skill"); done < <(profile_skills)
+  if (( ${#selected[@]} > 0 )); then copy_selected_skills "${selected[@]}"; else copy_selected_skills; fi
   apply_hooks_choice
 fi
 
@@ -176,4 +177,4 @@ if (( had_memory )); then mkdir -p "$target_dir/ai-assistant/memory"; cp -a "$me
 echo "BosskuAI installed to: $target_dir"
 echo "Profile: $profile"
 (( with_hooks )) && echo "Hooks: enabled with auto memory capture" || echo "Hooks: disabled by default"
-if (( skip_check == 0 )); then "$script_dir/check-workspace.sh" "$target_dir" --profile "$profile"; fi
+if (( skip_check == 0 )); then bash "$script_dir/check-workspace.sh" "$target_dir" --profile "$profile"; fi

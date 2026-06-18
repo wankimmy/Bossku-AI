@@ -42,7 +42,7 @@ function Get-ProfileSkills($Profile) {
     }
 }
 
-$Entries = @("AGENTS.md","CLAUDE.md","WORKSPACE-ONBOARDING.md","skill-index.json","agents","mcp-configs",".codex",".claude",".cursor",".claude-plugin",".claude-plugin","ai-assistant")
+$Entries = @("AGENTS.md","CLAUDE.md","WORKSPACE-ONBOARDING.md","skill-index.json","agents","commands","hooks","mcp-configs",".codex",".opencode",".claude",".cursor",".claude-plugin","ai-assistant")
 if (-not $SkillsOnly -and -not $SyncLayer) {
     $conflicts = @($Entries | Where-Object { Test-Path (Join-Path $ResolvedTarget $_) })
     if ($conflicts.Count -gt 0 -and -not $Force) {
@@ -68,7 +68,7 @@ if ($PreserveMemory -and (Test-Path (Join-Path $ResolvedTarget "ai-assistant\mem
 if ($SkillsOnly) {
     foreach ($sub in @("ai-assistant\skills","ai-assistant\references","ai-assistant\scripts")) { Copy-Path $sub }
 } else {
-    foreach ($e in @("AGENTS.md","CLAUDE.md","WORKSPACE-ONBOARDING.md","skill-index.json","agents","mcp-configs",".codex",".claude",".cursor",".claude-plugin")) { Copy-Path $e }
+    foreach ($e in @("AGENTS.md","CLAUDE.md","WORKSPACE-ONBOARDING.md","skill-index.json","agents","commands","hooks","mcp-configs",".codex",".opencode",".claude",".cursor",".claude-plugin")) { Copy-Path $e }
     foreach ($sub in @("ai-assistant\memory","ai-assistant\references","ai-assistant\scripts","ai-assistant\hooks")) { Copy-Path $sub }
     $destSkills = Join-Path $ResolvedTarget "ai-assistant\skills"
     if (Test-Path $destSkills) { Remove-Item -LiteralPath $destSkills -Recurse -Force }

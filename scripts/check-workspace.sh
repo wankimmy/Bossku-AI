@@ -23,7 +23,7 @@ if [[ "$profile" == "auto" ]]; then
 fi
 case "$profile" in core|dev|growth|design|full|skills-only) ;; *) echo "Error: unknown profile '$profile'" >&2; exit 2 ;; esac
 
-base_required=(AGENTS.md CLAUDE.md WORKSPACE-ONBOARDING.md skill-index.json .codex/AGENTS.md .cursor/rules/bosskuai.mdc .claude/rules/bosskuai.md ai-assistant/memory/agent-profile.md ai-assistant/memory/project-understanding.md ai-assistant/references ai-assistant/scripts/vector_memory.py)
+base_required=(AGENTS.md CLAUDE.md WORKSPACE-ONBOARDING.md skill-index.json .codex/AGENTS.md .opencode/opencode.jsonc .opencode/agent/bossku-orchestrator.md .opencode/command/bossku.md .cursor/rules/bosskuai.mdc .claude/rules/bosskuai.md ai-assistant/memory/agent-profile.md ai-assistant/memory/project-understanding.md ai-assistant/references ai-assistant/scripts/vector_memory.py)
 core_skills=(bosskuai-workspace-assistant bosskuai-project-understanding bosskuai-search-first bosskuai-human-output bosskuai-token-saver bosskuai-ratchet-loop bosskuai-continuous-learning bosskuai-context-limit-continuation)
 dev_skills=(bosskuai-engineering-delivery bosskuai-rigorous-code-review bosskuai-bug-finding bosskuai-software-architecture bosskuai-docker bosskuai-vps-docker-deployment bosskuai-laravel-development bosskuai-database-engineering bosskuai-redis-caching-queues bosskuai-integration-testing)
 growth_skills=(bosskuai-marketing-growth bosskuai-seo-geo bosskuai-sales-strategy bosskuai-launch-commercialization bosskuai-competitor-intelligence bosskuai-content-calendar)

@@ -1,25 +1,25 @@
-# Multi-Agent Architecture (Claude Code, Codex, Cursor)
+# Multi-Agent Architecture (Claude Code, Codex, Cursor, OpenCode)
 
-> **BosskuAI web app:** The Laravel dashboard run pipeline (planner → executor → auditor, etc.) is documented in [`orchestration.md`](orchestration.md). This file focuses on toolkit/IDE patterns (Claude Code slash commands, Codex, Cursor rules).
+> **BosskuAI web app:** The Laravel dashboard run pipeline (planner → executor → auditor, etc.) is documented in [`orchestration.md`](orchestration.md). This file focuses on toolkit/IDE patterns (Claude Code slash commands, Codex, Cursor rules, and OpenCode agents/commands).
 
 ## TL;DR
 
-BosskuAI runs as **single-call routing** by default on every surface. On Claude Code only, three opt-in commands (`/audit`, `/decide`, `/implement`) run **multi-agent flows** for high-stakes work. On Codex and Cursor, these commands are documented here as patterns the user can apply manually but are not natively dispatched.
+BosskuAI runs as **single-call routing** by default on every surface. On Claude Code only, three opt-in commands (`/audit`, `/decide`, `/implement`) run **multi-agent flows** for high-stakes work. On Codex, Cursor, and OpenCode, these commands are documented here as patterns the user can apply manually or map through tool-native agents/commands, but they are not the Laravel runtime pipeline.
 
 This is the honest architecture. "Every skill is an agent, cofounder is the orchestrator" sounds better in a diagram than it works in practice — see [Why not full multi-agent](#why-not-full-multi-agent) below.
 
 ## Surface capabilities
 
-| Capability | Claude Code | Codex CLI | Cursor |
-|---|---|---|---|
-| Single-call skill loading | ✅ via skill-index.json | ✅ via AGENTS.md | ✅ via .cursor/rules |
-| Slash commands | ✅ `commands/*.md` (plugin-shipped) | ❌ (use prompt patterns) | ❌ (use prompt patterns) |
-| Sub-agent dispatch (Task tool) | ✅ native | ⚠️ workaround via shell + API | ❌ not supported |
-| Parallel sub-agent execution | ✅ | ⚠️ user-implemented | ❌ |
-| Review/critique as separate call | ✅ via `/decide`, `/implement` | ⚠️ manual prompt chaining | ❌ |
-| Workspace-wide rules | ✅ `.claude/rules/` + `CLAUDE.md` | ✅ `.codex/AGENTS.md` | ✅ `.cursor/rules/*.mdc` |
+| Capability | Claude Code | Codex CLI | Cursor | OpenCode |
+|---|---|---|---|---|
+| Single-call skill loading | ✅ via skill-index.json | ✅ via AGENTS.md | ✅ via .cursor/rules | ✅ via `.opencode` references |
+| Slash commands | ✅ `commands/*.md` (plugin-shipped) | ❌ (use prompt patterns) | ❌ (use prompt patterns) | ✅ `.opencode/command/*.md` |
+| Sub-agent dispatch (Task tool) | ✅ native | ⚠️ workaround via shell + API | ❌ not supported | ✅ subagent modes where enabled |
+| Parallel sub-agent execution | ✅ | ⚠️ user-implemented | ❌ | ⚠️ OpenCode-dependent |
+| Review/critique as separate call | ✅ via `/decide`, `/implement` | ⚠️ manual prompt chaining | ❌ | ⚠️ via mode/command handoff |
+| Workspace-wide rules | ✅ `.claude/rules/` + `CLAUDE.md` | ✅ `.codex/AGENTS.md` | ✅ `.cursor/rules/*.mdc` | ✅ `.opencode/opencode.jsonc` |
 
-The same workspace serves all three surfaces. The slash commands are a Claude Code superpower; on Codex and Cursor the same workflows exist but the user invokes them by hand.
+The same workspace serves all four surfaces. The slash commands are strongest on Claude Code and OpenCode; on Codex and Cursor the same workflows exist but the user invokes them by hand.
 
 ## Default flow (every surface, every request)
 
@@ -135,11 +135,11 @@ The math only works when:
 
 The three slash commands target exactly those cases. Every other request is single-call.
 
-## Patterns for Codex and Cursor
+## Patterns for Codex, Cursor, and OpenCode
 
-These surfaces don't dispatch sub-agents natively. Same patterns work, the user invokes them manually:
+These surfaces do not all dispatch sub-agents the same way. Same patterns work; on OpenCode, prefer the `.opencode/agent/*.md` and `.opencode/command/*.md` harness, while Codex and Cursor users usually invoke the same roles manually:
 
-### `/audit` pattern on Codex/Cursor
+### `/audit` pattern on Codex/Cursor/OpenCode
 
 Run the audit as 2–4 separate prompts, one per specialist, then a synthesis prompt:
 
@@ -153,9 +153,9 @@ Prompt 3: "Load bosskuai-database-engineering. Audit ONLY the schema and queries
 Synthesis: "Here are three audit reports. Combine them into one prioritized list. Where they disagree, force a decision based on stage = MVP / pre-revenue."
 ```
 
-Slower than `/audit` on Claude Code (you do the routing) but the result is the same.
+Slower than `/audit` on Claude Code when routing is manual, but the result is the same.
 
-### `/decide` pattern on Codex/Cursor
+### `/decide` pattern on Codex/Cursor/OpenCode
 
 Two prompts:
 
@@ -167,7 +167,7 @@ Prompt 2: "Here is the recommendation: <paste>. Apply the failure-modes table fr
 Manual: revise the recommendation based on the critique.
 ```
 
-### `/implement` pattern on Codex/Cursor
+### `/implement` pattern on Codex/Cursor/OpenCode
 
 Two prompts:
 

@@ -147,7 +147,7 @@ The installer copies:
 - `AGENTS.md`
 - `skill-index.json`
 - `ai-assistant/`
-- supported editor and assistant rules
+- supported editor and assistant rules for Claude Code, Codex, Cursor, and OpenCode
 - helper scripts
 
 ## Optional Dashboard Helper

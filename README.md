@@ -2,7 +2,7 @@
 
 **A safety layer that makes your AI coding assistant plan before it edits, check its own work after, and remember what it learns.**
 
-BosskuAI runs locally and works with the AI tool you already use — Claude Code, Cursor, or Codex. Instead of one AI taking a single shot at your prompt, every task flows through a small team of specialized agents.
+BosskuAI runs locally and works with the AI tool you already use — Claude Code, Cursor, Codex, or OpenCode. Instead of one AI taking a single shot at your prompt, every task flows through a small team of specialized agents.
 
 > 🟢 **Free and open source.** Self-host it on your own machine in a few minutes — no account, no cloud lock-in. Your code never leaves your computer unless you choose a cloud AI provider.
 

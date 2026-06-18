@@ -155,13 +155,13 @@ Recommendation:
 - Document evaluator as deterministic v1 scoring.
 - If an LLM evaluator is desired later, add an explicit `evaluator_model` setting and route it through usage tracking.
 
-### Medium: Docs Mix Web-App Runtime With Claude/Codex/Cursor Toolkit Architecture
+### Medium: Docs Mix Web-App Runtime With Claude/Codex/Cursor/OpenCode Toolkit Architecture
 
 Impact: Some docs describe Claude Code slash-command behavior and single-call skill loading, while the Laravel web app has a separate orchestration runtime. This can confuse decisions about whether BosskuAI is "single-call by default" or a multi-stage AI software team.
 
 Evidence:
 
-- `docs/multi-agent-architecture.md` focuses on Claude Code/Codex/Cursor surfaces and says default is single-call (`docs/multi-agent-architecture.md:5`).
+- `docs/multi-agent-architecture.md` focuses on Claude Code/Codex/Cursor/OpenCode surfaces and says default is single-call (`docs/multi-agent-architecture.md:5`).
 - Laravel orchestration docs describe a web-app pipeline with optional planner/executor/auditor/security/final reviewer stages (`docs/orchestration.md:3`).
 - Runtime docs mention `ModelRouter` resolving provider/model by role, but the main service path uses `PromptRouteClassifier`, Settings role models, and `ModelFallbackService` (`docs/orchestration.md:48`, `app/app/Services/BosskuAi/PromptRouteClassifier.php:98`).
 
