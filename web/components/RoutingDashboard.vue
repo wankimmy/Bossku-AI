@@ -54,6 +54,10 @@ const why = computed(() => {
     `Workflow ${String(decision.value.workflow ?? '-')} was selected for ${String(decision.value.task_type ?? 'this task')}.`,
     `Risk level is ${String(decision.value.risk_level ?? '-')}.`,
   ]
+  const specialist = decision.value.specialist_agent as Record<string, unknown> | undefined
+  if (specialist?.display_name) {
+    parts.push('Specialist '.$String(specialist.display_name).' matched via '.$String(specialist.match_reason ?? 'routing').'.')
+  }
   if (decision.value.reason) parts.push(String(decision.value.reason))
   return parts.join(' ')
 })

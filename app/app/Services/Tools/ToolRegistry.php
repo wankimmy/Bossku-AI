@@ -4,6 +4,7 @@ namespace App\Services\Tools;
 
 use App\Models\BosskuAi\Run;
 use App\Models\BosskuAi\ToolCall;
+use App\Services\Agents\AgentToolPermissionService;
 use App\Services\Governance\ApprovalGateService;
 use App\Services\Governance\RiskClassifier;
 use App\Services\Project\ProjectFileDiscovery;
@@ -31,16 +32,24 @@ class ToolRegistry
         protected ProjectFileDiscovery $discovery,
         protected ApprovalGateService $approvals,
         protected RiskClassifier $riskClassifier,
+        protected AgentToolPermissionService $toolPermissions,
     ) {}
 
     /** @param callable(array<string, mixed>): void|null $emit optional SSE event hook */
-    public function invoke(?string $runId, ?string $stepId, mixed $toolRequest, ?callable $emit = null): array
+    public function invoke(?string $runId, ?string $stepId, mixed $toolRequest, ?callable $emit = null, string $agentRole = 'executor'): array
     {
         if (! is_array($toolRequest) || empty($toolRequest['tool'])) {
             return ['status' => 'noop', 'result' => null];
         }
 
         $tool = (string) $toolRequest['tool'];
+        $role = (string) ($toolRequest['agent_role'] ?? $agentRole);
+        if (! $this->toolPermissions->isAllowed($role, $tool)) {
+            Log::warning('Blocked tool by agent permission policy', ['tool' => $tool, 'role' => $role]);
+
+            return ['status' => 'blocked', 'result' => ['error' => "Tool not allowed for role {$role}: {$tool}"]];
+        }
+
         if (! in_array($tool, $this->allow, true)) {
             Log::warning('Blocked non-allowlisted tool', ['tool' => $tool]);
 

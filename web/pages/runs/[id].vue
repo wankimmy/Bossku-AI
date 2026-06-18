@@ -92,6 +92,12 @@ const signalEmoji = (s: string) => {
       :routing="artifacts.routingSummary"
     />
 
+    <RunTimelineBadges
+      :routing="artifacts.routingSummary"
+      :messages="artifacts.agentMessages"
+      :ai-council="artifacts.aiCouncil"
+    />
+
     <div>
       <h1 class="text-xl font-semibold text-zinc-100">
         Run <span class="font-mono text-sm text-zinc-500">{{ String(data.id ?? route.params.id).slice(0, 8) }}</span>

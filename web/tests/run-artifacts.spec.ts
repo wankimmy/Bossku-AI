@@ -612,4 +612,47 @@ describe('useRunArtifacts', () => {
     expect(normalized.agentMessages[2].agent).toBe('planner')
     expect(normalized.agentMessages[2].summary).toBe('Review the master plan before execution.')
   })
+
+  it('normalizes ai council and specialist selection events', () => {
+    const normalized = useRunArtifacts([
+      {
+        type: 'specialist_agent_selected',
+        agent: 'seo-writer',
+        status: 'success',
+        artifacts: {
+          specialist_agent: {
+            role_slug: 'seo-writer',
+            display_name: 'SEO Writer',
+            match_reason: 'intent_role,keyword:seo',
+            match_score: 15,
+            intent: 'seo',
+          },
+        },
+      },
+      {
+        type: 'ai_council_done',
+        agent: 'orchestrator',
+        status: 'success',
+        artifacts: {
+          ai_council: {
+            status: 'completed',
+            intent: 'seo',
+            consensus: 'Council reviewed the draft and synthesized one final answer.',
+            voices: [
+              {
+                role_slug: 'seo-writer',
+                display_name: 'SEO Writer',
+                critique: 'Verify headings map to search intent.',
+              },
+            ],
+          },
+        },
+      },
+    ])
+
+    expect(normalized.routingSummary.skill).toBe('SEO Writer')
+    expect(normalized.aiCouncil?.voices[0].display_name).toBe('SEO Writer')
+    expect(normalized.plan?.aiCouncil?.intent).toBe('seo')
+    expect(normalized.agentMessages[0].summary).toContain('SEO Writer selected')
+  })
 })

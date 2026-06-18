@@ -2,6 +2,7 @@
 
 namespace App\Services\Orchestrator;
 
+use App\Services\Agents\AgentToolPermissionService;
 use App\Services\BosskuAi\AgentPersonaService;
 use App\Services\BosskuAi\LlmErrorFormatter;
 use App\Services\BosskuAi\ModelFallbackService;
@@ -19,6 +20,7 @@ class DesignerService
         protected ModelRoutingConfig $modelConfig,
         protected RuntimeSettings $settings,
         protected AgentPersonaService $personas,
+        protected AgentToolPermissionService $toolPermissions,
     ) {}
 
     /**
@@ -35,7 +37,7 @@ class DesignerService
         $retry = (int) ($orch['retry_count'] ?? 1);
 
         $rawMd = $this->loadDesignerMd();
-        $toolsBlock = AgentTools::formatToolsBlock('designer', $rawMd);
+        $toolsBlock = $this->toolPermissions->formatToolsBlock('designer', $rawMd);
         $persona = $this->personas->defaultContentFromAgentsMd('designer') ?? '';
 
         $system = <<<SYS

@@ -19,6 +19,7 @@ use App\Services\BosskuAi\RepoTaskDetector;
 use App\Services\BosskuAi\WorkflowRouteHelper;
 use App\Services\Company\StaffCouncilService;
 use App\Services\Company\WorkIssueService;
+use App\Services\Council\AiCouncilService;
 use App\Services\BosskuAi\MemoryService;
 use App\Services\BosskuAi\ModelRoutingConfig;
 use App\Services\BosskuAi\PromptRouteClassifier;
@@ -81,6 +82,7 @@ class OrchestratorService
         protected SpecialistAgentRouter $specialistRouter,
         protected SpecialistAgentRunner $specialistRunner,
         protected SpecialistAgentDraftingService $specialistDrafting,
+        protected AiCouncilService $aiCouncil,
         protected ResumeIntentClassifier $resumeIntentClassifier,
         protected CodebaseIndexService $codeIndex,
         protected RunExecutionContext $runExecution,
@@ -233,7 +235,7 @@ class OrchestratorService
         ]));
 
         $t0 = microtime(true);
-        $classified = $this->promptRouteClassifier->classify($routingPrompt);
+        $classified = $this->promptRouteClassifier->classify($userPrompt);
         /** @var array<string, mixed> $modelRoute */
         $modelRoute = $classified['route'];
         $modelsResolved = $classified['models_resolved'];
@@ -608,32 +610,38 @@ class OrchestratorService
         $workflow = (string) ($modelRoute['workflow'] ?? 'orchestrator_executor_auditor');
 
         if ($workflow === 'direct_answer') {
-            return $this->finishShortPath(
+            return $this->completeShortPathWorkflow(
                 $run,
-                $prompt,
+                $userPrompt,
+                $agentPrompt,
                 $modelRoute,
                 $modelsResolved,
+                $routerMeta,
                 $memPayload,
+                $conversation,
                 $emit,
                 $tokenAcc,
                 $tRun,
                 'direct_answer',
-                fn () => $this->directAnswer->answer($prompt, $modelRoute, $run->id)
+                fn () => $this->directAnswer->answer($userPrompt, $modelRoute, $run->id),
             );
         }
 
         if ($workflow === 'writer_only') {
-            return $this->finishShortPath(
+            return $this->completeShortPathWorkflow(
                 $run,
-                $prompt,
+                $userPrompt,
+                $agentPrompt,
                 $modelRoute,
                 $modelsResolved,
+                $routerMeta,
                 $memPayload,
+                $conversation,
                 $emit,
                 $tokenAcc,
                 $tRun,
                 'writer_only',
-                fn () => $this->writer->write($prompt, $modelRoute, $run->id)
+                fn () => $this->writer->write($userPrompt, $modelRoute, $run->id),
             );
         }
 
@@ -667,25 +675,14 @@ class OrchestratorService
             ]));
         }
 
-        $matchedSpecialist = $this->specialistRouter->matchForPrompt($agentPrompt, $activeProject);
+        $matchedSpecialist = $this->specialistRouter->matchDetailed($agentPrompt, $activeProject, $modelRoute);
         $specialistAgentPayload = null;
-        if ($matchedSpecialist !== null) {
-            $specialistAgentPayload = $this->specialistRouter->payloadForAgent($matchedSpecialist);
+        if ($matchedSpecialist->agent !== null) {
+            $specialistAgentPayload = $matchedSpecialist->toPayload();
             $routerCtx['specialist_agent'] = $specialistAgentPayload;
             $modelRoute['specialist_agent'] = $specialistAgentPayload;
 
-            $this->emit($emit, $this->basePayload($run, 'specialist_agent_selected', [
-                'status' => 'success',
-                'agent' => $matchedSpecialist->role_slug,
-                'model_role' => 'reasoning',
-                'from_agent' => 'orchestrator',
-                'to_agent' => $matchedSpecialist->role_slug,
-                'summary' => $matchedSpecialist->display_name.' matched this project prompt.',
-                'message' => implode(', ', $matchedSpecialist->trigger_keywords ?? []),
-                'artifacts' => [
-                    'specialist_agent' => $specialistAgentPayload,
-                ],
-            ]));
+            $this->emit($emit, $this->events->specialistAgentSelected($run, $matchedSpecialist->agent, $specialistAgentPayload));
         }
 
         $repoAvailable = true;
@@ -1767,6 +1764,211 @@ class OrchestratorService
     }
 
     /**
+     * @param  list<array{role?: string, content?: string}>  $conversation
+     * @param  array<string, mixed>  $modelRoute
+     * @param  array<string, string>  $modelsResolved
+     * @param  array<string, mixed>  $routerMeta
+     * @param  list<array<string, mixed>>  $memPayload
+     * @param  callable(): string  $draftGenerator
+     * @return array<string, mixed>
+     */
+    protected function completeShortPathWorkflow(
+        Run $run,
+        string $userPrompt,
+        string $agentPrompt,
+        array $modelRoute,
+        array $modelsResolved,
+        array $routerMeta,
+        array $memPayload,
+        array $conversation,
+        ?callable $emit,
+        int $tokenAcc,
+        float $tRun,
+        string $kind,
+        callable $draftGenerator,
+    ): array {
+        $activeProject = $this->paths->activeProject();
+
+        $clarify = $this->councilClarificationIfNeeded(
+            $run,
+            $userPrompt,
+            $modelRoute,
+            $conversation,
+            $modelsResolved,
+            $routerMeta,
+            $memPayload,
+            $tokenAcc,
+            $tRun,
+            $agentPrompt,
+            $emit,
+        );
+        if ($clarify !== null) {
+            return $clarify;
+        }
+
+        $match = $this->specialistRouter->matchDetailed($userPrompt, $activeProject, $modelRoute);
+        if ($match->agent !== null) {
+            $modelRoute['specialist_agent'] = $match->toPayload();
+            $this->emit($emit, $this->events->specialistAgentSelected($run, $match->agent, $match->toPayload()));
+        }
+
+        $councilOutcome = $this->shortPathBodyWithCouncil(
+            $run,
+            $userPrompt,
+            $modelRoute,
+            $activeProject,
+            $conversation,
+            $emit,
+            $draftGenerator,
+            true,
+        );
+
+        if (($councilOutcome['status'] ?? '') === 'needs_clarification') {
+            return $this->pauseForClarification(
+                $run,
+                [
+                    'questions' => is_array($councilOutcome['questions'] ?? null) ? $councilOutcome['questions'] : [],
+                    'assumptions' => [],
+                    'ready_to_proceed' => false,
+                    'summary' => 'The AI council needs a little more context before it can answer accurately.',
+                ],
+                'council_postdraft',
+                [
+                    'user_prompt' => $userPrompt,
+                    'effective_prompt' => $agentPrompt,
+                    'model_route' => $modelRoute,
+                    'models_resolved' => $modelsResolved,
+                    'router_meta' => $routerMeta,
+                    'mem_payload' => $memPayload,
+                    'token_acc' => $tokenAcc,
+                    't_run' => $tRun,
+                ],
+                $emit,
+                'orchestrator',
+                'ai_council',
+            );
+        }
+
+        $body = (string) ($councilOutcome['body'] ?? '');
+
+        return $this->finishShortPath(
+            $run,
+            $userPrompt,
+            $modelRoute,
+            $modelsResolved,
+            $memPayload,
+            $emit,
+            $tokenAcc,
+            $tRun,
+            $kind,
+            fn () => $body,
+        );
+    }
+
+    /**
+     * @param  list<array{role?: string, content?: string}>  $conversation
+     * @param  callable(): string  $draftGenerator
+     * @return array{status: string, body: string, questions?: list<array<string, mixed>>}
+     */
+    protected function shortPathBodyWithCouncil(
+        Run $run,
+        string $userPrompt,
+        array $modelRoute,
+        ?\App\Models\BosskuAi\Project $activeProject,
+        array $conversation,
+        ?callable $emit,
+        callable $draftGenerator,
+        bool $precheckDone = false,
+    ): array {
+        $draft = $draftGenerator();
+        $this->emit($emit, $this->events->aiCouncilStarted($run, $modelRoute));
+
+        $council = $this->aiCouncil->deliberate(
+            $run,
+            $userPrompt,
+            $draft,
+            $modelRoute,
+            $activeProject,
+            $conversation,
+            $precheckDone,
+        );
+
+        $meta = is_array($run->metadata) ? $run->metadata : [];
+        $meta['ai_council'] = $council;
+        $run->update(['metadata' => $meta]);
+
+        if (($council['status'] ?? '') === 'completed') {
+            $this->emit($emit, $this->events->aiCouncilDone($run, $council));
+        } elseif (($council['status'] ?? '') === 'needs_clarification') {
+            $this->emit($emit, $this->events->aiCouncilSkipped($run, $council));
+        } else {
+            $this->emit($emit, $this->events->aiCouncilSkipped($run, $council));
+        }
+
+        if (($council['status'] ?? '') === 'needs_clarification') {
+            return [
+                'status' => 'needs_clarification',
+                'body' => $draft,
+                'questions' => is_array($council['questions'] ?? null) ? $council['questions'] : [],
+            ];
+        }
+
+        return [
+            'status' => (string) ($council['status'] ?? 'skipped'),
+            'body' => trim((string) ($council['final_output'] ?? $draft)),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $modelRoute
+     * @param  list<array{role?: string, content?: string}>  $conversation
+     * @return array<string, mixed>|null
+     */
+    protected function councilClarificationIfNeeded(
+        Run $run,
+        string $userPrompt,
+        array $modelRoute,
+        array $conversation,
+        array $modelsResolved,
+        array $routerMeta,
+        array $memPayload,
+        int $tokenAcc,
+        float $tRun,
+        string $agentPrompt,
+        ?callable $emit,
+    ): ?array {
+        $precheck = app(\App\Services\Council\CouncilQuestionService::class)
+            ->analyze($userPrompt, $modelRoute, $conversation);
+        if (! $precheck['needs_questions'] || $precheck['already_answered']) {
+            return null;
+        }
+
+        return $this->pauseForClarification(
+            $run,
+            [
+                'questions' => $precheck['questions'],
+                'assumptions' => [],
+                'ready_to_proceed' => false,
+                'summary' => 'The AI council needs a little more context before it can answer accurately.',
+            ],
+            'council_precheck',
+            [
+                'user_prompt' => $userPrompt,
+                'effective_prompt' => $agentPrompt,
+                'model_route' => $modelRoute,
+                'models_resolved' => $modelsResolved,
+                'router_meta' => $routerMeta,
+                'mem_payload' => $memPayload,
+                'token_acc' => $tokenAcc,
+                't_run' => $tRun,
+            ],
+            $emit,
+            'orchestrator',
+            'ai_council',
+        );
+    }
+
+    /**
      * @param  array<string, mixed>  $modelRoute
      * @param  array<string, string> $modelsResolved
      * @param  array<int, array<string, mixed>>  $memPayload
@@ -1789,7 +1991,11 @@ class OrchestratorService
         $tok = $this->estimateTokens($body);
 
         $final = $body;
-        if ($kind === 'writer_only') {
+        $runMeta = is_array($run->metadata) ? $run->metadata : [];
+        $aiCouncil = is_array($runMeta['ai_council'] ?? null) ? $runMeta['ai_council'] : null;
+        $aiCouncilRan = is_array($aiCouncil);
+
+        if ($kind === 'writer_only' && ! $aiCouncilRan) {
             $review = $this->staffCouncil->reviewContentDeliverable(
                 $run,
                 $prompt,

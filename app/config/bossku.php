@@ -161,6 +161,8 @@ return [
      */
     'company_staff_enabled' => env('BOSSKU_COMPANY_STAFF_ENABLED', true),
     'staff_council_enabled' => env('BOSSKU_STAFF_COUNCIL_ENABLED', true),
+    'ai_council_enabled' => env('BOSSKU_AI_COUNCIL_ENABLED', true),
+    'agent_wakeups_enabled' => env('BOSSKU_AGENT_WAKEUPS_ENABLED', false),
     'staff_auto_issue_generation_enabled' => env('BOSSKU_STAFF_AUTO_ISSUE_GENERATION_ENABLED', true),
 
     /**

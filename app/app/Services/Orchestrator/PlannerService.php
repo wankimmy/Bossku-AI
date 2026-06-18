@@ -9,6 +9,7 @@ use App\Support\LlmTelemetry;
 use App\Support\StringCoercion;
 use App\Services\BosskuAi\ModelFallbackService;
 use App\Services\BosskuAi\ModelRoutingConfig;
+use App\Services\Agents\AgentToolPermissionService;
 use App\Services\BosskuAi\RuntimeSettings;
 use App\Services\Project\ProjectFileDiscovery;
 use App\Services\Project\ProjectPathResolver;
@@ -27,6 +28,7 @@ class PlannerService
         protected ProjectFileDiscovery $discovery,
         protected CodebaseIndexService $codeIndex,
         protected ProjectPathResolver $paths,
+        protected AgentToolPermissionService $toolPermissions,
     ) {}
 
     /**
@@ -139,7 +141,7 @@ When `semantic_code_context` is present in the user payload, treat it as the mos
 - Set confidence higher when relevant code is visible.
 SYS;
         $plannerMd = $this->loadPlannerAgentsMd();
-        $system .= "\n\n".AgentTools::formatToolsBlock('planner', $plannerMd);
+        $system .= "\n\n".$this->toolPermissions->formatToolsBlock('planner', $plannerMd);
         if ($plannerMd !== null && preg_match('/<!--\s*runtime-core:start\s*-->(.*?)<!--\s*runtime-core:end\s*-->/s', $plannerMd, $coreMatch)) {
             $plannerCore = trim($coreMatch[1]);
             if ($plannerCore !== '') {

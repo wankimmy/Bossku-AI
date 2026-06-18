@@ -915,6 +915,13 @@ watch(showApprovalModal, async (open) => {
       :routing="displayRouting"
     />
 
+    <RunTimelineBadges
+      v-if="events.length > 0"
+      :routing="displayRouting"
+      :messages="artifacts.agentMessages"
+      :ai-council="artifacts.aiCouncil"
+    />
+
     <main class="space-y-4">
       <div class="flex flex-col gap-4 lg:flex-row lg:items-stretch">
         <div class="min-w-0 flex-1 space-y-4">

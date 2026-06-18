@@ -227,6 +227,45 @@ class BosskuRoutingClassifierTest extends TestCase
     }
 
     #[Test]
+    public function meta_capability_question_uses_direct_answer_not_repo_preflight(): void
+    {
+        $r = $this->classify('what are you good at?');
+        $this->assertSame('direct_answer', $r['workflow']);
+        $this->assertSame('low', $r['risk_level']);
+        $this->assertFalse($r['needs_repo_context']);
+        $this->assertFalse($r['needs_executor']);
+    }
+
+    #[Test]
+    public function meta_question_survives_conversation_history_pollution(): void
+    {
+        $polluted = "Previous conversation:\nUser: audit payment checkout in my project\n\nCurrent request:\nwhat are you good at?";
+        $r = $this->classify($polluted);
+        $this->assertSame('direct_answer', $r['workflow']);
+        $this->assertFalse($r['needs_repo_context']);
+        $this->assertSame('low', $r['risk_level']);
+    }
+
+    #[Test]
+    public function seo_content_request_uses_writer_only(): void
+    {
+        $r = $this->classify('Write SEO meta descriptions and keyword headings for our landing page');
+        $this->assertSame('writer_only', $r['workflow']);
+        $this->assertSame('seo', $r['skill']);
+        $this->assertSame('seo', $r['specialist_intent'] ?? null);
+        $this->assertFalse($r['needs_executor']);
+    }
+
+    #[Test]
+    public function ui_ux_advisory_uses_writer_only_without_code_verbs(): void
+    {
+        $r = $this->classify('Give me a UI/UX usability review of our onboarding wireframe');
+        $this->assertSame('writer_only', $r['workflow']);
+        $this->assertSame('uiux', $r['skill']);
+        $this->assertFalse($r['needs_executor']);
+    }
+
+    #[Test]
     public function default_executor_model_matches_config_default(): void
     {
         $cfg = app(ModelRoutingConfig::class);

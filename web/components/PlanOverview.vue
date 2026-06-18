@@ -22,7 +22,8 @@ const hasPlan = computed(() => {
     || p.risks.length
     || p.todos.length
     || p.councilReview
-    || p.staffCouncil,
+    || p.staffCouncil
+    || p.aiCouncil,
   )
 })
 
@@ -224,6 +225,12 @@ const headingClass = 'text-xs font-semibold uppercase tracking-wider text-zinc-5
       <StaffCouncilPanel
         v-if="plan?.staffCouncil"
         :council="plan.staffCouncil"
+        :compact="compact"
+      />
+
+      <AiCouncilPanel
+        v-if="plan?.aiCouncil"
+        :council="plan.aiCouncil"
         :compact="compact"
       />
 

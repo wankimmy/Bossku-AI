@@ -104,6 +104,59 @@ class RunEventFactoryTest extends TestCase
     }
 
     #[Test]
+    public function specialist_agent_selected_payload_contains_match_metadata(): void
+    {
+        $run = new Run([
+            'id' => '00000000-0000-0000-0000-000000000007',
+            'prompt' => 'Write SEO copy',
+            'status' => 'running',
+            'metadata' => [],
+        ]);
+
+        $factory = new RunEventFactory;
+        $agent = new \App\Models\BosskuAi\SpecialistAgent([
+            'role_slug' => 'seo-writer',
+            'display_name' => 'SEO Writer',
+        ]);
+
+        $payload = $factory->specialistAgentSelected($run, $agent, [
+            'match_score' => 12,
+            'match_reason' => 'intent_role',
+            'intent' => 'seo',
+        ]);
+
+        $this->assertSame('specialist_agent_selected', $payload['type']);
+        $this->assertSame('seo-writer', $payload['agent']);
+        $this->assertSame('intent_role', $payload['artifacts']['specialist_agent']['match_reason']);
+    }
+
+    #[Test]
+    public function ai_council_done_payload_contains_council_artifact(): void
+    {
+        $run = new Run([
+            'id' => '00000000-0000-0000-0000-000000000008',
+            'prompt' => 'Marketing positioning',
+            'status' => 'running',
+            'metadata' => [],
+        ]);
+
+        $factory = new RunEventFactory;
+
+        $payload = $factory->aiCouncilDone($run, [
+            'status' => 'completed',
+            'intent' => 'marketing',
+            'voices' => [
+                ['role_slug' => 'marketing-manager', 'display_name' => 'Marketing Manager', 'critique' => 'Clarify audience.'],
+            ],
+            'consensus' => 'Council reviewed the draft.',
+        ]);
+
+        $this->assertSame('ai_council_done', $payload['type']);
+        $this->assertSame('marketing', $payload['artifacts']['ai_council']['intent']);
+        $this->assertSame('Council reviewed the draft.', $payload['message']);
+    }
+
+    #[Test]
     public function metadata_shape_is_consistent_with_sse_payload(): void
     {
         $factory = new RunEventFactory;

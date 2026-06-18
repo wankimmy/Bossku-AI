@@ -2,6 +2,8 @@
 
 namespace App\Services\BosskuAi;
 
+use App\Support\PromptContextHelper;
+
 class RiskRuleEngine
 {
     /** @var list<string> */
@@ -32,12 +34,17 @@ class RiskRuleEngine
      */
     public function deterministicRisk(string $prompt): array
     {
-        $lower = mb_strtolower($prompt);
-        $trim = trim($prompt);
+        $current = PromptContextHelper::currentRequest($prompt);
+        $lower = mb_strtolower($current);
+        $trim = trim($current);
 
         // Prefer explanation-style prompts over generic high-risk vocab (policy/gate/auth wording).
         if (preg_match('/^(explain|what is|what are|how does|why|define)\b/i', $trim)) {
             return ['risk' => 'low', 'reasons' => ['heuristic:explanation_question'], 'upgraded' => false];
+        }
+
+        if (PromptContextHelper::isMetaAboutAssistant($prompt)) {
+            return ['risk' => 'low', 'reasons' => ['heuristic:meta_assistant'], 'upgraded' => false];
         }
 
         $reasons = [];

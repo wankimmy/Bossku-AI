@@ -5,6 +5,7 @@ namespace App\Services\BosskuAi;
 use App\Models\BosskuAi\AgentPersona;
 use App\Services\Project\BosskuToolkitDetector;
 use App\Services\Project\BosskuToolkitPersonas;
+use App\Services\Agents\AgentToolPermissionService;
 use App\Support\AgentTools;
 use Illuminate\Support\Facades\File;
 
@@ -12,6 +13,7 @@ class AgentPersonaService
 {
     public function __construct(
         protected BosskuToolkitDetector $toolkitDetector,
+        protected AgentToolPermissionService $toolPermissions,
     ) {}
     /** @var array<string, AgentPersona|null> */
     protected array $cache = [];
@@ -94,7 +96,7 @@ class AgentPersonaService
         }
 
         if (in_array($role, self::PIPELINE_ROLES, true)) {
-            $prefix .= AgentTools::formatToolsBlock($role, $this->readRawAgentsMd($role))."\n\n";
+            $prefix .= $this->toolPermissions->formatToolsBlock($role, $this->readRawAgentsMd($role))."\n\n";
         }
 
         if ($prefix === '') {

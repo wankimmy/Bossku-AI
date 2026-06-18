@@ -14,6 +14,7 @@ class WorkIssue extends Model
 
     protected $fillable = [
         'project_id',
+        'parent_issue_id',
         'run_id',
         'source_plan_item_id',
         'title',
@@ -22,6 +23,7 @@ class WorkIssue extends Model
         'priority',
         'approval_state',
         'assignee_role_slug',
+        'assignee_agent_id',
         'metadata',
     ];
 
@@ -40,5 +42,15 @@ class WorkIssue extends Model
     public function run(): BelongsTo
     {
         return $this->belongsTo(Run::class, 'run_id');
+    }
+
+    public function parentIssue(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_issue_id');
+    }
+
+    public function assigneeAgent(): BelongsTo
+    {
+        return $this->belongsTo(SpecialistAgent::class, 'assignee_agent_id');
     }
 }

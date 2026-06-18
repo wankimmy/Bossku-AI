@@ -2,6 +2,8 @@
 
 namespace App\Services\BosskuAi;
 
+use App\Support\PromptContextHelper;
+
 /**
  * Deterministic, dependency-free task router.
  *
@@ -53,8 +55,14 @@ class DeterministicTaskClassifier
         // Is the user actually asking to build/change code or files? Conversational
         // prompts (advice, opinions, brainstorming) must NOT default to file edits.
         $hasCodeVerb = (bool) preg_match(self::RE_CODE_VERB, $lower);
+        if ($hasCodeVerb && preg_match('/\b(write|draft|create|compose)\b.+\b(seo|blog|article|post|copy|newsletter|landing page|meta description|social media|sales pitch|outreach email|marketing)\b/i', $lower)) {
+            $hasCodeVerb = false;
+        }
 
         // (1) Short-circuit routes — these must never fall through to an edit pipeline.
+        if (($route = $this->metaAssistantRoute($prompt)) !== null) {
+            return $route;
+        }
         if (($route = $this->readOnlyUnderstandingRoute($prompt)) !== null) {
             return $route;
         }
@@ -179,10 +187,66 @@ class DeterministicTaskClassifier
             $memoryMode = 'read_and_write';
         }
 
-        // Marketing / social
-        if (preg_match('/\b(social media|instagram|twitter|linkedin post|vendor signup)\b/', $prompt)) {
+        // Marketing / social / growth content
+        if (preg_match('/\b(social media|instagram|twitter|linkedin post|vendor signup|marketing campaign|brand voice|positioning|launch plan|growth strategy)\b/', $prompt)) {
             $taskType = 'marketing';
             $skill = 'marketing';
+            $workflow = 'writer_only';
+            $needsRepo = false;
+            $needsFileEdit = false;
+            $needsExecutor = false;
+            $needsAuditor = false;
+            $needsTest = false;
+            $executorProfile = 'none';
+            $memoryMode = 'read_only';
+            $tokenLevel = 'low';
+        }
+
+        // SEO / discoverability content (non-coding)
+        if (
+            ! $hasCodeVerb
+            && preg_match('/\b(seo|search engine optimization|keyword research|meta description|organic traffic|search ranking|serp)\b/i', $lower)
+            && ! in_array($workflow, ['orchestrator_executor_auditor_security_final_reviewer'], true)
+        ) {
+            $taskType = 'seo';
+            $skill = 'seo';
+            $workflow = 'writer_only';
+            $needsRepo = false;
+            $needsFileEdit = false;
+            $needsExecutor = false;
+            $needsAuditor = false;
+            $needsTest = false;
+            $executorProfile = 'none';
+            $memoryMode = 'read_only';
+            $tokenLevel = 'low';
+        }
+
+        // Sales / commercial messaging (non-coding)
+        if (
+            ! $hasCodeVerb
+            && preg_match('/\b(sales pitch|cold outreach|cold email|sales proposal|objection handling|conversion copy|pipeline messaging|outbound email)\b/i', $lower)
+        ) {
+            $taskType = 'marketing';
+            $skill = 'marketing';
+            $workflow = 'writer_only';
+            $needsRepo = false;
+            $needsFileEdit = false;
+            $needsExecutor = false;
+            $needsAuditor = false;
+            $needsTest = false;
+            $executorProfile = 'none';
+            $memoryMode = 'read_only';
+            $tokenLevel = 'low';
+        }
+
+        // UI/UX advisory (design critique without implementation)
+        if (
+            ! $hasCodeVerb
+            && preg_match('/\b(ui\/ux|user experience|usability review|wireframe critique|design critique|visual hierarchy|information architecture)\b/i', $lower)
+            && ! preg_match('/\b(implement|fix|update|create|build|code|css|tailwind)\b/i', $lower)
+        ) {
+            $taskType = 'ui_ux';
+            $skill = 'uiux';
             $workflow = 'writer_only';
             $needsRepo = false;
             $needsFileEdit = false;
@@ -337,6 +401,40 @@ class DeterministicTaskClassifier
     }
 
     /**
+     * Meta questions about BosskuAI itself — answer directly, never repo preflight.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function metaAssistantRoute(string $prompt): ?array
+    {
+        if (! PromptContextHelper::isMetaAboutAssistant($prompt)) {
+            return null;
+        }
+
+        $det = (new RiskRuleEngine)->deterministicRisk($prompt);
+
+        return [
+            'task_type' => 'question',
+            'audit_mode' => 'standard',
+            'risk_level' => 'low',
+            'skill' => 'generic',
+            'workflow' => 'direct_answer',
+            'needs_repo_context' => false,
+            'needs_file_edit' => false,
+            'needs_test_run' => false,
+            'needs_executor' => false,
+            'needs_auditor' => false,
+            'needs_security_auditor' => false,
+            'needs_final_reviewer' => false,
+            'executor_profile' => 'none',
+            'memory_mode' => 'read_only',
+            'estimated_token_level' => 'low',
+            'reason' => 'Meta question about BosskuAI capabilities — direct conversational answer.',
+            '_deterministic_risk' => $det,
+        ];
+    }
+
+    /**
      * Read-only repository understanding ("summarize / explain this project") — the
      * orchestrator answers from repo context; no executor edits, no audit pipeline.
      * Must precede the repository-audit branch, which would otherwise force
@@ -431,6 +529,18 @@ class DeterministicTaskClassifier
         $needsAuditor = (bool) $route['needs_auditor'];
         $needsSecurity = (bool) $route['needs_security_auditor'];
         $needsFinal = (bool) $route['needs_final_reviewer'];
+
+        if (
+            in_array($workflow, ['direct_answer', 'writer_only', 'orchestrator_only'], true)
+            && ! ($route['needs_executor'] ?? false)
+        ) {
+            $route['risk_level'] = $risk === 'high' && PromptContextHelper::isMetaAboutAssistant($prompt) ? 'low' : $risk;
+            $route['needs_auditor'] = false;
+            $route['needs_security_auditor'] = false;
+            $route['needs_final_reviewer'] = false;
+
+            return $route;
+        }
 
         if ($risk === 'high') {
             if ($executorProfile !== 'devops') {

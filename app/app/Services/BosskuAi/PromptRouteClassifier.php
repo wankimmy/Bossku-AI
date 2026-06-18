@@ -95,6 +95,7 @@ SYS;
 
         $route = $this->mergeRoutes($base, $llmRoute, $detRisk);
         $route = RepoTaskDetector::enforceExecutorForRepo($route, $prompt);
+        $route = $this->enrichRouteWithIntent($prompt, $route);
 
         $modelsResolved = [
             'router' => $routerModelUsed,
@@ -249,6 +250,18 @@ SYS;
                 && ! WorkflowRouteHelper::workflowIncludesAuditor($w)) {
                 $route['workflow'] = 'orchestrator_executor';
             }
+        }
+
+        return $route;
+    }
+
+    /** @param  array<string, mixed>  $route */
+    protected function enrichRouteWithIntent(string $prompt, array $route): array
+    {
+        $intent = app(\App\Services\Specialists\SpecialistIntentClassifier::class)->classify($prompt, $route);
+        $route['specialist_intent'] = $intent->value;
+        if (($route['skill'] ?? 'generic') === 'generic' && $intent !== \App\Services\Specialists\SpecialistIntent::Generic) {
+            $route['skill'] = $intent->skill();
         }
 
         return $route;

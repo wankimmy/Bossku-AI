@@ -51,6 +51,8 @@ class SettingsApiController extends Controller
         'council_plan_review_enabled',
         'company_staff_enabled',
         'staff_council_enabled',
+        'ai_council_enabled',
+        'agent_wakeups_enabled',
         'staff_auto_issue_generation_enabled',
     ];
 

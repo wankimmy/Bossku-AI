@@ -21,6 +21,24 @@ async function seedStaff() {
   await refresh()
 }
 
+const { data: teamsData, refresh: refreshTeams } = await useAsyncData('company-teams-page', () => api.get('/company-teams'))
+const teams = computed(() => {
+  const raw = teamsData.value as { data?: Array<{ slug: string; name: string }> } | undefined
+  return raw?.data ?? []
+})
+const installingTeam = ref<string | null>(null)
+
+async function installTeam(slug: string) {
+  installingTeam.value = slug
+  try {
+    await api.post('/company-teams/install', { team_slug: slug })
+    await Promise.all([refresh(), refreshTeams()])
+  }
+  finally {
+    installingTeam.value = null
+  }
+}
+
 async function patchStaff(agent: CompanyStaffAgent, payload: Partial<CompanyStaffAgent>) {
   savingId.value = agent.id
   try {
@@ -62,6 +80,37 @@ async function patchStaff(agent: CompanyStaffAgent, payload: Partial<CompanyStaf
 
     <template v-else>
       <CompanyStaffRoster :staff="staff" />
+
+      <section
+        v-if="teams.length"
+        class="space-y-3"
+      >
+        <h2 class="text-base font-semibold text-zinc-100">
+          Teams catalog
+        </h2>
+        <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <article
+            v-for="team in teams"
+            :key="team.slug"
+            class="rounded-lg border border-zinc-800 bg-zinc-900 p-4"
+          >
+            <h3 class="text-sm font-semibold text-zinc-100">
+              {{ team.name }}
+            </h3>
+            <p class="mt-1 text-xs text-zinc-500">
+              {{ team.slug }}
+            </p>
+            <button
+              type="button"
+              class="mt-3 rounded border border-emerald-700/70 px-2.5 py-1.5 text-xs text-emerald-300 hover:bg-emerald-950 disabled:opacity-50"
+              :disabled="installingTeam === team.slug"
+              @click="installTeam(team.slug)"
+            >
+              {{ installingTeam === team.slug ? 'Installing...' : 'Install team' }}
+            </button>
+          </article>
+        </div>
+      </section>
 
       <section
         v-if="staff.length"

@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\AssistantController;
 use App\Http\Controllers\Api\ChecklistController;
 use App\Http\Controllers\Api\CheckpointController;
 use App\Http\Controllers\Api\CompanyStaffController;
+use App\Http\Controllers\Api\CompanyTeamsController;
 use App\Http\Controllers\Api\CronJobController;
 use App\Http\Controllers\Api\GraphController;
 use App\Http\Controllers\Api\ThreadController;
@@ -135,6 +136,9 @@ Route::post('/specialist-agents/{id}/archive', [SpecialistAgentController::class
 Route::get('/company-staff', [CompanyStaffController::class, 'index']);
 Route::post('/company-staff/seed', [CompanyStaffController::class, 'seed']);
 Route::patch('/company-staff/{id}', [CompanyStaffController::class, 'update']);
+Route::get('/company-teams', [CompanyTeamsController::class, 'index']);
+Route::post('/company-teams/install', [CompanyTeamsController::class, 'install']);
+Route::post('/agent-wakeups/dispatch', [CompanyTeamsController::class, 'dispatchWakeups']);
 Route::get('/staff-council', [StaffCouncilController::class, 'index']);
 Route::get('/work-issues', [WorkIssueController::class, 'index']);
 Route::get('/work-issues/{id}', [WorkIssueController::class, 'show']);

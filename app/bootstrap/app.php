@@ -21,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withSchedule(function (Schedule $schedule) {
         $schedule->command('bossku:process-learning-events')->everyMinute();
+        $schedule->command('bossku:dispatch-agent-wakeups')->everyMinute()->withoutOverlapping();
         $schedule->command('bossku:run-due-crons')->everyMinute()->withoutOverlapping();
         $pollJob = $schedule->job(new \App\Jobs\PollScmReactionsJob);
         $pollSeconds = max(60, (int) config('bossku.reactions_poll_interval_seconds', 60));

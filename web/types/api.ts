@@ -205,6 +205,7 @@ export type KanbanStatus =
 export interface WorkIssue {
   id: string
   project_id?: string
+  parent_issue_id?: string | null
   run_id?: string | null
   source_plan_item_id?: string | null
   title: string
@@ -213,9 +214,18 @@ export interface WorkIssue {
   priority: 'low' | 'medium' | 'high' | 'critical' | string
   approval_state: 'draft' | 'approved' | 'rejected' | string
   assignee_role_slug?: string | null
+  assignee_agent_id?: string | null
+  assignee_agent?: { id: string; role_slug: string; display_name: string } | null
+  parent_issue?: { id: string; title: string; status: string } | null
   metadata?: Record<string, unknown>
   created_at?: string
   updated_at?: string
+}
+
+export interface CompanyTeam {
+  slug: string
+  name: string
+  roles: string[]
 }
 
 export interface GraphNode {

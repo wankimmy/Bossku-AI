@@ -3,6 +3,7 @@
 namespace App\Services\Orchestrator;
 
 use App\Models\BosskuAi\Run;
+use App\Models\BosskuAi\SpecialistAgent;
 use App\Support\StringCoercion;
 
 class RunEventFactory
@@ -140,6 +141,77 @@ class RunEventFactory
             'message' => StringCoercion::toString($review['reason'] ?? null),
             'artifacts' => $artifacts,
             'output' => json_encode($review) ?: '',
+        ]);
+    }
+
+    /** @return array<string, mixed> */
+    public function specialistAgentSelected(Run $run, SpecialistAgent $agent, array $payload): array
+    {
+        return $this->event($run, 'specialist_agent_selected', [
+            'agent' => $agent->role_slug,
+            'from_agent' => 'orchestrator',
+            'to_agent' => $agent->role_slug,
+            'status' => 'success',
+            'model_role' => 'reasoning',
+            'summary' => $agent->display_name.' selected for this prompt.',
+            'message' => (string) ($payload['match_reason'] ?? implode(', ', $agent->trigger_keywords ?? [])),
+            'artifacts' => [
+                'specialist_agent' => $payload,
+            ],
+        ]);
+    }
+
+    /** @return array<string, mixed> */
+    public function aiCouncilStarted(Run $run, array $modelRoute): array
+    {
+        return $this->event($run, 'ai_council_started', [
+            'agent' => 'orchestrator',
+            'from_agent' => 'orchestrator',
+            'to_agent' => 'staff_council',
+            'status' => 'running',
+            'model_role' => 'reasoning',
+            'summary' => 'AI council loop started.',
+            'message' => 'Relevant staff agents are reviewing the draft answer.',
+            'artifacts' => [
+                'intent' => $modelRoute['specialist_intent'] ?? null,
+            ],
+        ]);
+    }
+
+    /** @return array<string, mixed> */
+    public function aiCouncilDone(Run $run, array $council): array
+    {
+        $voices = is_array($council['voices'] ?? null) ? $council['voices'] : [];
+
+        return $this->event($run, 'ai_council_done', [
+            'agent' => 'orchestrator',
+            'from_agent' => 'staff_council',
+            'to_agent' => 'user',
+            'status' => 'success',
+            'model_role' => 'reasoning',
+            'summary' => 'AI council synthesized '.count($voices).' staff voice(s).',
+            'message' => StringCoercion::toString($council['consensus'] ?? null, 'Council review completed.'),
+            'artifacts' => [
+                'ai_council' => $council,
+            ],
+            'output' => json_encode($council) ?: '',
+        ]);
+    }
+
+    /** @return array<string, mixed> */
+    public function aiCouncilSkipped(Run $run, array $council): array
+    {
+        return $this->event($run, 'ai_council_skipped', [
+            'agent' => 'orchestrator',
+            'from_agent' => 'staff_council',
+            'to_agent' => 'user',
+            'status' => 'skipped',
+            'model_role' => 'reasoning',
+            'summary' => StringCoercion::toString($council['reason'] ?? null, 'AI council skipped.'),
+            'message' => StringCoercion::toString($council['reason'] ?? null),
+            'artifacts' => [
+                'ai_council' => $council,
+            ],
         ]);
     }
 

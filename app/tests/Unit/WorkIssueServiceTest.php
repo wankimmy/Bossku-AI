@@ -31,6 +31,21 @@ class WorkIssueServiceTest extends TestCase
         $this->assertSame('todo', $first[0]->status);
         $this->assertSame('approved', $first[0]->approval_state);
         $this->assertSame('tech-lead', $first[0]->assignee_role_slug);
+        $this->assertNotNull($first[0]->assignee_agent_id);
+    }
+
+    #[Test]
+    public function it_enqueues_wakeup_requests_when_wakeups_enabled(): void
+    {
+        Setting::setValue('staff_auto_issue_generation_enabled', '1');
+        Setting::setValue('company_staff_enabled', '1');
+        Setting::setValue('agent_wakeups_enabled', '1');
+        $project = $this->project();
+        $run = Run::factory()->create(['prompt' => 'Build checkout settings page']);
+
+        app(WorkIssueService::class)->createFromApprovedPlan($run, $this->plan(), $project);
+
+        $this->assertGreaterThan(0, \App\Models\BosskuAi\AgentWakeupRequest::query()->count());
     }
 
     #[Test]

@@ -67,4 +67,17 @@ class BosskuToolRegistryTest extends TestCase
         $this->assertCount(1, $events);
         $this->assertStringContainsString('routes/api.php', (string) ($events[0]['summary'] ?? ''));
     }
+
+    #[Test]
+    public function direct_answer_role_cannot_use_db_query(): void
+    {
+        $registry = app(ToolRegistry::class);
+        $out = $registry->invoke(null, null, [
+            'tool' => 'db_query',
+            'payload' => ['sql' => 'select 1'],
+        ], null, 'direct_answer');
+
+        $this->assertSame('blocked', $out['status']);
+        $this->assertStringContainsString('not allowed', (string) ($out['result']['error'] ?? ''));
+    }
 }

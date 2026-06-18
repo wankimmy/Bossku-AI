@@ -2,6 +2,8 @@
 
 namespace App\Services\BosskuAi;
 
+use App\Support\PromptContextHelper;
+
 /**
  * Detects prompts that must read the active project repository (executor + file tools).
  */
@@ -9,7 +11,11 @@ class RepoTaskDetector
 {
     public static function requiresRepositoryAccess(string $prompt): bool
     {
-        $lower = mb_strtolower(trim($prompt));
+        if (PromptContextHelper::isMetaAboutAssistant($prompt)) {
+            return false;
+        }
+
+        $lower = mb_strtolower(trim(PromptContextHelper::currentRequest($prompt)));
 
         if (preg_match('/\b(audit|review|scan|analyse|analyze|inspect)\b.*\b(repo|repository|codebase|project|code)\b/u', $lower)) {
             return true;
@@ -59,7 +65,11 @@ class RepoTaskDetector
      */
     public static function isReadOnlyUnderstanding(string $prompt): bool
     {
-        $lower = mb_strtolower(trim($prompt));
+        if (PromptContextHelper::isMetaAboutAssistant($prompt)) {
+            return false;
+        }
+
+        $lower = mb_strtolower(trim(PromptContextHelper::currentRequest($prompt)));
 
         // Audit / review / mutation intent wins — those belong in the executor pipeline.
         if (preg_match('/\b(audit|review|scan|analyse|analyze|refactor|implement|deploy|migrate|optimi[sz]e|vulnerabilit|owasp|pentest|penetration)\b/u', $lower)) {
@@ -127,6 +137,10 @@ class RepoTaskDetector
      */
     public static function enforceExecutorForRepo(array $route, string $prompt): array
     {
+        if (PromptContextHelper::isMetaAboutAssistant($prompt)) {
+            return $route;
+        }
+
         // Read-only understanding needs repo context, never the executor/auditor pipeline.
         if (self::isReadOnlyUnderstanding($prompt)) {
             $route['needs_repo_context'] = true;

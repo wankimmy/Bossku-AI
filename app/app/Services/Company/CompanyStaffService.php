@@ -26,6 +26,10 @@ class CompanyStaffService
                 'trigger_keywords' => ['project', 'plan', 'kanban', 'milestone', 'scope', 'delivery'],
                 'persona_content' => 'You are the Project Manager. Convert CEO goals into bounded, approved work and keep the team honest about scope, dependencies, and status.',
                 'runtime_mode' => 'mixed',
+                'department' => 'core-engineering',
+                'reports_to_role_slug' => null,
+                'can_create_agents' => true,
+                'budget_policy' => 'standard',
             ],
             [
                 'role_slug' => 'tech-lead',
@@ -34,6 +38,10 @@ class CompanyStaffService
                 'trigger_keywords' => ['architecture', 'implementation', 'backend', 'frontend', 'code', 'technical', 'engineering'],
                 'persona_content' => 'You are the Tech Lead. Choose practical architecture, identify implementation risks, and keep engineering work testable and maintainable.',
                 'runtime_mode' => 'mixed',
+                'department' => 'core-engineering',
+                'reports_to_role_slug' => 'project-manager',
+                'can_create_agents' => false,
+                'budget_policy' => 'standard',
             ],
             [
                 'role_slug' => 'ui-ux-designer',
@@ -42,6 +50,10 @@ class CompanyStaffService
                 'trigger_keywords' => ['ui', 'ux', 'design', 'layout', 'screen', 'user experience', 'frontend'],
                 'persona_content' => 'You are the UI/UX Designer. Make interfaces clear, efficient, and polished without adding decorative complexity.',
                 'runtime_mode' => 'advisory',
+                'department' => 'product-design',
+                'reports_to_role_slug' => 'tech-lead',
+                'can_create_agents' => false,
+                'budget_policy' => 'standard',
             ],
             [
                 'role_slug' => 'blog-writer',
@@ -50,6 +62,10 @@ class CompanyStaffService
                 'trigger_keywords' => ['blog', 'article', 'post', 'newsletter', 'writing', 'editorial'],
                 'persona_content' => 'You are the Blog Writer. Produce clear, useful long-form content with a strong angle and clean structure.',
                 'runtime_mode' => 'advisory',
+                'department' => 'content-machine',
+                'reports_to_role_slug' => 'marketing-manager',
+                'can_create_agents' => false,
+                'budget_policy' => 'standard',
             ],
             [
                 'role_slug' => 'seo-writer',
@@ -58,6 +74,10 @@ class CompanyStaffService
                 'trigger_keywords' => ['seo', 'keyword', 'search', 'metadata', 'ranking', 'organic'],
                 'persona_content' => 'You are the SEO Writer. Improve discoverability while preserving accuracy and readable copy.',
                 'runtime_mode' => 'advisory',
+                'department' => 'content-machine',
+                'reports_to_role_slug' => 'marketing-manager',
+                'can_create_agents' => false,
+                'budget_policy' => 'standard',
             ],
             [
                 'role_slug' => 'marketing-manager',
@@ -66,6 +86,10 @@ class CompanyStaffService
                 'trigger_keywords' => ['marketing', 'campaign', 'positioning', 'launch', 'growth', 'brand'],
                 'persona_content' => 'You are the Marketing Manager. Align the output with positioning, audience, channels, and credible growth strategy.',
                 'runtime_mode' => 'advisory',
+                'department' => 'growth-sales',
+                'reports_to_role_slug' => 'project-manager',
+                'can_create_agents' => false,
+                'budget_policy' => 'standard',
             ],
             [
                 'role_slug' => 'sales-manager',
@@ -74,6 +98,10 @@ class CompanyStaffService
                 'trigger_keywords' => ['sales', 'lead', 'outreach', 'proposal', 'conversion', 'objection'],
                 'persona_content' => 'You are the Sales Manager. Make the output commercially useful, specific, and grounded in buyer objections.',
                 'runtime_mode' => 'advisory',
+                'department' => 'growth-sales',
+                'reports_to_role_slug' => 'marketing-manager',
+                'can_create_agents' => false,
+                'budget_policy' => 'standard',
             ],
             [
                 'role_slug' => 'qa',
@@ -82,6 +110,10 @@ class CompanyStaffService
                 'trigger_keywords' => ['qa', 'test', 'verify', 'regression', 'acceptance', 'quality'],
                 'persona_content' => 'You are QA. Define what must be tested, which edge cases matter, and where regressions are likely.',
                 'runtime_mode' => 'advisory',
+                'department' => 'security-qa',
+                'reports_to_role_slug' => 'tech-lead',
+                'can_create_agents' => false,
+                'budget_policy' => 'standard',
             ],
             [
                 'role_slug' => 'security',
@@ -90,6 +122,10 @@ class CompanyStaffService
                 'trigger_keywords' => ['security', 'auth', 'permission', 'secret', 'privacy', 'risk'],
                 'persona_content' => 'You are Security. Identify practical security and privacy risks and make bounded mitigation suggestions.',
                 'runtime_mode' => 'advisory',
+                'department' => 'security-qa',
+                'reports_to_role_slug' => 'tech-lead',
+                'can_create_agents' => false,
+                'budget_policy' => 'standard',
             ],
             [
                 'role_slug' => 'customer-support',
@@ -98,6 +134,10 @@ class CompanyStaffService
                 'trigger_keywords' => ['support', 'customer', 'docs', 'help', 'faq', 'user issue'],
                 'persona_content' => 'You are Customer Support. Surface likely user confusion and suggest concise support-friendly improvements.',
                 'runtime_mode' => 'advisory',
+                'department' => 'content-machine',
+                'reports_to_role_slug' => 'project-manager',
+                'can_create_agents' => false,
+                'budget_policy' => 'standard',
             ],
         ];
     }
@@ -126,9 +166,33 @@ class CompanyStaffService
                     'council_enabled' => true,
                     'runtime_mode' => $row['runtime_mode'],
                     'staff_sort_order' => $index + 1,
-                    'metadata' => ['seeded_by' => 'company_staff_mvp'],
+                    'department' => $row['department'] ?? null,
+                    'can_create_agents' => (bool) ($row['can_create_agents'] ?? false),
+                    'budget_policy' => $row['budget_policy'] ?? 'standard',
+                    'metadata' => [
+                        'seeded_by' => 'company_staff_mvp',
+                        'agent_mode' => 'primary',
+                    ],
                 ],
             );
+        }
+
+        $byRole = SpecialistAgent::query()
+            ->where('project_id', $project->id)
+            ->where('is_company_staff', true)
+            ->get()
+            ->keyBy('role_slug');
+
+        foreach ($this->defaultRoster() as $row) {
+            $managerSlug = $row['reports_to_role_slug'] ?? null;
+            if ($managerSlug === null || $managerSlug === '') {
+                continue;
+            }
+            $agent = $byRole->get($row['role_slug']);
+            $manager = $byRole->get($managerSlug);
+            if ($agent !== null && $manager !== null) {
+                $agent->update(['reports_to_agent_id' => $manager->id]);
+            }
         }
 
         return $this->staffForProject($project);
@@ -203,6 +267,15 @@ class CompanyStaffService
         });
 
         return new Collection($selected->values()->all());
+    }
+
+    public function agentForRole(Project $project, string $roleSlug): ?SpecialistAgent
+    {
+        return SpecialistAgent::query()
+            ->where('project_id', $project->id)
+            ->where('is_company_staff', true)
+            ->where('role_slug', $roleSlug)
+            ->first();
     }
 
     public function positionFor(SpecialistAgent $agent, array $plan = []): string

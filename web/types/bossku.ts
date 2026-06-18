@@ -75,6 +75,24 @@ export interface StaffCouncilReview {
   stop_conditions: string[]
 }
 
+export interface AiCouncilVoice {
+  role_slug: string
+  display_name: string
+  runtime_mode?: string
+  position?: string
+  critique?: string
+  confidence?: number
+}
+
+export interface AiCouncilReview {
+  status: StepStatus
+  reason?: string
+  intent?: string
+  consensus?: string
+  voices: AiCouncilVoice[]
+  questions?: Array<Record<string, unknown>>
+}
+
 /** Cursor-style orchestrator plan surfaced in Plan tab and chat. */
 export interface PlanOverview {
   goal?: string
@@ -87,6 +105,7 @@ export interface PlanOverview {
   todos: PlanChecklistItem[]
   councilReview?: CouncilReview
   staffCouncil?: StaffCouncilReview
+  aiCouncil?: AiCouncilReview
 }
 
 export interface FileRead {
@@ -211,4 +230,5 @@ export interface NormalizedRunArtifacts {
   finalResult: FinalResult
   routingSummary: RoutingSummary
   memoryUsed: boolean
+  aiCouncil?: AiCouncilReview
 }

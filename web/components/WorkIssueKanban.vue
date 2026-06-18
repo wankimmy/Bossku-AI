@@ -84,7 +84,14 @@ function changeStatus(issue: WorkIssue, event: Event) {
 
           <div class="mt-3 flex flex-wrap items-center justify-between gap-2">
             <span class="min-w-0 truncate text-xs text-zinc-500">
-              {{ issue.assignee_role_slug ?? 'unassigned' }}
+              {{ issue.assignee_agent?.display_name ?? issue.assignee_role_slug ?? 'unassigned' }}
+            </span>
+            <span
+              v-if="issue.parent_issue?.title"
+              class="truncate text-[11px] text-zinc-600"
+              :title="issue.parent_issue.title"
+            >
+              ↳ {{ issue.parent_issue.title }}
             </span>
             <select
               class="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-200"

@@ -1,6 +1,7 @@
 import type {
   AgentMessage,
   AuditFinding,
+  AiCouncilReview,
   CommandRun,
   FileChange,
   FileRead,
@@ -59,6 +60,7 @@ export function useRunArtifacts(items: UnknownRecord[] = []): NormalizedRunArtif
   let memoryUsed = false
   let finalRaw = ''
   let latestPlanRaw: UnknownRecord | undefined
+  let latestAiCouncil: AiCouncilReview | undefined
 
   for (const [idx, item] of items.entries()) {
     const event = unwrapStep(item)
@@ -75,6 +77,16 @@ export function useRunArtifacts(items: UnknownRecord[] = []): NormalizedRunArtif
     }
 
     applyRouting(event, artifacts, routingSummary, type)
+
+    const councilArtifact = asAiCouncilReview(artifacts.ai_council)
+    if (councilArtifact) {
+      latestAiCouncil = councilArtifact
+    }
+
+    const specialist = asRecord(artifacts.specialist_agent)
+    if (specialist?.display_name && type === 'specialist_agent_selected') {
+      routingSummary.skill = stringOrUndefined(specialist.display_name) ?? routingSummary.skill
+    }
 
     const planArtifact = asRecord(artifacts.plan)
     if (planArtifact) {
@@ -155,7 +167,7 @@ export function useRunArtifacts(items: UnknownRecord[] = []): NormalizedRunArtif
     dedupeChecklistLatest(checklist),
     items,
   )
-  const plan = buildPlanOverview(latestPlanRaw, resolvedChecklist)
+  const plan = buildPlanOverview(latestPlanRaw, resolvedChecklist, latestAiCouncil)
 
   return {
     agentMessages: messages,
@@ -171,6 +183,7 @@ export function useRunArtifacts(items: UnknownRecord[] = []): NormalizedRunArtif
     gitStatusAfter,
     routingSummary,
     memoryUsed,
+    aiCouncil: latestAiCouncil,
   }
 }
 
@@ -595,6 +608,7 @@ function parseRemainingRisks(raw: string, findings: AuditFinding[]): RiskItem[] 
 
 function inferAgent(type: string) {
   if (type === 'tool_call') return 'tools'
+  if (type.includes('ai_council')) return 'staff-council'
   if (type.includes('specialist_agent')) return 'specialist-agent'
   if (type === 'commands_executed') return 'executor'
   if (type.includes('planner')) return 'orchestrator'
@@ -645,6 +659,19 @@ function summaryFromArtifacts(artifacts: UnknownRecord, type: string) {
     const review = asRecord(artifacts.staff_council) ?? {}
     return String(review.consensus ?? 'Staff council skipped.')
   }
+  if (type === 'ai_council_done' && asRecord(artifacts.ai_council)) {
+    const review = asRecord(artifacts.ai_council) ?? {}
+    const count = asArray(review.voices).length
+    return `AI council synthesized ${count} staff voice(s).`
+  }
+  if (type === 'ai_council_skipped' && asRecord(artifacts.ai_council)) {
+    const review = asRecord(artifacts.ai_council) ?? {}
+    return String(review.reason ?? 'AI council skipped.')
+  }
+  if (type === 'specialist_agent_selected' && asRecord(artifacts.specialist_agent)) {
+    const specialist = asRecord(artifacts.specialist_agent) ?? {}
+    return `${String(specialist.display_name ?? specialist.role_slug ?? 'Specialist')} selected (${String(specialist.match_reason ?? 'matched')}).`
+  }
   if (type.includes('planner') && asArray(artifacts.checklist).length) {
     return `Planner created ${asArray(artifacts.checklist).length}-step execution checklist.`
   }
@@ -673,8 +700,9 @@ function summaryFromArtifacts(artifacts: UnknownRecord, type: string) {
 function buildPlanOverview(
   raw: UnknownRecord | undefined,
   todos: PlanChecklistItem[],
+  aiCouncil?: AiCouncilReview,
 ): PlanOverview | undefined {
-  if (!raw && todos.length === 0) {
+  if (!raw && todos.length === 0 && !aiCouncil) {
     return undefined
   }
 
@@ -684,7 +712,7 @@ function buildPlanOverview(
   const councilReview = asCouncilReview(raw?.council_review)
   const staffCouncil = asStaffCouncilReview(raw?.staff_council)
 
-  if (!goal && todos.length === 0 && !councilReview && !staffCouncil) {
+  if (!goal && todos.length === 0 && !councilReview && !staffCouncil && !aiCouncil) {
     return undefined
   }
 
@@ -699,6 +727,31 @@ function buildPlanOverview(
     todos,
     councilReview,
     staffCouncil,
+    aiCouncil,
+  }
+}
+
+function asAiCouncilReview(value: unknown): AiCouncilReview | undefined {
+  const record = asRecord(value)
+  if (!record) return undefined
+
+  return {
+    status: String(record.status ?? 'completed'),
+    reason: stringOrUndefined(record.reason),
+    intent: stringOrUndefined(record.intent),
+    consensus: stringOrUndefined(record.consensus),
+    voices: asArray(record.voices).map((voice) => {
+      const item = asRecord(voice) ?? {}
+      return {
+        role_slug: String(item.role_slug ?? 'staff'),
+        display_name: String(item.display_name ?? item.role_slug ?? 'Staff'),
+        runtime_mode: stringOrUndefined(item.runtime_mode),
+        position: stringOrUndefined(item.position),
+        critique: stringOrUndefined(item.critique),
+        confidence: typeof item.confidence === 'number' ? item.confidence : undefined,
+      }
+    }),
+    questions: asArray(record.questions) as Array<Record<string, unknown>>,
   }
 }
 

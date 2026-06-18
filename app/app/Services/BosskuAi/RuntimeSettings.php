@@ -355,6 +355,22 @@ class RuntimeSettings
         );
     }
 
+    public function aiCouncilEnabled(): bool
+    {
+        return $this->getBool(
+            'ai_council_enabled',
+            (bool) config('bossku.ai_council_enabled', true),
+        );
+    }
+
+    public function agentWakeupsEnabled(): bool
+    {
+        return $this->getBool(
+            'agent_wakeups_enabled',
+            (bool) config('bossku.agent_wakeups_enabled', false),
+        );
+    }
+
     public function staffAutoIssueGenerationEnabled(): bool
     {
         return $this->getBool(
@@ -527,6 +543,8 @@ class RuntimeSettings
             'council_plan_review_enabled' => $this->councilPlanReviewEnabled() ? '1' : '0',
             'company_staff_enabled' => $this->companyStaffEnabled() ? '1' : '0',
             'staff_council_enabled' => $this->staffCouncilEnabled() ? '1' : '0',
+            'ai_council_enabled' => $this->aiCouncilEnabled() ? '1' : '0',
+            'agent_wakeups_enabled' => $this->agentWakeupsEnabled() ? '1' : '0',
             'staff_auto_issue_generation_enabled' => $this->staffAutoIssueGenerationEnabled() ? '1' : '0',
             'memory_storage_enabled' => $this->memoryStorageEnabled() ? '1' : '0',
             'memory_ollama_enabled' => $this->memoryOllamaEnabled() ? '1' : '0',
