@@ -78,6 +78,28 @@ class ProjectManifestTest extends TestCase
         $this->assertGreaterThanOrEqual(6, $page1['total']);
     }
 
+    #[Test]
+    public function manifest_is_rooted_in_active_project(): void
+    {
+        $otherRepo = $this->workspaceParent.'/other-repo';
+        File::ensureDirectoryExists($otherRepo.'/only-here');
+        File::put($otherRepo.'/only-here/unique.php', '<?php');
+
+        Project::query()->create([
+            'name' => 'Other',
+            'host_path' => $this->normalize($otherRepo),
+            'container_path' => $otherRepo,
+            'is_active' => false,
+        ]);
+
+        $activePaths = $this->getJson('/api/project/manifest?ext=php')
+            ->assertOk()
+            ->json('paths');
+
+        $this->assertNotContains('only-here/unique.php', $activePaths);
+        $this->assertContains('app/Http/Controllers/Controller0.php', $activePaths);
+    }
+
     private function normalize(string $path): string
     {
         return str_replace('\\', '/', rtrim($path, '/\\'));

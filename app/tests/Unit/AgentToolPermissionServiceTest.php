@@ -57,4 +57,77 @@ class AgentToolPermissionServiceTest extends TestCase
         $this->assertFalse($service->isAllowed('writer', 'file_write_proposed'));
         $this->assertFalse($service->isAllowed('writer', 'db_query'));
     }
+
+    #[Test]
+    public function executor_frontmatter_editor_aliases_map_to_runtime_tools(): void
+    {
+        $service = app(AgentToolPermissionService::class);
+        $raw = <<<'MD'
+---
+name: executor
+tools: ["Read", "Grep", "Glob", "Write", "db_query", "log"]
+---
+# Executor
+MD;
+
+        $allowed = $service->allowedTools('executor', $raw);
+
+        $this->assertContains('file_read_safe', $allowed);
+        $this->assertContains('file_search', $allowed);
+        $this->assertContains('file_glob', $allowed);
+        $this->assertContains('file_write_proposed', $allowed);
+        $this->assertContains('db_query', $allowed);
+        $this->assertContains('log', $allowed);
+        $this->assertNotContains('Read', $allowed);
+        $this->assertNotContains('Write', $allowed);
+    }
+
+    #[Test]
+    public function planner_frontmatter_editor_aliases_remain_read_only(): void
+    {
+        $service = app(AgentToolPermissionService::class);
+        $raw = <<<'MD'
+---
+name: planner
+tools: ["Read", "Grep", "Glob", "db_query"]
+---
+# Planner
+MD;
+
+        $allowed = $service->allowedTools('planner', $raw);
+
+        $this->assertContains('file_read_safe', $allowed);
+        $this->assertContains('file_search', $allowed);
+        $this->assertContains('file_glob', $allowed);
+        $this->assertNotContains('file_write_proposed', $allowed);
+        $this->assertNotContains('db_query', $allowed);
+    }
+
+    #[Test]
+    public function unknown_editor_aliases_are_ignored(): void
+    {
+        $service = app(AgentToolPermissionService::class);
+        $raw = <<<'MD'
+---
+name: executor
+tools: ["Read", "Task", "Shell", "Bash", "log"]
+---
+# Executor
+MD;
+
+        $allowed = $service->allowedTools('executor', $raw);
+
+        $this->assertSame(['file_read_safe', 'log'], $allowed);
+    }
+
+    #[Test]
+    public function edit_alias_maps_to_file_write_proposed(): void
+    {
+        $service = app(AgentToolPermissionService::class);
+
+        $this->assertSame(
+            ['file_write_proposed'],
+            $service->normalizeTools(['Edit']),
+        );
+    }
 }

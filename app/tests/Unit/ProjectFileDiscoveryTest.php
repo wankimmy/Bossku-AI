@@ -118,6 +118,31 @@ PHP);
         $this->assertContains('UserSettingsController', $symbols);
     }
 
+    #[Test]
+    public function assess_active_root_flags_empty_project_with_warning(): void
+    {
+        $emptyRepo = $this->workspaceParent.'/empty-repo';
+        File::ensureDirectoryExists($emptyRepo.'/tmp/bossku-prompts');
+
+        Project::query()->where('is_active', true)->update(['is_active' => false]);
+        Project::query()->create([
+            'name' => 'Empty',
+            'host_path' => $this->normalize($emptyRepo),
+            'container_path' => $emptyRepo,
+            'is_active' => true,
+        ]);
+
+        config(['bossku.repo_root' => $emptyRepo]);
+
+        $assessment = app(ProjectFileDiscovery::class)->assessActiveRoot();
+
+        $this->assertTrue($assessment['mounted']);
+        $this->assertTrue($assessment['appears_empty']);
+        $this->assertSame(0, $assessment['manifest_total']);
+        $this->assertStringContainsString('Empty', (string) $assessment['message']);
+        $this->assertStringContainsString($emptyRepo, (string) $assessment['message']);
+    }
+
     private function normalize(string $path): string
     {
         return str_replace('\\', '/', rtrim($path, '/\\'));

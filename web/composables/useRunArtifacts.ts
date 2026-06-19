@@ -560,13 +560,29 @@ function parseFinalResult(
     raw,
   }
   result.nextPrompt = readMarkdownSection(raw, 'Next prompt') ?? result.nextStep
-  if (result.filesChanged.length === 0) {
+  const appliedFiles = appliedFileChanges(files)
+  if (appliedFiles.length > 0) {
+    result.filesChanged = appliedFiles.map(file => file.path)
+  } else if (result.filesChanged.length === 0) {
     result.filesChanged = files.map(file => file.path)
   }
   if (result.checksRun.length === 0) {
     result.checksRun = commands.map(command => command.command)
   }
   return result
+}
+
+function appliedFileChanges(files: FileChange[]): FileChange[] {
+  const hasApprovalState = files.some(file =>
+    file.approval_status || file.approval_error || file.approval_skipped,
+  )
+  if (!hasApprovalState) return files
+
+  return files.filter(file =>
+    (file.approval_status === 'approved' || file.approval_status === 'auto_approved')
+      && !file.approval_error
+      && !file.approval_skipped,
+  )
 }
 
 function readMarkdownSection(raw: string, heading: string): string | undefined {
@@ -676,7 +692,12 @@ function summaryFromArtifacts(artifacts: UnknownRecord, type: string) {
     return `Planner created ${asArray(artifacts.checklist).length}-step execution checklist.`
   }
   if (type.includes('executor') && asArray(artifacts.files_changed).length) {
-    return `Changed ${asArray(artifacts.files_changed).length} file(s).`
+    const changes = asFileChanges(artifacts.files_changed)
+    const applied = appliedFileChanges(changes)
+    const blocked = changes.length - applied.length
+    return blocked > 0
+      ? `Changed ${applied.length} file(s); ${blocked} blocked.`
+      : `Changed ${applied.length} file(s).`
   }
   if (type.includes('auditor') && asArray(artifacts.audit_findings).length) {
     return `Auditor found ${asArray(artifacts.audit_findings).length} item(s).`
@@ -857,6 +878,10 @@ function asFileChanges(value: unknown): FileChange[] {
       diff: stringOrUndefined(record.diff),
       after: typeof afterRaw === 'string' ? afterRaw : undefined,
       before: typeof record.before === 'string' ? record.before : undefined,
+      approval_status: stringOrUndefined(record.approval_status),
+      approval_error: stringOrUndefined(record.approval_error),
+      approval_skipped: record.approval_skipped === true,
+      approval_skip_reason: stringOrUndefined(record.approval_skip_reason),
     }
   }).filter(item => item.path)
 }

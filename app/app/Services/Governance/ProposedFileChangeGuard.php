@@ -57,6 +57,7 @@ class ProposedFileChangeGuard
         }
 
         $lower = strtolower($trimmed);
+        $isShortProposal = strlen($trimmed) <= 500;
         $patterns = [
             'will be determined',
             'to be determined',
@@ -72,7 +73,7 @@ class ProposedFileChangeGuard
         ];
 
         foreach ($patterns as $pattern) {
-            if (str_contains($lower, $pattern)) {
+            if ($lower === $pattern || ($isShortProposal && str_contains($lower, $pattern))) {
                 return true;
             }
         }

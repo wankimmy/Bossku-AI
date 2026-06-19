@@ -706,8 +706,10 @@ class OrchestratorService
         $repoAvailable = true;
         $repoError = '';
         $repoRoot = '';
+        $rootAssessment = null;
         try {
             $repoRoot = $this->paths->repoRoot();
+            $rootAssessment = $this->discovery->assessActiveRoot();
         } catch (\Throwable $e) {
             $repoAvailable = false;
             $repoError = $e->getMessage();
@@ -764,8 +766,20 @@ class OrchestratorService
                 'repo_root' => $repoRoot,
                 'repo_mounted' => $repoAvailable,
                 'repo_error' => $repoAvailable ? null : $repoError,
+                'manifest_total' => is_array($rootAssessment) ? ($rootAssessment['manifest_total'] ?? null) : null,
+                'appears_empty' => is_array($rootAssessment) ? (bool) ($rootAssessment['appears_empty'] ?? false) : false,
+                'empty_project_warning' => is_array($rootAssessment) ? ($rootAssessment['message'] ?? null) : null,
                 'active_project' => $activeProject?->only(['id', 'name', 'host_path', 'container_path']),
             ]));
+            if (is_array($rootAssessment) && ($rootAssessment['appears_empty'] ?? false) && ($rootAssessment['message'] ?? null) !== null) {
+                $this->emit($emit, $this->basePayload($run, 'active_project_empty_warning', [
+                    'status' => 'warning',
+                    'summary' => (string) $rootAssessment['message'],
+                    'repo_root' => $repoRoot,
+                    'manifest_total' => $rootAssessment['manifest_total'] ?? 0,
+                    'top_level' => $rootAssessment['top_level'] ?? [],
+                ]));
+            }
         } catch (\Throwable) {
             //
         }
@@ -2438,15 +2452,49 @@ class OrchestratorService
         if ($commandOutcome['git_restore_failed']) {
             $status = 'Partially Completed';
         }
+        $fileChanges = is_array($execResult['files_changed'] ?? null) ? $execResult['files_changed'] : [];
+        $blockedFileChanges = array_values(array_filter($fileChanges, static function ($file): bool {
+            if (! is_array($file)) {
+                return false;
+            }
+
+            $approvalStatus = StringCoercion::toString($file['approval_status'] ?? null, '');
+
+            return isset($file['approval_error'])
+                || ($file['approval_skipped'] ?? false) === true
+                || in_array($approvalStatus, ['pending', 'rejected'], true);
+        }));
+        $appliedFileChanges = array_values(array_filter($fileChanges, static function ($file): bool {
+            if (! is_array($file)) {
+                return true;
+            }
+
+            $approvalStatus = StringCoercion::toString($file['approval_status'] ?? null, '');
+
+            return ! isset($file['approval_error'])
+                && ($file['approval_skipped'] ?? false) !== true
+                && ($approvalStatus === '' || in_array($approvalStatus, ['approved', 'auto_approved'], true));
+        }));
+        if ($blockedFileChanges !== []) {
+            $status = 'Partially Completed';
+        }
         $files = array_values(array_filter(array_map(
             fn ($file) => is_array($file)
                 ? StringCoercion::toString($file['path'] ?? null)
                 : StringCoercion::toString($file),
-            $execResult['files_changed'] ?? [],
+            $appliedFileChanges,
         )));
         $executedCommands = $commandOutcome['executed_lines'];
         $proposedCommands = $commandOutcome['proposed_lines'];
         $risks = $execResult['known_issues'] ?? [];
+        foreach (array_slice($blockedFileChanges, 0, 10) as $file) {
+            $path = StringCoercion::toString($file['path'] ?? null, 'unknown path');
+            $reason = StringCoercion::toString(
+                $file['approval_error'] ?? $file['approval_skip_reason'] ?? $file['approval_status'] ?? null,
+                'not applied',
+            );
+            $risks[] = "File change not applied: {$path} ({$reason})";
+        }
         if (($lastAudit['optional_improvements'] ?? []) !== []) {
             $risks = array_merge($risks, $lastAudit['optional_improvements']);
         }
@@ -3657,6 +3705,23 @@ class OrchestratorService
                 'summary' => $foundCount.' file(s) read from the active project ('.count($reads).' probed).',
                 'artifacts' => ['preflight_reads' => $reads],
             ]));
+
+            if ($foundCount === 0) {
+                try {
+                    $assessment = $this->discovery->assessActiveRoot();
+                    if (($assessment['appears_empty'] ?? false) && ($assessment['message'] ?? null) !== null) {
+                        $this->emit($emit, $this->basePayload($run, 'preflight_empty_project_warning', [
+                            'status' => 'warning',
+                            'summary' => (string) $assessment['message'],
+                            'repo_root' => $assessment['repo_root'] ?? '',
+                            'manifest_total' => $assessment['manifest_total'] ?? 0,
+                            'probed_files' => count($reads),
+                        ]));
+                    }
+                } catch (\Throwable) {
+                    //
+                }
+            }
         }
 
         return $reads;

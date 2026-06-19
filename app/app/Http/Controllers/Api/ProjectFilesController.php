@@ -121,7 +121,7 @@ class ProjectFilesController extends Controller
         ]);
 
         try {
-            $resolved = $this->paths->resolve($validated['path']);
+            $resolved = $this->paths->resolveForWrite($validated['path']);
         } catch (\InvalidArgumentException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
@@ -270,7 +270,7 @@ class ProjectFilesController extends Controller
         ]);
 
         try {
-            $resolved = $this->paths->resolve($validated['path']);
+            $resolved = $this->paths->resolveForWrite($validated['path']);
         } catch (\InvalidArgumentException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }

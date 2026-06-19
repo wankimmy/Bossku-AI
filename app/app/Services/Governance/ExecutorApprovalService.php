@@ -64,7 +64,9 @@ class ExecutorApprovalService
             $changeType = StringCoercion::toString($item['change_type'] ?? null, 'modified');
 
             try {
-                $resolved = $this->paths->resolve($path);
+                $resolved = strtolower($changeType) === 'deleted'
+                    ? $this->paths->resolve($path)
+                    : $this->paths->resolveForWrite($path);
 
                 if (is_dir($resolved['absolute']) && $changeType !== 'deleted') {
                     $enriched[] = array_merge($item, [

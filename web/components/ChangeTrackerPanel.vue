@@ -7,6 +7,16 @@ defineProps<{
   commandsRun: CommandRun[]
   testsRun: TestRun[]
 }>()
+
+function isBlocked(file: FileChange) {
+  return Boolean(file.approval_error || file.approval_skipped || file.approval_status === 'rejected')
+}
+
+function statusLabel(file: FileChange) {
+  if (file.approval_error) return 'blocked'
+  if (file.approval_skipped) return 'skipped'
+  return file.approval_status || file.change_type
+}
 </script>
 
 <template>
@@ -38,14 +48,28 @@ defineProps<{
             v-for="file in filesChanged"
             :key="`${file.change_type}:${file.path}`"
             class="rounded-md border p-2 dark:border-zinc-800"
-            :class="file.change_type === 'created'
+            :class="isBlocked(file)
+              ? 'border-amber-700/50 bg-amber-950/10'
+              : file.change_type === 'created'
               ? 'border-emerald-700/40 bg-emerald-950/10'
               : 'border-zinc-200'"
           >
             <div class="flex flex-wrap items-center gap-2">
               <span class="rounded border border-zinc-300 px-1.5 py-0.5 text-[11px] dark:border-zinc-700">{{ file.change_type }}</span>
+              <span
+                v-if="file.approval_status || file.approval_error || file.approval_skipped"
+                class="rounded border px-1.5 py-0.5 text-[11px]"
+                :class="isBlocked(file)
+                  ? 'border-amber-700 text-amber-300'
+                  : 'border-emerald-700 text-emerald-300'"
+              >
+                {{ statusLabel(file) }}
+              </span>
               <span class="font-mono text-xs">{{ file.path }}</span>
             </div>
+            <p v-if="file.approval_error || file.approval_skip_reason" class="mt-2 text-sm text-amber-700 dark:text-amber-300">
+              Not applied: {{ file.approval_error || file.approval_skip_reason }}
+            </p>
             <p v-if="file.summary" class="mt-2 text-sm">
               {{ file.summary }}
             </p>

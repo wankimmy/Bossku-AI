@@ -213,6 +213,47 @@ class ProjectRegistryTest extends TestCase
             ->assertStatus(422);
     }
 
+    #[Test]
+    public function list_endpoint_exposes_active_repo_root_and_empty_warning(): void
+    {
+        $emptyRepo = $this->workspaceParent.'/empty-project';
+        File::ensureDirectoryExists($emptyRepo.'/tmp/bossku-prompts');
+
+        Project::query()->create([
+            'name' => 'Empty',
+            'host_path' => $emptyRepo,
+            'container_path' => $emptyRepo,
+            'is_active' => true,
+        ]);
+
+        $response = $this->getJson('/api/project/list')->assertOk();
+
+        $response
+            ->assertJsonPath('active_repo_root', $emptyRepo)
+            ->assertJsonPath('manifest_total', 0)
+            ->assertJsonPath('appears_empty', true);
+
+        $this->assertStringContainsString('Empty', (string) $response->json('empty_project_warning'));
+    }
+
+    #[Test]
+    public function activating_project_preserves_exact_container_path(): void
+    {
+        $b = Project::query()->create([
+            'name' => 'B',
+            'host_path' => $this->repoB,
+            'container_path' => '/workspace/project-b',
+            'is_active' => false,
+        ]);
+
+        $this->postJson("/api/project/{$b->id}/activate")
+            ->assertOk()
+            ->assertJsonPath('project.container_path', '/workspace/project-b')
+            ->assertJsonPath('project.is_active', true);
+
+        $this->assertSame('/workspace/project-b', $b->fresh()->container_path);
+    }
+
     private function normalize(string $path): string
     {
         return str_replace('\\', '/', rtrim($path, '/\\'));

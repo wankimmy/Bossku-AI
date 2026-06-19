@@ -121,6 +121,10 @@ export interface FileChange {
   diff?: string
   after?: string
   before?: string
+  approval_status?: string
+  approval_error?: string
+  approval_skipped?: boolean
+  approval_skip_reason?: string
 }
 
 export interface CommandRun {

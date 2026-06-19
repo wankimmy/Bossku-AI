@@ -36,6 +36,7 @@ function truncate(text: string, max: number): string {
 interface AgentLabelsProps {
   officeState: OfficeState
   agents: number[]
+  agentLabels: Record<number, string>
   agentStatuses: Record<number, string>
   agentTools: Record<number, ToolActivity[]>
   containerRef: React.RefObject<HTMLDivElement | null>
@@ -44,9 +45,19 @@ interface AgentLabelsProps {
   subagentCharacters: SubagentCharacter[]
 }
 
+function resolveAgentLabel(id: number, agentLabels: Record<number, string>, isSub: boolean, subLabel?: string): string {
+  if (isSub) {
+    return subLabel ?? 'Subtask'
+  }
+  const dynamic = agentLabels[id]?.trim()
+  if (dynamic) return dynamic
+  return AGENT_ROLE_NAMES[id] ?? `Agent #${id}`
+}
+
 export function AgentLabels({
   officeState,
   agents,
+  agentLabels,
   agentStatuses,
   agentTools,
   containerRef,
@@ -99,9 +110,7 @@ export function AgentLabels({
         const isActive = ch.isActive
         const isSub = ch.isSubagent
 
-        const labelText = isSub
-          ? (subLabelMap.get(id) ?? 'Subtask')
-          : (AGENT_ROLE_NAMES[id] ?? `Agent #${id}`)
+        const labelText = resolveAgentLabel(id, agentLabels, isSub, subLabelMap.get(id))
 
         const activityText = isSub ? null : getActivityText(id, agentTools, isActive)
 

@@ -298,6 +298,76 @@ class ProjectFileDiscovery
     }
 
     /**
+     * Diagnostics for the active project root: mount state, manifest size, and empty-project warning.
+     *
+     * @return array{
+     *     repo_root: string,
+     *     manifest_total: int,
+     *     top_level: list<string>,
+     *     appears_empty: bool,
+     *     mounted: bool,
+     *     message: ?string
+     * }
+     */
+    public function assessActiveRoot(): array
+    {
+        try {
+            $root = $this->paths->repoRoot();
+        } catch (\Throwable $e) {
+            return [
+                'repo_root' => '',
+                'manifest_total' => 0,
+                'top_level' => [],
+                'appears_empty' => false,
+                'mounted' => false,
+                'message' => 'Active project root unavailable: '.$e->getMessage(),
+            ];
+        }
+
+        $mounted = is_dir($root);
+        $manifestTotal = 0;
+
+        if ($mounted) {
+            try {
+                $manifestTotal = $this->manifest('', 1, 1)['total'];
+            } catch (\Throwable) {
+                //
+            }
+        }
+
+        $topLevel = [];
+        if ($mounted) {
+            foreach (scandir($root) ?: [] as $name) {
+                if ($name === '.' || $name === '..') {
+                    continue;
+                }
+                $topLevel[] = $name;
+            }
+            sort($topLevel);
+        }
+
+        $appearsEmpty = $mounted && $manifestTotal === 0;
+        $message = null;
+
+        if ($appearsEmpty) {
+            $active = $this->paths->activeProject();
+            $name = $active?->name ?? 'active project';
+            $path = $active?->container_path ?? $root;
+            $message = 'Active project "'.$name.'" at '.$path.' has no tracked source files (manifest total: 0). '
+                .'Scaffolding is allowed, but do not assume existing app source — create files via files_changed.';
+        }
+
+        return [
+            'repo_root' => $root,
+            'manifest_total' => $manifestTotal,
+            'top_level' => $topLevel,
+            'appears_empty' => $appearsEmpty,
+            'mounted' => $mounted,
+            'message' => $message,
+        ];
+    }
+
+    /**
      * Extract PHP/class symbols from text for discovery.
      *
      * @return list<string>

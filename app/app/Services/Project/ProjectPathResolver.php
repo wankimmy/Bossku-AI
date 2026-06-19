@@ -3,7 +3,7 @@
 namespace App\Services\Project;
 
 use App\Models\BosskuAi\Project;
-use Illuminate\Support\Str;
+use App\Models\BosskuAi\Setting;
 
 class ProjectPathResolver
 {
@@ -22,7 +22,7 @@ class ProjectPathResolver
 
     public function repoRootWithoutRun(): string
     {
-        $active = Project::query()->where('is_active', true)->first();
+        $active = $this->activeProject();
         $root = $active?->container_path ?: (string) config('bossku.repo_root');
         $real = realpath($root);
 
@@ -48,7 +48,17 @@ class ProjectPathResolver
 
     public function activeProject(): ?Project
     {
-        return Project::query()->where('is_active', true)->first();
+        $active = Project::query()->where('is_active', true)->first();
+        if ($active !== null) {
+            return $active;
+        }
+
+        $id = Setting::getValue(ProjectService::SETTING_ACTIVE_PROJECT_ID);
+        if ($id !== null && $id !== '') {
+            return Project::query()->find($id);
+        }
+
+        return null;
     }
 
     /**
@@ -97,15 +107,15 @@ class ProjectPathResolver
         if ($real === false) {
             $parent = dirname($combined);
             $parentReal = realpath($parent);
-            if ($parentReal === false || ! Str::startsWith($parentReal, $root)) {
+            if ($parentReal === false || ! $this->pathWithinRoot($parentReal, $root)) {
                 throw new \InvalidArgumentException('Path denied or not found.');
             }
 
             $real = $parentReal.DIRECTORY_SEPARATOR.basename($combined);
-            if (! Str::startsWith($real, $root)) {
+            if (! $this->pathWithinRoot($real, $root)) {
                 throw new \InvalidArgumentException('Path denied.');
             }
-        } elseif (! Str::startsWith($real, $root)) {
+        } elseif (! $this->pathWithinRoot($real, $root)) {
             throw new \InvalidArgumentException('Path denied.');
         }
 
@@ -115,11 +125,110 @@ class ProjectPathResolver
         return ['absolute' => $real, 'relative' => $relative];
     }
 
+    /**
+     * Resolve a write target, allowing missing parent directories as long as the
+     * deepest existing parent is still inside the active project root.
+     *
+     * @return array{absolute: string, relative: string}
+     */
+    public function resolveForWrite(string $relativePath): array
+    {
+        $root = $this->repoRoot();
+        $original = trim(str_replace('\\', '/', $relativePath));
+
+        if ($this->isUnmappedAbsolutePath($original)) {
+            throw new \InvalidArgumentException('Path denied.');
+        }
+
+        $rel = $this->normalizeRelativePath($relativePath);
+        if ($rel === '' || $this->containsTraversal($rel)) {
+            throw new \InvalidArgumentException('Path denied.');
+        }
+
+        $combined = $root.DIRECTORY_SEPARATOR.str_replace('/', DIRECTORY_SEPARATOR, $rel);
+        $existing = file_exists($combined) ? $combined : dirname($combined);
+
+        while (! file_exists($existing)) {
+            $parent = dirname($existing);
+            if ($parent === $existing) {
+                throw new \InvalidArgumentException('Path denied or not found.');
+            }
+            $existing = $parent;
+        }
+
+        $existingReal = realpath($existing);
+        if ($existingReal === false || ! $this->pathWithinRoot($existingReal, $root)) {
+            throw new \InvalidArgumentException('Path denied.');
+        }
+
+        $existingNormalized = rtrim(str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $existing), DIRECTORY_SEPARATOR);
+        $combinedNormalized = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $combined);
+        $missingTail = ltrim(substr($combinedNormalized, strlen($existingNormalized)), DIRECTORY_SEPARATOR);
+        $absolute = $missingTail === ''
+            ? $existingReal
+            : $existingReal.DIRECTORY_SEPARATOR.$missingTail;
+
+        if (! $this->pathWithinRoot($absolute, $root)) {
+            throw new \InvalidArgumentException('Path denied.');
+        }
+
+        $relative = ltrim(str_replace($root, '', $absolute), DIRECTORY_SEPARATOR);
+        $relative = str_replace(DIRECTORY_SEPARATOR, '/', $relative);
+
+        return ['absolute' => $absolute, 'relative' => $relative];
+    }
+
     public function shouldSkipDir(string $name): bool
     {
         $dirs = config('bossku.skip_dirs', []);
 
         return is_array($dirs) && in_array($name, $dirs, true);
+    }
+
+    private function pathWithinRoot(string $path, string $root): bool
+    {
+        $root = rtrim(str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $root), DIRECTORY_SEPARATOR);
+        $path = rtrim(str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $path), DIRECTORY_SEPARATOR);
+
+        return $path === $root || str_starts_with($path, $root.DIRECTORY_SEPARATOR);
+    }
+
+    private function containsTraversal(string $relativePath): bool
+    {
+        foreach (explode('/', str_replace('\\', '/', $relativePath)) as $segment) {
+            if ($segment === '..') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function isUnmappedAbsolutePath(string $path): bool
+    {
+        if ($path === '') {
+            return false;
+        }
+
+        $isAbsolute = str_starts_with($path, '/') || preg_match('#^[a-z]:/#i', $path) === 1;
+        if (! $isAbsolute) {
+            return false;
+        }
+
+        $active = $this->activeProject();
+        if ($active === null) {
+            return true;
+        }
+
+        $lowerPath = strtolower($path);
+        foreach ([$active->host_path, $active->container_path] as $root) {
+            $root = rtrim(strtolower(str_replace('\\', '/', (string) $root)), '/');
+            if ($root !== '' && ($lowerPath === $root || str_starts_with($lowerPath, $root.'/'))) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public function unifiedDiff(string $path, string $before, string $after): string

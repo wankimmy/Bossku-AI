@@ -24,10 +24,30 @@ class ProjectRegistryController extends Controller
     public function list()
     {
         $active = $this->projects->activeProject();
+        $activeRepoRoot = null;
+        $manifestTotal = null;
+        $appearsEmpty = null;
+        $emptyProjectWarning = null;
+
+        if ($active !== null) {
+            try {
+                $assessment = $this->discovery->assessActiveRoot();
+                $activeRepoRoot = $assessment['repo_root'] !== '' ? $assessment['repo_root'] : null;
+                $manifestTotal = $assessment['manifest_total'];
+                $appearsEmpty = $assessment['appears_empty'];
+                $emptyProjectWarning = $assessment['message'];
+            } catch (\Throwable) {
+                //
+            }
+        }
 
         return response()->json([
             'projects' => Project::query()->orderBy('name')->get(),
             'active_project_id' => $active?->id,
+            'active_repo_root' => $activeRepoRoot,
+            'manifest_total' => $manifestTotal,
+            'appears_empty' => $appearsEmpty,
+            'empty_project_warning' => $emptyProjectWarning,
             'workspace' => $this->projects->workspaceMeta(),
         ]);
     }

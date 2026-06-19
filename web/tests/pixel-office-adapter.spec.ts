@@ -4,6 +4,7 @@ import {
   applyBosskuEventsToPixelOffice,
   createPixelOfficeAdapterState,
   resetPixelOfficeAdapterState,
+  spawnCastMessages,
 } from '~/utils/pixelOfficeAdapter'
 import { BOSSKU_AGENT_IDS, specialistAgentId } from '~/utils/pixelOfficeLayout'
 
@@ -21,6 +22,11 @@ describe('pixelOfficeAdapter', () => {
     expect(messages.some(m => m.type === 'existingAgents')).toBe(true)
     expect(messages.filter(m => m.type === 'agentCreated').length).toBe(0)
     expect(state.castSpawned).toBe(true)
+
+    const cast = messages.find(m => m.type === 'existingAgents')
+    const meta = cast?.agentMeta as Record<number, { label: string }>
+    expect(meta[BOSSKU_AGENT_IDS.executor].label).toBe('Executor')
+    expect(meta[BOSSKU_AGENT_IDS.orchestrator].label).toBe('Orchestrator')
   })
 
   it('activates executor on executor_step_started', () => {
@@ -129,7 +135,8 @@ describe('pixelOfficeAdapter', () => {
     const cast = selected.find(m => m.type === 'existingAgents')
     expect(cast).toBeTruthy()
     expect((cast?.agents as number[])).toContain(expectedId)
-    expect((cast?.agentMeta as Record<number, { palette: number }>)[expectedId].palette).toBe(3)
+    expect((cast?.agentMeta as Record<number, { palette: number; label: string }>)[expectedId].palette).toBe(3)
+    expect((cast?.agentMeta as Record<number, { palette: number; label: string }>)[expectedId].label).toBe('Checkout Specialist')
 
     const started = applyBosskuEventsToPixelOffice([
       evt({
@@ -143,5 +150,24 @@ describe('pixelOfficeAdapter', () => {
     ], state)
     expect(started.some(m => m.type === 'agentStatus' && m.id === expectedId && m.status === 'active')).toBe(true)
     expect(started.some(m => m.type === 'agentToolStart' && m.id === expectedId)).toBe(true)
+  })
+
+  it('spawnCastMessages includes role labels for dynamic specialists', () => {
+    const specialistId = specialistAgentId('seo-writer')
+    const messages = spawnCastMessages([
+      {
+        role: 'seo-writer',
+        id: specialistId,
+        meta: {
+          palette: 2,
+          hueShift: 0,
+          seatId: null,
+          label: 'SEO Writer',
+        },
+      },
+    ])
+    const cast = messages.find(m => m.type === 'existingAgents')
+    const meta = cast?.agentMeta as Record<number, { label: string }>
+    expect(meta[specialistId].label).toBe('SEO Writer')
   })
 })

@@ -116,6 +116,83 @@ class ExecutorApprovalServiceTest extends TestCase
     }
 
     #[Test]
+    public function it_creates_pending_approval_for_nested_new_file(): void
+    {
+        $runId = Run::query()->create(['prompt' => 'test', 'status' => 'running'])->id;
+        $service = app(ExecutorApprovalService::class);
+
+        $out = $service->proposeFileChanges($runId, [
+            'files_changed' => [[
+                'path' => 'docs/PRODUCT_SPEC.md',
+                'change_type' => 'created',
+                'after' => "# Product Spec\n\nNested write proof.\n",
+            ]],
+        ]);
+
+        $this->assertCount(1, $out['pending_approval_ids']);
+        $this->assertArrayNotHasKey('approval_error', $out['execResult']['files_changed'][0]);
+        $this->assertSame('docs/PRODUCT_SPEC.md', $out['execResult']['files_changed'][0]['path']);
+        $this->assertDatabaseHas('bossku_ai_approvals', [
+            'run_id' => $runId,
+            'operation_type' => 'file_write',
+            'status' => 'pending',
+        ]);
+        $this->assertFileDoesNotExist($this->repo.'/docs/PRODUCT_SPEC.md');
+    }
+
+    #[Test]
+    public function approved_nested_file_write_creates_parent_directory(): void
+    {
+        $runId = Run::query()->create(['prompt' => 'test', 'status' => 'running'])->id;
+        $service = app(ExecutorApprovalService::class);
+
+        $out = $service->proposeFileChanges($runId, [
+            'files_changed' => [[
+                'path' => 'docs/PRODUCT_SPEC.md',
+                'change_type' => 'created',
+                'after' => "# Product Spec\n\nNested write proof.\n",
+            ]],
+        ]);
+
+        $approval = Approval::query()->findOrFail($out['pending_approval_ids'][0]);
+        $approval->update(['status' => 'approved', 'decided_by' => 'test', 'decided_at' => now()]);
+
+        $service->applyApproved($approval);
+
+        $this->assertFileExists($this->repo.'/docs/PRODUCT_SPEC.md');
+        $this->assertSame(
+            "# Product Spec\n\nNested write proof.\n",
+            File::get($this->repo.'/docs/PRODUCT_SPEC.md'),
+        );
+    }
+
+    #[Test]
+    public function long_documentation_with_task_language_is_not_treated_as_placeholder(): void
+    {
+        $runId = Run::query()->create(['prompt' => 'test', 'status' => 'running'])->id;
+        $service = app(ExecutorApprovalService::class);
+        $content = "# Implementation Status\n\n"
+            ."This document records completed, pending, and todo work without being placeholder content.\n\n"
+            .str_repeat("- Feature area documented with concrete acceptance criteria and implementation notes.\n", 12);
+
+        $out = $service->proposeFileChanges($runId, [
+            'files_changed' => [[
+                'path' => 'docs/IMPLEMENTATION_STATUS.md',
+                'change_type' => 'created',
+                'after' => $content,
+            ]],
+        ]);
+
+        $this->assertCount(1, $out['pending_approval_ids']);
+        $approval = Approval::query()->findOrFail($out['pending_approval_ids'][0]);
+        $approval->update(['status' => 'approved', 'decided_by' => 'test', 'decided_at' => now()]);
+
+        $service->applyApproved($approval);
+
+        $this->assertSame($content, File::get($this->repo.'/docs/IMPLEMENTATION_STATUS.md'));
+    }
+
+    #[Test]
     public function it_skips_placeholder_file_proposals_without_creating_approval(): void
     {
         $before = implode("\n", array_map(fn ($i) => "<?php // line {$i}", range(1, 25)));

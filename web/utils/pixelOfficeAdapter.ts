@@ -147,16 +147,16 @@ export function spawnCastMessages(dynamicAgents: DynamicPixelAgent[] = []): Pixe
     ...BOSSKU_PIXEL_AGENT_ROLES.map(role => BOSSKU_AGENT_IDS[role]),
     ...dynamicAgents.map(agent => agent.id),
   ]
-  const agentMeta: Record<number, { palette: number; hueShift: number; seatId: string | null }> = {}
+  const agentMeta: Record<number, { palette: number; hueShift: number; seatId: string | null; label: string }> = {}
   for (const role of BOSSKU_PIXEL_AGENT_ROLES) {
     const id = BOSSKU_AGENT_IDS[role]
     const m = meta[id]
-    agentMeta[id] = { palette: m.palette, hueShift: m.hueShift, seatId: m.seatId }
+    agentMeta[id] = { palette: m.palette, hueShift: m.hueShift, seatId: m.seatId, label: m.label }
   }
   for (const agent of dynamicAgents) {
     const persisted = meta[agent.id]
-    const m = persisted ? { ...agent.meta, ...persisted } : agent.meta
-    agentMeta[agent.id] = { palette: m.palette, hueShift: m.hueShift, seatId: m.seatId }
+    const m = persisted ? { ...agent.meta, ...persisted, label: agent.meta.label } : agent.meta
+    agentMeta[agent.id] = { palette: m.palette, hueShift: m.hueShift, seatId: m.seatId, label: m.label }
   }
   return [{ type: 'existingAgents', agents, agentMeta }]
 }

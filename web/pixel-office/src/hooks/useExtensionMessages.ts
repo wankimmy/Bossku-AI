@@ -38,6 +38,7 @@ export interface FurnitureAsset {
 
 export interface ExtensionMessageState {
   agents: number[]
+  agentLabels: Record<number, string>
   selectedAgent: number | null
   agentTools: Record<number, ToolActivity[]>
   agentStatuses: Record<number, string>
@@ -62,6 +63,7 @@ export function useExtensionMessages(
   isEditDirty?: () => boolean,
 ): ExtensionMessageState {
   const [agents, setAgents] = useState<number[]>([])
+  const [agentLabels, setAgentLabels] = useState<Record<number, string>>({})
   const [selectedAgent, setSelectedAgent] = useState<number | null>(null)
   const [agentTools, setAgentTools] = useState<Record<number, ToolActivity[]>>({})
   const [agentStatuses, setAgentStatuses] = useState<Record<number, string>>({})
@@ -135,13 +137,19 @@ export function useExtensionMessages(
           delete next[id]
           return next
         })
+        setAgentLabels((prev) => {
+          if (!(id in prev)) return prev
+          const next = { ...prev }
+          delete next[id]
+          return next
+        })
         // Remove all sub-agent characters belonging to this agent
         os.removeAllSubagents(id)
         setSubagentCharacters((prev) => prev.filter((s) => s.parentAgentId !== id))
         os.removeAgent(id)
       } else if (msg.type === 'existingAgents') {
         const incoming = msg.agents as number[]
-        const meta = (msg.agentMeta || {}) as Record<number, { palette?: number; hueShift?: number; seatId?: string }>
+        const meta = (msg.agentMeta || {}) as Record<number, { palette?: number; hueShift?: number; seatId?: string; label?: string }>
         if (layoutReadyRef.current) {
           // Layout already loaded — add missing agents immediately without matrix effect
           for (const id of incoming) {
@@ -167,6 +175,16 @@ export function useExtensionMessages(
             }
           }
           return merged.sort((a, b) => a - b)
+        })
+        setAgentLabels((prev) => {
+          const next = { ...prev }
+          for (const id of incoming) {
+            const label = meta[id]?.label?.trim()
+            if (label) {
+              next[id] = label
+            }
+          }
+          return next
         })
       } else if (msg.type === 'agentToolStart') {
         const id = msg.id as number
@@ -382,5 +400,5 @@ export function useExtensionMessages(
     }
   }, [getOfficeState])
 
-  return { agents, selectedAgent, agentTools, agentStatuses, subagentTools, subagentCharacters, layoutReady, loadedAssets }
+  return { agents, agentLabels, selectedAgent, agentTools, agentStatuses, subagentTools, subagentCharacters, layoutReady, loadedAssets }
 }

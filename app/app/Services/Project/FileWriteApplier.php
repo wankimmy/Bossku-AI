@@ -19,15 +19,16 @@ class FileWriteApplier
      */
     public function applyPath(string $relativePath, string $after, string $changeType = 'modified'): array
     {
-        $resolved = $this->paths->resolve($relativePath);
-
         if ($changeType === 'deleted') {
+            $resolved = $this->paths->resolve($relativePath);
             if (is_file($resolved['absolute'])) {
                 unlink($resolved['absolute']);
             }
 
             return ['path' => $resolved['absolute'], 'relative' => $resolved['relative']];
         }
+
+        $resolved = $this->paths->resolveForWrite($relativePath);
 
         if (is_dir($resolved['absolute'])) {
             throw new \RuntimeException('Cannot write file — target path is a directory: '.$resolved['relative']);
