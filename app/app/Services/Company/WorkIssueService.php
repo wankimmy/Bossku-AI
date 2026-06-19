@@ -67,16 +67,18 @@ class WorkIssueService
                 $issue->update(['assignee_agent_id' => $assigneeAgent->id]);
             }
 
-            $this->wakeups->enqueue(
-                $assigneeAgent,
-                $issue->refresh(),
-                $run,
-                'issue_assigned',
-                [
-                    'prompt' => 'Review and advance work issue: '.$issue->title,
-                    'task_key' => 'issue:'.$issue->id,
-                ],
-            );
+            if ($assigneeAgent !== null) {
+                $this->wakeups->enqueue(
+                    $assigneeAgent,
+                    $issue->refresh(),
+                    $run,
+                    'issue_assigned',
+                    [
+                        'prompt' => 'Review and advance work issue: '.$issue->title,
+                        'task_key' => 'issue:'.$issue->id,
+                    ],
+                );
+            }
 
             $issues[] = $issue->refresh();
         }

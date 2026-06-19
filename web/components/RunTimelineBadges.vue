@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { AgentMessage, AiCouncilReview, RoutingSummary } from '~/types/bossku'
 
 const props = defineProps<{
@@ -8,7 +9,7 @@ const props = defineProps<{
 }>()
 
 const specialist = computed(() => {
-  for (const message of props.messages ?? []) {
+  for (const message of [...(props.messages ?? [])].reverse()) {
     const payload = message.artifacts?.specialist_agent as Record<string, unknown> | undefined
     if (payload?.display_name) {
       return payload
@@ -23,6 +24,18 @@ const workflowLabel = computed(() => {
   if (workflow === 'writer_only') return 'Writer specialist'
   if (workflow === '') return 'Pipeline'
   return workflow.replaceAll('_', ' ')
+})
+
+const councilLabel = computed(() => {
+  const council = props.aiCouncil
+  if (!council) return ''
+  if (council.status === 'skipped') {
+    return `AI council skipped${council.reason ? ` · ${council.reason}` : ''}`
+  }
+  if (council.status === 'needs_clarification' || council.status === 'awaiting_input') {
+    return `AI council needs ${council.questions?.length ?? 0} answer(s)`
+  }
+  return `AI council · ${council.voices.length} voice(s)`
 })
 </script>
 
@@ -54,7 +67,7 @@ const workflowLabel = computed(() => {
       v-if="aiCouncil?.status"
       class="rounded-full border border-sky-800/70 bg-sky-950/40 px-2.5 py-1 text-xs text-sky-200"
     >
-      AI council · {{ aiCouncil.voices.length }} voice(s)
+      {{ councilLabel }}
     </span>
 
     <span

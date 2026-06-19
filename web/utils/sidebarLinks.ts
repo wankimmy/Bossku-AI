@@ -24,6 +24,8 @@ export const SIDEBAR_GROUPS: SidebarGroup[] = [
       { to: '/dashboard', label: 'Dashboard', icon: '📊' },
       { to: '/runs', label: 'Runs', icon: '▶', tourId: 'nav-runs' },
       { to: '/project', label: 'Project', icon: '📁', tourId: 'nav-project' },
+      { to: '/staff', label: 'Staff', icon: '👥' },
+      { to: '/work-issues', label: 'Work Issues', icon: '📌' },
     ],
   },
   {

@@ -127,6 +127,22 @@ class OrchestratorService
         return $this->kernelCoordinator->run($run, $context, $emit);
     }
 
+    protected function fusionFeaturesRequireLegacyPipeline(string $userPrompt): bool
+    {
+        if (! $this->settings->aiCouncilEnabled() && ! $this->settings->companyStaffEnabled()) {
+            return false;
+        }
+
+        $classified = $this->promptRouteClassifier->classify($userPrompt);
+        $route = is_array($classified['route'] ?? null) ? $classified['route'] : [];
+        $workflow = (string) ($route['workflow'] ?? '');
+        $intent = (string) ($route['specialist_intent'] ?? '');
+
+        return in_array($workflow, ['direct_answer', 'writer_only'], true)
+            || ! empty($route['specialist_agent'])
+            || ($intent !== '' && $intent !== 'generic');
+    }
+
     /**
      * @param  callable(array<string,mixed>): void|null  $emit
      * @return array<string,mixed>
@@ -147,7 +163,8 @@ class OrchestratorService
         // call with options['force_legacy'] = true.
         if ($this->kernelCoordinator !== null
             && \App\Services\Kernel\KernelMode::graph()
-            && ($options['force_legacy'] ?? false) !== true) {
+            && ($options['force_legacy'] ?? false) !== true
+            && ! $this->fusionFeaturesRequireLegacyPipeline($userPrompt)) {
             return $this->dispatchToKernel($userPrompt, $emit, $conversation, $options);
         }
 
@@ -675,14 +692,15 @@ class OrchestratorService
             ]));
         }
 
-        $matchedSpecialist = $this->specialistRouter->matchDetailed($agentPrompt, $activeProject, $modelRoute);
+        $specialistMatch = $this->specialistRouter->matchDetailed($agentPrompt, $activeProject, $modelRoute);
+        $matchedSpecialist = $specialistMatch->agent;
         $specialistAgentPayload = null;
-        if ($matchedSpecialist->agent !== null) {
-            $specialistAgentPayload = $matchedSpecialist->toPayload();
+        if ($matchedSpecialist !== null) {
+            $specialistAgentPayload = $specialistMatch->toPayload();
             $routerCtx['specialist_agent'] = $specialistAgentPayload;
             $modelRoute['specialist_agent'] = $specialistAgentPayload;
 
-            $this->emit($emit, $this->events->specialistAgentSelected($run, $matchedSpecialist->agent, $specialistAgentPayload));
+            $this->emit($emit, $this->events->specialistAgentSelected($run, $matchedSpecialist, $specialistAgentPayload));
         }
 
         $repoAvailable = true;
@@ -1900,7 +1918,7 @@ class OrchestratorService
         if (($council['status'] ?? '') === 'completed') {
             $this->emit($emit, $this->events->aiCouncilDone($run, $council));
         } elseif (($council['status'] ?? '') === 'needs_clarification') {
-            $this->emit($emit, $this->events->aiCouncilSkipped($run, $council));
+            $this->emit($emit, $this->events->aiCouncilNeedsClarification($run, $council));
         } else {
             $this->emit($emit, $this->events->aiCouncilSkipped($run, $council));
         }
@@ -1937,6 +1955,10 @@ class OrchestratorService
         string $agentPrompt,
         ?callable $emit,
     ): ?array {
+        if (($modelRoute['_council_precheck_done'] ?? false) === true) {
+            return null;
+        }
+
         $precheck = app(\App\Services\Council\CouncilQuestionService::class)
             ->analyze($userPrompt, $modelRoute, $conversation);
         if (! $precheck['needs_questions'] || $precheck['already_answered']) {

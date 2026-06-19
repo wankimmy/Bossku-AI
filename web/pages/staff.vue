@@ -4,8 +4,10 @@ import type { CompanyStaffAgent } from '~/types/api'
 definePageMeta({ layout: 'default' })
 
 const api = useApi()
+const toast = useToast()
 const savingId = ref<string | null>(null)
-const { data, pending, refresh } = await useAsyncData<{ data?: CompanyStaffAgent[] } | CompanyStaffAgent[]>(
+const seeding = ref(false)
+const { data, pending, error, refresh } = await useAsyncData<{ data?: CompanyStaffAgent[] } | CompanyStaffAgent[]>(
   'company-staff',
   () => api.get('/company-staff'),
 )
@@ -17,8 +19,16 @@ const staff = computed<CompanyStaffAgent[]>(() => {
 })
 
 async function seedStaff() {
-  await api.post('/company-staff/seed')
-  await refresh()
+  seeding.value = true
+  try {
+    await api.post('/company-staff/seed')
+    await refresh()
+    toast.success('Company staff seeded.')
+  } catch (e) {
+    toast.error(e instanceof Error ? e.message : 'Could not seed company staff')
+  } finally {
+    seeding.value = false
+  }
 }
 
 const { data: teamsData, refresh: refreshTeams } = await useAsyncData('company-teams-page', () => api.get('/company-teams'))
@@ -33,6 +43,10 @@ async function installTeam(slug: string) {
   try {
     await api.post('/company-teams/install', { team_slug: slug })
     await Promise.all([refresh(), refreshTeams()])
+    toast.success('Team installed.')
+  }
+  catch (e) {
+    toast.error(e instanceof Error ? e.message : 'Could not install team')
   }
   finally {
     installingTeam.value = null
@@ -44,6 +58,10 @@ async function patchStaff(agent: CompanyStaffAgent, payload: Partial<CompanyStaf
   try {
     await api.patch(`/company-staff/${agent.id}`, payload)
     await refresh()
+    toast.success('Staff settings updated.')
+  }
+  catch (e) {
+    toast.error(e instanceof Error ? e.message : 'Could not update staff settings')
   }
   finally {
     savingId.value = null
@@ -65,9 +83,10 @@ async function patchStaff(agent: CompanyStaffAgent, payload: Partial<CompanyStaf
       <button
         type="button"
         class="rounded-md border border-emerald-700/70 px-3 py-2 text-sm text-emerald-300 hover:bg-emerald-950"
+        :disabled="seeding"
         @click="seedStaff"
       >
-        Seed Product Team Plus
+        {{ seeding ? 'Seeding...' : 'Seed Product Team Plus' }}
       </button>
     </div>
 
@@ -76,6 +95,13 @@ async function patchStaff(agent: CompanyStaffAgent, payload: Partial<CompanyStaf
       class="text-sm text-zinc-500"
     >
       Loading staff...
+    </div>
+
+    <div
+      v-else-if="error"
+      class="rounded border border-red-900/60 bg-red-950/30 p-3 text-sm text-red-200"
+    >
+      Could not load staff.
     </div>
 
     <template v-else>

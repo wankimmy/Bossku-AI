@@ -94,10 +94,12 @@ class PlannerConfirmationFlowTest extends TestCase
         $this->assertSame('planner_review', $run->metadata['checkpoint']['stage'] ?? null);
         $this->assertSame('Master plan ready.', $run->metadata['checkpoint']['pipeline']['plan']['summary'] ?? null);
         $this->assertSame('completed', $run->metadata['checkpoint']['pipeline']['plan']['council_review']['status'] ?? null);
-        $this->assertSame(
-            ['architect', 'skeptic', 'pragmatist', 'critic'],
-            array_column($run->metadata['checkpoint']['pipeline']['plan']['council_review']['voices'] ?? [], 'id'),
-        );
+        $voiceIds = array_column($run->metadata['checkpoint']['pipeline']['plan']['council_review']['voices'] ?? [], 'id');
+        $this->assertContains('architect', $voiceIds);
+        $this->assertContains('skeptic', $voiceIds);
+        $this->assertContains('pragmatist', $voiceIds);
+        $this->assertContains('critic', $voiceIds);
+        $this->assertContains('specialist', $voiceIds);
     }
 
     #[Test]

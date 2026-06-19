@@ -157,6 +157,31 @@ class RunEventFactoryTest extends TestCase
     }
 
     #[Test]
+    public function ai_council_needs_clarification_payload_is_not_skipped(): void
+    {
+        $run = new Run([
+            'id' => '00000000-0000-0000-0000-000000000009',
+            'prompt' => 'Marketing positioning',
+            'status' => 'running',
+            'metadata' => [],
+        ]);
+
+        $factory = new RunEventFactory;
+
+        $payload = $factory->aiCouncilNeedsClarification($run, [
+            'status' => 'needs_clarification',
+            'reason' => 'missing_information',
+            'questions' => [
+                ['id' => 'audience', 'prompt' => 'Who is the target audience?'],
+            ],
+        ]);
+
+        $this->assertSame('ai_council_needs_clarification', $payload['type']);
+        $this->assertSame('awaiting_input', $payload['status']);
+        $this->assertSame('missing_information', $payload['message']);
+    }
+
+    #[Test]
     public function metadata_shape_is_consistent_with_sse_payload(): void
     {
         $factory = new RunEventFactory;

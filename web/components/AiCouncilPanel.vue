@@ -15,6 +15,7 @@ const hasContent = computed(() => {
   if (!council) return false
   return Boolean(
     council.consensus
+    || council.reason
     || council.voices.length
     || (council.questions?.length ?? 0) > 0,
   )
@@ -61,14 +62,21 @@ const bodyClass = computed(() =>
         {{ council.consensus }}
       </p>
 
+      <p
+        v-else-if="council?.reason"
+        class="leading-relaxed text-zinc-300"
+      >
+        {{ council.reason }}
+      </p>
+
       <div v-if="council?.voices?.length">
         <p class="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
           Staff voices
         </p>
         <ul class="mt-1.5 space-y-2">
           <li
-            v-for="voice in council.voices"
-            :key="voice.role_slug"
+            v-for="(voice, index) in council.voices"
+            :key="`${voice.role_slug}-${index}`"
             class="rounded border border-zinc-800 bg-zinc-950/60 p-2"
           >
             <div class="flex flex-wrap items-center justify-between gap-2">
@@ -88,6 +96,21 @@ const bodyClass = computed(() =>
             >
               {{ voice.critique }}
             </p>
+          </li>
+        </ul>
+      </div>
+
+      <div v-if="council?.questions?.length">
+        <p class="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+          Questions
+        </p>
+        <ul class="mt-1.5 space-y-2">
+          <li
+            v-for="(question, index) in council.questions"
+            :key="String(question.id ?? index)"
+            class="rounded border border-zinc-800 bg-zinc-950/60 p-2 text-xs text-zinc-300"
+          >
+            {{ question.prompt ?? question.id }}
           </li>
         </ul>
       </div>

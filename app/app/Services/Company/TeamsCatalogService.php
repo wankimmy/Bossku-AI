@@ -62,17 +62,26 @@ class TeamsCatalogService
                 continue;
             }
             $row['department'] = $team['slug'];
-            SpecialistAgent::query()
+            $staffAgent = SpecialistAgent::query()
                 ->where('project_id', $project->id)
                 ->where('role_slug', $row['role_slug'])
                 ->where('is_company_staff', true)
-                ->update([
+                ->first();
+
+            if ($staffAgent !== null) {
+                $metadata = is_array($staffAgent->metadata) ? $staffAgent->metadata : [];
+                $staffAgent->update([
                     'department' => $team['slug'],
-                    'metadata' => [
+                    'metadata' => array_merge($metadata, [
                         'agent_mode' => 'subagent',
                         'source' => 'teams_catalog:'.$teamSlug,
-                    ],
+                    ]),
                 ]);
+                $installed++;
+
+                continue;
+            }
+
             $this->packLoader->syncToProject([
                 'role_slug' => $row['role_slug'],
                 'display_name' => $row['display_name'],

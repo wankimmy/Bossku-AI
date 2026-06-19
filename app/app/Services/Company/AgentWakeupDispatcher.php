@@ -2,6 +2,7 @@
 
 namespace App\Services\Company;
 
+use App\Jobs\ProcessAgentWakeupRequestJob;
 use App\Models\BosskuAi\AgentWakeupRequest;
 use App\Models\BosskuAi\Run;
 use App\Models\BosskuAi\SpecialistAgent;
@@ -29,21 +30,17 @@ class AgentWakeupDispatcher
         ?string $idempotencyKey = null,
     ): AgentWakeupRequest {
         if (! $this->settings->agentWakeupsEnabled()) {
-            return AgentWakeupRequest::query()->firstOrCreate(
-                [
-                    'specialist_agent_id' => $agent?->id,
-                    'work_issue_id' => $issue?->id,
-                    'wake_reason' => $wakeReason,
-                    'idempotency_key' => 'disabled',
-                ],
-                [
-                    'run_id' => $run?->id,
-                    'status' => 'skipped',
-                    'skip_reason' => 'agent_wakeups_disabled',
-                    'context_snapshot' => $context,
-                    'processed_at' => now(),
-                ],
-            );
+            return new AgentWakeupRequest([
+                'specialist_agent_id' => $agent?->id,
+                'work_issue_id' => $issue?->id,
+                'run_id' => $run?->id,
+                'wake_reason' => $wakeReason,
+                'status' => 'skipped',
+                'idempotency_key' => 'disabled',
+                'skip_reason' => 'agent_wakeups_disabled',
+                'context_snapshot' => $context,
+                'processed_at' => now(),
+            ]);
         }
 
         $key = $idempotencyKey ?? sha1(json_encode([
@@ -90,12 +87,18 @@ class AgentWakeupDispatcher
 
         foreach ($requests as $request) {
             try {
-                $result = $this->processOne($request);
-                if ($result === 'skipped') {
+                $claimed = AgentWakeupRequest::query()
+                    ->whereKey($request->id)
+                    ->where('status', 'queued')
+                    ->update(['status' => 'processing']);
+
+                if ($claimed !== 1) {
                     $skipped++;
-                } else {
-                    $processed++;
+                    continue;
                 }
+
+                ProcessAgentWakeupRequestJob::dispatch((string) $request->id)->onQueue('agent-wakeups');
+                $processed++;
             } catch (\Throwable $e) {
                 $failed++;
                 $request->update([
@@ -109,7 +112,7 @@ class AgentWakeupDispatcher
         return compact('processed', 'skipped', 'failed');
     }
 
-    protected function processOne(AgentWakeupRequest $request): string
+    public function processRequest(AgentWakeupRequest $request): string
     {
         $agent = $request->specialistAgent;
         $parentRun = $request->run;

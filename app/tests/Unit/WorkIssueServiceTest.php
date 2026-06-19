@@ -49,6 +49,22 @@ class WorkIssueServiceTest extends TestCase
     }
 
     #[Test]
+    public function it_does_not_enqueue_wakeups_without_an_assignee_agent(): void
+    {
+        Setting::setValue('staff_auto_issue_generation_enabled', '1');
+        Setting::setValue('company_staff_enabled', '0');
+        Setting::setValue('agent_wakeups_enabled', '1');
+        $project = $this->project();
+        $run = Run::factory()->create(['prompt' => 'Build checkout settings page']);
+
+        $issues = app(WorkIssueService::class)->createFromApprovedPlan($run, $this->plan(), $project);
+
+        $this->assertCount(2, $issues);
+        $this->assertNull($issues[0]->assignee_agent_id);
+        $this->assertSame(0, \App\Models\BosskuAi\AgentWakeupRequest::query()->count());
+    }
+
+    #[Test]
     public function it_skips_issue_generation_when_disabled(): void
     {
         Setting::setValue('staff_auto_issue_generation_enabled', '0');

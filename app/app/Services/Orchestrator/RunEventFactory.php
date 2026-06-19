@@ -199,6 +199,25 @@ class RunEventFactory
     }
 
     /** @return array<string, mixed> */
+    public function aiCouncilNeedsClarification(Run $run, array $council): array
+    {
+        $questions = is_array($council['questions'] ?? null) ? $council['questions'] : [];
+
+        return $this->event($run, 'ai_council_needs_clarification', [
+            'agent' => 'orchestrator',
+            'from_agent' => 'staff_council',
+            'to_agent' => 'user',
+            'status' => 'awaiting_input',
+            'model_role' => 'reasoning',
+            'summary' => 'AI council needs '.count($questions).' clarification question(s).',
+            'message' => StringCoercion::toString($council['reason'] ?? null, 'Missing information blocks an accurate answer.'),
+            'artifacts' => [
+                'ai_council' => $council,
+            ],
+        ]);
+    }
+
+    /** @return array<string, mixed> */
     public function aiCouncilSkipped(Run $run, array $council): array
     {
         return $this->event($run, 'ai_council_skipped', [

@@ -26,4 +26,22 @@ describe('AiCouncilPanel', () => {
     expect(wrapper.text()).toContain('SEO Writer')
     expect(wrapper.text()).toContain('search intent')
   })
+
+  it('renders skipped reasons and clarification questions', () => {
+    const wrapper = mount(AiCouncilPanel, {
+      props: {
+        council: {
+          status: 'needs_clarification',
+          reason: 'missing_information',
+          voices: [],
+          questions: [
+            { id: 'audience', prompt: 'Who is the target audience?' },
+          ],
+        },
+      },
+    })
+
+    expect(wrapper.text()).toContain('missing_information')
+    expect(wrapper.text()).toContain('Who is the target audience?')
+  })
 })

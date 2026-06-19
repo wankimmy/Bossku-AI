@@ -56,7 +56,7 @@ const why = computed(() => {
   ]
   const specialist = decision.value.specialist_agent as Record<string, unknown> | undefined
   if (specialist?.display_name) {
-    parts.push('Specialist '.$String(specialist.display_name).' matched via '.$String(specialist.match_reason ?? 'routing').'.')
+    parts.push(`Specialist ${String(specialist.display_name)} matched via ${String(specialist.match_reason ?? 'routing')}.`)
   }
   if (decision.value.reason) parts.push(String(decision.value.reason))
   return parts.join(' ')

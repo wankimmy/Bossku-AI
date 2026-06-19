@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\BosskuAi\Project;
 use App\Models\BosskuAi\Setting;
+use App\Models\BosskuAi\SpecialistAgent;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -35,6 +36,15 @@ class CompanyTeamsApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('team_slug', 'growth-sales')
             ->assertJsonStructure(['installed']);
+
+        $agent = SpecialistAgent::query()
+            ->where('role_slug', 'marketing-manager')
+            ->where('is_company_staff', true)
+            ->firstOrFail();
+
+        $this->assertSame('growth-sales', $agent->department);
+        $this->assertSame('company_staff_mvp', $agent->metadata['seeded_by'] ?? null);
+        $this->assertSame('subagent', $agent->metadata['agent_mode'] ?? null);
     }
 
     #[Test]

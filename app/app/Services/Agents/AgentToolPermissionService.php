@@ -6,10 +6,20 @@ use App\Support\AgentTools;
 
 class AgentToolPermissionService
 {
+    /** @var list<string> */
+    protected array $runtimeTools = [
+        'log',
+        'db_query',
+        'file_read_safe',
+        'file_search',
+        'file_glob',
+        'file_write_proposed',
+    ];
+
     /** @var array<string, list<string>> */
     protected array $deniedByRole = [
         'direct_answer' => ['file_write_proposed', 'db_query'],
-        'writer' => ['db_query'],
+        'writer' => ['file_write_proposed', 'db_query'],
         'planner' => ['file_write_proposed', 'db_query'],
         'auditor' => ['file_write_proposed', 'db_query'],
         'security_auditor' => ['file_write_proposed', 'db_query'],
@@ -27,7 +37,10 @@ class AgentToolPermissionService
         $tools = $fromYaml !== [] ? $fromYaml : AgentTools::forRole($role);
         $denied = $this->deniedByRole[$role] ?? [];
 
-        return array_values(array_filter($tools, static fn (string $tool) => ! in_array($tool, $denied, true)));
+        return array_values(array_filter(
+            $tools,
+            fn (string $tool) => in_array($tool, $this->runtimeTools, true) && ! in_array($tool, $denied, true),
+        ));
     }
 
     public function isAllowed(string $role, string $tool, ?string $agentsMdRaw = null): bool

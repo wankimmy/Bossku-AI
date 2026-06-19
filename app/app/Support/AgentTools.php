@@ -10,16 +10,16 @@ class AgentTools
     /** @var array<string, list<string>> */
     protected static array $roleTools = [
         'router' => ['file_read_safe', 'file_search', 'file_glob', 'log'],
-        'orchestrator' => ['file_read_safe', 'file_search', 'file_glob', 'log', 'memory'],
-        'planner' => ['file_read_safe', 'file_search', 'file_glob', 'log', 'memory', 'docs_lookup'],
-        'designer' => ['file_read_safe', 'file_search', 'file_glob', 'file_write_proposed', 'log', 'memory', 'docs_lookup'],
+        'orchestrator' => ['file_read_safe', 'file_search', 'file_glob', 'log'],
+        'planner' => ['file_read_safe', 'file_search', 'file_glob', 'log'],
+        'designer' => ['file_read_safe', 'file_search', 'file_glob', 'file_write_proposed', 'log'],
         'executor' => ['file_read_safe', 'file_search', 'file_glob', 'file_write_proposed', 'log', 'db_query'],
         'auditor' => ['file_read_safe', 'file_search', 'file_glob', 'log'],
         'security_auditor' => ['file_read_safe', 'file_search', 'file_glob', 'log'],
-        'final_reviewer' => ['file_read_safe', 'file_search', 'file_glob', 'log', 'memory'],
-        'writer' => ['file_read_safe', 'file_search', 'file_glob', 'file_write_proposed', 'log'],
-        'direct_answer' => ['file_read_safe', 'file_search', 'log', 'memory'],
-        'clarification' => ['file_read_safe', 'file_search', 'file_glob', 'log', 'memory'],
+        'final_reviewer' => ['file_read_safe', 'file_search', 'file_glob', 'log'],
+        'writer' => ['file_read_safe', 'file_search', 'file_glob', 'log'],
+        'direct_answer' => ['file_read_safe', 'file_search', 'log'],
+        'clarification' => ['file_read_safe', 'file_search', 'file_glob', 'log'],
     ];
 
     /**

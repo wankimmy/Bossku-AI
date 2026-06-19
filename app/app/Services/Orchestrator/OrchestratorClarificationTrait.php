@@ -114,12 +114,19 @@ trait OrchestratorClarificationTrait
         $userPrompt = (string) ($pipeline['user_prompt'] ?? $run->prompt);
         /** @var list<array{role: string, content: string}> $conversation */
         $conversation = is_array($pipeline['conversation'] ?? null) ? $pipeline['conversation'] : [];
+        if (in_array($stage, ['council_precheck', 'council_postdraft'], true) && $answerBlock !== '') {
+            $conversation[] = ['role' => 'user', 'content' => $answerBlock];
+            $pipeline['conversation'] = $conversation;
+        }
         $prompt = $this->effectivePrompt($userPrompt, $conversation);
         $prompt = trim($prompt."\n\n".$answerBlock);
         $agentPrompt = trim($prompt."\n\n".$this->projects->agentWorkspaceContext());
 
         /** @var array<string, mixed> $modelRoute */
         $modelRoute = is_array($pipeline['model_route'] ?? null) ? $pipeline['model_route'] : [];
+        if (in_array($stage, ['council_precheck', 'council_postdraft'], true)) {
+            $modelRoute['_council_precheck_done'] = true;
+        }
         /** @var array<string, string> $modelsResolved */
         $modelsResolved = is_array($pipeline['models_resolved'] ?? null) ? $pipeline['models_resolved'] : [];
         /** @var array<string, mixed> $routerMeta */

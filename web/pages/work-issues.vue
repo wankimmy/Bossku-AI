@@ -5,8 +5,10 @@ definePageMeta({ layout: 'default' })
 
 const api = useApi()
 const toast = useToast()
+const updatingIssueId = ref<string | null>(null)
+const dispatching = ref(false)
 
-const { data, pending, refresh } = await useAsyncData('work-issues', async () => {
+const { data, pending, error, refresh } = await useAsyncData('work-issues', async () => {
   const response = await api.get('/work-issues') as { data?: WorkIssue[] } | WorkIssue[]
   if (Array.isArray(response)) return response
   return response.data ?? []
@@ -20,13 +22,29 @@ const { data: teamsData } = await useAsyncData('company-teams', async () => {
 })
 
 async function updateIssueStatus(id: string, status: WorkIssue['status']) {
-  await api.patch(`/work-issues/${id}`, { status })
-  await refresh()
+  updatingIssueId.value = id
+  try {
+    await api.patch(`/work-issues/${id}`, { status })
+    await refresh()
+    toast.success('Work issue updated.')
+  } catch (e) {
+    toast.error(e instanceof Error ? e.message : 'Could not update work issue')
+  } finally {
+    updatingIssueId.value = null
+  }
 }
 
 async function dispatchWakeups() {
-  const result = await api.post('/agent-wakeups/dispatch') as { processed?: number; skipped?: number; failed?: number }
-  toast.info(`Wakeups processed ${result.processed ?? 0}, skipped ${result.skipped ?? 0}, failed ${result.failed ?? 0}`)
+  dispatching.value = true
+  try {
+    const result = await api.post('/agent-wakeups/dispatch') as { processed?: number; skipped?: number; failed?: number }
+    toast.info(`Wakeups processed ${result.processed ?? 0}, skipped ${result.skipped ?? 0}, failed ${result.failed ?? 0}`)
+    await refresh()
+  } catch (e) {
+    toast.error(e instanceof Error ? e.message : 'Could not dispatch wakeups')
+  } finally {
+    dispatching.value = false
+  }
 }
 </script>
 
@@ -44,9 +62,10 @@ async function dispatchWakeups() {
       <button
         type="button"
         class="rounded-md border border-sky-700/70 px-3 py-2 text-sm text-sky-300 hover:bg-sky-950"
+        :disabled="dispatching"
         @click="dispatchWakeups"
       >
-        Dispatch wakeups
+        {{ dispatching ? 'Dispatching...' : 'Dispatch wakeups' }}
       </button>
     </div>
 
@@ -78,9 +97,17 @@ async function dispatchWakeups() {
       Loading work issues...
     </div>
 
+    <div
+      v-else-if="error"
+      class="rounded border border-red-900/60 bg-red-950/30 p-3 text-sm text-red-200"
+    >
+      Could not load work issues.
+    </div>
+
     <WorkIssueKanban
       v-else
       :issues="issues"
+      :updating-id="updatingIssueId"
       @update-status="updateIssueStatus"
     />
   </div>

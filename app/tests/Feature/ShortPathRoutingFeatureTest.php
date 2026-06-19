@@ -49,4 +49,58 @@ class ShortPathRoutingFeatureTest extends TestCase
             ->count();
         $this->assertSame(0, $executorSteps);
     }
+
+    #[Test]
+    public function council_precheck_resume_uses_answer_context_and_completes(): void
+    {
+        Setting::setValue('ai_council_enabled', '1');
+        Setting::setValue('staff_council_enabled', '1');
+
+        $this->mock(ModelFallbackService::class, function ($mock): void {
+            $mock->shouldReceive('chatWithFallbacks')
+                ->andReturn(['text' => 'Position the landing page for enterprise B2B SaaS teams.', 'model' => 'mock']);
+        });
+
+        $run = Run::factory()->create([
+            'prompt' => 'Help me decide the best landing page positioning',
+            'status' => 'awaiting_input',
+            'metadata' => [
+                'checkpoint' => [
+                    'phase' => 'awaiting_clarification',
+                    'stage' => 'council_precheck',
+                    'clarification' => [
+                        'questions' => [
+                            ['id' => 'audience', 'prompt' => 'Who is the target audience or buyer?'],
+                        ],
+                        'assumptions' => [],
+                        'summary' => 'The AI council needs a little more context before it can answer accurately.',
+                    ],
+                    'pipeline' => [
+                        'user_prompt' => 'Help me decide the best landing page positioning',
+                        'conversation' => [],
+                        'model_route' => [
+                            'workflow' => 'writer_only',
+                            'skill' => 'marketing',
+                            'risk_level' => 'low',
+                            'memory_mode' => 'read_only',
+                        ],
+                        'models_resolved' => ['writer' => 'mock', 'direct_answer' => 'mock'],
+                        'router_meta' => [],
+                        'mem_payload' => [],
+                        'token_acc' => 0,
+                        't_run' => microtime(true),
+                    ],
+                ],
+            ],
+        ]);
+
+        app(OrchestratorService::class)->continueRun($run->id, [
+            ['question_id' => 'audience', 'free_text' => 'Enterprise B2B SaaS teams'],
+        ]);
+
+        $run->refresh();
+        $this->assertSame('completed', $run->status);
+        $this->assertArrayNotHasKey('checkpoint', $run->metadata ?? []);
+        $this->assertStringContainsString('enterprise', strtolower((string) $run->final_output));
+    }
 }

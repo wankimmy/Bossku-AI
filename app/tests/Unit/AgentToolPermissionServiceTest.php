@@ -45,5 +45,16 @@ class AgentToolPermissionServiceTest extends TestCase
 
         $this->assertStringContainsString('file_read_safe', $block);
         $this->assertStringNotContainsString('file_write_proposed', $block);
+        $this->assertStringNotContainsString('memory', $block);
+        $this->assertStringNotContainsString('docs_lookup', $block);
+    }
+
+    #[Test]
+    public function writer_cannot_propose_file_writes(): void
+    {
+        $service = app(AgentToolPermissionService::class);
+
+        $this->assertFalse($service->isAllowed('writer', 'file_write_proposed'));
+        $this->assertFalse($service->isAllowed('writer', 'db_query'));
     }
 }

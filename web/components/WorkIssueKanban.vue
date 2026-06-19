@@ -4,10 +4,11 @@ import type { KanbanStatus, WorkIssue } from '~/types/api'
 
 const props = defineProps<{
   issues: WorkIssue[]
+  updatingId?: string | null
 }>()
 
 const emit = defineEmits<{
-  'update-status': [id: string, status: KanbanStatus]
+  (event: 'update-status', id: string, status: KanbanStatus): void
 }>()
 
 const statuses: { value: KanbanStatus; label: string }[] = [
@@ -20,9 +21,18 @@ const statuses: { value: KanbanStatus; label: string }[] = [
   { value: 'cancelled', label: 'Cancelled' },
 ]
 
+const displayStatuses = computed(() => {
+  const known = new Set(statuses.map(status => status.value))
+  const extra = [...new Set(props.issues.map(issue => String(issue.status)))]
+    .filter(status => status && !known.has(status as KanbanStatus))
+    .map(status => ({ value: status as KanbanStatus, label: status.replaceAll('_', ' ') }))
+
+  return [...statuses, ...extra]
+})
+
 const grouped = computed(() => {
   const map = new Map<string, WorkIssue[]>()
-  for (const status of statuses) {
+  for (const status of displayStatuses.value) {
     map.set(status.value, [])
   }
   for (const issue of props.issues) {
@@ -36,8 +46,12 @@ const grouped = computed(() => {
 function changeStatus(issue: WorkIssue, event: Event) {
   const target = event.target as HTMLSelectElement | null
   const next = target?.value as KanbanStatus | undefined
-  if (!next || next === issue.status) return
+  if (!next) return
   emit('update-status', issue.id, next)
+}
+
+function isIssueUpdating(issue: WorkIssue): boolean {
+  return props.updatingId === issue.id
 }
 </script>
 
@@ -47,7 +61,7 @@ function changeStatus(issue: WorkIssue, event: Event) {
     data-testid="work-issue-kanban"
   >
     <section
-      v-for="status in statuses"
+      v-for="status in displayStatuses"
       :key="status.value"
       class="min-h-48 rounded-lg border border-zinc-800 bg-zinc-900 p-3"
     >
@@ -97,7 +111,8 @@ function changeStatus(issue: WorkIssue, event: Event) {
               class="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-200"
               :data-testid="`issue-${issue.id}-status`"
               :value="issue.status"
-              @change="changeStatus(issue, $event)"
+              :disabled="isIssueUpdating(issue)"
+              @change="event => changeStatus(issue, event)"
             >
               <option
                 v-for="option in statuses"
