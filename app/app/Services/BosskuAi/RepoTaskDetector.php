@@ -3,6 +3,7 @@
 namespace App\Services\BosskuAi;
 
 use App\Support\PromptContextHelper;
+use App\Support\TaskContextResolver;
 
 /**
  * Detects prompts that must read the active project repository (executor + file tools).
@@ -52,7 +53,71 @@ class RepoTaskDetector
             return true;
         }
 
+        if (self::isExplicitFileOrPathIntent($prompt)) {
+            return true;
+        }
+
         return false;
+    }
+
+    /**
+     * Explicit repo file/path reads and continuation cues that inherit a prior path.
+     */
+    public static function isExplicitFileOrPathIntent(string $prompt): bool
+    {
+        if (PromptContextHelper::isMetaAboutAssistant($prompt)) {
+            return false;
+        }
+
+        $text = mb_strtolower($prompt);
+        if (preg_match('/\b(read|open|inspect|summarize|show|execute)\b.{0,50}\b(docs\/[^\s`]+|[^\s`]+\.(?:md|php|ts|tsx|js|vue|json|yml|yaml))\b/u', $text) === 1) {
+            return true;
+        }
+
+        $paths = TaskContextResolver::extractRepoLikePaths($prompt);
+        if ($paths === []) {
+            return false;
+        }
+
+        $current = mb_strtolower(trim(PromptContextHelper::currentRequest($prompt)));
+        if (TaskContextResolver::isLikelyContinuationCue($current)) {
+            return true;
+        }
+
+        return preg_match('/\b(read|open|inspect|summarize|execute|instruction|spec)\b/u', $text) === 1;
+    }
+
+    /**
+     * Read or summarize a named file without implying mutation.
+     */
+    public static function isReadOnlyFileAccess(string $prompt): bool
+    {
+        if (self::isExecuteInstructionsFromDocs($prompt)) {
+            return false;
+        }
+
+        if (! self::isExplicitFileOrPathIntent($prompt)) {
+            return false;
+        }
+
+        $text = mb_strtolower($prompt);
+
+        return preg_match('/\b(read|open|inspect|summarize|show|understand)\b/u', $text) === 1
+            && preg_match('/\b(implement|fix|update|create|modify|deploy|migrate)\b/u', $text) !== 1;
+    }
+
+    /**
+     * User wants to execute instructions from a docs/file source.
+     */
+    public static function isExecuteInstructionsFromDocs(string $prompt): bool
+    {
+        if (PromptContextHelper::isMetaAboutAssistant($prompt)) {
+            return false;
+        }
+
+        return TaskContextResolver::looksLikeExecuteInstructions($prompt)
+            || (self::isExplicitFileOrPathIntent($prompt)
+                && preg_match('/\b(execute|implement|follow|run)\b/u', mb_strtolower($prompt)) === 1);
     }
 
     /**
@@ -144,6 +209,30 @@ class RepoTaskDetector
         // Read-only understanding needs repo context, never the executor/auditor pipeline.
         if (self::isReadOnlyUnderstanding($prompt)) {
             $route['needs_repo_context'] = true;
+
+            return $route;
+        }
+
+        if (self::isReadOnlyFileAccess($prompt)) {
+            $route['needs_repo_context'] = true;
+            $route['needs_file_edit'] = false;
+            $route['needs_executor'] = false;
+            $route['needs_auditor'] = false;
+            $route['needs_security_auditor'] = false;
+            $route['needs_final_reviewer'] = false;
+            $route['workflow'] = 'orchestrator_only';
+            $route['memory_mode'] = 'read_only';
+
+            return $route;
+        }
+
+        if (self::isExecuteInstructionsFromDocs($prompt)) {
+            $route['needs_repo_context'] = true;
+            $route['needs_executor'] = true;
+            $route['needs_file_edit'] = true;
+            $route['workflow'] = in_array((string) ($route['workflow'] ?? ''), ['direct_answer', 'writer_only'], true)
+                ? 'orchestrator_executor'
+                : ($route['workflow'] ?? 'orchestrator_executor');
 
             return $route;
         }

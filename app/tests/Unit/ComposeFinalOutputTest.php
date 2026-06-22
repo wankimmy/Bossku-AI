@@ -48,6 +48,9 @@ class ComposeFinalOutputTest extends TestCase
      * @param  array<string, string>  $modelsResolved
      * @param  list<array<string, mixed>>  $memPayload
      */
+    /**
+     * @param  array<string, mixed>  $contextAnchors
+     */
     private function composeUserOutput(
         array $lastAudit,
         array $execResult,
@@ -56,6 +59,10 @@ class ComposeFinalOutputTest extends TestCase
         array $modelRoute,
         array $modelsResolved,
         array $memPayload,
+        string $userPrompt = '',
+        array $plan = [],
+        array $contextAnchors = [],
+        bool $hasMergeEvidence = false,
     ): string {
         $service = app(OrchestratorService::class);
         $method = new ReflectionMethod(OrchestratorService::class, 'composeUserOutput');
@@ -70,6 +77,10 @@ class ComposeFinalOutputTest extends TestCase
             $modelRoute,
             $modelsResolved,
             $memPayload,
+            $userPrompt,
+            $plan,
+            $contextAnchors,
+            $hasMergeEvidence,
         );
     }
 
@@ -137,5 +148,37 @@ class ComposeFinalOutputTest extends TestCase
         $this->assertStringContainsString('## Next recommended step', $output);
         $this->assertStringContainsString('## Next prompt', $output);
         $this->assertStringContainsString('hello-world.txt', $output);
+    }
+
+    #[Test]
+    public function read_only_docs_task_avoids_generic_before_merge_wording(): void
+    {
+        $output = $this->composeUserOutput(
+            ['status' => 'pass'],
+            [
+                'status' => 'success',
+                'files_changed' => [],
+                'commands_run' => [],
+                'patch_summary' => 'No files changed.',
+            ],
+            null,
+            null,
+            ['skill' => 'general'],
+            [],
+            [],
+            'read docs/PRODUCT_SPEC.md',
+            [],
+            [
+                'task_kind' => 'docs_read',
+                'docs_targets' => ['docs/PRODUCT_SPEC.md'],
+                'target_paths' => ['docs/PRODUCT_SPEC.md'],
+                'last_actionable_user_intent' => 'read docs/PRODUCT_SPEC.md',
+            ],
+            false,
+        );
+
+        $this->assertStringContainsString('docs/PRODUCT_SPEC.md', $output);
+        $this->assertStringNotContainsString('before merge', strtolower($output));
+        $this->assertStringContainsString('## Prompt suggestions', $output);
     }
 }

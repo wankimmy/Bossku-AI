@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   buildFreeTextClarificationAnswers,
   resolveSubmitTarget,
+  shouldAttachContinuationRunId,
   type SubmitRoutingContext,
 } from '../utils/resolveSubmitTarget'
 
@@ -59,6 +60,23 @@ describe('resolveSubmitTarget', () => {
       awaitingClarification: true,
       hasClarificationRequest: true,
     }))).toBe('new_run')
+  })
+
+  it('attaches continuation run id for completed-run proceed prompts', () => {
+    expect(shouldAttachContinuationRunId(baseCtx({
+      runStatus: 'completed',
+      completedRunId: 'run-123',
+      promptTrimmed: 'proceed',
+    }))).toBe(true)
+  })
+
+  it('does not attach continuation run id while awaiting input', () => {
+    expect(shouldAttachContinuationRunId(baseCtx({
+      runStatus: 'awaiting_input',
+      awaitingClarification: true,
+      completedRunId: 'run-123',
+      promptTrimmed: 'proceed',
+    }))).toBe(false)
   })
 })
 

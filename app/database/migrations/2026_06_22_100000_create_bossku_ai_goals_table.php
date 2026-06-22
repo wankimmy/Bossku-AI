@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('bossku_ai_goals', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('project_id')->constrained('bossku_ai_projects')->cascadeOnDelete();
-            $table->foreignUuid('parent_goal_id')->nullable()->constrained('bossku_ai_goals')->nullOnDelete();
+            $table->uuid('parent_goal_id')->nullable();
             $table->string('title');
             $table->text('description')->nullable();
             $table->string('status')->default('active'); // active | achieved | paused | abandoned
@@ -28,6 +28,13 @@ return new class extends Migration
             $table->index('parent_goal_id');
         });
 
+        Schema::table('bossku_ai_goals', function (Blueprint $table) {
+            $table->foreign('parent_goal_id')
+                ->references('id')
+                ->on('bossku_ai_goals')
+                ->nullOnDelete();
+        });
+
         Schema::table('bossku_ai_work_issues', function (Blueprint $table) {
             $table->foreignUuid('goal_id')->nullable()->after('project_id')
                 ->constrained('bossku_ai_goals')->nullOnDelete();
@@ -38,7 +45,9 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('bossku_ai_work_issues', function (Blueprint $table) {
-            $table->dropConstrainedForeignId('goal_id');
+            $table->dropForeign(['goal_id']);
+            $table->dropIndex(['goal_id', 'status']);
+            $table->dropColumn('goal_id');
         });
 
         Schema::dropIfExists('bossku_ai_goals');

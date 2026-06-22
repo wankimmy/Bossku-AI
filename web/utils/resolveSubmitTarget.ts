@@ -11,7 +11,10 @@ export type SubmitRoutingContext = {
   runStatus: string | null | undefined
   hasClarificationRequest: boolean
   promptTrimmed: string
+  completedRunId?: string | null
 }
+
+const CONTINUATION_RE = /\b(proceed|continue|go ahead|ok read|read it|do it|yes|execute it)\b/i
 
 /**
  * Decide whether the composer should resume a paused run or start a new one.
@@ -33,6 +36,20 @@ export function resolveSubmitTarget(ctx: SubmitRoutingContext): SubmitTarget {
   }
 
   return 'new_run'
+}
+
+/** Completed-run follow-ups should start a contextual new run, not resume approvals. */
+export function shouldAttachContinuationRunId(ctx: SubmitRoutingContext): boolean {
+  if (ctx.awaitingClarification || String(ctx.runStatus ?? '').toLowerCase() === 'awaiting_input') {
+    return false
+  }
+
+  const status = String(ctx.runStatus ?? '').toLowerCase()
+  if (status !== 'completed') {
+    return false
+  }
+
+  return CONTINUATION_RE.test(ctx.promptTrimmed) && Boolean(ctx.completedRunId)
 }
 
 export function buildFreeTextClarificationAnswers(

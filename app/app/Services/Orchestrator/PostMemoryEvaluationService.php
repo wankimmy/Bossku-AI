@@ -21,8 +21,9 @@ class PostMemoryEvaluationService
         ?array $lastFinal = null,
         array $modelRoute = [],
         array $modelsResolved = [],
+        array $contextAnchors = [],
     ): array {
-        $responseScore = $this->scoreFinalResponse($finalOutput, $lastAudit, $lastFinal);
+        $responseScore = $this->scoreFinalResponse($finalOutput, $lastAudit, $lastFinal, $contextAnchors);
         $proofScore = $this->scoreProofCompleteness($execResult, $lastAudit, $lastSecurity);
         $memoryScore = $this->scoreMemoryQuality($memPayload, $learningResult, $modelRoute);
 
@@ -35,7 +36,7 @@ class PostMemoryEvaluationService
                 'label' => 'Final response',
                 'weight' => 45,
                 'score' => $responseScore,
-                'note' => $this->finalResponseNote($finalOutput, $lastAudit, $lastFinal),
+                'note' => $this->finalResponseNote($finalOutput, $lastAudit, $lastFinal, $contextAnchors),
             ],
             [
                 'id' => 'proof_completeness',
@@ -74,7 +75,7 @@ class PostMemoryEvaluationService
      * @param  array<string, mixed>  $lastAudit
      * @param  array<string, mixed>|null  $lastFinal
      */
-    protected function scoreFinalResponse(string $finalOutput, array $lastAudit, ?array $lastFinal): float
+    protected function scoreFinalResponse(string $finalOutput, array $lastAudit, ?array $lastFinal, array $contextAnchors = []): float
     {
         $score = 0.25;
         $text = trim($finalOutput);
@@ -89,6 +90,29 @@ class PostMemoryEvaluationService
             }
         }
 
+        if (str_contains($text, '## Prompt suggestions')) {
+            $score += 0.1;
+        }
+
+        $targetPaths = is_array($contextAnchors['target_paths'] ?? null) ? $contextAnchors['target_paths'] : [];
+        if ($targetPaths !== []) {
+            $primaryTarget = (string) $targetPaths[0];
+            if ($primaryTarget !== '' && str_contains($text, $primaryTarget)) {
+                $score += 0.1;
+            } elseif ($primaryTarget !== '') {
+                $score -= 0.15;
+            }
+        }
+
+        if (preg_match('/\bbefore merge\b/i', $text) && ! preg_match('/\b(merge|pull request|\bpr\b)\b/i', $text)) {
+            $score -= 0.2;
+        }
+
+        $activeRepo = mb_strtolower((string) ($contextAnchors['active_repo'] ?? ''));
+        if ($activeRepo !== '' && preg_match('/\bbobberlab\b/i', $text) && ! str_contains(mb_strtolower($text), $activeRepo)) {
+            $score -= 0.15;
+        }
+
         $auditStatus = (string) ($lastAudit['status'] ?? '');
         if (in_array($auditStatus, ['pass', 'pass_with_notes'], true)) {
             $score += 0.1;
@@ -98,7 +122,7 @@ class PostMemoryEvaluationService
             $score += 0.1;
         }
 
-        return min(1.0, $score);
+        return max(0.0, min(1.0, $score));
     }
 
     /**
@@ -155,7 +179,7 @@ class PostMemoryEvaluationService
      * @param  array<string, mixed>  $lastAudit
      * @param  array<string, mixed>|null  $lastFinal
      */
-    protected function finalResponseNote(string $finalOutput, array $lastAudit, ?array $lastFinal): string
+    protected function finalResponseNote(string $finalOutput, array $lastAudit, ?array $lastFinal, array $contextAnchors = []): string
     {
         if (trim($finalOutput) === '') {
             return 'Final output is missing.';
@@ -163,8 +187,9 @@ class PostMemoryEvaluationService
 
         $status = (string) ($lastAudit['status'] ?? 'unknown');
         $decision = is_array($lastFinal) ? (string) ($lastFinal['decision'] ?? 'unknown') : 'unknown';
+        $targets = is_array($contextAnchors['target_paths'] ?? null) ? count($contextAnchors['target_paths']) : 0;
 
-        return "Final output present; audit={$status}; final_review={$decision}.";
+        return "Final output present; audit={$status}; final_review={$decision}; preserved_targets={$targets}.";
     }
 
     /**

@@ -1,10 +1,15 @@
 <script setup lang="ts">
 import type { CompanyStaffAgent } from '~/types/api'
+import { apiErrorMessage } from '~/utils/apiErrorMessage'
 
 definePageMeta({ layout: 'default' })
 
 const api = useApi()
 const toast = useToast()
+const registry = useProjects()
+await registry.refresh()
+
+const hasActiveProject = computed(() => Boolean(registry.activeProjectId.value))
 const savingId = ref<string | null>(null)
 const seeding = ref(false)
 const { data, pending, error, refresh } = await useAsyncData<{ data?: CompanyStaffAgent[] } | CompanyStaffAgent[]>(
@@ -25,7 +30,7 @@ async function seedStaff() {
     await refresh()
     toast.success('Company staff seeded.')
   } catch (e) {
-    toast.error(e instanceof Error ? e.message : 'Could not seed company staff')
+    toast.error(apiErrorMessage(e, 'Could not seed company staff'))
   } finally {
     seeding.value = false
   }
@@ -46,7 +51,7 @@ async function installTeam(slug: string) {
     toast.success('Team installed.')
   }
   catch (e) {
-    toast.error(e instanceof Error ? e.message : 'Could not install team')
+    toast.error(apiErrorMessage(e, 'Could not install team'))
   }
   finally {
     installingTeam.value = null
@@ -61,7 +66,7 @@ async function patchStaff(agent: CompanyStaffAgent, payload: Partial<CompanyStaf
     toast.success('Staff settings updated.')
   }
   catch (e) {
-    toast.error(e instanceof Error ? e.message : 'Could not update staff settings')
+    toast.error(apiErrorMessage(e, 'Could not update staff settings'))
   }
   finally {
     savingId.value = null
@@ -82,12 +87,26 @@ async function patchStaff(agent: CompanyStaffAgent, payload: Partial<CompanyStaf
       </div>
       <button
         type="button"
-        class="rounded-md border border-emerald-700/70 px-3 py-2 text-sm text-emerald-300 hover:bg-emerald-950"
-        :disabled="seeding"
+        class="rounded-md border border-emerald-700/70 px-3 py-2 text-sm text-emerald-300 hover:bg-emerald-950 disabled:opacity-50"
+        :disabled="!hasActiveProject || seeding"
         @click="seedStaff"
       >
         {{ seeding ? 'Seeding...' : 'Seed Product Team Plus' }}
       </button>
+    </div>
+
+    <div
+      v-if="!hasActiveProject"
+      class="rounded-lg border border-amber-800/60 bg-amber-950/30 px-4 py-3 text-sm text-amber-200"
+    >
+      No active project. Register a folder on
+      <NuxtLink
+        to="/project"
+        class="font-medium text-amber-100 underline underline-offset-2 hover:text-white"
+      >
+        Project
+      </NuxtLink>
+      and click <strong>Activate</strong> before seeding staff or installing teams.
     </div>
 
     <div
@@ -129,7 +148,7 @@ async function patchStaff(agent: CompanyStaffAgent, payload: Partial<CompanyStaf
             <button
               type="button"
               class="mt-3 rounded border border-emerald-700/70 px-2.5 py-1.5 text-xs text-emerald-300 hover:bg-emerald-950 disabled:opacity-50"
-              :disabled="installingTeam === team.slug"
+              :disabled="!hasActiveProject || installingTeam === team.slug"
               @click="installTeam(team.slug)"
             >
               {{ installingTeam === team.slug ? 'Installing...' : 'Install team' }}

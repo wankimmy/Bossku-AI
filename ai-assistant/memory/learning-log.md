@@ -243,3 +243,25 @@ Desktop 3.0.8 released + CI made green. 5 commits pushed to main: (1) executor q
 - `resolve_bossku_home()`: $BOSSKU_HOME → project ai-assistant/memory → sibling Bossku-AI → plugin root; plugin cache never used as memory home.
 - Skill description load trimmed 7.3KB→4.6KB across 25 skills (~680 tokens/session). Full description load for 105 skills was 22.3KB — next candidate tier is the ~25 skills at 200–250 chars.
 - Lesson: installed plugin cache was a frozen Apr-20 v1.0.0 (66 skills) because plugin.json version never changed — ALWAYS bump `.claude-plugin/plugin.json` version when skills/agents change, then update via /plugin.
+
+### Meatlers iPay88 payment integration complete — 2026-06-22
+
+- **Source:** task + operator confirmation ("payment all good")
+- **Signal:** iPay88 checkout was blocked by Inertia rendering handoff HTML in a sandboxed iframe (`about:srcdoc`, `allow-forms` missing); separate Windows `npm run build` failures from missing `vendor/tightenco/ziggy` and EPERM on `public/build/assets` when Docker/nginx held file locks.
+- **Decision / learning:** For external payment handoff from Inertia, always use `Inertia::location()` (409 + `X-Inertia-Location`) not `redirect()`; iPay88 needs full-page Blade POST handoff. Frontend Ziggy should use `ziggy-js` npm package. On Windows + Docker, set Vite `emptyOutDir: false` or build inside the `node` container.
+- **Promote to:** memory (`project-understanding.md`)
+- **Status:** applied — operator verified payment working in production
+- **Confidence:** high
+- **Last reviewed:** 2026-06-22
+
+## 2026-06-22 — Cursor — remember
+
+- **Tool:** cursor
+- **Event:** remember
+- **Source:** manual-remember (operator: "payment all good")
+- **Kind:** project milestone
+- **Captured at:** 2026-06-22
+
+```text
+Meatlers (myfreshstorage.com.my) iPay88 payment integration DONE on branch payment-integration. Operator confirmed checkout → iPay88 → return flow works. Shipped: Inertia::location full-page redirect to ipay88-handoff; CSP form-action for iPay88; target=_top on handoff form; ziggy-js npm dep; vite emptyOutDir:false for Windows Docker EPERM; OWASP ZAP CI gate; default payment ipay88. Deploy recipe: composer install, npm ci && npm run build, config:clear && config:cache. Docker node_modules is a separate volume — npm ci in container after lockfile changes.
+```

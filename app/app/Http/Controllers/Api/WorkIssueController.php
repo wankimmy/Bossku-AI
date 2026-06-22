@@ -8,11 +8,16 @@ use App\Models\BosskuAi\SpecialistAgent;
 use App\Models\BosskuAi\WorkIssue;
 use App\Services\Company\CompanyStaffService;
 use App\Services\Company\WorkIssueService;
+use App\Services\Project\ProjectService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class WorkIssueController extends Controller
 {
+    public function __construct(
+        protected ProjectService $projects,
+    ) {}
+
     public function index(Request $request): JsonResponse
     {
         $query = WorkIssue::query()
@@ -25,7 +30,7 @@ class WorkIssueController extends Controller
             ->orderByRaw("CASE status WHEN 'backlog' THEN 0 WHEN 'todo' THEN 1 WHEN 'in_progress' THEN 2 WHEN 'in_review' THEN 3 WHEN 'blocked' THEN 4 WHEN 'done' THEN 5 WHEN 'cancelled' THEN 6 ELSE 7 END")
             ->orderByDesc('updated_at');
 
-        $project = $this->activeProject();
+        $project = $this->projects->activeProject();
         if ($project !== null) {
             $query->where('project_id', $project->id);
         }
@@ -84,13 +89,5 @@ class WorkIssueController extends Controller
             'assigneeAgent:id,role_slug,display_name',
             'parentIssue:id,title,status',
         ]));
-    }
-
-    private function activeProject(): ?Project
-    {
-        return Project::query()
-            ->where('is_active', true)
-            ->orderByDesc('updated_at')
-            ->first();
     }
 }

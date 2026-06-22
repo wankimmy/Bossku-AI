@@ -247,6 +247,34 @@ class BosskuRoutingClassifierTest extends TestCase
     }
 
     #[Test]
+    public function anaphoric_docs_read_uses_repo_context_not_direct_answer(): void
+    {
+        $polluted = "Previous conversation:\nUser: read docs/PRODUCT_SPEC.md\n\nCurrent request:\nok read it";
+        $r = $this->classify($polluted);
+        $this->assertSame('orchestrator_only', $r['workflow']);
+        $this->assertTrue($r['needs_repo_context']);
+        $this->assertFalse($r['needs_executor']);
+    }
+
+    #[Test]
+    public function proceed_after_named_doc_inherits_repo_context(): void
+    {
+        $polluted = "Previous conversation:\nUser: read docs/PRODUCT_SPEC.md\n\nCurrent request:\nproceed";
+        $r = $this->classify($polluted);
+        $this->assertTrue($r['needs_repo_context']);
+        $this->assertNotSame('direct_answer', $r['workflow']);
+    }
+
+    #[Test]
+    public function explicit_docs_read_is_read_only_repo_task(): void
+    {
+        $r = $this->classify('read docs/PRODUCT_SPEC.md and summarize it');
+        $this->assertSame('orchestrator_only', $r['workflow']);
+        $this->assertTrue($r['needs_repo_context']);
+        $this->assertFalse($r['needs_executor']);
+    }
+
+    #[Test]
     public function seo_content_request_uses_writer_only(): void
     {
         $r = $this->classify('Write SEO meta descriptions and keyword headings for our landing page');

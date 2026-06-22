@@ -38,4 +38,43 @@ class PostMemoryEvaluationServiceTest extends TestCase
         $this->assertSame('final_response', $result['dimensions'][0]['id']);
         $this->assertStringContainsString('memory', strtolower($result['recommendation']));
     }
+
+    #[Test]
+    public function it_penalizes_generic_merge_advice_without_merge_evidence(): void
+    {
+        $service = new PostMemoryEvaluationService;
+
+        $result = $service->evaluate(
+            finalOutput: "## Next recommended step\nRun the relevant test suite before merge.",
+            memPayload: [],
+            execResult: [],
+            lastAudit: ['status' => 'pass'],
+            learningResult: [],
+            contextAnchors: [
+                'target_paths' => ['docs/PRODUCT_SPEC.md'],
+                'active_repo' => 'Safwan',
+            ],
+        );
+
+        $this->assertLessThan(0.8, $result['dimensions'][0]['score']);
+    }
+
+    #[Test]
+    public function it_rewards_preserved_target_paths_and_prompt_suggestions(): void
+    {
+        $service = new PostMemoryEvaluationService;
+
+        $result = $service->evaluate(
+            finalOutput: "## Next recommended step\nInspect `docs/PRODUCT_SPEC.md`.\n\n## Prompt suggestions\nContinue: Read `docs/PRODUCT_SPEC.md` in the active repo.",
+            memPayload: [],
+            execResult: [],
+            lastAudit: ['status' => 'pass'],
+            learningResult: [],
+            contextAnchors: [
+                'target_paths' => ['docs/PRODUCT_SPEC.md'],
+            ],
+        );
+
+        $this->assertGreaterThanOrEqual(0.75, $result['dimensions'][0]['score']);
+    }
 }

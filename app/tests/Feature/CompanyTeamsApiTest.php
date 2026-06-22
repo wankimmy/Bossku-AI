@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\BosskuAi\Project;
 use App\Models\BosskuAi\Setting;
 use App\Models\BosskuAi\SpecialistAgent;
+use App\Services\Project\ProjectService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -19,6 +20,32 @@ class CompanyTeamsApiTest extends TestCase
         $this->getJson('/api/company-teams')
             ->assertOk()
             ->assertJsonPath('data.0.slug', 'core-engineering');
+    }
+
+    #[Test]
+    public function it_returns_422_when_no_active_project_on_install(): void
+    {
+        $this->postJson('/api/company-teams/install', ['team_slug' => 'growth-sales'])
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'No active project is registered.');
+    }
+
+    #[Test]
+    public function it_installs_team_when_active_project_id_setting_points_to_project(): void
+    {
+        $project = Project::query()->create([
+            'name' => 'Setting Fallback Shop',
+            'host_path' => '/workspace/setting-shop',
+            'container_path' => '/workspace/setting-shop',
+            'is_active' => false,
+        ]);
+        Setting::setValue(ProjectService::SETTING_ACTIVE_PROJECT_ID, $project->id);
+        Setting::setValue('company_staff_enabled', '1');
+
+        $this->postJson('/api/company-teams/install', ['team_slug' => 'growth-sales'])
+            ->assertOk()
+            ->assertJsonPath('team_slug', 'growth-sales')
+            ->assertJsonStructure(['installed']);
     }
 
     #[Test]

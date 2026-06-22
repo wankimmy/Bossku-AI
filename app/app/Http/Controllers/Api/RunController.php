@@ -257,6 +257,10 @@ class RunController extends Controller
     public function streamPost(Request $request, OrchestratorService $orchestrator): StreamedResponse|JsonResponse
     {
         $data = $this->validateRunInput($request);
+        $data['conversation'] = $this->mergeContinuationConversation(
+            $data['conversation'],
+            $data['continuation_run_id'] ?? null,
+        );
         $misroute = $this->awaitingClarificationMisrouteResponse($data['conversation']);
         if ($misroute !== null) {
             return $misroute;
@@ -268,7 +272,13 @@ class RunController extends Controller
             return $prepared;
         }
 
-        return $this->streamRun($orchestrator, $prepared, $data['conversation'], $data['attachment_ids']);
+        return $this->streamRun(
+            $orchestrator,
+            $prepared,
+            $data['conversation'],
+            $data['attachment_ids'],
+            $data['continuation_run_id'] ?? null,
+        );
     }
 
     /**
@@ -281,6 +291,7 @@ class RunController extends Controller
         array $prepared,
         array $conversation,
         array $attachmentIds = [],
+        ?string $continuationRunId = null,
     ): StreamedResponse {
         $ip = request()->ip();
         $promptLength = strlen($prepared['prompt']);
@@ -288,7 +299,7 @@ class RunController extends Controller
             ? (int) ($prepared['metadata']['original_length'] ?? $promptLength)
             : $promptLength;
 
-        return response()->stream(function () use ($orchestrator, $prepared, $conversation, $attachmentIds, $ip, $promptLength, $originalPromptLength) {
+        return response()->stream(function () use ($orchestrator, $prepared, $conversation, $attachmentIds, $continuationRunId, $ip, $promptLength, $originalPromptLength) {
             $this->streamEventLog->beginBackgroundStream();
 
             $started = microtime(true);
@@ -321,7 +332,7 @@ class RunController extends Controller
             ]);
 
             try {
-                $result = $this->runPreparedPrompt($orchestrator, $prepared, $emitTracked, $conversation);
+                $result = $this->runPreparedPrompt($orchestrator, $prepared, $emitTracked, $conversation, $continuationRunId);
                 if ($runId === null && isset($result['run_id'])) {
                     $runId = (string) $result['run_id'];
                 }
@@ -382,6 +393,7 @@ class RunController extends Controller
             'conversation.*.content' => 'required_with:conversation|string|max:20000',
             'attachment_ids' => 'sometimes|array|max:'.$maxAttachments,
             'attachment_ids.*' => 'uuid',
+            'continuation_run_id' => 'sometimes|uuid',
         ]);
 
         /** @var list<array{role: string, content: string}> $conversation */
@@ -393,7 +405,66 @@ class RunController extends Controller
             'prompt' => $validated['prompt'],
             'conversation' => $conversation,
             'attachment_ids' => $attachmentIds,
+            'continuation_run_id' => $validated['continuation_run_id'] ?? null,
         ];
+    }
+
+    /**
+     * @param  list<array{role: string, content: string}>  $conversation
+     * @return list<array{role: string, content: string}>
+     */
+    private function mergeContinuationConversation(array $conversation, ?string $continuationRunId): array
+    {
+        if ($continuationRunId === null || $continuationRunId === '') {
+            return $conversation;
+        }
+
+        $prior = Run::query()->find($continuationRunId);
+        if ($prior === null) {
+            return $conversation;
+        }
+
+        /** @var array<string, mixed> $meta */
+        $meta = is_array($prior->metadata) ? $prior->metadata : [];
+        $stored = is_array($meta['conversation'] ?? null) ? $meta['conversation'] : [];
+        if ($conversation === [] && $stored !== []) {
+            return $stored;
+        }
+
+        if ($conversation !== [] && $stored !== []) {
+            $encoded = json_encode($conversation);
+            $storedEncoded = json_encode($stored);
+            if ($encoded !== false && $storedEncoded !== false && ! str_starts_with($encoded, $storedEncoded)) {
+                return array_values(array_slice(array_merge($stored, $conversation), -50));
+            }
+        }
+
+        return $conversation;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function continuationOptionsForRun(?string $continuationRunId): array
+    {
+        if ($continuationRunId === null || $continuationRunId === '') {
+            return [];
+        }
+
+        $prior = Run::query()->find($continuationRunId);
+        if ($prior === null) {
+            return [];
+        }
+
+        /** @var array<string, mixed> $meta */
+        $meta = is_array($prior->metadata) ? $prior->metadata : [];
+        $anchors = is_array($meta['context_anchors'] ?? null) ? $meta['context_anchors'] : [];
+
+        return array_filter([
+            'parent_run_id' => $prior->id,
+            'thread_id' => $prior->thread_id,
+            'context_anchors' => $anchors !== [] ? $anchors : null,
+        ]);
     }
 
     /**
@@ -460,8 +531,12 @@ class RunController extends Controller
         array $prepared,
         ?callable $emit,
         array $conversation,
+        ?string $continuationRunId = null,
     ): array {
-        $options = $this->orchestratorOptionsForPreparedPrompt($prepared);
+        $options = array_merge(
+            $this->orchestratorOptionsForPreparedPrompt($prepared),
+            $this->continuationOptionsForRun($continuationRunId),
+        );
         if ($options === []) {
             return $orchestrator->run($prepared['prompt'], $emit, $conversation);
         }

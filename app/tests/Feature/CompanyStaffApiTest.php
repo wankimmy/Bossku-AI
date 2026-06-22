@@ -12,6 +12,14 @@ class CompanyStaffApiTest extends TestCase
     use RefreshDatabase;
 
     #[Test]
+    public function it_returns_422_when_no_active_project_on_seed(): void
+    {
+        $this->postJson('/api/company-staff/seed')
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'No active project is registered.');
+    }
+
+    #[Test]
     public function it_seeds_lists_and_updates_company_staff_for_the_active_project(): void
     {
         $this->project();

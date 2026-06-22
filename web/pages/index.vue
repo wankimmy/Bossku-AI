@@ -25,6 +25,7 @@ import { preparePromptForSubmission } from '~/utils/longPrompt'
 import {
   buildFreeTextClarificationAnswers,
   resolveSubmitTarget,
+  shouldAttachContinuationRunId,
 } from '~/utils/resolveSubmitTarget'
 import type { ChatAttachmentMeta } from '~/composables/useLandingChat'
 
@@ -671,6 +672,19 @@ async function submit() {
     conversation: prior,
     convId: convId ?? undefined,
     attachmentIds,
+    continuationRunId: shouldAttachContinuationRunId({
+      running: running.value,
+      submittingClarification: submittingClarification.value,
+      uploadingAttachments: attachments.uploading.value,
+      showClarificationModal: showClarificationModal.value,
+      showApprovalModal: showApprovalModal.value,
+      isLocalCommandsClarification: isLocalCommandsClarification.value,
+      awaitingClarification: awaitingClarification.value,
+      runStatus: status.value,
+      hasClarificationRequest: effectiveClarificationRequest.value !== null,
+      promptTrimmed: userText,
+      completedRunId: resolvedRunId.value,
+    }) ? resolvedRunId.value ?? undefined : undefined,
   })
 }
 

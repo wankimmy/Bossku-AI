@@ -103,4 +103,30 @@ class ShortPathRoutingFeatureTest extends TestCase
         $this->assertArrayNotHasKey('checkpoint', $run->metadata ?? []);
         $this->assertStringContainsString('enterprise', strtolower((string) $run->final_output));
     }
+
+    #[Test]
+    public function anaphoric_docs_follow_up_does_not_finish_on_direct_answer_short_path(): void
+    {
+        $this->mock(ModelFallbackService::class, function ($mock): void {
+            $mock->shouldReceive('chatWithFallbacks')
+                ->andReturn(['text' => '{"goal":"Read docs/PRODUCT_SPEC.md","checklist":[]}', 'model' => 'mock']);
+        });
+
+        $conversation = [
+            ['role' => 'user', 'content' => 'read docs/PRODUCT_SPEC.md'],
+            ['role' => 'assistant', 'content' => 'I can inspect that file in the active repo.'],
+        ];
+
+        $result = app(OrchestratorService::class)->run('ok read it', null, $conversation);
+
+        $run = Run::query()->findOrFail((string) ($result['run_id'] ?? ''));
+        $meta = is_array($run->metadata) ? $run->metadata : [];
+        $workflow = $meta['routing_decision']['workflow'] ?? null;
+        $anchors = is_array($meta['context_anchors'] ?? null) ? $meta['context_anchors'] : [];
+        $this->assertNotSame('direct_answer', $workflow);
+        $this->assertTrue(
+            ($meta['routing_decision']['needs_repo_context'] ?? false) === true
+            || in_array('docs/PRODUCT_SPEC.md', $anchors['docs_targets'] ?? [], true),
+        );
+    }
 }

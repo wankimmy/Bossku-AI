@@ -10,12 +10,15 @@ use App\Models\BosskuAi\Run;
 use App\Models\BosskuAi\RunStep;
 use App\Models\BosskuAi\Skill;
 use App\Models\BosskuAi\SpecialistAgent;
+use App\Models\BosskuAi\Thread;
 use App\Services\BosskuAi\AgentPersonaService;
 use App\Support\LlmTelemetry;
 use App\Support\StringCoercion;
+use App\Support\TaskContextResolver;
 use App\Services\BosskuAi\BosskuResponseIndicator;
 use App\Services\BosskuAi\ContextBudgetGuard;
 use App\Services\BosskuAi\RepoTaskDetector;
+use App\Services\BosskuAi\UntrustedContentScanner;
 use App\Services\BosskuAi\WorkflowRouteHelper;
 use App\Services\Company\StaffCouncilService;
 use App\Services\Company\WorkIssueService;
@@ -60,6 +63,7 @@ class OrchestratorService
         protected SecurityAuditorService $securityAuditor,
         protected FinalReviewerService $finalReviewer,
         protected DirectAnswerService $directAnswer,
+        protected HandoffPromptBuilder $handoffPrompts,
         protected WriterService $writer,
         protected PostMemoryEvaluationService $postMemoryEvaluation,
         protected ToolRegistry $tools,
@@ -106,6 +110,9 @@ class OrchestratorService
      */
     protected function dispatchToKernel(string $userPrompt, ?callable $emit, array $conversation, array $options): array
     {
+        $routingPrompt = TaskContextResolver::buildEffectivePrompt($userPrompt, $conversation);
+        $routingInput = TaskContextResolver::routingInput($userPrompt, $routingPrompt, $conversation);
+
         $run = Run::query()->create([
             'prompt' => $userPrompt,
             'status' => 'running',
@@ -113,7 +120,7 @@ class OrchestratorService
             'metadata' => ['engine' => 'graph', 'conversation_turns' => count($conversation)],
         ]);
 
-        $classified = $this->promptRouteClassifier->classify($userPrompt);
+        $classified = $this->promptRouteClassifier->classify($routingInput);
         $route = is_array($classified['route'] ?? null) ? $classified['route'] : [];
         $workflow = (string) ($route['workflow'] ?? config('bossku.default_workflow', 'orchestrator_executor'));
 
@@ -129,13 +136,15 @@ class OrchestratorService
         return $this->kernelCoordinator->run($run, $context, $emit);
     }
 
-    protected function fusionFeaturesRequireLegacyPipeline(string $userPrompt): bool
+    protected function fusionFeaturesRequireLegacyPipeline(string $userPrompt, array $conversation = []): bool
     {
         if (! $this->settings->aiCouncilEnabled() && ! $this->settings->companyStaffEnabled()) {
             return false;
         }
 
-        $classified = $this->promptRouteClassifier->classify($userPrompt);
+        $routingPrompt = TaskContextResolver::buildEffectivePrompt($userPrompt, $conversation);
+        $routingInput = TaskContextResolver::routingInput($userPrompt, $routingPrompt, $conversation);
+        $classified = $this->promptRouteClassifier->classify($routingInput);
         $route = is_array($classified['route'] ?? null) ? $classified['route'] : [];
         $workflow = (string) ($route['workflow'] ?? '');
         $intent = (string) ($route['specialist_intent'] ?? '');
@@ -166,30 +175,65 @@ class OrchestratorService
         if ($this->kernelCoordinator !== null
             && \App\Services\Kernel\KernelMode::graph()
             && ($options['force_legacy'] ?? false) !== true
-            && ! $this->fusionFeaturesRequireLegacyPipeline($userPrompt)) {
+            && ! $this->fusionFeaturesRequireLegacyPipeline($userPrompt, $conversation)) {
             return $this->dispatchToKernel($userPrompt, $emit, $conversation, $options);
         }
 
-        $prompt = $this->effectivePrompt($userPrompt, $conversation);
+        $prompt = TaskContextResolver::buildEffectivePrompt($userPrompt, $conversation);
         $routingSeed = trim((string) ($options['routing_prompt'] ?? $userPrompt));
-        $routingPrompt = $this->effectivePrompt($routingSeed !== '' ? $routingSeed : $userPrompt, $conversation);
+        $routingPrompt = TaskContextResolver::buildEffectivePrompt($routingSeed !== '' ? $routingSeed : $userPrompt, $conversation);
         $agentPrompt = trim($prompt."\n\n".$this->projects->agentWorkspaceContext());
+
+        $activeProject = $this->paths->activeProject();
+        $contextAnchors = TaskContextResolver::extractContextAnchors(
+            $userPrompt,
+            $conversation,
+            $activeProject?->name,
+        );
+        if (is_array($options['context_anchors'] ?? null)) {
+            $contextAnchors = array_merge($contextAnchors, $options['context_anchors']);
+        }
+
+        $untrustedWarnings = [];
+        $untrustedScanner = app(UntrustedContentScanner::class);
+        if ($untrustedScanner->hasHighSeverityFindings($routingPrompt)) {
+            $contextAnchors['safety_constraints'][] = 'blocked_untrusted_instruction_patterns';
+            $untrustedWarnings = $untrustedScanner->summarizeBlockedActions($routingPrompt);
+        }
 
         $runMeta = [
             'conversation_turns' => count($conversation),
             'conversation' => $conversation,
+            'context_anchors' => $contextAnchors,
         ];
+        if ($untrustedWarnings !== []) {
+            $runMeta['untrusted_content_warnings'] = $untrustedWarnings;
+        }
         if (is_array($options['metadata'] ?? null)) {
             $runMeta = array_merge($runMeta, $options['metadata']);
         }
-        $activeProject = $this->paths->activeProject();
         if ($activeProject !== null) {
             $runMeta['active_project_id'] = $activeProject->id;
             $runMeta['active_project_name'] = $activeProject->name;
+            $contextAnchors['active_repo'] = $activeProject->name;
+            $runMeta['context_anchors'] = $contextAnchors;
         }
 
         $runKind = is_string($options['run_kind'] ?? null) ? (string) $options['run_kind'] : 'standard';
         $parentRunId = is_string($options['parent_run_id'] ?? null) ? (string) $options['parent_run_id'] : null;
+        $threadId = is_string($options['thread_id'] ?? null) ? (string) $options['thread_id'] : null;
+        if ($threadId === null && $parentRunId !== null && $parentRunId !== '') {
+            $parentRun = Run::query()->find($parentRunId);
+            $threadId = $parentRun?->thread_id;
+        }
+        if ($threadId === null && $parentRunId !== null && $parentRunId !== '') {
+            $thread = Thread::query()->create([
+                'title' => Str::limit($userPrompt, 80),
+                'status' => 'active',
+                'metadata' => ['origin' => 'continuation', 'parent_run_id' => $parentRunId],
+            ]);
+            $threadId = (string) $thread->id;
+        }
         $supervisorSlot = isset($options['supervisor_slot']) ? (int) $options['supervisor_slot'] : null;
         $existingRunId = is_string($options['existing_run_id'] ?? null) ? (string) $options['existing_run_id'] : null;
 
@@ -211,6 +255,7 @@ class OrchestratorService
                 'run_kind' => $runKind,
                 'parent_run_id' => $parentRunId,
                 'supervisor_slot' => $supervisorSlot,
+                'thread_id' => $threadId,
             ]);
         }
 
@@ -254,7 +299,8 @@ class OrchestratorService
         ]));
 
         $t0 = microtime(true);
-        $classified = $this->promptRouteClassifier->classify($userPrompt);
+        $routingInput = TaskContextResolver::routingInput($userPrompt, $routingPrompt, $conversation);
+        $classified = $this->promptRouteClassifier->classify($routingInput);
         /** @var array<string, mixed> $modelRoute */
         $modelRoute = $classified['route'];
         $modelsResolved = $classified['models_resolved'];
@@ -271,6 +317,7 @@ class OrchestratorService
 
         $personasApplied = $this->agentPersonas->snapshotForRun();
         $runMeta['personas_applied'] = $personasApplied;
+        $runMeta['routing_decision'] = $modelRoute;
         $run->update(['metadata' => $runMeta]);
 
         $this->logStep($run, -2, 'model_router', $modelsResolved['router'] ?? null, $routerMeta['provider'] ?? null, null, 'success', $agentPrompt, $routerJson, $routerJson, null, null, null, $routerMs, $routerTok, null, [
@@ -679,7 +726,7 @@ class OrchestratorService
                 $tokenAcc,
                 $tRun,
                 'direct_answer',
-                fn () => $this->directAnswer->answer($userPrompt, $modelRoute, $run->id),
+                fn () => $this->directAnswer->answer($userPrompt, $modelRoute, $run->id, $conversation),
             );
         }
 
@@ -1839,7 +1886,19 @@ class OrchestratorService
             $plan = $this->reconcilePlanChecklist($plan, $execResult, $lastAudit);
         }
 
-        $finalOutput = $this->composeUserOutput($lastAudit, $execResult, $lastFinal, $lastSecurity, $modelRoute, $modelsResolved, $memPayload, $userPrompt, $plan);
+        $finalOutput = $this->composeUserOutput(
+            $lastAudit,
+            $execResult,
+            $lastFinal,
+            $lastSecurity,
+            $modelRoute,
+            $modelsResolved,
+            $memPayload,
+            $userPrompt,
+            $plan,
+            is_array($run->metadata['context_anchors'] ?? null) ? $run->metadata['context_anchors'] : [],
+            $this->runHasMergeEvidence($userPrompt, $plan, $run),
+        );
 
         return $this->completeRun(
             $run,
@@ -1933,6 +1992,7 @@ class OrchestratorService
                 [
                     'user_prompt' => $userPrompt,
                     'effective_prompt' => $agentPrompt,
+                    'conversation' => $conversation,
                     'model_route' => $modelRoute,
                     'models_resolved' => $modelsResolved,
                     'router_meta' => $routerMeta,
@@ -2056,6 +2116,7 @@ class OrchestratorService
             [
                 'user_prompt' => $userPrompt,
                 'effective_prompt' => $agentPrompt,
+                'conversation' => $conversation,
                 'model_route' => $modelRoute,
                 'models_resolved' => $modelsResolved,
                 'router_meta' => $routerMeta,
@@ -2503,6 +2564,8 @@ class OrchestratorService
         array $memPayload,
         string $userPrompt = '',
         array $plan = [],
+        array $contextAnchors = [],
+        bool $hasMergeEvidence = false,
     ): string {
         $commandOutcome = $this->summarizeCommandExecution($execResult);
         $checklistStats = ChecklistReconciler::summarizeChecklist(
@@ -2568,32 +2631,20 @@ class OrchestratorService
         }
 
         $auditStatus = (string) ($lastAudit['status'] ?? 'not_run');
-        $nextStep = 'Review the changed files and run any missing checks before merge.';
-        if ($commandOutcome['git_restore_failed']) {
-            $nextStep = 'Git restore did not complete. Run manually in the project: '
-                .implode('; ', array_slice($commandOutcome['failed_commands'], 0, 3));
-        } elseif ($executedCommands === [] && $proposedCommands !== []) {
-            $nextStep = 'Commands were proposed but not executed — run them manually in the project root.';
-        } elseif ($executedCommands === []) {
-            $nextStep = 'Run the relevant test suite before merge.';
-        } elseif ($lastFinal !== null && ($lastFinal['required_actions'] ?? []) !== []) {
-            $nextStep = implode('; ', array_map(
-                fn ($action) => StringCoercion::toString($action),
-                $lastFinal['required_actions'],
-            ));
-        }
-
-        $planGoal = StringCoercion::toString($plan['goal'] ?? $plan['task_summary'] ?? null, '');
-        $nextPrompt = $this->buildNextPrompt(
+        $handoff = $this->handoffPrompts->build(
             $files,
             $commandOutcome,
             $executedCommands,
             $proposedCommands,
-            $nextStep,
             $lastFinal,
             $userPrompt,
-            $planGoal,
+            StringCoercion::toString($plan['goal'] ?? $plan['task_summary'] ?? $contextAnchors['last_actionable_user_intent'] ?? null, ''),
+            $contextAnchors,
+            $hasMergeEvidence,
         );
+        $nextStep = $handoff['next_step'];
+        $nextPrompt = $handoff['primary_prompt'];
+        $promptSuggestions = $handoff['prompt_suggestions'];
 
         $lines = [
             '[BOSSKUAI]',
@@ -2646,7 +2697,35 @@ class OrchestratorService
             $nextPrompt,
         ];
 
+        if ($promptSuggestions !== []) {
+            $lines[] = '';
+            $lines[] = '## Prompt suggestions';
+            foreach ($promptSuggestions as $suggestion) {
+                $label = (string) ($suggestion['label'] ?? 'Continue');
+                $text = (string) ($suggestion['prompt'] ?? '');
+                if ($text === '') {
+                    continue;
+                }
+                $lines[] = $label.': '.$text;
+            }
+        }
+
         return implode("\n", $lines);
+    }
+
+    /**
+     * @param  array<string, mixed>  $plan
+     */
+    protected function runHasMergeEvidence(string $userPrompt, array $plan, Run $run): bool
+    {
+        $blob = mb_strtolower($userPrompt.' '.json_encode($plan).' '.json_encode($run->metadata ?? []));
+        foreach (['merge', 'pull request', 'pr ', 'open pr', 'before merge', 'branch '] as $marker) {
+            if (str_contains($blob, $marker)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -3299,6 +3378,7 @@ class OrchestratorService
             $lastFinal,
             $modelRoute,
             $modelsResolved,
+            is_array($run->metadata['context_anchors'] ?? null) ? $run->metadata['context_anchors'] : [],
         );
         $evalMs = (int) round((microtime(true) - $tEval) * 1000);
         $evalTok = $this->estimateTokens(json_encode($evaluation) ?: '');
@@ -3514,34 +3594,7 @@ class OrchestratorService
      */
     protected function effectivePrompt(string $userPrompt, array $conversation): string
     {
-        $userPrompt = trim($userPrompt);
-        if ($conversation === []) {
-            return $userPrompt;
-        }
-
-        $lines = [];
-        $used = 0;
-        $maxChars = 12_000;
-
-        foreach (array_slice($conversation, -40) as $turn) {
-            $role = strtolower((string) ($turn['role'] ?? 'user'));
-            $content = trim((string) ($turn['content'] ?? ''));
-            if ($content === '') {
-                continue;
-            }
-            $line = ($role === 'assistant' ? 'Assistant' : 'User').': '.$content;
-            if ($used + strlen($line) > $maxChars) {
-                break;
-            }
-            $lines[] = $line;
-            $used += strlen($line);
-        }
-
-        if ($lines === []) {
-            return $userPrompt;
-        }
-
-        return "Previous conversation:\n".implode("\n\n", $lines)."\n\nCurrent request:\n".$userPrompt;
+        return TaskContextResolver::buildEffectivePrompt($userPrompt, $conversation);
     }
 
     /**

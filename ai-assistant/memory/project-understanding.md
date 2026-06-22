@@ -37,3 +37,16 @@ Treat it as shared memory across supported tool surfaces.
 - Maintenance flow: Confirmed: BosskuAI includes skill stocktake and rules distillation workflows, deterministic helper scripts, and evals for prompt surface, routing-fit, retrieval relevance, and workflow proxies.
 - Learning hygiene flow: Confirmed: BosskuAI includes a dedicated continuous-learning workflow, plus `active-continuation.md` as optional ephemeral handoff state rather than durable memory.
 - Hook posture: Confirmed: BosskuAI includes optional hook-ready reminder scripts under `ai-assistant/hooks/`, but they are advisory only and intentionally avoid automatic memory or rule mutation.
+
+## Meatlers (My Fresh Storage)
+
+- **Repo:** `C:/Users/Admin/Documents/Safwan/meatlers` — Laravel 13 + Inertia/Vue storefront for fresh meat e-commerce.
+- **Prod site:** `myfreshstorage.com.my` (Plesk deploy).
+- **Payment branch:** `payment-integration` on `https://github.com/wankimmy/meatlers.git`.
+- **Payment status (2026-06-22):** **Complete and verified by operator** — iPay88 hosted checkout works end-to-end.
+- **iPay88 flow:** checkout `form.post` → `CheckoutController::store` → `Inertia::location()` to `/payments/ipay88/handoff/{order}` (full page, not SPA XHR) → Blade auto-POST to `payment.ipay88.com.my` → backend/response callbacks mark paid.
+- **Key fixes shipped:** `Inertia::location()` (fixes sandboxed `srcdoc` iframe blocking form POST); CSP `form-action` includes iPay88 origin via `config('ipay88.entry_url')`; handoff form `target="_top"`; default payment method `ipay88`.
+- **Frontend build:** `ziggy-js` npm package (no `vendor/` needed for `npm run build`); `vite.config.js` `build.emptyOutDir: false` avoids Windows EPERM when Docker/nginx locks `public/build/assets`; prefer `make npm-build` or `docker compose run --rm --no-deps node sh -c "npm ci && npm run build"` when stack is running.
+- **Docker:** `app` uses `vendor_data` volume; `node` uses `node_modules_data` volume — run `npm ci` inside Docker after `package-lock.json` changes.
+- **CI:** backend tests + Pint + composer audit; frontend `composer install` then `npm ci && npm run build`; OWASP ZAP baseline gate (Medium+ fails).
+- **Source-of-truth files:** `app/Http/Controllers/CheckoutController.php`, `app/Http/Controllers/Payments/Ipay88HandoffController.php`, `resources/views/payments/ipay88-handoff.blade.php`, `app/Http/Middleware/SecurityHeaders.php`, `config/payments.php`, `config/ipay88.php`, `tests/Feature/CheckoutPaymentTest.php`.

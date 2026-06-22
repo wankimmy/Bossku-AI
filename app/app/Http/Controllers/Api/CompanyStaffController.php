@@ -3,17 +3,21 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\BosskuAi\Project;
 use App\Models\BosskuAi\SpecialistAgent;
 use App\Services\Company\CompanyStaffService;
+use App\Services\Project\ProjectService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class CompanyStaffController extends Controller
 {
+    public function __construct(
+        protected ProjectService $projects,
+    ) {}
+
     public function index(CompanyStaffService $staff): JsonResponse
     {
-        $project = $this->activeProject();
+        $project = $this->projects->activeProject();
         if ($project === null) {
             return response()->json(['data' => []]);
         }
@@ -27,7 +31,7 @@ class CompanyStaffController extends Controller
 
     public function seed(CompanyStaffService $staff): JsonResponse
     {
-        $project = $this->activeProject();
+        $project = $this->projects->activeProject();
         if ($project === null) {
             return response()->json(['message' => 'No active project is registered.'], 422);
         }
@@ -70,13 +74,5 @@ class CompanyStaffController extends Controller
         $agent->update($data);
 
         return response()->json($agent->refresh()->toOfficePayload());
-    }
-
-    private function activeProject(): ?Project
-    {
-        return Project::query()
-            ->where('is_active', true)
-            ->orderByDesc('updated_at')
-            ->first();
     }
 }

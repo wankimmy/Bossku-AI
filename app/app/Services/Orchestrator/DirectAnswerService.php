@@ -15,16 +15,20 @@ class DirectAnswerService
         protected CompanyStaffService $companyStaff,
     ) {}
 
-    public function answer(string $userPrompt, array $routeContext, ?string $runId = null): string
+    public function answer(string $userPrompt, array $routeContext, ?string $runId = null, array $conversation = []): string
     {
         $cfg = $this->config->directAnswer();
         $primary = (string) ($cfg['primary'] ?? 'gpt-4o-mini');
         $fallbacks = $cfg['fallback'] ?? [];
         $models = array_merge([$primary], is_array($fallbacks) ? $fallbacks : []);
         $retry = (int) ($cfg['retry_count'] ?? 1);
+        $payload = ['route' => $routeContext, 'question' => $userPrompt];
+        if ($conversation !== []) {
+            $payload['conversation_context'] = array_slice($conversation, -6);
+        }
         $messages = [
             ['role' => 'system', 'content' => $this->systemPrompt($routeContext)],
-            ['role' => 'user', 'content' => "Context (JSON):\n".json_encode(['route' => $routeContext, 'question' => $userPrompt])],
+            ['role' => 'user', 'content' => "Context (JSON):\n".json_encode($payload)],
         ];
         try {
             $out = $this->fallback->chatWithFallbacks(

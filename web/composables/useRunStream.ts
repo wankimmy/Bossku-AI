@@ -289,6 +289,7 @@ export function useRunStream() {
       appendEvents?: boolean
       convId?: string
       attachmentIds?: string[]
+      continuationRunId?: string
     },
   ) {
     if (options?.convId) {
@@ -319,6 +320,7 @@ export function useRunStream() {
           prompt,
           conversation: options?.conversation ?? [],
           attachment_ids: options?.attachmentIds ?? [],
+          continuation_run_id: options?.continuationRunId ?? undefined,
         }),
         signal: abort.signal,
       })
