@@ -77,6 +77,28 @@ class WorkIssueServiceTest extends TestCase
         $this->assertSame(0, WorkIssue::query()->count());
     }
 
+    #[Test]
+    public function it_links_generated_issues_to_the_runs_goal_and_recomputes_progress(): void
+    {
+        Setting::setValue('staff_auto_issue_generation_enabled', '1');
+        $project = $this->project();
+        $goal = \App\Models\BosskuAi\Goal::query()->create([
+            'project_id' => $project->id,
+            'title' => 'Ship checkout',
+            'status' => 'active',
+            'priority' => 'high',
+            'progress' => 50, // seed non-zero so a recompute is observable
+        ]);
+        $run = Run::factory()->create(['prompt' => 'Build checkout', 'metadata' => ['goal_id' => $goal->id]]);
+
+        $issues = app(WorkIssueService::class)->createFromApprovedPlan($run, $this->plan(), $project);
+
+        $this->assertSame($goal->id, $issues[0]->goal_id);
+        $this->assertSame($goal->id, $issues[1]->goal_id);
+        // Two fresh 'todo' issues → 0% complete; the seeded 50 was recomputed.
+        $this->assertSame(0, $goal->refresh()->progress);
+    }
+
     /** @return array<string, mixed> */
     private function plan(): array
     {

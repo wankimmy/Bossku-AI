@@ -26,6 +26,7 @@ use App\Services\BosskuAi\PromptRouteClassifier;
 use App\Services\BosskuAi\RuntimeSettings;
 use App\Services\BosskuAi\SkillRouterService;
 use App\Services\Graph\KnowledgeGraphBuilder;
+use App\Services\Governance\CostBudgetGuard;
 use App\Services\Governance\ExecutorApprovalService;
 use App\Services\Learning\UserSelfLearningService;
 use App\Services\Project\ChangedFileDiagnostics;
@@ -458,16 +459,27 @@ class OrchestratorService
         ]));
 
         $skillContent = $agent->linkedSkill?->content;
-        $handoff = $this->specialistRunner->run(
-            $agent,
-            $userPrompt,
-            $this->projects->agentWorkspaceContext(),
-            $plan,
-            $routerCtx,
-            $memPayload,
-            $skillContent !== null ? Str::limit($skillContent, 6000) : null,
-            $run->id,
-        );
+        $httpAdapter = app(\App\Services\Agents\HttpAgentAdapter::class);
+        if ($httpAdapter->supports($agent)) {
+            // External worker (BYO agent over HTTP) — dispatch the task instead
+            // of running an internal LLM, then continue with its handoff.
+            $handoff = $httpAdapter->dispatch($agent, [
+                'user_prompt' => $userPrompt,
+                'plan' => $plan,
+                'project_context' => $this->projects->agentWorkspaceContext(),
+            ]);
+        } else {
+            $handoff = $this->specialistRunner->run(
+                $agent,
+                $userPrompt,
+                $this->projects->agentWorkspaceContext(),
+                $plan,
+                $routerCtx,
+                $memPayload,
+                $skillContent !== null ? Str::limit($skillContent, 6000) : null,
+                $run->id,
+            );
+        }
         $tokenEstimate = $this->estimateTokens(json_encode($handoff) ?: '');
         $model = StringCoercion::toString($handoff['_specialist_model'] ?? null);
         $provider = LlmTelemetry::resolveStepProvider($handoff);
@@ -573,14 +585,37 @@ class OrchestratorService
             $routerCtx['primary_skill']['name'] ?? $run->selected_skill_name ?? null
         );
 
+        $agent = null;
+        $synthesized = false;
+
+        // Prefer an LLM-synthesized specialist tailored to this task; fall back
+        // to the pattern/template draft if synthesis is unavailable or fails.
         try {
-            $agent = $this->specialistDrafting->draftFromRun($run, [
-                'skill_name' => $skillName,
-                'router_context' => $routerCtx,
-                'planner_output' => $plan,
-            ], force: true);
-        } catch (\Throwable $e) {
-            return null;
+            $intent = $this->specialistRouter->matchDetailed($agentPrompt, $activeProject)->intent ?? null;
+            $spec = app(\App\Services\Specialists\DynamicSpecialistSynthesizer::class)
+                ->synthesize($agentPrompt, $plan, $intent, [], $run->id);
+            if ($spec !== null) {
+                $agent = $this->specialistDrafting->draftFromSpec($activeProject, $spec, [
+                    'skill_name' => $skillName,
+                    'router_context' => $routerCtx,
+                    'run_id' => $run->id,
+                ]);
+                $synthesized = true;
+            }
+        } catch (\Throwable) {
+            $agent = null;
+        }
+
+        if ($agent === null) {
+            try {
+                $agent = $this->specialistDrafting->draftFromRun($run, [
+                    'skill_name' => $skillName,
+                    'router_context' => $routerCtx,
+                    'planner_output' => $plan,
+                ], force: true);
+            } catch (\Throwable $e) {
+                return null;
+            }
         }
 
         $this->emit($emit, $this->basePayload($run, 'specialist_agent_spawned', [
@@ -589,10 +624,13 @@ class OrchestratorService
             'model_role' => 'reasoning',
             'from_agent' => 'orchestrator',
             'to_agent' => $agent->role_slug,
-            'summary' => $agent->display_name.' was spawned on demand for this task.',
-            'message' => 'No approved specialist matched, so the orchestrator drafted one from the plan. Review and approve it under Agents to reuse it next time.',
+            'summary' => $agent->display_name.($synthesized ? ' was synthesized on demand for this task.' : ' was spawned on demand for this task.'),
+            'message' => $synthesized
+                ? 'No specialist matched, so the orchestrator designed one tailored to this task. Review and approve it under Agents to reuse it next time.'
+                : 'No approved specialist matched, so the orchestrator drafted one from the plan. Review and approve it under Agents to reuse it next time.',
             'artifacts' => [
                 'specialist_agent' => $this->specialistRouter->payloadForAgent($agent),
+                'synthesized' => $synthesized,
             ],
         ]));
 
@@ -783,6 +821,17 @@ class OrchestratorService
             }
         } catch (\Throwable) {
             //
+        }
+
+        // Goal alignment: when the run targets (or the project has) a business
+        // goal, surface it to the planner so the plan advances that objective,
+        // and remember it on the run so generated work issues roll up to it.
+        $alignedGoal = app(\App\Services\Company\GoalContextResolver::class)->resolveForRun($run, $activeProject);
+        if ($alignedGoal !== null) {
+            $routerCtx['goal_context'] = app(\App\Services\Company\GoalContextResolver::class)->contextBlock($alignedGoal);
+            if (($run->metadata['goal_id'] ?? null) !== $alignedGoal->id) {
+                $run->update(['metadata' => array_merge($run->metadata ?? [], ['goal_id' => $alignedGoal->id])]);
+            }
         }
 
         if ($approvedPlan !== null) {
@@ -1608,6 +1657,9 @@ class OrchestratorService
                     );
                 }
                 if ($maxRevisionRounds <= 0 || $revisionRoundsUsed >= $maxRevisionRounds) {
+                    break;
+                }
+                if ($this->haltForBudget($run, $tokenAcc, $emit)) {
                     break;
                 }
 
@@ -3828,19 +3880,69 @@ class OrchestratorService
         int $tokenAccAfter,
         ?callable $emit,
     ): void {
-        $budget = (int) config('bossku.token_budget_per_run', 0);
-        if ($budget <= 0 || $emit === null) {
+        if ($emit === null) {
             return;
         }
-        if ($tokenAccBefore < $budget && $tokenAccAfter >= $budget) {
+
+        $status = app(CostBudgetGuard::class)->evaluate($run->id, $tokenAccAfter);
+
+        if ($status['state'] === CostBudgetGuard::EXCEEDED) {
+            $this->emit($emit, $this->basePayload($run, 'budget_exceeded', [
+                'status' => 'warning',
+                'agent' => 'orchestrator',
+                'summary' => 'Run budget exceeded ('.$status['reason'].'): $'.number_format($status['usd_spent'], 4)
+                    .' spent, ~'.number_format($status['tokens']).' tokens.'
+                    .(app(CostBudgetGuard::class)->hardStopEnabled() ? ' Remaining optional stages will be skipped.' : ''),
+                'artifacts' => ['budget' => $status],
+            ]));
+
+            return;
+        }
+
+        // Token-cap crossing keeps the original "warn once" behaviour; the guard
+        // adds the same for the USD cap and richer detail.
+        $tokenBudget = (int) config('bossku.token_budget_per_run', 0);
+        $crossedToken = $tokenBudget > 0 && $tokenAccBefore < $tokenBudget && $tokenAccAfter >= $tokenBudget;
+        if ($status['state'] === CostBudgetGuard::WARNING || $crossedToken) {
             $this->emit($emit, $this->basePayload($run, 'token_budget_warning', [
                 'status' => 'warning',
                 'agent' => 'orchestrator',
-                'summary' => 'This run has used ~'.number_format($tokenAccAfter).' estimated tokens (budget: '.number_format($budget).'). Further pipeline stages will use additional tokens.',
+                'summary' => 'This run has used ~'.number_format($tokenAccAfter).' estimated tokens'
+                    .($status['usd_spent'] > 0 ? ' / $'.number_format($status['usd_spent'], 4) : '')
+                    .'. Further pipeline stages will use more.',
                 'token_count' => $tokenAccAfter,
-                'budget' => $budget,
+                'budget' => $tokenBudget,
+                'artifacts' => ['budget' => $status],
             ]));
         }
+    }
+
+    /**
+     * Hard-stop check for the audit→revise loop: when the run's recorded spend
+     * or token use exceeds a cap and the hard stop is enabled, emit a terminal
+     * budget event, record it on the run, and signal the loop to break.
+     */
+    protected function haltForBudget(Run $run, int $tokensAccrued, ?callable $emit): bool
+    {
+        if (! app(CostBudgetGuard::class)->shouldHalt($run->id, $tokensAccrued)) {
+            return false;
+        }
+
+        $status = app(CostBudgetGuard::class)->evaluate($run->id, $tokensAccrued);
+        $run->update(['metadata' => array_merge($run->metadata ?? [], [
+            'budget_halted' => true,
+            'budget_halt_reason' => $status['reason'],
+            'budget_usd_spent' => $status['usd_spent'],
+        ])]);
+
+        $this->emit($emit, $this->basePayload($run, 'budget_halt', [
+            'status' => 'warning',
+            'agent' => 'orchestrator',
+            'summary' => 'Run halted by budget hard stop ('.$status['reason'].'): $'.number_format($status['usd_spent'], 4).' spent. Stopping the revise loop and finalizing.',
+            'artifacts' => ['budget' => $status],
+        ]));
+
+        return true;
     }
 
     /**

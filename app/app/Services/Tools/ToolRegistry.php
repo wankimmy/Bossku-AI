@@ -36,6 +36,8 @@ class ToolRegistry
         'file_write_proposed',
         'file_edit',
         'run_command',
+        'mcp_list_tools',
+        'mcp_call',
     ];
 
     public function __construct(
@@ -86,6 +88,8 @@ class ToolRegistry
                 'file_write_proposed' => $this->fileWriteProposed($runId, $payload),
                 'file_edit' => $this->fileEdit($runId, $payload),
                 'run_command' => $this->runCommand($payload),
+                'mcp_list_tools' => $this->mcpListTools($payload),
+                'mcp_call' => $this->mcpCall($payload),
                 default => ['error' => 'Unknown tool'],
             };
 
@@ -445,6 +449,38 @@ class ToolRegistry
         }
 
         return $row;
+    }
+
+    /**
+     * List the tools exposed by a connected external MCP server (e.g. github,
+     * figma). @param array<string,mixed> $payload
+     */
+    protected function mcpListTools(array $payload): array
+    {
+        $server = (string) ($payload['server'] ?? '');
+        if ($server === '') {
+            throw new \InvalidArgumentException('server is required.');
+        }
+
+        $tools = app(\App\Services\Mcp\McpToolBridge::class)->listTools($server);
+
+        return ['server' => $server, 'tools' => $tools, 'count' => count($tools)];
+    }
+
+    /**
+     * Call a tool on a connected external MCP server.
+     * Payload: {server, tool, arguments?}. @param array<string,mixed> $payload
+     */
+    protected function mcpCall(array $payload): array
+    {
+        $server = (string) ($payload['server'] ?? '');
+        $tool = (string) ($payload['tool'] ?? '');
+        if ($server === '' || $tool === '') {
+            throw new \InvalidArgumentException('server and tool are required.');
+        }
+        $arguments = is_array($payload['arguments'] ?? null) ? $payload['arguments'] : [];
+
+        return app(\App\Services\Mcp\McpToolBridge::class)->callTool($server, $tool, $arguments);
     }
 
     /** @param array<string,mixed> $payload */

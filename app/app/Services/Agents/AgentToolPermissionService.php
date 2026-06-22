@@ -27,20 +27,22 @@ class AgentToolPermissionService
         'file_write_proposed',
         'file_edit',
         'run_command',
+        'mcp_list_tools',
+        'mcp_call',
     ];
 
     /** @var array<string, list<string>> */
     protected array $deniedByRole = [
-        'direct_answer' => ['file_write_proposed', 'file_edit', 'run_command', 'db_query'],
-        'writer' => ['file_write_proposed', 'file_edit', 'run_command', 'db_query'],
-        'planner' => ['file_write_proposed', 'file_edit', 'run_command', 'db_query'],
-        'auditor' => ['file_write_proposed', 'file_edit', 'run_command', 'db_query'],
-        'security_auditor' => ['file_write_proposed', 'file_edit', 'run_command', 'db_query'],
-        'final_reviewer' => ['file_write_proposed', 'file_edit', 'run_command', 'db_query'],
-        'seo-writer' => ['file_write_proposed', 'file_edit', 'run_command', 'db_query'],
-        'marketing-manager' => ['file_write_proposed', 'file_edit', 'run_command', 'db_query'],
-        'sales-manager' => ['file_write_proposed', 'file_edit', 'run_command', 'db_query'],
-        'ui-ux-designer' => ['file_write_proposed', 'file_edit', 'run_command', 'db_query'],
+        'direct_answer' => ['file_write_proposed', 'file_edit', 'run_command', 'mcp_call', 'db_query'],
+        'writer' => ['file_write_proposed', 'file_edit', 'run_command', 'mcp_call', 'db_query'],
+        'planner' => ['file_write_proposed', 'file_edit', 'run_command', 'mcp_call', 'db_query'],
+        'auditor' => ['file_write_proposed', 'file_edit', 'run_command', 'mcp_call', 'db_query'],
+        'security_auditor' => ['file_write_proposed', 'file_edit', 'run_command', 'mcp_call', 'db_query'],
+        'final_reviewer' => ['file_write_proposed', 'file_edit', 'run_command', 'mcp_call', 'db_query'],
+        'seo-writer' => ['file_write_proposed', 'file_edit', 'run_command', 'mcp_call', 'db_query'],
+        'marketing-manager' => ['file_write_proposed', 'file_edit', 'run_command', 'mcp_call', 'db_query'],
+        'sales-manager' => ['file_write_proposed', 'file_edit', 'run_command', 'mcp_call', 'db_query'],
+        'ui-ux-designer' => ['file_write_proposed', 'file_edit', 'run_command', 'mcp_call', 'db_query'],
     ];
 
     /** @return list<string> */

@@ -156,6 +156,55 @@ class SpecialistAgentDraftingService
         ]);
     }
 
+    /**
+     * Persist a specialist from an LLM-synthesized spec (see
+     * {@see DynamicSpecialistSynthesizer}). Created as a draft so it is used in
+     * the current run yet still needs review before the router reuses it.
+     *
+     * @param  array{display_name: string, role_slug: string, description: string, trigger_keywords: list<string>, expertise?: list<string>, persona_content: string}  $spec
+     * @param  array<string, mixed>  $context
+     */
+    public function draftFromSpec(Project $project, array $spec, array $context = []): SpecialistAgent
+    {
+        $roleSlug = $this->uniqueRoleSlug($project, $spec['role_slug'] !== '' ? $spec['role_slug'] : $this->roleSlug($spec['display_name']));
+        $skillName = trim(StringCoercion::toString($context['skill_name'] ?? Arr::get($context, 'router_context.primary_skill.name')));
+        $linkedSkill = $skillName !== '' ? Skill::query()->where('name', $skillName)->first() : null;
+
+        return SpecialistAgent::query()->create([
+            'project_id' => $project->id,
+            'role_slug' => $roleSlug,
+            'display_name' => $spec['display_name'],
+            'description' => $spec['description'],
+            'trigger_keywords' => array_values(array_unique(array_filter($spec['trigger_keywords']))),
+            'persona_content' => $spec['persona_content'],
+            'linked_skill_id' => $linkedSkill?->id,
+            'approval_status' => 'draft',
+            'pixel_palette' => count($spec['trigger_keywords']) % 6,
+            'pixel_hue_shift' => (strlen($roleSlug) * 7) % 60,
+            'seat_id' => null,
+            'metadata' => [
+                'source' => 'dynamic_synthesis',
+                'auto_created' => true,
+                'expertise' => array_values($spec['expertise'] ?? []),
+                'source_run_ids' => array_values(array_filter([StringCoercion::toString($context['run_id'] ?? null)])),
+                'synthesized_at' => now()->toIso8601String(),
+            ],
+        ]);
+    }
+
+    protected function uniqueRoleSlug(Project $project, string $roleSlug): string
+    {
+        $base = $roleSlug;
+        $candidate = $base;
+        $n = 2;
+        while (SpecialistAgent::query()->where('project_id', $project->id)->where('role_slug', $candidate)->exists()) {
+            $candidate = Str::limit($base, 76, '').'-'.$n;
+            $n++;
+        }
+
+        return $candidate;
+    }
+
     protected function resolveProject(Run $run): ?Project
     {
         $metadata = is_array($run->metadata) ? $run->metadata : [];

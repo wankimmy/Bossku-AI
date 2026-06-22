@@ -65,6 +65,35 @@ return [
      * so the Nuxt UI can show an alert. 0 = no limit. Default ~100k tokens.
      */
     'token_budget_per_run' => (int) env('BOSSKU_TOKEN_BUDGET_PER_RUN', 100000),
+    /**
+     * Hard $ spend cap per run (USD), enforced against real recorded usage cost
+     * (bossku_ai_usage_events.cost_usd). 0 = no USD cap. Pairs with
+     * token_budget_per_run. See App\Services\Governance\CostBudgetGuard.
+     */
+    'cost_budget_usd_per_run' => (float) env('BOSSKU_COST_BUDGET_USD_PER_RUN', 0.0),
+    /**
+     * Fraction of a cap (0–1) at which a budget WARNING is emitted before the
+     * hard limit. Default 0.8 (warn at 80%).
+     */
+    'budget_warn_threshold' => (float) env('BOSSKU_BUDGET_WARN_THRESHOLD', 0.8),
+    /**
+     * When true, exceeding a budget cap HALTS the run (stops the audit→revise
+     * loop and skips remaining optional stages) instead of only warning.
+     * Opt-in for safety; default off.
+     */
+    'budget_hard_stop' => env('BOSSKU_BUDGET_HARD_STOP', false),
+    /**
+     * When true, a run with no explicit goal_id aligns to the project's top
+     * active goal (highest priority, most recent) so its plan and work issues
+     * roll up under the live objective. An explicit run goal_id always wins.
+     * See App\Services\Company\GoalContextResolver.
+     */
+    'align_runs_to_active_goal' => env('BOSSKU_ALIGN_RUNS_TO_ACTIVE_GOAL', false),
+    /**
+     * Request timeout (seconds) when dispatching a task to an external HTTP
+     * worker agent (runtime_mode=http). See App\Services\Agents\HttpAgentAdapter.
+     */
+    'http_agent_timeout_seconds' => (int) env('BOSSKU_HTTP_AGENT_TIMEOUT_SECONDS', 60),
     /** Max executor re-proposal rounds after user code-review "request changes" on approvals. */
     'max_approval_review_rounds' => (int) env('BOSSKU_MAX_APPROVAL_REVIEW_ROUNDS', 3),
     'show_raw_json' => env('BOSSKUAI_SHOW_RAW_JSON', true),

@@ -14,6 +14,7 @@ class WorkIssue extends Model
 
     protected $fillable = [
         'project_id',
+        'goal_id',
         'parent_issue_id',
         'run_id',
         'source_plan_item_id',
@@ -37,6 +38,11 @@ class WorkIssue extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class, 'project_id');
+    }
+
+    public function goal(): BelongsTo
+    {
+        return $this->belongsTo(Goal::class, 'goal_id');
     }
 
     public function run(): BelongsTo

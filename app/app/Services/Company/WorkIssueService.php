@@ -31,6 +31,10 @@ class WorkIssueService
         $breakdown = $this->breakdownByPlanItem($plan);
         $issues = [];
 
+        // Roll generated issues up to the run's aligned goal (set by the
+        // orchestrator via GoalContextResolver) so goal progress tracks them.
+        $goalId = StringCoercion::toString(($run->metadata['goal_id'] ?? null));
+
         foreach ($checklist as $idx => $item) {
             if (! is_array($item)) {
                 continue;
@@ -49,6 +53,7 @@ class WorkIssueService
                 ],
                 [
                     'project_id' => $project->id,
+                    'goal_id' => $goalId !== '' ? $goalId : null,
                     'title' => $title,
                     'description' => $description,
                     'status' => 'todo',
@@ -81,6 +86,13 @@ class WorkIssueService
             }
 
             $issues[] = $issue->refresh();
+        }
+
+        if ($goalId !== '' && $issues !== []) {
+            $goal = \App\Models\BosskuAi\Goal::query()->find($goalId);
+            if ($goal !== null) {
+                app(GoalService::class)->recomputeProgress($goal);
+            }
         }
 
         return $issues;

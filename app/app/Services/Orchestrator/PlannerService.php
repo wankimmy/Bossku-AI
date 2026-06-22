@@ -140,6 +140,13 @@ When `semantic_code_context` is present in the user payload, treat it as the mos
 - Anchor your plan's key_design_decisions and risk_notes to actual code you can see.
 - Set confidence higher when relevant code is visible.
 SYS;
+        $goalAlignment = $this->buildGoalAlignment($routerContext);
+        if ($goalAlignment !== null) {
+            $system .= "\n\nGOAL ALIGNMENT:\n- This work serves the business goal \"".$goalAlignment['title'].'"'
+                .($goalAlignment['target_metric'] !== '' ? ' (target: '.$goalAlignment['target_metric'].', currently '.$goalAlignment['progress_pct'].'% done)' : '')
+                .". Shape the checklist so its items measurably advance this goal, and in `goal` state how this task moves the goal forward. Flag scope that does not serve the goal as a planner_question instead of silently expanding work.";
+        }
+
         $plannerMd = $this->loadPlannerAgentsMd();
         $system .= "\n\n".$this->toolPermissions->formatToolsBlock('planner', $plannerMd);
         if ($plannerMd !== null && preg_match('/<!--\s*runtime-core:start\s*-->(.*?)<!--\s*runtime-core:end\s*-->/s', $plannerMd, $coreMatch)) {
@@ -170,10 +177,13 @@ SYS;
             'conversation_history' => $conversationSummary,
             'conversation_turns' => count($conversation),
             'prior_memory' => $formattedMemory,
-            'skill_router' => Arr::except($routerContext, ['_scores']),
+            'skill_router' => Arr::except($routerContext, ['_scores', 'goal_context']),
             'routing' => $modelRoute,
             'repo_index' => $repoIndex,
         ];
+        if ($goalAlignment !== null) {
+            $userPayload['goal_alignment'] = $goalAlignment;
+        }
         if ($semanticCodeContext !== '') {
             $userPayload['semantic_code_context'] = $semanticCodeContext;
         }
@@ -221,6 +231,30 @@ SYS;
      * @param array<string, mixed> $modelRoute
      * @return array<string, mixed>
      */
+    /**
+     * Extract a compact goal-alignment block from the router context (set by
+     * the orchestrator via GoalContextResolver). Returns null when no goal
+     * applies to this run.
+     *
+     * @param  array<string, mixed>  $routerContext
+     * @return array{title: string, target_metric: string, progress_pct: int, status: string, description: string}|null
+     */
+    protected function buildGoalAlignment(array $routerContext): ?array
+    {
+        $goal = $routerContext['goal_context'] ?? null;
+        if (! is_array($goal) || trim(StringCoercion::toString($goal['title'] ?? null)) === '') {
+            return null;
+        }
+
+        return [
+            'title' => StringCoercion::toString($goal['title'] ?? null),
+            'target_metric' => StringCoercion::toString($goal['target_metric'] ?? null),
+            'progress_pct' => (int) ($goal['progress'] ?? 0),
+            'status' => StringCoercion::toString($goal['status'] ?? null),
+            'description' => StringCoercion::toString($goal['description'] ?? null),
+        ];
+    }
+
     protected function normalizePlan(array $decoded, string $prompt, array $routerContext, array $modelRoute): array
     {
         $skill = (string) ($decoded['selected_skill'] ?? $routerContext['primary_skill']['name'] ?? $modelRoute['skill'] ?? 'general');
