@@ -592,6 +592,14 @@ class ExecutorEvidenceSupport
                 $problems[] = 'File write skipped: '.$skip;
             }
         }
+        foreach (is_array($report['diagnostics'] ?? null) ? $report['diagnostics'] : [] as $diag) {
+            if (! is_array($diag) || ($diag['ok'] ?? true) !== false) {
+                continue;
+            }
+            $errs = is_array($diag['errors'] ?? null) ? implode('; ', array_map('strval', $diag['errors'])) : '';
+            $problems[] = 'Diagnostics failed ('.($diag['checker'] ?? 'check').') for '
+                .($diag['path'] ?? '').($errs !== '' ? ': '.$errs : '');
+        }
 
         if ($problems === []) {
             return $execResult;

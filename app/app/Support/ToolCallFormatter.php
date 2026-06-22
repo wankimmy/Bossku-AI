@@ -32,7 +32,9 @@ final class ToolCallFormatter
             'file_search' => 'Searching repo for "'.self::query($payload).'"'
                 .(self::glob($payload) !== '*' ? ' in '.self::glob($payload) : ''),
             'file_glob' => 'Listing files: '.self::pattern($payload),
+            'file_edit' => 'Editing file: '.self::path($payload),
             'file_write_proposed' => 'Proposing file write: '.self::path($payload),
+            'run_command' => 'Running: '.self::truncate(self::string($payload['command'] ?? ''), 120),
             'db_query' => 'Running read-only SQL: '.self::sqlPreview($payload),
             'log' => 'Log: '.self::truncate(self::string($payload['message'] ?? ''), 120),
             default => 'Tool: '.$tool,
@@ -48,7 +50,9 @@ final class ToolCallFormatter
             'file_read_safe' => ['path' => self::path($payload)],
             'file_search' => ['q' => self::query($payload), 'glob' => self::glob($payload)],
             'file_glob' => ['pattern' => self::pattern($payload)],
+            'file_edit' => ['path' => self::path($payload), 'edits' => self::editCount($payload)],
             'file_write_proposed' => ['path' => self::path($payload)],
+            'run_command' => ['command' => self::truncate(self::string($payload['command'] ?? ''), 200)],
             'db_query' => ['sql' => self::sqlPreview($payload)],
             'log' => ['message' => self::truncate(self::string($payload['message'] ?? ''), 200)],
             default => $payload,
@@ -63,6 +67,19 @@ final class ToolCallFormatter
         $path = self::string($payload['path'] ?? '');
 
         return $path !== '' ? $path : '(path missing)';
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    protected static function editCount(array $payload): int
+    {
+        $edits = $payload['edits'] ?? null;
+        if (is_array($edits) && $edits !== []) {
+            return count($edits);
+        }
+
+        return isset($payload['old_string']) || isset($payload['oldString']) ? 1 : 0;
     }
 
     /**

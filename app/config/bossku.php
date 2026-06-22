@@ -46,6 +46,21 @@ return [
      */
     'max_revision_rounds' => (int) env('BOSSKUAI_MAX_REVISION_ROUNDS', 2),
     /**
+     * Hard iteration cap for the agentic tool-use loop (AgenticToolLoop). The
+     * loop also stops early on done=true or stuck detection. Clamped to [1, 50].
+     */
+    'agentic_max_iterations' => (int) env('BOSSKUAI_AGENTIC_MAX_ITERATIONS', 12),
+    /**
+     * Executor mode for the main pipeline step:
+     *  - 'single_shot' (default): the model returns one JSON plan that the
+     *     pipeline applies and audits (the long-standing behaviour).
+     *  - 'agentic': the AgenticToolLoop performs the work iteratively
+     *     (read → edit → run tests → fix) through the governed ToolRegistry.
+     * Agentic mode only activates when auto-apply is enabled (no per-change user
+     * approval); otherwise the pipeline falls back to single_shot for that run.
+     */
+    'executor_mode' => env('BOSSKUAI_EXECUTOR_MODE', 'single_shot'),
+    /**
      * Soft token budget per run (estimated tokens). When exceeded, a warning event is emitted
      * so the Nuxt UI can show an alert. 0 = no limit. Default ~100k tokens.
      */

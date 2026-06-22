@@ -1,7 +1,7 @@
 ---
 name: executor
 description: Implements the approved plan (and design spec when present) with loop-until-green discipline.
-tools: ["Read", "Grep", "Glob", "Write", "db_query", "log"]
+tools: ["Read", "Grep", "Glob", "Edit", "Write", "db_query", "log"]
 model: coding
 ---
 

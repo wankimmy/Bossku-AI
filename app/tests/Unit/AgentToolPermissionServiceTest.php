@@ -117,17 +117,39 @@ MD;
 
         $allowed = $service->allowedTools('executor', $raw);
 
-        $this->assertSame(['file_read_safe', 'log'], $allowed);
+        // "Task" is unknown and dropped; "Shell"/"Bash" both alias to run_command (deduped).
+        $this->assertSame(['file_read_safe', 'run_command', 'log'], $allowed);
     }
 
     #[Test]
-    public function edit_alias_maps_to_file_write_proposed(): void
+    public function edit_alias_maps_to_surgical_file_edit(): void
+    {
+        $service = app(AgentToolPermissionService::class);
+
+        $this->assertSame(
+            ['file_edit'],
+            $service->normalizeTools(['Edit']),
+        );
+    }
+
+    #[Test]
+    public function write_alias_still_maps_to_file_write_proposed(): void
     {
         $service = app(AgentToolPermissionService::class);
 
         $this->assertSame(
             ['file_write_proposed'],
-            $service->normalizeTools(['Edit']),
+            $service->normalizeTools(['Write']),
         );
+    }
+
+    #[Test]
+    public function executor_can_use_surgical_edit_but_read_only_roles_cannot(): void
+    {
+        $service = app(AgentToolPermissionService::class);
+
+        $this->assertTrue($service->isAllowed('executor', 'file_edit'));
+        $this->assertFalse($service->isAllowed('auditor', 'file_edit'));
+        $this->assertFalse($service->isAllowed('planner', 'file_edit'));
     }
 }

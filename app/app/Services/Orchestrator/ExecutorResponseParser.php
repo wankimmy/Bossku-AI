@@ -93,8 +93,9 @@ final class ExecutorResponseParser
 
         $after = StringCoercion::toString($item['after'] ?? $item['new_contents'] ?? $item['contents'] ?? null, '');
         $diff = StringCoercion::toString($item['diff'] ?? null, '');
+        $hasEdits = is_array($item['edits'] ?? null) && $item['edits'] !== [];
 
-        return $after !== '' || $diff !== '';
+        return $after !== '' || $diff !== '' || $hasEdits;
     }
 
     /** True when file content carries an elision marker instead of real code. */

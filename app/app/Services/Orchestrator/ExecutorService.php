@@ -168,7 +168,7 @@ HONESTY RULES (hard constraints):
 Output JSON only (no markdown fences). Required keys:
 status ("success"|"partial"|"failed"),
 files_read (array of {path, reason}),
-files_changed (array of {path, change_type, summary, why, after?, diff?}),
+files_changed (array of {path, change_type, summary, why, edits?, after?, diff?}),
 commands_run (array of {command: string, cwd?: string} — cwd optional for sibling repos under /workspace; omit to use active project),
 tests_run, tests_result, patch_summary,
 known_issues, needs_user_input, blockers, suggested_options, needs_audit,
@@ -178,12 +178,15 @@ memory_lessons_applied (string[] — cite which [Memory N] lessons you applied a
 checklist_status (array of {id: string, status: "completed"|"partial"|"failed"|"skipped", notes: string} — one entry per plan checklist item).
 
 File write rules:
-- For MODIFY operations on existing files: return a valid unified diff in the `diff` key (not `after`). Format: `--- path\n+++ path\n @@ ... @@\n -old\n +new\n context`. This saves tokens and lets the system apply targeted patches.
+- READS ARE LINE-NUMBERED: file_read_safe and preflight reads show each line as `<n>: <content>`. When you quote text into `old_string`/diffs, copy ONLY the content after the `<n>: ` prefix — never include the line number. Large files are paged; request more with file_read_safe {path, offset, limit}.
+- For MODIFY operations on existing files: PREFER surgical `edits` — an array of {old_string, new_string, replace_all?}. `old_string` is the EXACT snippet to replace (quoted verbatim from the file you read, with enough surrounding lines to be unique); `new_string` is its replacement. Set replace_all=true only to rename every occurrence. This is the most reliable and token-cheap mechanism: the system locates the snippet even if whitespace/indentation drift, and rejects edits that are not found or ambiguous so you can retry with a longer, more specific `old_string`.
+  - Keep each `old_string` minimal but UNIQUE. If an edit comes back "ambiguous", add more surrounding context. If "not found", re-read the file and quote the real text.
+  - Use multiple entries in `edits` for several changes to the same file.
+- Use a unified `diff` only if you cannot express the change as `edits`. Format: `--- path\n+++ path\n @@ ... @@\n -old\n +new\n context`.
 - For CREATE operations (new file): return the complete file contents in `after`.
-- For DELETE operations: set change_type to "deleted" and omit `after` and `diff`.
-- NEVER put placeholders, "...", or "rest of file unchanged" in `after` or `diff`.
-- If you do not have enough context to write a correct diff, set `after` to the complete file instead of guessing.
-- Only include the changed hunks in the diff — no need to include the full file.
+- For DELETE operations: set change_type to "deleted" and omit `edits`, `after`, and `diff`.
+- NEVER put placeholders, "...", or "rest of file unchanged" in `edits`, `after`, or `diff`.
+- For a whole-file rewrite, set `after` to the complete file. Never mix `edits` and `after` on the same file.
 SYS;
 
         $isRejectedRevert = is_array($auditFeedback)
@@ -307,6 +310,7 @@ SYS;
                 'summary' => StringCoercion::toString($item['summary'] ?? $item['description'] ?? null),
                 'why' => StringCoercion::toString($item['why'] ?? null),
                 'after' => $after !== '' ? $after : null,
+                'edits' => $this->normalizeEdits($item['edits'] ?? null),
                 'diff' => is_string($item['diff'] ?? null) ? $item['diff'] : null,
             ];
         }, is_array($result['files_changed'] ?? null) ? $result['files_changed'] : []), fn ($item) => $item !== null && $item['path'] !== ''));
@@ -372,6 +376,38 @@ SYS;
         $taskType = strtolower(StringCoercion::toString($modelRoute['task_type'] ?? null, ''));
 
         return ! in_array($taskType, self::READ_ONLY_TASK_TYPES, true);
+    }
+
+    /**
+     * Normalize the surgical `edits` array on a files_changed item to a clean
+     * list of {old_string, new_string, replace_all}. Returns null when absent
+     * or empty so the applier falls through to `after`/`diff`.
+     *
+     * @return list<array{old_string: string, new_string: string, replace_all: bool}>|null
+     */
+    protected function normalizeEdits(mixed $edits): ?array
+    {
+        if (! is_array($edits) || $edits === []) {
+            return null;
+        }
+
+        $out = [];
+        foreach ($edits as $edit) {
+            if (! is_array($edit)) {
+                continue;
+            }
+            $old = StringCoercion::toString($edit['old_string'] ?? $edit['oldString'] ?? null, '');
+            if ($old === '') {
+                continue;
+            }
+            $out[] = [
+                'old_string' => $old,
+                'new_string' => StringCoercion::toString($edit['new_string'] ?? $edit['newString'] ?? null, ''),
+                'replace_all' => (bool) ($edit['replace_all'] ?? $edit['replaceAll'] ?? false),
+            ];
+        }
+
+        return $out === [] ? null : $out;
     }
 
     /** @param list<array<string,mixed>> $memories */

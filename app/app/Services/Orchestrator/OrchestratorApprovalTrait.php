@@ -19,6 +19,12 @@ trait OrchestratorApprovalTrait
         array $pipeline,
         ?callable $emit,
     ): array {
+        // Agentic mode applied its file changes during the loop (through this
+        // same governance), so there is nothing to apply or propose here.
+        if (($execResult['_files_already_applied'] ?? false) === true) {
+            return $execResult;
+        }
+
         if (! $this->executorApprovals->requireUserApproval()) {
             $execResult = $this->applyExecutorFileChanges($run, $execResult, $emit);
 

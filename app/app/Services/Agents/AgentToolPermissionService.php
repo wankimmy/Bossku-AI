@@ -12,7 +12,9 @@ class AgentToolPermissionService
         'grep' => 'file_search',
         'glob' => 'file_glob',
         'write' => 'file_write_proposed',
-        'edit' => 'file_write_proposed',
+        'edit' => 'file_edit',
+        'bash' => 'run_command',
+        'shell' => 'run_command',
     ];
 
     /** @var list<string> */
@@ -23,20 +25,22 @@ class AgentToolPermissionService
         'file_search',
         'file_glob',
         'file_write_proposed',
+        'file_edit',
+        'run_command',
     ];
 
     /** @var array<string, list<string>> */
     protected array $deniedByRole = [
-        'direct_answer' => ['file_write_proposed', 'db_query'],
-        'writer' => ['file_write_proposed', 'db_query'],
-        'planner' => ['file_write_proposed', 'db_query'],
-        'auditor' => ['file_write_proposed', 'db_query'],
-        'security_auditor' => ['file_write_proposed', 'db_query'],
-        'final_reviewer' => ['file_write_proposed', 'db_query'],
-        'seo-writer' => ['file_write_proposed', 'db_query'],
-        'marketing-manager' => ['file_write_proposed', 'db_query'],
-        'sales-manager' => ['file_write_proposed', 'db_query'],
-        'ui-ux-designer' => ['file_write_proposed', 'db_query'],
+        'direct_answer' => ['file_write_proposed', 'file_edit', 'run_command', 'db_query'],
+        'writer' => ['file_write_proposed', 'file_edit', 'run_command', 'db_query'],
+        'planner' => ['file_write_proposed', 'file_edit', 'run_command', 'db_query'],
+        'auditor' => ['file_write_proposed', 'file_edit', 'run_command', 'db_query'],
+        'security_auditor' => ['file_write_proposed', 'file_edit', 'run_command', 'db_query'],
+        'final_reviewer' => ['file_write_proposed', 'file_edit', 'run_command', 'db_query'],
+        'seo-writer' => ['file_write_proposed', 'file_edit', 'run_command', 'db_query'],
+        'marketing-manager' => ['file_write_proposed', 'file_edit', 'run_command', 'db_query'],
+        'sales-manager' => ['file_write_proposed', 'file_edit', 'run_command', 'db_query'],
+        'ui-ux-designer' => ['file_write_proposed', 'file_edit', 'run_command', 'db_query'],
     ];
 
     /** @return list<string> */

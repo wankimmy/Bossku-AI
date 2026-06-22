@@ -28,6 +28,7 @@ use App\Services\BosskuAi\SkillRouterService;
 use App\Services\Graph\KnowledgeGraphBuilder;
 use App\Services\Governance\ExecutorApprovalService;
 use App\Services\Learning\UserSelfLearningService;
+use App\Services\Project\ChangedFileDiagnostics;
 use App\Services\Project\ProjectCommandRunner;
 use App\Services\Project\ProjectFileDiscovery;
 use App\Services\Project\ProjectPathResolver;
@@ -1132,24 +1133,36 @@ class OrchestratorService
             'model' => $modelsResolved['executor'] ?? '',
         ]));
 
-        $execResult = $this->executor->execute(
-            $step,
-            $skillRow,
-            $ruleLines,
-            $pbExcerpt,
-            $chkExcerpt,
-            null,
-            $plan,
-            $modelRoute,
-            $execProfileKey,
-            $this->projects->agentWorkspaceContext(),
-            $preflightReads,
-            null,
-            $memPayload,
-            $conversation,
-            $run->id,
-            $specialistContext,
-        );
+        if ($this->useAgenticExecutor()) {
+            $execResult = app(\App\Services\Agents\AgenticExecutorAdapter::class)->execute(
+                $step,
+                $plan,
+                $modelRoute,
+                $execProfileKey,
+                $run->id,
+                $emit,
+                $preflightReads,
+            );
+        } else {
+            $execResult = $this->executor->execute(
+                $step,
+                $skillRow,
+                $ruleLines,
+                $pbExcerpt,
+                $chkExcerpt,
+                null,
+                $plan,
+                $modelRoute,
+                $execProfileKey,
+                $this->projects->agentWorkspaceContext(),
+                $preflightReads,
+                null,
+                $memPayload,
+                $conversation,
+                $run->id,
+                $specialistContext,
+            );
+        }
         $execResult = ExecutorEvidenceSupport::mergePreflightReads($execResult, $preflightReads);
         $execResult = $this->applyExecutorCommands($run, $execResult, $emit);
         $this->maybeReindexAfterWrites($execResult, $activeProject);
@@ -2751,8 +2764,29 @@ class OrchestratorService
         return $revisionRoundsUsed >= ($escalateEarly ? 0 : 1) ? 'high_risk' : $execProfileKey;
     }
 
+    /**
+     * Whether the main executor step should run the agentic tool-use loop
+     * instead of the single-shot executor. Requires executor_mode=agentic AND
+     * auto-apply (the loop applies during its run; per-change user approval is
+     * incompatible), otherwise the pipeline falls back to single-shot.
+     */
+    protected function useAgenticExecutor(): bool
+    {
+        if (strtolower((string) config('bossku.executor_mode', 'single_shot')) !== 'agentic') {
+            return false;
+        }
+
+        return ! $this->executorApprovals->requireUserApproval();
+    }
+
     protected function applyExecutorCommands(Run $run, array $execResult, ?callable $emit): array
     {
+        // Agentic mode already ran commands through the governed runner during
+        // its loop; re-running here would double-execute them.
+        if (($execResult['_commands_already_run'] ?? false) === true) {
+            return $execResult;
+        }
+
         $commandsRun = is_array($execResult['commands_run'] ?? null) ? $execResult['commands_run'] : [];
         if ($commandsRun === []) {
             return $execResult;
@@ -2800,10 +2834,38 @@ class OrchestratorService
 
     protected function applyExecutorFileChanges(Run $run, array $execResult, ?callable $emit): array
     {
+        // Agentic mode already applied (and diagnosed) its file changes during
+        // the loop; skip to avoid re-applying the same writes.
+        if (($execResult['_files_already_applied'] ?? false) === true) {
+            return $execResult;
+        }
+
         $result = $this->executorFileApplier->applyFromExecutorResult($run->id, $execResult);
         $execResult = $result['execResult'];
         $report = $result;
         unset($report['execResult']);
+
+        // Post-edit diagnostics: run cheap syntax/validity checks on every file
+        // we just wrote, so a broken edit is caught here (and folded into the
+        // revise loop via mergeApplyReport) instead of shipping a file that
+        // does not parse. Mirrors opencode's read-diagnostics-after-edit step.
+        if ($report['applied'] !== []) {
+            $diagnostics = (new ChangedFileDiagnostics($this->paths))->check($report['applied']);
+            $report['diagnostics'] = $diagnostics;
+            $failed = array_values(array_filter(
+                $diagnostics,
+                static fn (array $d): bool => ($d['ok'] ?? true) === false,
+            ));
+            if ($failed !== [] && $emit !== null) {
+                $emit($this->basePayload($run, 'files_diagnostics', [
+                    'agent' => 'executor',
+                    'status' => 'warning',
+                    'summary' => count($failed).' applied file(s) failed diagnostics (syntax/validity).',
+                    'artifacts' => ['diagnostics' => $failed],
+                ]));
+            }
+        }
+
         $execResult['_files_applied'] = $report;
 
         if ($report['applied'] !== [] && $emit !== null) {

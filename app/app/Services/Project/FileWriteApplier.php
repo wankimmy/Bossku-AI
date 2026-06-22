@@ -12,6 +12,7 @@ class FileWriteApplier
         private readonly ProjectPathResolver $paths,
         private readonly WorkspaceWriteGuard $writeGuard,
         private readonly ProposedFileChangeGuard $fileChangeGuard,
+        private readonly FileEditEngine $editEngine = new FileEditEngine,
     ) {}
 
     /**
@@ -314,6 +315,20 @@ class FileWriteApplier
         $path = (string) ($relativePath ?? $item['path'] ?? '');
         if ($path === '') {
             return null;
+        }
+
+        // Surgical edits are preferred over a unified diff: the model quotes the
+        // exact snippet to change and the fuzzy edit engine locates it even when
+        // whitespace/indentation drift, which is far more reliable than matching
+        // diff context lines. Edit-engine failures (not found / ambiguous) are
+        // left to propagate so the caller records a loud, actionable error
+        // instead of silently dropping the change.
+        $edits = $item['edits'] ?? null;
+        if (is_array($edits) && $edits !== []) {
+            $resolved = $this->paths->resolve($path);
+            $before = is_file($resolved['absolute']) ? (string) file_get_contents($resolved['absolute']) : '';
+
+            return $this->editEngine->applyEdits($before, array_values($edits));
         }
 
         $diff = $item['diff'] ?? null;
