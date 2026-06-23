@@ -16,6 +16,14 @@ return [
         'router_llm_enabled' => true,
     ],
 
+    /**
+     * When true, the auditor / security-auditor / final-reviewer roles reorder their
+     * resolved model list by the domain of the change (DomainModelSelector) instead of
+     * always leading with the configured primary. An explicit per-role pin in Settings
+     * is always honored first. Disable to force the static primary everywhere.
+     */
+    'domain_adaptive_reviewers' => env('BOSSKU_DOMAIN_ADAPTIVE_REVIEWERS', true),
+
     'router' => [
         'primary' => 'kimi-k2.6',
         'fallback' => ['glm-5.1', 'deepseek-v4-pro', 'qwen3-coder-next'],
@@ -106,6 +114,7 @@ return [
             'summarize_patch_for_auditor',
             'never_expose_secrets',
             'never_modify_unrelated_files',
+            'never_terminate_own_runtime_or_wipe_data',
         ],
     ],
 

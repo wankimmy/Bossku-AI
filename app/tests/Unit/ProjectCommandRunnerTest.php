@@ -167,6 +167,33 @@ class ProjectCommandRunnerTest extends TestCase
     }
 
     #[Test]
+    public function it_blocks_self_terminating_and_data_wiping_commands(): void
+    {
+        config(['bossku.allow_docker_compose_commands' => true]);
+        $runner = app(ProjectCommandRunner::class);
+
+        // Self-preservation: commands that would stop or kill the runtime the agent runs in.
+        foreach ([
+            'docker compose down',
+            'docker compose stop',
+            'docker compose restart web',
+            'php artisan migrate:fresh',
+            'php artisan migrate:reset',
+            'php artisan db:wipe',
+        ] as $command) {
+            $this->assertSame(
+                'Command blocked: contains disallowed token.',
+                $runner->validateCommand($command, $this->repo),
+                "expected to block: {$command}",
+            );
+        }
+
+        // A normal docker compose verb is still allowed (subject to the sock check).
+        $psResult = $runner->validateCommand('docker compose ps', $this->repo);
+        $this->assertNotSame('Command blocked: contains disallowed token.', $psResult);
+    }
+
+    #[Test]
     public function it_marks_commands_skipped_when_auto_execute_disabled(): void
     {
         config(['bossku.auto_execute_project_commands' => false]);

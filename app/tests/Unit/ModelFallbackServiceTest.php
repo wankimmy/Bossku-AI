@@ -285,6 +285,51 @@ class ModelFallbackServiceTest extends TestCase
     }
 
     #[Test]
+    public function near_empty_review_response_falls_through_to_a_complementary_model(): void
+    {
+        $messages = [
+            ['role' => 'system', 'content' => 'JSON only.'],
+            ['role' => 'user', 'content' => 'Audit this.'],
+        ];
+        $modelsCalled = [];
+        $richSummary = str_repeat('A concrete finding with file:line evidence. ', 8);
+
+        $gateway = $this->createMock(LlmGateway::class);
+        $gateway->expects($this->exactly(2))
+            ->method('chat')
+            ->willReturnCallback(function (string $model) use (&$modelsCalled, $richSummary): array {
+                $modelsCalled[] = $model;
+                $text = $model === 'thin-auditor'
+                    ? '{"status":"pass","summary":"ok"}'
+                    : '{"status":"pass","summary":"'.$richSummary.'"}';
+
+                return [
+                    'text' => $text,
+                    'provider' => 'ollama',
+                    'input_tokens' => 2,
+                    'output_tokens' => 1,
+                    'model_logical' => $model,
+                    'model_resolved' => $model.':cloud',
+                ];
+            });
+
+        /** @var LlmGateway $gateway */
+        $svc = new ModelFallbackService($gateway, app(AgentPersonaService::class));
+        $out = $svc->chatWithFallbacks(
+            ['thin-auditor', 'rich-auditor'],
+            $messages,
+            0.1,
+            1,
+            'auditor',
+            fn (mixed $j): bool => is_array($j) && isset($j['status'], $j['summary'])
+        );
+
+        // The thin (valid but hollow) verdict is rejected; the substantive model wins.
+        $this->assertSame(['thin-auditor', 'rich-auditor'], $modelsCalled);
+        $this->assertSame('rich-auditor', $out['model_used']);
+    }
+
+    #[Test]
     public function fallback_continues_after_first_model_fails_without_needing_logging(): void
     {
         $messages = [

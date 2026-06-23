@@ -113,6 +113,22 @@ class ModelFallbackService
                             throw new \RuntimeException('invalid_json_schema');
                         }
                     }
+
+                    // Quality gate: a textually/structurally valid but near-empty response
+                    // usually means the model bailed (refusal, quota wall, stub). For roles
+                    // where a hollow result is itself the bug — e.g. an auditor returning an
+                    // empty verdict — fall through to a complementary model instead of
+                    // reporting the hollow result as success. Mirrors Fugu's reward=0 for
+                    // unparseable/empty worker output.
+                    $degradedFloor = $this->degradedFloorForRole($role);
+                    if ($degradedFloor > 0 && $idx < $modelCount - 1) {
+                        $effectiveLen = $isValidJson !== null
+                            ? strlen((string) json_encode($parsedData))
+                            : mb_strlen($text);
+                        if ($effectiveLen < $degradedFloor) {
+                            throw new \RuntimeException('degraded_response');
+                        }
+                    }
                     $this->safeLog('info', 'bosskuai.llm.success', [
                         'role' => $role,
                         'model' => $model,
@@ -166,7 +182,10 @@ class ModelFallbackService
                         $retryContext['response_preview'] = self::sanitizeResponsePreview($responseText);
                     }
                     $this->safeLog('warning', 'bosskuai.llm.retry', $retryContext);
-                    if ($structuredOutput && $lastError === 'empty_response' && $idx < $modelCount - 1) {
+                    if ($structuredOutput && in_array($lastError, ['empty_response', 'degraded_response'], true) && $idx < $modelCount - 1) {
+                        break;
+                    }
+                    if (! $structuredOutput && $lastError === 'degraded_response' && $idx < $modelCount - 1) {
                         break;
                     }
                 }
@@ -174,6 +193,25 @@ class ModelFallbackService
         }
 
         throw new \RuntimeException('All models failed for role '.$role.': '.($lastError ?? 'unknown'));
+    }
+
+    /**
+     * Minimum acceptable response size (in chars) for a role before the result is treated
+     * as degraded and a complementary model is tried. 0 = gate disabled. Defaults target the
+     * review roles, where an empty verdict is a silent failure; overridable via config.
+     */
+    protected function degradedFloorForRole(string $role): int
+    {
+        $defaults = [
+            'auditor' => 200,
+            'security_auditor' => 200,
+            'final_reviewer' => 160,
+        ];
+
+        /** @var array<string, int> $configured */
+        $configured = (array) config('bossku.degraded_response_floor', []);
+
+        return max(0, (int) ($configured[$role] ?? $defaults[$role] ?? 0));
     }
 
     protected function safeLog(string $level, string $message, array $context = []): void

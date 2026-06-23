@@ -37,6 +37,14 @@ class RuntimeSettings
         return ($v !== null && $v !== '') ? $v : $default;
     }
 
+    /** True when the user has explicitly stored a value for this setting (vs. falling back to a default). */
+    public function isExplicit(string $key): bool
+    {
+        $v = Setting::getValue($key);
+
+        return $v !== null && $v !== '';
+    }
+
     public function plannerProvider(): string
     {
         return 'ollama';

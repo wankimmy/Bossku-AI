@@ -3,6 +3,7 @@
 namespace App\Services\Orchestrator;
 
 use App\Services\BosskuAi\AgentPersonaService;
+use App\Services\BosskuAi\DomainModelSelector;
 use App\Services\BosskuAi\ModelFallbackService;
 use App\Services\BosskuAi\ModelRoutingConfig;
 use App\Services\BosskuAi\RuntimeSettings;
@@ -21,6 +22,7 @@ class ExecutorService
         protected ModelRoutingConfig $modelConfig,
         protected AgentPersonaService $personas,
         protected ?RuntimeSettings $settings = null,
+        protected ?DomainModelSelector $modelSelector = null,
     ) {}
 
     /**
@@ -55,6 +57,16 @@ class ExecutorService
         $primary = (string) ($profile['primary'] ?? 'kimi-k2.6');
         $fallbacks = is_array($profile['fallback'] ?? null) ? $profile['fallback'] : [];
         $models = array_values(array_unique(array_merge([$primary], $fallbacks)));
+
+        // On an audit-driven revision, lead with a model from a different family than the
+        // one that just produced the rejected output — Fugu's build-then-debug alternation,
+        // where a complementary model beats retrying the one that already failed.
+        $previousModel = is_array($auditFeedback) ? (string) ($auditFeedback['_previous_executor_model'] ?? '') : '';
+        if ($previousModel !== '' && $this->modelSelector !== null && count($models) > 1) {
+            $models = $this->modelSelector->complementTo($previousModel, $models, $this->modelSelector->domainFor($modelRoute));
+            $primary = $models[0] ?? $primary;
+        }
+
         $retry = (int) ($profile['retry_count'] ?? 1);
         $rulesBlock = implode("\n", array_map(fn ($r) => '- '.$r, $ruleLines));
         $execRules = implode("\n", array_map(fn ($r) => '- '.$r, $this->modelConfig->executorRules()));

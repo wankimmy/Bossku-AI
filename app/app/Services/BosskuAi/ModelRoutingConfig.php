@@ -77,6 +77,19 @@ class ModelRoutingConfig
         return $cfg;
     }
 
+    /** True when the user explicitly pinned this reviewer role's model in Settings. */
+    public function roleModelIsPinned(string $role): bool
+    {
+        $key = match ($role) {
+            'auditor' => 'auditor_model',
+            'security_auditor' => 'security_auditor_model',
+            'final_reviewer' => 'final_reviewer_model',
+            default => null,
+        };
+
+        return $key !== null && $this->settings->isExplicit($key);
+    }
+
     /** @return array<string, mixed> */
     public function writer(): array
     {

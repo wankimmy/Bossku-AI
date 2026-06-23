@@ -5,6 +5,7 @@ namespace App\Services\Orchestrator;
 use App\Support\LlmTelemetry;
 use App\Support\StringCoercion;
 use App\Services\BosskuAi\AgentPersonaService;
+use App\Services\BosskuAi\DomainModelSelector;
 use App\Services\BosskuAi\ModelFallbackService;
 use App\Services\BosskuAi\ModelRoutingConfig;
 use App\Services\Project\ProjectService;
@@ -15,7 +16,8 @@ class SecurityAuditorService
         protected ModelRoutingConfig $config,
         protected ModelFallbackService $fallback,
         protected ProjectService $projects,
-        protected AgentPersonaService $personas
+        protected AgentPersonaService $personas,
+        protected DomainModelSelector $modelSelector,
     ) {}
 
     /**
@@ -58,6 +60,12 @@ class SecurityAuditorService
         $cfg = $this->config->securityAuditor();
         $primary = (string) ($cfg['primary'] ?? 'deepseek-v4-pro');
         $models = array_merge([$primary], is_array($cfg['fallback'] ?? null) ? $cfg['fallback'] : []);
+        // Security review is inherently a deep-reasoning domain regardless of the change.
+        $models = $this->modelSelector->order(
+            $models,
+            'security',
+            $this->config->roleModelIsPinned('security_auditor'),
+        );
         $retry = (int) ($cfg['retry_count'] ?? 1);
 
         $system = <<<'SYS'
