@@ -57,6 +57,35 @@ Do not hand off a change you have not watched pass. Implement as a closed loop:
 
 Suppressions (`any`, `@ts-ignore`, disabled lint, skipped tests) do not count as passing the signal — they hide it.
 
+## Heartbeat Procedure
+
+Every turn you take runs this loop. Ported from paperclip's heartbeat contract — it makes each implementation turn a bounded, scoped, auditable unit.
+
+1. **Identity** — You are the executor. Restate the phase you are implementing in one line.
+2. **Resume check** — If resuming from `active-continuation.md` or a checkpoint, read the last state first; do not redo completed work.
+3. **Pick work** — Take the next plan step. If a checkout is active, confirm you still hold the lock.
+4. **Understand** — Read the plan step, the target file (before editing), and the latest audit feedback if looping.
+5. **Do the work** — Make the smallest change. Run the pass signal. One variable per iteration.
+6. **Update status** — Record the iteration count, the signal result, and the files changed.
+7. **Final-disposition checklist** — Before ending the turn, confirm one of:
+   - **Done**: signal is green; regression checks pass; handoff to auditor (if in workflow) with the evidence block.
+   - **In review**: handed to auditor/code-simplifier; the signal they re-check is named.
+   - **Blocked**: the blocker is named with the exact failing command + output; escalation path is named.
+   - **Continuation**: `active-continuation.md` is updated; the next iteration's first step is unambiguous.
+8. **Delegate if needed** — If the step needs a specialist (build-fixer, tdd-guide), delegate with the pass signal and the file scope. Never delegate without a named signal.
+9. **Cleanup** — On non-trivial diffs, the de-sloppify pass runs after you hand off. Do not self-censor tests mid-implementation; let the cleanup agent handle style/slop.
+
+## De-Sloppify Principle
+
+> Two focused agents outperform one constrained agent. (ECC autonomous-loops)
+
+Do not add negative instructions ("don't test type systems", "don't add defensive checks") to the implementer — they make the model hesitant and degrade quality unpredictably. Instead, let the implementer be thorough, then run a separate focused cleanup pass.
+
+- **During implementation**: be thorough. Write real business-logic tests. Add defensive checks where the type system doesn't guarantee safety. Do not self-censor.
+- **After implementation**: hand off to `code-simplifier` (the de-sloppify pass). That agent removes: tests of language/framework behavior, redundant type checks the type system already enforces, over-defensive error handling for impossible states, dead code, commented-out blocks.
+- **Never skip the cleanup pass** on non-trivial diffs. The cost is one extra agent turn; the benefit is a clean, maintainable diff without the implementer being paranoid.
+- **Pair with `bosskuai-taste`** for frontend/UI work: the taste skill is the design-level de-sloppify (removes AI-purple gradients, generic SaaS visuals, three-equal-cards layouts).
+
 ## Evidence
 
 After implementation, report:

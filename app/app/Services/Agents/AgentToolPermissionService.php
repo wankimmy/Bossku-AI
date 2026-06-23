@@ -108,4 +108,45 @@ class AgentToolPermissionService
             .'Do not ask the user to enable file_read/file_write or shell access. '
             .'Use only these capabilities. Do not invent tools outside this list.';
     }
+
+    /**
+     * Build a structured PermissionRuleset for a role, porting the static
+     * deniedByRole array into the allow/deny/ask model. A denied tool becomes
+     * an explicit DENY rule; an allowed tool gets an ALLOW rule. This is the
+     * opencode-style ruleset that supports path-pattern overrides (e.g.
+     * file_write_proposed is ALLOW for executor but ASK for *.env).
+     *
+     * The default for a tool not mentioned in the role's map is DENY (the
+     * runtime tool whitelist already enforces this, but the ruleset makes it
+     * explicit for the ask-flow).
+     *
+     * @return PermissionRuleset
+     */
+    public function rulesetForRole(string $role, ?string $agentsMdRaw = null): PermissionRuleset
+    {
+        $allowed = $this->allowedTools($role, $agentsMdRaw);
+        $ruleset = new PermissionRuleset;
+
+        foreach ($this->runtimeTools as $tool) {
+            $action = in_array($tool, $allowed, true)
+                ? PermissionRule::ACTION_ALLOW
+                : PermissionRule::ACTION_DENY;
+            $ruleset->add(new PermissionRule($tool, $action));
+        }
+
+        return $ruleset;
+    }
+
+    /**
+     * Decide allow / deny / ask for a tool+path using the structured ruleset.
+     * This is the entry point for the ask-flow: callers that want a three-way
+     * decision (to surface an approval card) use this instead of isAllowed().
+     *
+     * @return PermissionRule::ACTION_*
+     */
+    public function decide(string $role, string $tool, ?string $path = null, ?string $agentsMdRaw = null): string
+    {
+        return $this->rulesetForRole($role, $agentsMdRaw)
+            ->evaluate($tool, $path, PermissionRule::ACTION_DENY);
+    }
 }
