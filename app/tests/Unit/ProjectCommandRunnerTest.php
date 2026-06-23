@@ -155,6 +155,16 @@ class ProjectCommandRunnerTest extends TestCase
     }
 
     #[Test]
+    public function it_blocks_malformed_tinker_execute_code(): void
+    {
+        $runner = app(ProjectCommandRunner::class);
+
+        $invalid = "php artisan tinker --execute='=app(\\App\\Services\\Example::class)'";
+        $this->assertStringContainsString('cannot start with "="', (string) $runner->validateCommand($invalid, $this->repo));
+        $this->assertNull($runner->validateCommand("php artisan tinker --execute='app(\\App\\Services\\Example::class)'", $this->repo));
+    }
+
+    #[Test]
     public function it_blocks_docker_compose_when_sock_unavailable(): void
     {
         config(['bossku.allow_docker_compose_commands' => true]);

@@ -13,6 +13,18 @@ describe('approvalReview', () => {
     expect(isPlaceholderText('changed')).toBe(false)
   })
 
+  it('allows long real content that mentions placeholders', () => {
+    const content = `# Implementation Status
+
+| Feature | Status | Notes |
+|---|---|---|
+| Save / Load | Implemented | Local storage persistence replaced the placeholder row. |
+${Array.from({ length: 12 }, (_, i) => `| Detail ${i} | Implemented | Concrete implementation note ${i}. |`).join('\n')}
+`
+
+    expect(isPlaceholderText(content)).toBe(false)
+  })
+
   it('blocks destructive wipe', () => {
     const before = Array.from({ length: 30 }, (_, i) => `line ${i}`).join('\n')
     const reason = validateFileChange(before, 'Will be determined after reading the file', 'modified', 'app/Foo.php')

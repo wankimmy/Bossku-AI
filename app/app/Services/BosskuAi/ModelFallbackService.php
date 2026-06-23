@@ -48,6 +48,7 @@ class ModelFallbackService
         $structuredOutput = $isValidJson !== null;
         if ($structuredOutput) {
             $messages = $this->withStructuredOutputGuard($messages);
+            $messages = self::compactMessagesForRetry($messages);
         }
 
         $modelCount = count($models);
@@ -255,10 +256,10 @@ class ModelFallbackService
     }
 
     /**
-     * Trim the middle of oversized non-system message contents so a retry has room to
-     * emit a complete JSON object. System messages (which carry the schema/rules) are
-     * left intact; head and tail of large user payloads are kept so the task and the
-     * output contract both survive.
+     * Trim oversized non-system message contents before a structured call so the model has
+     * room to emit a complete JSON object. System messages (which carry the schema/rules)
+     * are left intact; head and tail of large user payloads are kept so the task and output
+     * contract both survive.
      *
      * @param  array<int, array{role: string, content: string}>  $messages
      * @return array<int, array{role: string, content: string}>

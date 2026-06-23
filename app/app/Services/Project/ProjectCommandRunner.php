@@ -241,6 +241,10 @@ class ProjectCommandRunner
             }
         }
 
+        if ($this->hasMalformedTinkerExecute($command)) {
+            return 'Command blocked: php artisan tinker --execute code cannot start with "=". Use "app(...)" instead.';
+        }
+
         if (str_starts_with($lower, 'docker compose')) {
             if (! $this->dockerComposeEnabled()) {
                 return 'Command blocked: docker compose requires /var/run/docker.sock on the Bossku backend (local dev).';
@@ -292,6 +296,15 @@ class ProjectCommandRunner
         }
 
         return (bool) preg_match('/^(npm|npx|yarn|pnpm)\b/', $lower);
+    }
+
+    protected function hasMalformedTinkerExecute(string $command): bool
+    {
+        if (preg_match('/\bphp\s+artisan\s+tinker\b/i', $command) !== 1) {
+            return false;
+        }
+
+        return preg_match('/--execute(?:=|\s+)(?:["\']?\s*)=/', $command) === 1;
     }
 
     /**

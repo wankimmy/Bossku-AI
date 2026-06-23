@@ -194,7 +194,7 @@ class ModelFallbackServiceTest extends TestCase
     }
 
     #[Test]
-    public function invalid_json_retry_compacts_oversized_context(): void
+    public function structured_calls_compact_oversized_context_before_the_initial_attempt(): void
     {
         $bigUserContent = str_repeat('A', 30000);
         $messages = [
@@ -232,12 +232,12 @@ class ModelFallbackServiceTest extends TestCase
             fn (mixed $j): bool => is_array($j) && isset($j['status'])
         );
 
-        // First attempt sends the full oversized context.
+        // Structured calls compact oversized context before the first model attempt.
         $firstUser = collect($calls[0])->firstWhere('role', 'user')['content'] ?? '';
-        $this->assertSame(30000, mb_strlen($firstUser));
+        $this->assertLessThan(30000, mb_strlen($firstUser));
+        $this->assertStringContainsString('trimmed for retry', $firstUser);
 
-        // Retry after invalid_json_parse trims the oversized user content so the model
-        // has room to finish a complete JSON object.
+        // The repair attempt keeps the compact payload so it still has room to finish.
         $retryContents = array_column($calls[1], 'content');
         $compacted = collect($retryContents)->first(fn ($c) => str_contains((string) $c, 'trimmed for retry'));
         $this->assertNotNull($compacted, 'Expected the oversized context to be trimmed on retry.');

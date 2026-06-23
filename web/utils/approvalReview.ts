@@ -41,7 +41,8 @@ export function isPlaceholderText(text: string): boolean {
   }
 
   const lower = trimmed.toLowerCase()
-  return PLACEHOLDER_PATTERNS.some((p) => lower.includes(p))
+  const isShortProposal = trimmed.length <= 500
+  return PLACEHOLDER_PATTERNS.some((p) => lower === p || (isShortProposal && lower.includes(p)))
 }
 
 function lineCount(text: string): number {

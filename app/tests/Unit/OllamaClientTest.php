@@ -152,6 +152,23 @@ class OllamaClientTest extends TestCase
     }
 
     #[Test]
+    public function structured_calls_disable_thinking_and_ignore_reasoning_only_responses(): void
+    {
+        config(['bossku.ollama_think' => true]);
+        $ndjson = implode("\n", [
+            json_encode(['message' => ['content' => '', 'thinking' => 'I should return JSON.']]),
+            json_encode(['message' => ['content' => '', 'thinking' => 'Still reasoning.'], 'done' => true]),
+        ]);
+        Http::fake(['*/api/chat' => Http::response($ndjson, 200)]);
+
+        $client = new OllamaClient('http://127.0.0.1:11434');
+        $out = $client->chatWithUsage('kimi-k2.6:cloud', [['role' => 'user', 'content' => 'hi']], 0.2, null, 'json');
+
+        $this->assertSame('', $out['text']);
+        Http::assertSent(fn ($request) => ($request->data()['think'] ?? null) === false);
+    }
+
+    #[Test]
     public function it_sends_think_flag_only_when_configured(): void
     {
         config(['bossku.ollama_think' => false]);

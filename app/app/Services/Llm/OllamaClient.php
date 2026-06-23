@@ -38,9 +38,17 @@ class OllamaClient
             $payload['format'] = $format;
         }
 
+        $structuredOutput = $format === 'json';
+
+        // Structured responses must be final content, never a model's private reasoning.
+        // Some cloud models otherwise stream only `message.thinking`, which looks like
+        // prose to the JSON parser and triggers a pointless retry/fallback cycle.
+        $payload = self::withKeepAlive($payload);
+        $payload = self::withThink($payload, $structuredOutput ? false : null);
+
         // stream:true → Ollama sends NDJSON chunks; Guzzle stream option buffers at socket
         // level so very large completions don't load into memory as one giant string.
-        $res = $http->withOptions(['stream' => true])->post($url, self::withThink(self::withKeepAlive($payload)));
+        $res = $http->withOptions(['stream' => true])->post($url, $payload);
 
         try {
             $res->throw();
@@ -51,7 +59,7 @@ class OllamaClient
             );
         }
 
-        return self::parseStreamedNdjson($res->body());
+        return self::parseStreamedNdjson($res->body(), ! $structuredOutput);
     }
 
     /**
@@ -59,15 +67,13 @@ class OllamaClient
      * Each line is a JSON object; content tokens accumulate and the final `done:true` line
      * carries `prompt_eval_count` / `eval_count` (usage stats).
      *
-     * Thinking models (kimi, deepseek, glm, qwen reasoning variants) stream their answer in
-     * `message.thinking` and may leave `message.content` empty — which the pipeline would
-     * otherwise treat as an `empty_response` and waste a fallback call. When content is empty
-     * we fall back to the accumulated thinking text; downstream JSON parsing still extracts
-     * the embedded object.
+     * Thinking models (kimi, deepseek, glm, qwen reasoning variants) may stream their answer
+     * in `message.thinking` and leave `message.content` empty. That fallback is useful for
+     * prose, but unsafe for JSON-mode calls: reasoning is not a structured response.
      *
      * @return array{text: string, input_tokens: int|null, output_tokens: int|null}
      */
-    private static function parseStreamedNdjson(string $rawBody): array
+    private static function parseStreamedNdjson(string $rawBody, bool $allowThinkingFallback = true): array
     {
         $content = '';
         $thinking = '';
@@ -93,7 +99,7 @@ class OllamaClient
         }
 
         return [
-            'text' => trim($content) !== '' ? $content : $thinking,
+            'text' => trim($content) !== '' ? $content : ($allowThinkingFallback ? $thinking : ''),
             'input_tokens' => $inputTokens,
             'output_tokens' => $outputTokens,
         ];
@@ -254,9 +260,9 @@ class OllamaClient
      * @param  array<string, mixed>  $payload
      * @return array<string, mixed>
      */
-    protected static function withThink(array $payload): array
+    protected static function withThink(array $payload, ?bool $override = null): array
     {
-        $think = config('bossku.ollama_think');
+        $think = $override ?? config('bossku.ollama_think');
         if (is_bool($think)) {
             $payload['think'] = $think;
         }
