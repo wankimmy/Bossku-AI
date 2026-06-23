@@ -5,6 +5,7 @@ namespace App\Services\Orchestrator;
 use App\Support\LlmTelemetry;
 use App\Support\StringCoercion;
 use App\Services\BosskuAi\AgentPersonaService;
+use App\Services\BosskuAi\DomainModelSelector;
 use App\Services\BosskuAi\ModelFallbackService;
 use App\Services\BosskuAi\ModelRoutingConfig;
 use App\Services\Project\ProjectService;
@@ -17,7 +18,8 @@ class AuditorService
         protected ModelFallbackService $fallback,
         protected ModelRoutingConfig $modelConfig,
         protected ProjectService $projects,
-        protected AgentPersonaService $personas
+        protected AgentPersonaService $personas,
+        protected DomainModelSelector $modelSelector,
     ) {}
 
     /**
@@ -46,6 +48,11 @@ class AuditorService
         $cfg = $this->modelConfig->auditor();
         $primary = (string) ($cfg['primary'] ?? 'deepseek-v4-pro');
         $models = array_merge([$primary], is_array($cfg['fallback'] ?? null) ? $cfg['fallback'] : []);
+        $models = $this->modelSelector->order(
+            $models,
+            $this->modelSelector->domainFor($modelRoute, $router),
+            $this->modelConfig->roleModelIsPinned('auditor'),
+        );
         $retry = (int) ($cfg['retry_count'] ?? 1);
 
         $memBlock = $this->buildMemoryBlock($memoryContext);

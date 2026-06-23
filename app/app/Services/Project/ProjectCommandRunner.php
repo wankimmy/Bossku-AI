@@ -63,6 +63,15 @@ class ProjectCommandRunner
         'docker run', 'docker build', 'docker system', 'docker volume',
         'npm publish', 'yarn publish', 'pnpm publish',
         'rm -rf', 'mkfs', 'dd ',
+        // Self-preservation: the agent runs inside its own container/runtime, so a
+        // command that stops, restarts, or kills that runtime would end the session
+        // it depends on. Block these even though their prefix is otherwise allowed.
+        'compose down', 'compose stop', 'compose kill', 'compose rm', 'compose restart',
+        'kill -9', 'kill -s', 'killall', 'pkill', 'taskkill', 'stop-process',
+        'reboot', 'shutdown', 'systemctl', 'wsl --shutdown', 'wsl --terminate',
+        // Data loss: these drop or recreate the active project's database without
+        // consent. Surface them for the user to run manually instead of auto-running.
+        'migrate:fresh', 'migrate:reset', 'db:wipe',
     ];
 
     public function __construct(private readonly ProjectPathResolver $paths) {}

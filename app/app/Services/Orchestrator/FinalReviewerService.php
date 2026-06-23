@@ -5,15 +5,19 @@ namespace App\Services\Orchestrator;
 use App\Support\LlmTelemetry;
 use App\Support\StringCoercion;
 use App\Services\BosskuAi\AgentPersonaService;
+use App\Services\BosskuAi\DomainModelSelector;
 use App\Services\BosskuAi\ModelFallbackService;
 use App\Services\BosskuAi\ModelRoutingConfig;
+use App\Services\BosskuAi\ReviewerAccessList;
 
 class FinalReviewerService
 {
     public function __construct(
         protected ModelRoutingConfig $config,
         protected ModelFallbackService $fallback,
-        protected AgentPersonaService $personas
+        protected AgentPersonaService $personas,
+        protected DomainModelSelector $modelSelector,
+        protected ReviewerAccessList $accessList,
     ) {}
 
     /**
@@ -40,6 +44,11 @@ class FinalReviewerService
         $cfg = $this->config->finalReviewer();
         $primary = (string) ($cfg['primary'] ?? 'deepseek-v4-pro');
         $models = array_merge([$primary], is_array($cfg['fallback'] ?? null) ? $cfg['fallback'] : []);
+        $models = $this->modelSelector->order(
+            $models,
+            $this->modelSelector->domainFor($route),
+            $this->config->roleModelIsPinned('final_reviewer'),
+        );
         $retry = (int) ($cfg['retry_count'] ?? 1);
 
         $memBlock = $this->buildMemoryBlock($memoryContext);
@@ -90,21 +99,9 @@ SYS;
             'plan_summary' => $plan['summary'] ?? $plan['task_summary'] ?? null,
             'plan_confidence' => $plan['confidence'] ?? null,
             'plan_risk_level' => $plan['risk_level'] ?? null,
-            'auditor_status' => $auditor['status'] ?? null,
-            'auditor_summary' => $auditor['summary'] ?? null,
-            'auditor_findings' => $auditor['findings'] ?? [],
-            'auditor_required_fixes' => $auditor['required_fixes'] ?? [],
-            'verdict_trail' => $verdictTrail,
-            'auditor_memory_conflicts' => $auditor['memory_conflicts'] ?? [],
-            'executor_memory_lessons_applied' => $executorResult['memory_lessons_applied'] ?? [],
-            'security_audit' => $securityAudit,
-            'patch_summary' => $executorResult['patch_summary'] ?? '',
-            'tests_result' => $executorResult['tests_result'] ?? 'not_run',
-            'files_changed' => array_map(
-                fn ($f) => is_array($f) ? ['path' => $f['path'] ?? '', 'summary' => $f['summary'] ?? ''] : (string) $f,
-                is_array($executorResult['files_changed'] ?? null) ? $executorResult['files_changed'] : []
-            ),
-            'known_issues' => $executorResult['known_issues'] ?? [],
+            // Bounded access list of prior-stage outputs (severity-ranked + capped) so a
+            // large audit cannot bury the critical findings or blow the context window.
+            ...$this->accessList->forFinalReviewer($auditor, $executorResult, $securityAudit),
             'conversation_turns' => count($conversation),
             'memory_context_count' => count($memoryContext),
         ], JSON_THROW_ON_ERROR);

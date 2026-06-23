@@ -1732,6 +1732,9 @@ class OrchestratorService
                     $run->id,
                 );
                 $auditFeedback['original_prompt'] = $agentPrompt;
+                // Let the executor lead the retry with a model from a different family than
+                // the one whose output the auditor just rejected (complementary escalation).
+                $auditFeedback['_previous_executor_model'] = (string) ($execResult['_executor_model'] ?? $modelsResolved['executor'] ?? '');
 
                 $revProfileKey = self::revisionProfileKey(
                     $execProfileKey,
