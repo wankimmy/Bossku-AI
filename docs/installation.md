@@ -188,4 +188,4 @@ After repo toolkit install, open the target project and ask your AI assistant:
 bossku, confirm what BosskuAI files are available in this repo.
 ```
 
-For a shorter first-run guide, see [`quickstart.md`](quickstart.md).
+For a shorter first-run guide, see [`quickstart.md`](quickstart.md). For the full README setup guide, see [`get-started.md`](get-started.md).

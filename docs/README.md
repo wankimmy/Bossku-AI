@@ -7,8 +7,9 @@ Use this page as the map for the documentation.
 | Doc | Use it for |
 |---|---|
 | [`what-is-bossku-ai.md`](what-is-bossku-ai.md) | Understand what BosskuAI is and is not |
-| [`quickstart.md`](quickstart.md) | Get one successful run quickly |
-| [`installation.md`](installation.md) | Install the web app or repo toolkit |
+| [`get-started.md`](get-started.md) | Full setup: Docker app, repo toolkit, commands, troubleshooting |
+| [`quickstart.md`](quickstart.md) | Shortest path to one successful run |
+| [`installation.md`](installation.md) | Desktop app, Docker stack, and repo toolkit install paths |
 | [`examples.md`](examples.md) | Copy useful starting prompts |
 | [`faq.md`](faq.md) | Answer common setup and usage questions |
 

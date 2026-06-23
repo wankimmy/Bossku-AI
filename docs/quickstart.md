@@ -1,6 +1,6 @@
 # Quickstart
 
-This guide gets you to one useful BosskuAI run.
+This is the **shortest** path to one useful BosskuAI run. For the full guide (workspace setup, frontend dev, ports, security, troubleshooting), see [`get-started.md`](get-started.md).
 
 Choose one path:
 
