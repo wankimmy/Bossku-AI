@@ -1,6 +1,6 @@
 import { defineConfig, devices } from '@playwright/test'
 
-const mockPort = 8001
+const mockPort = Number(process.env.E2E_MOCK_PORT || 8001)
 const mockBase = `http://127.0.0.1:${mockPort}`
 // Default off 3000 to match the repo's 284xx port scheme (README) and avoid
 // reuseExistingServer silently binding to an unrelated app already on :3000.

@@ -28,6 +28,7 @@ const checklistCl1 = load<Record<string, unknown>>('checklist-cl1.json')
 const memoryList = load<{ data: Record<string, unknown>[] }>('memory-list.json')
 const memorySearchHit = load<unknown[]>('memory-search-hit.json')
 const defaultSettings = load<Record<string, string>>('settings-public.json')
+const productTourPrompt = 'Review the access policy before release.'
 
 type MockProject = {
   id: string
@@ -91,6 +92,7 @@ let activeProjectId: string | null = initialProjects[0]?.id ?? null
 let projectTreeState: Record<string, { name: string; path: string; type: 'dir' | 'file' }[]> = structuredClone(initialTree)
 let projectFilesState: Record<string, string> = structuredClone(initialFiles)
 let projectChangesState: MockProjectChange[] = []
+const productTourRunIds = new Set<string>()
 let knowledgeRecent = {
   data: [
     {
@@ -133,6 +135,7 @@ function resetProjectState() {
   projectTreeState = structuredClone(initialTree)
   projectFilesState = structuredClone(initialFiles)
   projectChangesState = []
+  productTourRunIds.clear()
 }
 
 function activeProject() {
@@ -293,6 +296,111 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
       return
     }
 
+    if (trimmedPrompt === productTourPrompt) {
+      productTourRunIds.add(runId)
+      const route = {
+        workflow: 'orchestrator_executor',
+        task_type: 'code_edit',
+        risk_level: 'medium',
+        skill: 'laravel',
+        executor_profile: 'backend',
+        needs_executor: true,
+        needs_auditor: true,
+        needs_security_auditor: false,
+        needs_final_reviewer: true,
+        memory_mode: 'retrieve',
+      }
+
+      sse({
+        type: 'model_router_done',
+        agent: 'router',
+        status: 'success',
+        run_id: runId,
+        routing: route,
+        artifacts: {
+          routing_decision: route,
+          pipeline_agents: ['orchestrator', 'executor', 'auditor', 'final-reviewer'],
+        },
+      })
+      sse({
+        type: 'memory_retrieved',
+        agent: 'memory',
+        status: 'success',
+        run_id: runId,
+        message: 'Authorization rules from the active project.',
+      })
+      sse({ type: 'planner_started', agent: 'planner', status: 'running', run_id: runId })
+      sse({
+        type: 'planner_completed',
+        agent: 'planner',
+        status: 'success',
+        run_id: runId,
+        artifacts: {
+          plan: {
+            goal: productTourPrompt,
+            task_summary: productTourPrompt,
+            flow_steps: ['Trace policy usage', 'Check tenant boundaries', 'Run focused verification'],
+            risk_notes: ['Authorization changes need human review before application.'],
+          },
+          checklist: [
+            { id: 'tour-trace', title: 'Trace policy usage', owner: 'planner', status: 'completed' },
+            { id: 'tour-boundary', title: 'Check tenant boundaries', owner: 'executor', status: 'in_progress' },
+            { id: 'tour-verify', title: 'Run focused verification', owner: 'auditor', status: 'pending' },
+          ],
+        },
+      })
+      sse({ type: 'executor_started', agent: 'executor', status: 'running', run_id: runId })
+      sse({
+        type: 'executor_completed',
+        agent: 'executor',
+        status: 'success',
+        run_id: runId,
+        artifacts: {
+          files_read: [{ path: 'app/Policies/AccessPolicy.php', reason: 'Authorize workspace access.' }],
+          files_changed: [{
+            path: 'app/Policies/AccessPolicy.php',
+            change_type: 'modified',
+            summary: 'Scope the policy query to the active workspace.',
+          }],
+          tests_run: [{
+            name: 'php artisan test --filter=AccessPolicy',
+            status: 'passed',
+            summary: 'Access policy checks completed.',
+          }],
+        },
+      })
+      sse({ type: 'auditor_started', agent: 'auditor', status: 'running', run_id: runId })
+      sse({
+        type: 'auditor_completed',
+        agent: 'auditor',
+        status: 'success',
+        run_id: runId,
+        artifacts: {
+          audit_findings: [{
+            id: 'tour-workspace-scope',
+            title: 'Workspace scope needs approval',
+            severity: 'medium',
+            category: 'authorization',
+            description: 'The policy change affects workspace access boundaries.',
+            status: 'needs_review',
+          }],
+        },
+      })
+      setTimeout(() => {
+        if (res.destroyed || res.writableEnded) return
+        sse({
+          type: 'approval_requested',
+          agent: 'executor',
+          stage: 'executor_approvals',
+          status: 'waiting',
+          run_id: runId,
+          artifacts: { pending_count: 1 },
+        })
+        res.end()
+      }, 8_000)
+      return
+    }
+
     sse({
       type: 'memory_loaded',
       status: 'ok',
@@ -374,6 +482,31 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
 
   if (pathname === '/api/runs/r_1' && method === 'GET') {
     json(res, runDetailR1)
+    return
+  }
+
+  const approvalsMatch = pathname.match(/^\/api\/runs\/([^/]+)\/approvals$/)
+  if (approvalsMatch && method === 'GET' && productTourRunIds.has(approvalsMatch[1])) {
+    const runId = approvalsMatch[1]
+    json(res, {
+      stage: 'executor_approvals',
+      pending: [{
+        id: 'approval-product-tour-access-policy',
+        run_id: runId,
+        operation_type: 'file_change',
+        description: 'Apply the workspace-scoped access policy change.',
+        risk_level: 'medium',
+        status: 'pending',
+        evidence: {
+          asking_agent: 'executor',
+          why: 'The change affects workspace access boundaries.',
+          path: 'app/Policies/AccessPolicy.php',
+          before: "return $query->where('active', true);",
+          after: "return $query->where('workspace_id', $workspaceId);",
+          diff: "- return $query->where('active', true);\n+ return $query->where('workspace_id', $workspaceId);",
+        },
+      }],
+    })
     return
   }
 

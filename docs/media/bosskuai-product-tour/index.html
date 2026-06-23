@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1280, height=720" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * { box-sizing: border-box; }
+      html, body {
+        width: 1280px;
+        height: 720px;
+        margin: 0;
+        overflow: hidden;
+        background: #09090b;
+      }
+      body {
+        color: #f4f4f5;
+        font-family: ui-sans-serif, system-ui, sans-serif;
+      }
+      #root {
+        position: relative;
+        width: 1280px;
+        height: 720px;
+        overflow: hidden;
+        background: #09090b;
+      }
+      .scene {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+        background: #09090b;
+      }
+      #scene-intro { z-index: 1; }
+      .scene:not(#scene-intro) { z-index: 1; opacity: 0; }
+      .scene::before {
+        position: absolute;
+        width: 520px;
+        height: 520px;
+        right: -210px;
+        top: -240px;
+        border: 1px solid rgba(52, 211, 153, 0.22);
+        border-radius: 50%;
+        content: "";
+      }
+      .scene::after {
+        position: absolute;
+        width: 320px;
+        height: 320px;
+        left: -140px;
+        bottom: -190px;
+        border: 1px solid rgba(5, 150, 105, 0.26);
+        border-radius: 50%;
+        content: "";
+      }
+      .scene-chrome {
+        position: absolute;
+        inset: 24px 36px auto;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        color: #a1a1aa;
+        font-size: 14px;
+        font-weight: 700;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+      .brand-mark {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        color: #34d399;
+      }
+      .brand-mark::before {
+        width: 13px;
+        height: 13px;
+        border-radius: 3px;
+        background: #059669;
+        box-shadow: 0 0 0 5px rgba(5, 150, 105, 0.15);
+        content: "";
+      }
+      .scene-index {
+        color: #a1a1aa;
+        font-variant-numeric: tabular-nums;
+      }
+      .screen-shell {
+        position: absolute;
+        top: 58px;
+        left: 52px;
+        width: 1176px;
+        height: 632px;
+        overflow: hidden;
+        border: 1px solid #3f3f46;
+        border-radius: 14px;
+        background: #18181b;
+        box-shadow: 0 28px 72px rgba(0, 0, 0, 0.52);
+        transform-origin: 50% 50%;
+        will-change: transform, opacity, filter;
+      }
+      .screen-shell img {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+      .scene-title {
+        position: absolute;
+        left: 76px;
+        bottom: 48px;
+        max-width: 570px;
+        padding: 16px 20px 18px;
+        border: 1px solid rgba(63, 63, 70, 0.94);
+        border-left: 4px solid #059669;
+        border-radius: 8px;
+        background: rgba(9, 9, 11, 0.91);
+        box-shadow: 0 16px 28px rgba(0, 0, 0, 0.34);
+        will-change: transform, opacity;
+      }
+      .scene-title .eyebrow {
+        margin: 0 0 8px;
+        color: #34d399;
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+      .scene-title h1 {
+        max-width: 540px;
+        margin: 0;
+        color: #f4f4f5;
+        font-size: 42px;
+        font-weight: 800;
+        letter-spacing: -0.04em;
+        line-height: 0.96;
+      }
+      .scene-title p {
+        max-width: 500px;
+        margin: 11px 0 0;
+        color: #d4d4d8;
+        font-size: 18px;
+        font-weight: 500;
+        line-height: 1.28;
+      }
+      .focus-ring {
+        position: absolute;
+        border: 2px solid #34d399;
+        border-radius: 10px;
+        box-shadow: 0 0 0 8px rgba(5, 150, 105, 0.13);
+        pointer-events: none;
+        will-change: transform, opacity;
+      }
+      .focus-ring::after {
+        position: absolute;
+        right: -8px;
+        top: -8px;
+        width: 12px;
+        height: 12px;
+        border: 3px solid #09090b;
+        border-radius: 50%;
+        background: #34d399;
+        content: "";
+      }
+      .typing-overlay {
+        position: absolute;
+        top: 429px;
+        left: 297px;
+        width: 320px;
+        min-height: 32px;
+        padding: 8px 10px;
+        overflow: hidden;
+        border-radius: 5px;
+        background: rgba(9, 9, 11, 0.88);
+        color: #e4e4e7;
+        font-family: monospace;
+        font-size: 13px;
+        font-weight: 500;
+        line-height: 1.25;
+        will-change: transform, opacity;
+      }
+      .typing-overlay .cursor {
+        display: inline-block;
+        width: 2px;
+        height: 13px;
+        margin-left: 3px;
+        vertical-align: -2px;
+        background: #34d399;
+      }
+      #scene-agents .focus-ring { left: 644px; top: 294px; width: 538px; height: 348px; }
+      #scene-plan .focus-ring { left: 254px; top: 596px; width: 168px; height: 48px; }
+      #scene-changes .focus-ring { left: 416px; top: 596px; width: 168px; height: 48px; }
+      #scene-audit .focus-ring { left: 580px; top: 596px; width: 168px; height: 48px; border-color: #f59e0b; box-shadow: 0 0 0 8px rgba(245, 158, 11, 0.14); }
+      #scene-memory .focus-ring { left: 492px; top: 596px; width: 94px; height: 48px; }
+      .approval-badge {
+        position: absolute;
+        top: 90px;
+        right: 84px;
+        padding: 10px 14px;
+        border: 1px solid rgba(245, 158, 11, 0.72);
+        border-radius: 999px;
+        background: rgba(39, 26, 8, 0.92);
+        color: #fbbf24;
+        font-size: 14px;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        will-change: transform, opacity;
+      }
+      #scene-features .feature-grid {
+        position: absolute;
+        top: 150px;
+        left: 76px;
+        display: flex;
+        gap: 20px;
+        width: 1128px;
+        will-change: transform, opacity;
+      }
+      .feature-card {
+        width: 362px;
+        overflow: hidden;
+        border: 1px solid #3f3f46;
+        border-radius: 12px;
+        background: #18181b;
+        box-shadow: 0 22px 52px rgba(0, 0, 0, 0.44);
+        will-change: transform, opacity;
+      }
+      .feature-card img {
+        display: block;
+        width: 100%;
+        height: 248px;
+        object-fit: cover;
+        object-position: top left;
+      }
+      .feature-card h2 {
+        margin: 0;
+        padding: 16px 18px 4px;
+        color: #f4f4f5;
+        font-size: 22px;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+      }
+      .feature-card p {
+        min-height: 66px;
+        margin: 0;
+        padding: 4px 18px 18px;
+        color: #d4d4d8;
+        font-size: 16px;
+        font-weight: 500;
+        line-height: 1.32;
+      }
+      #scene-close .screen-shell {
+        top: 74px;
+        height: 588px;
+      }
+      #scene-plan .scene-title,
+      #scene-changes .scene-title {
+        right: 76px;
+        left: auto;
+        max-width: 500px;
+        border-left: 1px solid rgba(63, 63, 70, 0.94);
+        border-right: 4px solid #059669;
+        text-align: right;
+      }
+      #scene-memory .scene-title {
+        right: 76px;
+        bottom: 178px;
+        left: auto;
+        max-width: 500px;
+        border-left: 1px solid rgba(63, 63, 70, 0.94);
+        border-right: 4px solid #059669;
+        text-align: right;
+      }
+      #scene-close .scene-title {
+        right: 76px;
+        left: auto;
+        max-width: 690px;
+        border-left: 1px solid rgba(63, 63, 70, 0.94);
+        border-right: 4px solid #059669;
+        text-align: right;
+      }
+      #scene-close .scene-title h1 {
+        font-size: 38px;
+      }
+      .final-rule {
+        position: absolute;
+        right: 76px;
+        bottom: 198px;
+        width: 390px;
+        height: 2px;
+        background: #34d399;
+        transform-origin: right center;
+        will-change: transform, opacity;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="bosskuai-product-tour"
+      data-start="0"
+      data-duration="72"
+      data-width="1280"
+      data-height="720"
+    >
+      <section id="scene-intro" class="scene">
+        <div class="scene-chrome"><span class="brand-mark">BosskuAI</span><span class="scene-index">01 / 09</span></div>
+        <div id="intro-screen" class="screen-shell" data-layout-allow-overflow><img src="assets/screens/01-dashboard-empty.png" alt="BosskuAI workspace dashboard" /></div>
+        <div id="typing-overlay" class="typing-overlay"><span id="typed-prompt"></span><span class="cursor"></span></div>
+        <div id="intro-title" class="scene-title"><p class="eyebrow">Workspace control</p><h1>ASK WITH CONTEXT</h1><p>Type the task. Keep the work visible from the first decision.</p></div>
+      </section>
+
+      <section id="scene-agents" class="scene">
+        <div class="scene-chrome"><span class="brand-mark">BosskuAI</span><span class="scene-index">02 / 09</span></div>
+        <div class="screen-shell" data-layout-allow-overflow><img src="assets/screens/03-agents.png" alt="BosskuAI agents workspace and Pixel Office" /></div>
+        <div class="focus-ring"></div>
+        <div class="scene-title"><p class="eyebrow">Pixel Office</p><h1>WATCH THE TEAM WORK</h1><p>Planner, executor, auditor, and reviewer activity stays in view.</p></div>
+      </section>
+
+      <section id="scene-plan" class="scene">
+        <div class="scene-chrome"><span class="brand-mark">BosskuAI</span><span class="scene-index">03 / 09</span></div>
+        <div class="screen-shell" data-layout-allow-overflow><img src="assets/screens/04-plan.png" alt="BosskuAI plan workspace" /></div>
+        <div class="focus-ring"></div>
+        <div class="scene-title"><p class="eyebrow">Plan workspace</p><h1>PLAN BEFORE EDITING</h1><p>Keep the goal, scope, risks, and checklist visible before changes begin.</p></div>
+      </section>
+
+      <section id="scene-changes" class="scene">
+        <div class="scene-chrome"><span class="brand-mark">BosskuAI</span><span class="scene-index">04 / 09</span></div>
+        <div class="screen-shell" data-layout-allow-overflow><img src="assets/screens/05-changes.png" alt="BosskuAI changes workspace" /></div>
+        <div class="focus-ring"></div>
+        <div class="scene-title"><p class="eyebrow">Changes workspace</p><h1>KEEP THE SCOPE VISIBLE</h1><p>See the files, commands, and verification behind each change.</p></div>
+      </section>
+
+      <section id="scene-audit" class="scene">
+        <div class="scene-chrome"><span class="brand-mark">BosskuAI</span><span class="scene-index">05 / 09</span></div>
+        <div class="screen-shell" data-layout-allow-overflow><img src="assets/screens/08-approval.png" alt="BosskuAI approval gate with code review" /></div>
+        <div class="focus-ring"></div>
+        <div class="approval-badge">Human decision</div>
+        <div class="scene-title"><p class="eyebrow">Audit and approval</p><h1>PAUSE. INSPECT. DECIDE.</h1><p>Risky changes stop for review with the evidence in front of you.</p></div>
+      </section>
+
+      <section id="scene-memory" class="scene">
+        <div class="scene-chrome"><span class="brand-mark">BosskuAI</span><span class="scene-index">06 / 09</span></div>
+        <div class="screen-shell" data-layout-allow-overflow><img src="assets/screens/07-memory.png" alt="BosskuAI memory workspace" /></div>
+        <div class="focus-ring"></div>
+        <div class="scene-title"><p class="eyebrow">Memory workspace</p><h1>KEEP THE CONTEXT</h1><p>Carry the reasoning and project knowledge into the next run.</p></div>
+      </section>
+
+      <section id="scene-features" class="scene">
+        <div class="scene-chrome"><span class="brand-mark">BosskuAI</span><span class="scene-index">07 / 09</span></div>
+        <div class="scene-title"><p class="eyebrow">Built-in depth</p><h1>ROUTE THE RIGHT EXPERTISE</h1><p>Explore skills, memory, model roles, and review controls without leaving the workspace.</p></div>
+        <div class="feature-grid">
+          <article class="feature-card"><img src="assets/screens/09-skills-graph.png" alt="BosskuAI Skills Graph" /><h2>Skills Graph</h2><p>Make focused expertise visible.</p></article>
+          <article class="feature-card"><img src="assets/screens/10-memory-inspector.png" alt="BosskuAI Memory Inspector" /><h2>Memory Inspector</h2><p>Search the context that guides each run.</p></article>
+          <article class="feature-card"><img src="assets/screens/11-model-settings.png" alt="BosskuAI model settings" /><h2>Model Controls</h2><p>Set routing, audit, memory, and plan mode.</p></article>
+        </div>
+      </section>
+
+      <section id="scene-close" class="scene">
+        <div class="scene-chrome"><span class="brand-mark">BosskuAI</span><span class="scene-index">08 / 09</span></div>
+        <div class="screen-shell" data-layout-allow-overflow><img src="assets/screens/02-dashboard-typed.png" alt="BosskuAI dashboard with typed task" /></div>
+        <div class="final-rule"></div>
+        <div class="scene-title"><p class="eyebrow">Your existing workspace</p><h1>CURSOR. CLAUDE CODE. CODEX. OPENCODE.</h1><p>Plan the work. Review the evidence. Keep the context.</p></div>
+      </section>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+      const prompt = 'Review the access policy before release.';
+      const typedPrompt = document.querySelector('#typed-prompt');
+
+      tl.from('#intro-screen', { opacity: 0, scale: 0.92, x: -44, filter: 'blur(10px)', duration: 0.78, ease: 'power3.out' }, 0.22);
+      tl.from('#intro-title', { opacity: 0, y: 46, duration: 0.62, ease: 'expo.out' }, 0.52);
+      tl.from('#typing-overlay', { opacity: 0, x: -26, duration: 0.45, ease: 'power2.out' }, 0.86);
+      for (let index = 1; index <= prompt.length; index += 1) {
+        tl.call(() => { typedPrompt.textContent = prompt.slice(0, index); }, [], 1.12 + index * 0.052);
+      }
+      tl.to('#intro-screen', { scale: 1.17, x: -76, y: -34, duration: 2.25, ease: 'sine.inOut' }, 4.55);
+      tl.to('#typing-overlay', { scale: 1.17, x: -76, y: -34, duration: 2.25, ease: 'sine.inOut' }, 4.55);
+
+      tl.set('#scene-intro', { zIndex: 3 }, 7.45);
+      tl.set('#scene-agents', { opacity: 1, zIndex: 2 }, 7.45);
+      tl.to('#intro-screen', { scale: 1.02, filter: 'blur(9px)', duration: 0.55, ease: 'sine.inOut' }, 7.45);
+      tl.to('#scene-intro', { opacity: 0, duration: 0.55, ease: 'sine.inOut' }, 7.45);
+      tl.from('#scene-agents .screen-shell', { opacity: 0, scale: 0.94, x: 56, filter: 'blur(10px)', duration: 0.72, ease: 'power3.out' }, 7.57);
+      tl.from('#scene-agents .scene-title', { opacity: 0, y: 42, duration: 0.58, ease: 'expo.out' }, 7.79);
+      tl.from('#scene-agents .focus-ring', { opacity: 0, scale: 0.86, duration: 0.42, ease: 'back.out(1.5)' }, 8.01);
+      tl.to('#scene-agents .screen-shell', { scale: 1.035, x: -16, y: -8, duration: 3.8, ease: 'sine.inOut' }, 8.6);
+      tl.set('#scene-intro', { zIndex: 1 }, 8.03);
+
+      tl.set('#scene-agents', { zIndex: 3 }, 15.45);
+      tl.set('#scene-plan', { opacity: 1, zIndex: 2 }, 15.45);
+      tl.to('#scene-agents .screen-shell', { scale: 1.02, filter: 'blur(9px)', duration: 0.55, ease: 'sine.inOut' }, 15.45);
+      tl.to('#scene-agents', { opacity: 0, duration: 0.55, ease: 'sine.inOut' }, 15.45);
+      tl.from('#scene-plan .screen-shell', { opacity: 0, scale: 0.94, x: -56, filter: 'blur(10px)', duration: 0.72, ease: 'power3.out' }, 15.57);
+      tl.from('#scene-plan .scene-title', { opacity: 0, y: 42, duration: 0.58, ease: 'expo.out' }, 15.79);
+      tl.from('#scene-plan .focus-ring', { opacity: 0, scale: 0.86, duration: 0.42, ease: 'back.out(1.5)' }, 16.01);
+      tl.to('#scene-plan .screen-shell', { scale: 1.035, x: 16, y: -8, duration: 3.8, ease: 'sine.inOut' }, 16.6);
+      tl.set('#scene-agents', { zIndex: 1 }, 16.03);
+
+      tl.set('#scene-plan', { zIndex: 3 }, 23.45);
+      tl.set('#scene-changes', { opacity: 1, zIndex: 2 }, 23.45);
+      tl.to('#scene-plan .screen-shell', { scale: 1.02, filter: 'blur(9px)', duration: 0.55, ease: 'sine.inOut' }, 23.45);
+      tl.to('#scene-plan', { opacity: 0, duration: 0.55, ease: 'sine.inOut' }, 23.45);
+      tl.from('#scene-changes .screen-shell', { opacity: 0, scale: 0.94, x: 56, filter: 'blur(10px)', duration: 0.72, ease: 'power3.out' }, 23.57);
+      tl.from('#scene-changes .scene-title', { opacity: 0, y: 42, duration: 0.58, ease: 'expo.out' }, 23.79);
+      tl.from('#scene-changes .focus-ring', { opacity: 0, scale: 0.86, duration: 0.42, ease: 'back.out(1.5)' }, 24.01);
+      tl.to('#scene-changes .screen-shell', { scale: 1.035, x: -16, y: -8, duration: 3.8, ease: 'sine.inOut' }, 24.6);
+      tl.set('#scene-plan', { zIndex: 1 }, 24.03);
+
+      tl.set('#scene-changes', { zIndex: 3 }, 31.45);
+      tl.set('#scene-audit', { opacity: 1, zIndex: 2 }, 31.45);
+      tl.to('#scene-changes .screen-shell', { scale: 1.02, filter: 'blur(9px)', duration: 0.55, ease: 'sine.inOut' }, 31.45);
+      tl.to('#scene-changes', { opacity: 0, duration: 0.55, ease: 'sine.inOut' }, 31.45);
+      tl.from('#scene-audit .screen-shell', { opacity: 0, scale: 0.94, x: -56, filter: 'blur(10px)', duration: 0.72, ease: 'power3.out' }, 31.57);
+      tl.from('#scene-audit .scene-title', { opacity: 0, y: 42, duration: 0.58, ease: 'expo.out' }, 31.79);
+      tl.from('#scene-audit .focus-ring', { opacity: 0, scale: 0.86, duration: 0.42, ease: 'back.out(1.5)' }, 32.01);
+      tl.from('#scene-audit .approval-badge', { opacity: 0, x: 30, duration: 0.42, ease: 'power2.out' }, 32.03);
+      tl.to('#scene-audit .screen-shell', { scale: 1.035, x: 16, y: -8, duration: 3.8, ease: 'sine.inOut' }, 32.6);
+      tl.set('#scene-changes', { zIndex: 1 }, 32.03);
+
+      tl.set('#scene-audit', { zIndex: 3 }, 40.45);
+      tl.set('#scene-memory', { opacity: 1, zIndex: 2 }, 40.45);
+      tl.to('#scene-audit .screen-shell', { scale: 1.02, filter: 'blur(9px)', duration: 0.55, ease: 'sine.inOut' }, 40.45);
+      tl.to('#scene-audit', { opacity: 0, duration: 0.55, ease: 'sine.inOut' }, 40.45);
+      tl.from('#scene-memory .screen-shell', { opacity: 0, scale: 0.94, x: 56, filter: 'blur(10px)', duration: 0.72, ease: 'power3.out' }, 40.57);
+      tl.from('#scene-memory .scene-title', { opacity: 0, y: 42, duration: 0.58, ease: 'expo.out' }, 40.79);
+      tl.from('#scene-memory .focus-ring', { opacity: 0, scale: 0.86, duration: 0.42, ease: 'back.out(1.5)' }, 41.01);
+      tl.to('#scene-memory .screen-shell', { scale: 1.035, x: -16, y: -8, duration: 3.8, ease: 'sine.inOut' }, 41.6);
+      tl.set('#scene-audit', { zIndex: 1 }, 41.03);
+
+      tl.set('#scene-memory', { zIndex: 3 }, 48.45);
+      tl.set('#scene-features', { opacity: 1, zIndex: 2 }, 48.45);
+      tl.to('#scene-memory .screen-shell', { scale: 1.02, filter: 'blur(9px)', duration: 0.55, ease: 'sine.inOut' }, 48.45);
+      tl.to('#scene-memory', { opacity: 0, duration: 0.55, ease: 'sine.inOut' }, 48.45);
+      tl.from('#scene-features .feature-grid', { opacity: 0, scale: 0.94, x: -56, filter: 'blur(10px)', duration: 0.72, ease: 'power3.out' }, 48.57);
+      tl.from('#scene-features .scene-title', { opacity: 0, y: 42, duration: 0.58, ease: 'expo.out' }, 48.79);
+      tl.from('#scene-features .feature-card', { opacity: 0, y: 38, scale: 0.94, duration: 0.52, stagger: 0.14, ease: 'power4.out' }, 49.01);
+      tl.to('#scene-features .feature-grid', { scale: 1.02, x: 12, y: -8, duration: 4.8, ease: 'sine.inOut' }, 49.9);
+      tl.set('#scene-memory', { zIndex: 1 }, 49.03);
+
+      tl.set('#scene-features', { zIndex: 3 }, 60.45);
+      tl.set('#scene-close', { opacity: 1, zIndex: 2 }, 60.45);
+      tl.to('#scene-features .feature-grid', { scale: 1.02, filter: 'blur(9px)', duration: 0.55, ease: 'sine.inOut' }, 60.45);
+      tl.to('#scene-features', { opacity: 0, duration: 0.55, ease: 'sine.inOut' }, 60.45);
+      tl.from('#scene-close .screen-shell', { opacity: 0, scale: 0.94, x: 56, filter: 'blur(10px)', duration: 0.72, ease: 'power3.out' }, 60.57);
+      tl.from('#scene-close .scene-title', { opacity: 0, y: 42, duration: 0.58, ease: 'expo.out' }, 60.79);
+      tl.from('#scene-close .final-rule', { opacity: 0, scaleX: 0, duration: 0.62, ease: 'power3.out' }, 61.18);
+      tl.to('#scene-close .screen-shell', { scale: 1.025, x: -12, y: -6, duration: 6.5, ease: 'sine.inOut' }, 61.6);
+      tl.set('#scene-features', { zIndex: 1 }, 61.03);
+
+      tl.to('#scene-close', { opacity: 0, duration: 0.7, ease: 'power1.in' }, 71.3);
+
+      window.__timelines['bosskuai-product-tour'] = tl;
+    </script>
+  </body>
+</html>

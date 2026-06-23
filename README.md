@@ -10,6 +10,12 @@ Instead of one-shot file edits, every task runs through a multi-agent pipeline: 
 
 ---
 
+## See BosskuAI
+
+[![Watch the BosskuAI product tour](docs/assets/bosskuai-product-tour-preview.gif)](docs/assets/bosskuai-product-tour.mp4)
+
+Watch the full product tour: type a task, follow the agents in Pixel Office, inspect each run workspace, approve risky work, review the audit, and keep the context for the next run.
+
 ## What BosskuAI does
 
 1. **Plans before editing** — you see the plan before any file changes.
