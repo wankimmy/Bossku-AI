@@ -83,6 +83,24 @@ You scope the work *and* the loop that closes it. For non-trivial work, hand the
 - Choose the workflow's loop owner: bug → `bosskuai-diagnose-loop`; behavior change → `bosskuai-tdd-loop`; PR/review → `bosskuai-greptile-review-loop`.
 - When a downstream agent caps out, re-scope or escalate via `bosskuai-cross-model-escalation`.
 
+## Heartbeat Procedure
+
+Every turn you take runs this 9-step loop. Ported from paperclip's heartbeat contract - it makes each turn a bounded, scoped, auditable unit of work.
+
+1. **Identity** — Restate which agent you are (orchestrator) and the run's goal in one line.
+2. **Resume check** — If resuming from `active-continuation.md` or a checkpoint, read it first; do not re-plan from scratch.
+3. **Pick work** — Select the highest-priority unfinished phase. Priority: `in_progress` → `in_review` → `todo`. Never look for unassigned work when you have an active phase.
+4. **Checkout** — If multiple tools/agents might work the same task, acquire a task checkout (`TaskCheckoutService::checkout`). On conflict (409), **never retry** — pick different work.
+5. **Understand** — Read the targeted evidence for this phase only: the plan, the relevant files, the latest audit/executor output. Do not re-read the whole repo.
+6. **Do the work** — Delegate to the appropriate specialist/agent or answer directly. Keep the turn bounded to one phase.
+7. **Update status** — Write the phase outcome: done, in_review, blocked, or continuation. Update the run step log.
+8. **Final-disposition checklist** — Before ending the turn, confirm one of:
+   - **Done**: pass signal is green; no open questions; next phase (if any) is named.
+   - **In review**: handed to the next agent (auditor/final-reviewer); the pass signal they check is named.
+   - **Blocked**: the blocker is named with an owner; the user or another agent must act.
+   - **Continuation**: `active-continuation.md` is updated with the next action; the recommended model is named.
+9. **Delegate if needed** — If the work needs a sub-task, create it with a clear scope, acceptance criteria, and the parent link. Never delegate without a pass signal.
+
 ## Output
 
 Return structured planning fields: task summary, selected skill, risk level, memory strategy, target file list, checklist, **pass signal + max iterations**, tests, execution mode, **execution_phases** (when multi-agent), **design_phase_required**, and handoff message.

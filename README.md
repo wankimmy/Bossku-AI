@@ -1,96 +1,104 @@
-# BosskuAI 3.0
+# BosskuAI
 
-**A safety layer that makes your AI coding assistant plan before it edits, check its own work after, and remember what it learns.**
+**A safety layer for your AI coding assistant. It makes the AI plan before it edits, check its own work after, and remember what it learns.**
 
-BosskuAI runs locally and works with the AI tool you already use — Claude Code, Cursor, Codex, or OpenCode. Instead of one AI taking a single shot at your prompt, every task flows through a small team of specialized agents.
+You already use an AI tool like Claude Code, Cursor, Codex, or OpenCode. BosskuAI sits on top of it. Instead of the AI taking one shot at your prompt and editing files, every task goes through a small team of agents that plan, build, review, and approve before anything reaches you.
 
-> 🟢 **Free and open source.** Self-host it on your own machine in a few minutes — no account, no cloud lock-in. Your code never leaves your computer unless you choose a cloud AI provider.
+> Free and open source. Runs on your machine. No account, no cloud lock-in. Your code stays on your computer unless you choose a cloud AI provider.
 
-**New here?** Read [How it works](#how-it-works) for the 30-second picture, then jump to [Get started in 5 minutes](#get-started-in-5-minutes).
+---
 
-### Is this for me?
+## Why use BosskuAI instead of a plain AI assistant?
 
-- ✅ You use an AI coding assistant and want it to be **safer and more predictable** — no surprise edits.
-- ✅ You want a **dashboard** that shows what the AI planned, changed, and checked.
-- ✅ You care about **privacy** and want the option to run everything locally with Ollama.
-- ❓ You just want raw autocomplete with zero structure — BosskuAI adds guardrails, so it may feel like more process than you need.
+When you ask an AI to fix a bug or add a feature, you usually get one shot: the AI reads your prompt, edits files, and hands you the result. If it gets something wrong, you find out after the damage is done.
 
-<img width="1895" height="921" alt="image" src="https://github.com/user-attachments/assets/10eb8908-f05e-426a-af68-e83162703f4a" />
+BosskuAI changes that. Every task flows through a pipeline:
 
-<img width="1878" height="911" alt="image" src="https://github.com/user-attachments/assets/f5176bb3-a611-4a51-a7e7-560e65b995f6" />
+1. **Plan first** — one agent figures out what to change, which files, and what could go wrong. You see the plan before any edit happens.
+2. **Edit carefully** — another agent makes the actual changes, following the plan.
+3. **Review the work** — a second agent checks the diff for bugs, security holes, and missing tests. If it finds problems, it sends the work back.
+4. **Approve risky changes** — for anything touching payments, auth, or database migrations, BosskuAI pauses and asks you before continuing.
+5. **Remember lessons** — decisions and patterns are saved so the next session does not start from zero.
 
-<img width="1906" height="919" alt="image" src="https://github.com/user-attachments/assets/da80b202-7ab5-4ce5-a504-89cb6bce146c" />
+The result: fewer surprise edits, fewer broken builds, fewer security regressions, and a dashboard that shows you exactly what happened.
 
-<img width="1905" height="916" alt="image" src="https://github.com/user-attachments/assets/fb1a22c8-2d4c-41d3-829c-e43aa6b2b41f" />
+---
 
-<img width="1898" height="914" alt="image" src="https://github.com/user-attachments/assets/6b09ffcc-d3b1-47a5-b793-38b79e476a45" />
+## How it is different from other AI agent tools
 
-<img width="1883" height="917" alt="image" src="https://github.com/user-attachments/assets/ecd3433a-bb86-4e2a-b87c-9ea69a57007b" />
+| Feature | BosskuAI | Plain AI (Claude Code, Cursor, etc.) | LangChain / CrewAI | LangGraph | Paperclip |
+|---|---|---|---|---|---|
+| **Plans before editing** | Yes - always | Sometimes, if you ask | No | No | Yes |
+| **Audits its own work** | Yes - second agent reviews the diff | No | No | No | Yes |
+| **Approval gates for risky work** | Yes - auth, payments, migrations pause | No | No | No | Yes |
+| **Remembers across sessions** | Yes - durable memory with vector search | No (starts fresh each time) | No | Optional | Planned |
+| **Runs locally** | Yes - Ollama support, your code never leaves | Partial (depends on provider) | No (needs API keys) | No (Python library) | Yes |
+| **Works with your existing AI tool** | Yes - Claude Code, Cursor, Codex, OpenCode | That IS the tool | No (build your own) | No (build your own) | Yes |
+| **Dashboard with run history** | Yes - see plans, changes, audits live | No | No | No | Yes |
+| **Free and open source** | Yes | Tool itself, but you pay for API | Yes | Yes | Yes |
+| **No cloud lock-in** | Yes - bring any provider | No (tied to one vendor) | No (API-dependent) | No (API-dependent) | Yes |
+| **Skill system** | 85+ built-in skills, add your own | No | No | No | Yes |
+| **Cross-tool consistency** | One contract works across Claude, Cursor, Codex, OpenCode | No (each tool is different) | No | No | Yes |
 
-<img width="1892" height="911" alt="image" src="https://github.com/user-attachments/assets/ee209dc8-11ae-4f71-bb7b-f18303a64ff8" />
+**In one sentence:** BosskuAI is the only tool that adds planning, auditing, approval gates, and memory on top of the AI coding assistant you already use, without locking you into one vendor or the cloud.
 
-<img width="1885" height="894" alt="image" src="https://github.com/user-attachments/assets/38f1d9c6-9a6d-4432-af85-4edd14e48701" />
+---
+
+## Is this for me?
+
+- You use an AI coding assistant and want it to be **safer and more predictable** - no surprise edits.
+- You want a **dashboard** that shows what the AI planned, changed, and checked.
+- You care about **privacy** and want the option to run everything locally with Ollama.
+- You are okay with a little more structure in exchange for a lot fewer broken builds.
+
+If you just want raw autocomplete with zero guardrails, BosskuAI will feel like more process than you need.
 
 ---
 
 ## How it works
 
-Every task is routed through a pipeline instead of a single prompt. Simple questions take the short path; risky changes get the full treatment.
-
 ```
 Your prompt
-    │
-    ▼
-┌─────────────┐   Reads your prompt, picks the right path,
-│   Router    │   and decides how much rigor the task needs.
-└─────────────┘
-    │
-    ▼
-┌─────────────┐   Plans the change: which files, what steps,
-│  Planner    │   what could go wrong, what to test.
-└─────────────┘
-    │
-    ▼
-┌─────────────┐   Makes the actual edits, following the plan.
-│  Executor   │
-└─────────────┘
-    │
-    ▼
-┌─────────────┐   Reviews the diff for bugs, security, and
-│  Auditor    │   missing tests. Can send work back to fix.
-└─────────────┘
-    │
-    ▼
-┌─────────────┐   Final gate for risky work: MERGE, REVISE,
-│ Final Review│   or REJECT before you ever see the result.
-└─────────────┘
-    │
-    ▼
-   Memory       Saves decisions and lessons for next time.
+    |
+    v
+  Router       Reads your prompt, picks the right path,
+               decides how much rigor the task needs.
+    |
+    v
+  Planner       Plans the change: which files, what steps,
+               what could go wrong, what to test.
+    |
+    v
+  Executor     Makes the actual edits, following the plan.
+    |
+    v
+  Auditor      Reviews the diff for bugs, security, and
+               missing tests. Can send work back to fix.
+    |
+    v
+  Final Review  Final gate for risky work: MERGE, REVISE,
+               or REJECT before you ever see the result.
+    |
+    v
+  Memory       Saves decisions and lessons for next time.
 ```
 
-- **Plans before editing** — no blind edits; you see the plan first
-- **Audits after editing** — a second agent checks the work before it reaches you
-- **Approval gates** — payments, auth, and migrations pause and ask you first
-- **Remembers** — project decisions and lessons survive across sessions
-- **Local-first** — your code stays on your machine; you pick the AI provider
+Simple questions take the short path (just answer directly). Risky changes get the full treatment (plan, edit, audit, review, approve).
 
 ---
 
 ## Two ways to use it
 
-| You want to… | Use |
+| You want... | Use this |
 |---|---|
-| The full dashboard — run history, memory, skills, approval gates | **Path 1 — Docker web app** (below) |
-| Just add BosskuAI's rules and skills to an existing project | **[Path 2 — Repo toolkit](#path-2--add-to-an-existing-repo)** |
+| The full dashboard with run history, memory, skills, and approval gates | **Path 1 - Docker web app** (below) |
+| Just add BosskuAI's rules and skills to an existing project, no dashboard | **Path 2 - Repo toolkit** (see below) |
 
 **New here? Start with Path 1.** The dashboard shows everything as it happens.
 
 ---
 
-## Get started in 5 minutes
-
-> This is **Path 1 — the Docker web app**, the recommended way to try BosskuAI. Prefer to skip the dashboard? See [Path 2 — Repo toolkit](#path-2--add-to-an-existing-repo).
+## Get started in 5 minutes (Path 1 - Docker web app)
 
 ### What you need
 
@@ -98,7 +106,7 @@ Your prompt
 - Git
 - One AI provider: a local [Ollama](https://ollama.com), an Anthropic API key, or a ChatGPT/Codex connection
 
-### Step 1 — Clone and configure
+### Step 1 - Clone and configure
 
 ```bash
 git clone https://github.com/wankimmy/Bossku-AI bosskuAI
@@ -106,25 +114,23 @@ cd bosskuAI
 cp app/.env.example app/.env
 ```
 
-> On Windows PowerShell, use `Copy-Item app\.env.example app\.env`.
-
 Open `app/.env` and add **one** provider:
 
 ```env
-# A — Local Ollama (most private, free)
+# A - Local Ollama (most private, free)
 OLLAMA_BASE_URL=http://host.docker.internal:11434
 
-# B — Ollama Cloud
+# B - Ollama Cloud
 OLLAMA_BASE_URL=https://ollama.com
 OLLAMA_API_KEY=your-ollama-cloud-key
 
-# C — Anthropic Claude
+# C - Anthropic Claude
 ANTHROPIC_API_KEY=your-anthropic-key
 
-# D — Codex / ChatGPT — connect from Settings after launch
+# D - Codex / ChatGPT (connect from Settings after launch)
 ```
 
-### Step 2 — Start it
+### Step 2 - Start it
 
 ```bash
 docker compose up -d --build
@@ -135,20 +141,20 @@ docker compose exec backend php artisan db:seed
 docker compose exec backend php artisan bosskuai:import-knowledge --fresh
 ```
 
-First run takes 2–4 minutes while Docker pulls images and installs dependencies.
+First run takes 2-4 minutes while Docker pulls images and installs dependencies.
 
-### Step 3 — Open it
+### Step 3 - Open it
 
 | Service | URL |
 |---|---|
 | Web dashboard | http://localhost:28470 |
 | API (direct) | http://localhost:28480 |
 
-### Step 4 — Run your first task
+### Step 4 - Run your first task
 
 1. Open http://localhost:28470
-2. Type a task — e.g. `bossku, understand this repo and summarize the architecture`
-3. Press **Run task** and watch the Planner → Executor → Auditor steps appear live
+2. Type a task, for example: `bossku, understand this repo and summarize the architecture`
+3. Press **Run task** and watch the Planner, Executor, and Auditor steps appear live
 4. When it finishes, open the **Plan**, **Changes**, and **Audit** tabs
 
 > Tip: type `/` in the prompt box to see slash commands. `/project-understanding` is the best first command for any unfamiliar repo.
@@ -185,9 +191,9 @@ npm run dev   # http://localhost:3000
 
 ---
 
-## Path 2 — Add to an existing repo
+## Path 2 - Add to an existing repo
 
-Drop BosskuAI's rules, skills, and memory into any project — no dashboard required.
+Drop BosskuAI's rules, skills, and memory into any project. No dashboard required.
 
 **Linux / macOS:**
 ```bash
@@ -201,9 +207,9 @@ Drop BosskuAI's rules, skills, and memory into any project — no dashboard requ
 
 This copies in:
 
-- `AGENTS.md` — the shared contract for Claude Code, Cursor, and Codex
-- `skill-index.json` — available task skills
-- `ai-assistant/` — memory, orchestrator, and model-router scripts
+- `AGENTS.md` - the shared contract for Claude Code, Cursor, and Codex
+- `skill-index.json` - available task skills
+- `ai-assistant/` - memory, orchestrator, and model-router scripts
 - Rule files for supported editors
 
 Then open the project in your AI tool and start any message with `bossku,` to activate BosskuAI mode.
@@ -231,7 +237,7 @@ docker compose exec backend php artisan route:list
 docker compose exec backend php artisan test
 ```
 
-> `import-knowledge --fresh` refreshes only knowledge (skills, rules, playbooks, checklists). Run history and memory are preserved.
+> `import-knowledge --fresh` refreshes only knowledge (skills, rules, playbooks). Run history and memory are preserved.
 
 **Frontend:**
 ```bash
@@ -267,7 +273,7 @@ Override in the root `.env`: `BOSSKU_PORT_WEB`, `BOSSKU_PORT_API`, `BOSSKU_PORT_
 
 ## Security
 
-Local development has **no authentication** by default — fine for a single machine.
+Local development has **no authentication** by default - fine for a single machine.
 
 Before exposing BosskuAI to a network, turn auth on:
 
@@ -302,7 +308,7 @@ See [`docs/production-deploy.md`](docs/production-deploy.md) for TLS, CORS, and 
 | **No skills in the slash menu** | `docker compose exec backend php artisan bosskuai:import-knowledge --fresh` |
 | **Local Ollama unreachable** | Confirm Ollama is running and `OLLAMA_BASE_URL=http://host.docker.internal:11434` |
 | **Cloud model fails** | Check the API key in `app/.env` or the Settings page |
-| **Planner JSON error** | Check the model, key, and base URL in Settings → Model Routing |
+| **Planner JSON error** | Check the model, key, and base URL in Settings, then Model Routing |
 | **Port already in use** | Set `BOSSKU_PORT_WEB`, `BOSSKU_PORT_API`, etc. in the root `.env` |
 
 ---
@@ -323,16 +329,16 @@ See [`docs/production-deploy.md`](docs/production-deploy.md) for TLS, CORS, and 
 
 ---
 
-## Contributing & community
+## Contributing
 
-BosskuAI is open source and contributions are welcome — whether it's a bug report, a docs fix, or a new skill.
+BosskuAI is open source and contributions are welcome - whether it is a bug report, a docs fix, or a new skill.
 
-- 🐛 **Found a bug or have an idea?** Open an issue on GitHub.
-- 🔧 **Want to contribute code?** Read [`CONTRIBUTING.md`](CONTRIBUTING.md) first — it covers setup, conventions, and how to run the tests.
-- 🔒 **Found a security issue?** Please follow [`SECURITY.md`](SECURITY.md) instead of opening a public issue.
-- 📐 **Working with an AI assistant in this repo?** [`AGENTS.md`](AGENTS.md) is the shared contract that keeps Claude Code, Cursor, and Codex aligned.
+- Found a bug or have an idea? Open an issue on GitHub.
+- Want to contribute code? Read [`CONTRIBUTING.md`](CONTRIBUTING.md) first - it covers setup, conventions, and how to run the tests.
+- Found a security issue? Please follow [`SECURITY.md`](SECURITY.md) instead of opening a public issue.
+- Working with an AI assistant in this repo? [`AGENTS.md`](AGENTS.md) is the shared contract that keeps Claude Code, Cursor, and Codex aligned.
 
-If BosskuAI is useful to you, a ⭐ on GitHub helps other people find it.
+If BosskuAI is useful to you, a star on GitHub helps other people find it.
 
 ---
 
