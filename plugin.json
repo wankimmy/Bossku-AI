@@ -1,7 +1,7 @@
 {
   "name": "bossku-ai",
   "version": "1.13.0",
-  "description": "AI cofounder plugin for Cursor: 108 skills on disk under ai-assistant/skills; Cursor may show fewer in Plugins (108 minus manual-only specialists in skill-index routing). Invoke specialists by name. Run scripts/cursor-plugin-refresh.sh after git pull.",
+  "description": "Open-source AI agent orchestration for Cursor: multi-agent plan → execute → audit pipeline, approval gates, persistent memory, 100+ skills. Local-first (Ollama). Run scripts/cursor-plugin-refresh.sh after git pull.",
   "author": {
     "name": "wankimmy"
   },
@@ -9,11 +9,21 @@
   "repository": "https://github.com/wankimmy/Bossku-AI",
   "license": "MIT",
   "keywords": [
+    "ai-agents",
+    "ai-coding-assistant",
     "cursor",
-    "skills",
-    "ai-cofounder",
-    "product-strategy",
-    "engineering"
+    "claude-code",
+    "opencode",
+    "codex",
+    "agent-orchestration",
+    "code-review",
+    "ollama",
+    "local-first",
+    "multi-agent",
+    "mcp",
+    "open-source",
+    "developer-tools",
+    "skills"
   ],
   "skills": "./ai-assistant/skills/",
   "rules": [

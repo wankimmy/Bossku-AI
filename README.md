@@ -1,10 +1,12 @@
 # BosskuAI
 
-**A safety layer for your AI coding assistant. It makes the AI plan before it edits, check its own work after, and remember what it learns.**
+**BosskuAI is an open-source AI agent orchestration layer for software development.** It adds planning, automated code review, approval gates, and persistent memory on top of Cursor, Claude Code, Codex, and OpenCode — so AI coding assistants plan before they edit, audit their own diffs, and remember what they learn.
 
-You already use an AI tool like Claude Code, Cursor, Codex, or OpenCode. BosskuAI sits on top of it. Instead of the AI taking one shot at your prompt and editing files, every task goes through a small team of agents that plan, build, review, and approve before anything reaches you.
+Instead of one-shot file edits, every task runs through a multi-agent pipeline: **plan → execute → audit → approve**. You get a run dashboard, 100+ skills, and optional local inference with Ollama.
 
-> Free and open source. Runs on your machine. No account, no cloud lock-in. Your code stays on your computer unless you choose a cloud AI provider.
+> Free and open source (MIT). Runs on your machine. No account required. No cloud lock-in — your code stays local unless you choose a cloud AI provider.
+
+**Looking for:** an AI coding assistant with guardrails · multi-agent orchestration for Cursor or Claude Code · local-first LLM dev tools · plan-and-review before merge · open-source alternative to LangGraph/CrewAI for coding workflows.
 
 ---
 
@@ -40,7 +42,7 @@ The result: fewer surprise edits, fewer broken builds, fewer security regression
 | **Skill system** | 85+ built-in skills, add your own | No | No | No | Yes |
 | **Cross-tool consistency** | One contract works across Claude, Cursor, Codex, OpenCode | No (each tool is different) | No | No | Yes |
 
-**In one sentence:** BosskuAI is the only tool that adds planning, auditing, approval gates, and memory on top of the AI coding assistant you already use, without locking you into one vendor or the cloud.
+**In one sentence:** BosskuAI is open-source AI agent orchestration that adds plan → audit → approve guardrails and persistent memory to Cursor, Claude Code, Codex, and OpenCode — local-first, no vendor lock-in.
 
 ---
 
