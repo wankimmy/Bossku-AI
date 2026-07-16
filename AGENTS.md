@@ -46,6 +46,19 @@ Ask before payments, auth, secrets, privacy, data loss, or migrations.
 - Export to Obsidian is one-way, curated, and vault-local under `BosskuAI/<project>/`.
 - Never store secrets in memory files.
 
+## Pack routing
+
+Load vendored packs from [`skills/vendored.json`](skills/vendored.json). See [`docs/third-party.md`](docs/third-party.md).
+
+| Task | Primary skill(s) |
+|---|---|
+| New product / UI that must not look AI-generated | `hallmark` (+ `bosskuai-taste` for anti-slop) |
+| Marketing, CRO, SEO, copy, GTM | marketingskills — start with `product-marketing` |
+| Brainstorm → plan → TDD → debug → review process | superpowers — `using-superpowers`, `brainstorming`, `writing-plans`, `systematic-debugging` |
+| Codebase map / architecture graph | `graphify` (requires `graphifyy` CLI) |
+| Browser automation agent | `browser-use` (prefer over `bosskuai-browser-automation` when installed) |
+| Office/PDF/HTML → Markdown | `markitdown` (requires `markitdown[all]` pip package) |
+
 ## Verification
 
 Before declaring done: re-check the request, review changed files, run the relevant check, and state anything not verified.

@@ -57,17 +57,23 @@ def update_user(*, root: Path | None = None, home: Path | None = None) -> dict:
     return install_user(root=root, home=home, profile=profile, vault=vault)
 
 
-def uninstall_user(*, home: Path | None = None, purge: bool = False) -> dict:
+def uninstall_user(*, root: Path | None = None, home: Path | None = None, purge: bool = False) -> dict:
     h = home if home is not None else Path.home()
+    cfg_path = user_config_dir(h) / "config.json"
+    effective_root = root
+    if effective_root is None and cfg_path.is_file():
+        cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+        installed_from = cfg.get("installed_from")
+        if installed_from:
+            effective_root = Path(installed_from)
     removed: list[str] = []
     for dest in (agents_skills_dir(h), claude_skills_dir(h)):
         if not dest.is_dir():
             continue
         for child in list(dest.iterdir()):
-            if child.is_dir() and is_managed_skill_name(child.name):
+            if child.is_dir() and is_managed_skill_name(child.name, effective_root):
                 shutil.rmtree(child)
                 removed.append(child.name)
-    cfg_path = user_config_dir(h) / "config.json"
     if purge and cfg_path.is_file():
         cfg_path.unlink()
     cache = user_config_dir(h) / "routing-cache.json"

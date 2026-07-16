@@ -23,6 +23,23 @@ def aliases_path(root: Path | None = None) -> Path:
     return repo_root(root) / "skills" / "aliases.json"
 
 
+def vendored_path(root: Path | None = None) -> Path:
+    return repo_root(root) / "skills" / "vendored.json"
+
+
+def load_vendored(root: Path | None = None) -> dict[str, str]:
+    path = vendored_path(root)
+    if not path.is_file():
+        return {}
+    data = json.loads(path.read_text(encoding="utf-8"))
+    skills = data.get("skills", {})
+    return {str(k): str(v) for k, v in skills.items()}
+
+
+def load_vendored_ids(root: Path | None = None) -> set[str]:
+    return set(load_vendored(root).keys())
+
+
 def load_aliases(root: Path | None = None) -> dict[str, str]:
     path = aliases_path(root)
     if not path.is_file():
@@ -218,8 +235,10 @@ def _profile_skills(profile: str, root: Path | None) -> list[str]:
     return list_skill_ids(root)
 
 
-def is_managed_skill_name(name: str) -> bool:
-    return name == COFOUNDER_SKILL or name.startswith(MANAGED_SKILL_PREFIX)
+def is_managed_skill_name(name: str, root: Path | None = None) -> bool:
+    if name == COFOUNDER_SKILL or name.startswith(MANAGED_SKILL_PREFIX):
+        return True
+    return name in load_vendored_ids(root)
 
 
 def validate_skills(root: Path | None = None) -> list[str]:

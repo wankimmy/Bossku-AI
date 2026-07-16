@@ -92,7 +92,7 @@ def main(argv: list[str] | None = None) -> int:
             print("validate: ok")
             return 0
         if args.command == "uninstall":
-            result = uninstall_user(home=home, purge=args.purge)
+            result = uninstall_user(root=root, home=home, purge=args.purge)
             print(json.dumps(result, indent=2))
             return 0
     except Exception as exc:  # noqa: BLE001 - CLI boundary

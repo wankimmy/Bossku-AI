@@ -34,9 +34,17 @@ Open the project in any supported coding agent. Say `bossku` or ask for cofounde
 ## Layout
 
 - [`AGENTS.md`](AGENTS.md) — cross-tool contract
-- [`skills/`](skills/) — canonical skill library
+- [`skills/`](skills/) — canonical skill library (~170 skills, including vendored packs)
+- [`skills/vendored.json`](skills/vendored.json) — third-party skill provenance
 - [`agents/`](agents/) — orchestrator, planner, executor, auditor, final reviewer
 - [`bossku/`](bossku/) — CLI package (stdlib only)
+- [`docs/third-party.md`](docs/third-party.md) — MIT attribution for vendored packs
+
+## Vendored skill packs
+
+BosskuAI ships skills from **marketingskills**, **superpowers**, **hallmark**, **browser-use**, **graphify**, and a thin **markitdown** wrapper. Use `bossku install --profile full` to install all of them.
+
+Optional CLIs for some packs: see [`requirements-optional.txt`](requirements-optional.txt).
 
 ## Archive
 

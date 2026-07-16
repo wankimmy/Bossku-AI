@@ -1,20 +1,12 @@
-# BosskuAI optional dependencies — install to upgrade the embedding provider.
+# Optional tools referenced by vendored BosskuAI skills (not installed by default).
 #
-# Default (no install needed):
-#   vector-config.json: "provider": "tfidf"  — proper IDF weights, zero downloads.
-#
-# Upgrade options (change provider in ai-assistant/memory/vector-config.json):
-#
-# 1. Neural embeddings — sentence-transformers (recommended, ~80MB model):
-#    pip install sentence-transformers
-#    Set: "provider": "sentence-transformers"
-#
-# 2. OpenAI embeddings (requires OPENAI_API_KEY):
-#    pip install openai
-#    Set: "provider": "openai"
-#
-# Dev / eval tooling (already in stdlib — no install needed):
-#   sqlite3, json, re, hashlib, math, pathlib, datetime, argparse
+# Install only what you need for the skills you use.
 
-sentence-transformers>=2.7.0    ; extra == "neural"
-openai>=1.0.0                   ; extra == "openai"
+# markitdown skill — document conversion
+markitdown[all]>=0.1.0
+
+# graphify skill — knowledge graph CLI
+graphifyy>=0.8.0
+
+# browser-use skills — browser automation agent
+browser-use>=0.11.0
