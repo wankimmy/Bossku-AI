@@ -1,71 +1,20 @@
 # Contributing
 
-Thanks for contributing.
+BosskuAI is a toolkit-only repo: skills, agents, CLI, and docs.
 
-## Principles
+## Changes
 
-- Keep the repo portable. Do not introduce machine-specific absolute paths.
-- Prefer relative references throughout the starter.
-- Keep skills concise and reusable.
-- Prefer adding high-signal guidance over adding more volume.
-- Treat planning-first, triple-checking, and asking when material facts are unconfirmed as non-negotiable behavior.
+1. Keep `AGENTS.md` tool-neutral and concise.
+2. Add or edit skills under `skills/<id>/SKILL.md` with YAML frontmatter.
+3. Register deprecated names in `skills/aliases.json` instead of duplicating folders.
+4. Run before opening a PR:
 
-## What to contribute
-
-Good contributions include:
-
-- better skills
-- stronger checklists and playbooks
-- clearer onboarding docs
-- domain packs that are optional and well scoped
-- example prompts and example outputs
-- portability and consistency fixes across Codex, Claude, and Cursor
-
-## Skill format
-
-Every new skill file must follow this structure:
-
-```markdown
----
-name: bosskuai-<slug>
-description: One-line description under 200 characters. Used by routers.
----
-
-# BosskuAI <Title>
-
-## How this differs from nearby skills
-## Mindset
-## <Domain lenses or workflow sections>
-## Guardrails
-## Output format
-## References
+```bash
+pip install -e .
+python -m bossku validate --root .
+python -m unittest discover -s tests -v
 ```
 
-- `name` must match the folder slug exactly (`bosskuai-<slug>`)
-- `description` is loaded by routers — keep it specific and under 200 chars
-- `Guardrails` must include the standard ambiguity protocol bullet
-- When adding a skill, also update `AGENTS.md`: skill roster table, quick reference table, local skills table, proactive skill use, and phased pipelines
+## Archive
 
-## Before opening a PR
-
-Check that:
-
-- docs match the actual files in the repo
-- no absolute local paths remain
-- new skills have clear descriptions and a focused workflow
-- changes do not contradict `AGENTS.md`
-- examples are practical, not just aspirational
-
-## Style guidance
-
-- Prefer short, direct language
-- Separate confirmed facts from inference
-- Avoid hype
-- Keep templates and examples easy to copy
-
-## Public repo quality bar
-
-- planning-first for meaningful tasks
-- triple-check important conclusions
-- ask instead of guessing when something material is unconfirmed
-- keep durable memory reusable across tool surfaces
+Product MVP code lives on `archive/product-mvp-2026-07`. Do not reintroduce Laravel/Nuxt/Docker surfaces on `main` without an explicit decision.

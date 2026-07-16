@@ -1,6 +1,0 @@
-{
-  "id": "cl_1",
-  "name": "Release QA",
-  "content": "- [ ] Run e2e\n- [ ] Ship\n\nMOCK_CHECKLIST_MARKER_YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY\n",
-  "is_active": true
-}

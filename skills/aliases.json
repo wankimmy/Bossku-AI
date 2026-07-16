@@ -1,0 +1,12 @@
+{
+  "aliases": {
+    "bosskuai-caveman": "bosskuai-token-saver",
+    "bosskuai-root-cause-investigation": "bosskuai-diagnose-loop",
+    "bosskuai-bug-finding": "bosskuai-diagnose-loop",
+    "bosskuai-project-management": "bosskuai-planning-execution",
+    "bosskuai-social-content-calendar": "bosskuai-content-calendar",
+    "bosskuai-agent-security-hardening": "bosskuai-prompt-injection-defense",
+    "bosskuai-grill-me": "bosskuai-grill-with-docs",
+    "bosskuai-zoom-out": "bosskuai-codebase-analysis"
+  }
+}

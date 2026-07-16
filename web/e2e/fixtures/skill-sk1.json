@@ -1,9 +1,0 @@
-{
-  "id": "sk_1",
-  "name": "Laravel playbook",
-  "description": "E2E mock skill tied to playbook metadata.",
-  "source_path": "skills/laravel/playbook/SKILL.md",
-  "content": "---\nid: laravel-example\n---\n\n```php\n<?php declare(strict_types=1);\nnamespace App\\\n{\\n  final class Example { }\n}\\n}\n```\n\nLong line for horizontal overflow checks: WWWWWWWWWWMMMMMMMMMMMMMMMMMMMMMMMMMMMMQQQQQQQQQQQQAAAAAAAAAAAAAAAAEEEEEEEEEEEEEE\nMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM\n\nMore lines.\nRepeat.\nRepeat.\n",
-  "is_active": true,
-  "links": []
-}

@@ -7,22 +7,29 @@ on:
     branches: ["main", "master"]
 
 jobs:
-  integrity:
-    name: Repo integrity
-    runs-on: ubuntu-latest
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.11"]
+    runs-on: ${{ matrix.os }}
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Make scripts executable
-        run: chmod +x scripts/check-workspace.sh scripts/verify-skill-references.sh scripts/validate-skill-index.sh
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
 
-      - name: Workspace check (required files present)
-        run: ./scripts/check-workspace.sh .
+      - name: Install package
+        run: pip install -e .
 
-      - name: Skill reference check (SKILL.md → references/ paths)
-        run: ./scripts/verify-skill-references.sh
+      - name: Validate repository
+        run: python -m bossku validate --root .
 
-      - name: Skill index consistency (index ↔ folders)
-        run: ./scripts/validate-skill-index.sh .
+      - name: Unit tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Doctor smoke (temp home)
+        run: python -c "import tempfile, subprocess, sys; from pathlib import Path; h=Path(tempfile.mkdtemp()); subprocess.check_call([sys.executable,'-m','bossku','install','--root','.','--home',str(h),'--profile','core']); subprocess.check_call([sys.executable,'-m','bossku','doctor','--root','.','--home',str(h)])"

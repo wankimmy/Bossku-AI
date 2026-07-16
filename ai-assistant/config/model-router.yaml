@@ -1,1 +1,0 @@
-Updated hints: planning primary llama3.1:8b, backups mistral:7b, gemma2:9b; execution primary codellama:7b, high_risk llama3.1:8b, backups mistral:7b, codellama:7b, gemma2:9b; audit primary mistral:7b, backups llama3.1:8b, gemma2:9b; final_review primary llama3.1:8b, backups mistral:7b, gemma2:9b; router primary llama3.1:8b, backups mistral:7b, gemma2:9b

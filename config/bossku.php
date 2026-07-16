@@ -1,1 +1,0 @@
-Changed defaults: planning primary 'llama3.1:8b', fallback 'mistral:7b'; execution primary 'codellama:7b', high_risk 'llama3.1:8b', fallback 'mistral:7b'; audit primary 'mistral:7b', fallback 'llama3.1:8b'; final_review primary 'llama3.1:8b', fallback 'mistral:7b'; router primary 'llama3.1:8b', fallback 'mistral:7b'

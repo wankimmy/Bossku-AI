@@ -1,4 +1,0 @@
-{
-  "_comment": "Hooks moved to the plugin (hooks/hooks.json) in v1.13.0 so they fire in every repo the bossku-ai plugin is enabled for. Working in this repo without the plugin? Wire them back locally via scripts/install.sh --with-hooks or copy hooks/hooks.json entries here with ${CLAUDE_PROJECT_DIR} paths.",
-  "hooks": {}
-}

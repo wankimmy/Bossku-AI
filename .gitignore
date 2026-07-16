@@ -2,16 +2,9 @@
 .DS_Store
 Thumbs.db
 
-# Logs
-*.log
-
 # Env
 .env
-
-# Node
-node_modules/
-dist/
-build/
+.env.*
 
 # Python
 __pycache__/
@@ -19,38 +12,19 @@ __pycache__/
 .pytest_cache/
 .venv/
 venv/
+*.egg-info/
+dist/
+build/
 
-# Coverage
-coverage/
-.coverage
+# BosskuAI local state
+.bosskuai-backups/
+.bossku/
 
-# Misc
+# Logs
+*.log
 tmp/
 temp/
 
-# Docker persistent data (bind mounts — never commit)
-data/
-
-# AI assistant (local)
-ai-assistant/memory/*
-!ai-assistant/memory/README.md
-!ai-assistant/memory/agent-profile.md
-!ai-assistant/memory/active-continuation.md
-!ai-assistant/memory/bug-patterns.md
-!ai-assistant/memory/learning-log.md
-!ai-assistant/memory/market-notes.md
-!ai-assistant/memory/plan-log.md
-!ai-assistant/memory/project-understanding.md
-!ai-assistant/memory/vector-config.json
-!ai-assistant/memory/instincts/
-ai-assistant/memory/instincts/*
-!ai-assistant/memory/instincts/README.md
-ai-assistant/memory/semantic-memory.sqlite3
-**/project-understanding.md
-
-# Laravel orchestrator backend + Nuxt frontend
-app/vendor/
-app/storage/*.key
-web/node_modules/
-web/.nuxt/
-web/.output/
+# IDE
+.idea/
+.vscode/

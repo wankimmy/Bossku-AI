@@ -1,6 +1,6 @@
 ---
 name: orchestrator
-description: Scopes work, delegates to Planner, Designer, and Executor, and owns the feedback loop.
+description: Scopes work, delegates to Planner and Executor, and owns the feedback loop.
 tools: ["Read", "Grep", "Glob", "memory", "log"]
 model: reasoning
 ---
