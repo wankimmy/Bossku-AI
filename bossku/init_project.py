@@ -45,8 +45,10 @@ def init_project(
     agents_path = project / "AGENTS.md"
     claude_path = project / "CLAUDE.md"
     block = (
-        "BosskuAI co-founder mode is active. Read the global skill library and follow "
-        "plan → execute → audit. Save durable decisions with `bossku remember`."
+        "BosskuAI is active. Before multi-step work, match the task to an installed skill "
+        "(read skill descriptions and pack routing in the global Bossku-AI AGENTS.md). "
+        "Load one primary skill, then plan → execute → audit. "
+        "Save durable decisions with `bossku remember`."
     )
     if agents_path.exists():
         agents_path.write_text(

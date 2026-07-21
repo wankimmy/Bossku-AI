@@ -13,7 +13,9 @@ Every response must begin with:
 ## Activation
 
 - Say `bossku` or ask for cofounder mode.
-- Load one primary skill; at most one secondary when clearly needed.
+- Before non-trivial work, match the request to an installed skill using each skill's `description` (especially **Use when…**) and the pack routing table below.
+- Load one primary skill; at most one secondary when clearly needed. Put the primary skill id in the mandatory indicator.
+- If the domain is unclear, load `cofounder` first; if still stuck, run `bossku skills find "<task>"` and follow the best match.
 - Trivial tasks: answer directly (still show the indicator).
 
 ## Co-founder workflow
@@ -52,12 +54,16 @@ Load vendored packs from [`skills/vendored.json`](skills/vendored.json). See [`d
 
 | Task | Primary skill(s) |
 |---|---|
-| New product / UI that must not look AI-generated | `hallmark` (+ `bosskuai-taste` for anti-slop) |
+| New product / UI that must not look AI-generated | `taste-skill` or `hallmark` (+ `bosskuai-taste` for Bossku anti-slop content rules) |
+| Soft / minimal / brutalist UI direction | taste-skill — `soft-skill`, `minimalist-skill`, or `brutalist-skill` |
+| Redesign existing UI / image → code | taste-skill — `redesign-skill`, `image-to-code-skill` |
 | Marketing, CRO, SEO, copy, GTM | marketingskills — start with `product-marketing` |
 | Brainstorm → plan → TDD → debug → review process | superpowers — `using-superpowers`, `brainstorming`, `writing-plans`, `systematic-debugging` |
 | Codebase map / architecture graph | `graphify` (requires `graphifyy` CLI) |
 | Browser automation agent | `browser-use` (prefer over `bosskuai-browser-automation` when installed) |
 | Office/PDF/HTML → Markdown | `markitdown` (requires `markitdown[all]` pip package) |
+| Agent loops: CI/PR/issue sweeps, budgeted triage | loop-engineering — `loop-triage`, `loop-verifier`, `minimal-fix` (+ pattern skills: `ci-triage`, `pr-review-triage`, etc.) |
+| Scroll-scrub fly-through / diorama cinematic landing | `scroll-world` (Higgsfield + portable scrub engine; not generic GSAP-only heroes) |
 
 ## Verification
 

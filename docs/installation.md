@@ -24,6 +24,8 @@ Skills are copied to:
 
 No symlinks. Unrelated skills in those folders are left untouched.
 
+Coding agents pick skills from installed folders using each skill's `description` (especially **Use when…**) plus your project `AGENTS.md`. After pulling Bossku-AI changes, run `bossku update`. For CLI hints: `bossku skills find "<task>"`.
+
 ## Per-project adapter
 
 ```bash

@@ -26,6 +26,15 @@ BosskuAI cofounder mode must be able to route to expert skills for:
 - **Growth:** SEO/GEO, AEO, content calendar, marketing, sales, lead generation, launch, commercialization, customer success/support.
 - **Founder operations:** prioritization, build-vs-buy, roadmap sequencing, pricing, runway, metrics, experiments, SaaS billing ops, cost optimization, observability, QA automation, eval-driven agent improvement.
 
+**Vendored packs** (route to these when the task fits; see global `AGENTS.md` pack table):
+
+- **superpowers:** brainstorm, plans, TDD, systematic debug, code review workflows (`using-superpowers`, `brainstorming`, `writing-plans`, `systematic-debugging`, …)
+- **marketingskills:** deep marketing/CRO/SEO/copy (`product-marketing`, `copywriting`, `cro`, …)
+- **loop-engineering:** agent loops for CI, PRs, issues, deps, releases (`loop-triage`, `ci-triage`, `pr-review-triage`, …)
+- **taste-skill:** anti-slop landing/portfolio UI (`taste-skill`, `soft-skill`, `minimalist-skill`, `brutalist-skill`, `redesign-skill`, …)
+- **scroll-world:** scroll-scrub fly-through cinematic landings (Higgsfield pipeline + scrub engine)
+- **hallmark**, **browser-use**, **graphify**, **markitdown** when the task matches their descriptions
+
 ## Core workflow
 
 1. **Frame:** current situation, objective, stage, and constraint.
@@ -44,6 +53,8 @@ BosskuAI cofounder mode must be able to route to expert skills for:
 - Redis/cache/queues: `bosskuai-redis-caching-queues`
 - VPS Docker deployment: `bosskuai-vps-docker-deployment`
 - UI/UX and anti-AI design: `bosskuai-ui-ux-design-to-code`
+- Anti-slop landing / portfolio frontend: `taste-skill` (variants: `soft-skill`, `minimalist-skill`, `brutalist-skill`; redesign: `redesign-skill`)
+- Scroll-scrub fly-through / diorama world landing: `scroll-world`
 - Security/privacy/abuse: `bosskuai-cybersecurity-risk`
 - Tenant isolation/data leak: `bosskuai-tenant-isolation-security`
 - Prompt injection / AI workspace security: `bosskuai-prompt-injection-defense`
@@ -58,6 +69,14 @@ BosskuAI cofounder mode must be able to route to expert skills for:
 - Cost optimization/token budget: `bosskuai-cost-optimization`
 - Customer success/support: `bosskuai-customer-success-support`
 - Eval-driven agent improvement: `bosskuai-eval-driven-agent-improvement`
+- CI failures / red builds: `ci-triage` → `minimal-fix` → `loop-verifier`
+- Open PR babysitting / merge readiness: `pr-review-triage`
+- Issue backlog hygiene (dedupe, prioritize): `issue-triage`
+- Dependency / CVE sweeps: `dependency-triage`
+- Post-merge cleanup (TODOs, stale flags): `post-merge-scan`
+- Release changelog / notes: `changelog-scan` → `draft-release-notes`
+- Budgeted agent loops (caps, guardrails): `loop-budget`, `loop-constraints`, `loop-triage`
+- Sweep CI + issues + recent commits into a loop backlog: `loop-triage`
 
 ## Decision quality bar
 

@@ -103,21 +103,48 @@ def _parse_frontmatter(text: str) -> dict:
     block = text[3:end].strip()
     out: dict[str, object] = {}
     key: str | None = None
-    for line in block.splitlines():
-        if line.strip().startswith("- ") and key:
+    lines = block.splitlines()
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        stripped = line.strip()
+        if stripped.startswith("- ") and key:
             items = out.setdefault(key, [])
             if isinstance(items, list):
-                items.append(line.strip()[2:].strip())
+                items.append(stripped[2:].strip())
+            i += 1
             continue
-        if ":" in line:
-            key, val = line.split(":", 1)
-            key = key.strip()
+        if ":" in line and (not line or not line[0].isspace()):
+            key_part, val = line.split(":", 1)
+            key = key_part.strip()
             val = val.strip()
+            if val in (">", "|"):
+                folded = val == ">"
+                i += 1
+                parts: list[str] = []
+                while i < len(lines):
+                    nxt = lines[i]
+                    if nxt.strip() == "":
+                        if not folded:
+                            parts.append("")
+                        i += 1
+                        continue
+                    if not nxt[0].isspace():
+                        head = nxt.split(":", 1)[0].strip()
+                        if head and re.match(r"^[A-Za-z0-9_-]+$", head):
+                            break
+                    parts.append(nxt.strip())
+                    i += 1
+                out[key] = (" ".join(parts) if folded else "\n".join(parts)).strip()
+                continue
             if val.startswith("[") and val.endswith("]"):
                 inner = val[1:-1]
                 out[key] = [p.strip().strip("'\"") for p in inner.split(",") if p.strip()]
             else:
                 out[key] = val.strip("'\"")
+            i += 1
+            continue
+        i += 1
     return out
 
 
@@ -172,6 +199,21 @@ def _score(task: str, meta: SkillMeta) -> float:
     for kw in meta.keywords:
         if kw.lower() in task:
             score += 1.0
+    desc = meta.description.lower()
+    if task in desc:
+        score += 6.0
+    words = [w.strip(".,!?") for w in task.split()]
+    if len(words) >= 2:
+        for i in range(len(words) - 1):
+            bigram = f"{words[i]} {words[i + 1]}"
+            if bigram in desc:
+                score += 4.0
+    for part in meta.skill_id.replace("bosskuai-", "").split("-"):
+        if len(part) >= 3 and part in task:
+            score += 1.5
+    for word in words:
+        if len(word) >= 5 and word in desc:
+            score += 0.5
     return score
 
 

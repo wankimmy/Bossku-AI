@@ -81,6 +81,38 @@
     ],
     "markitdown": [
       "markitdown"
+    ],
+    "loop-engineering": [
+      "loop-budget",
+      "loop-constraints",
+      "loop-triage",
+      "loop-verifier",
+      "minimal-fix",
+      "ci-triage",
+      "issue-triage",
+      "dependency-triage",
+      "pr-review-triage",
+      "post-merge-scan",
+      "changelog-scan",
+      "draft-release-notes"
+    ],
+    "taste-skill": [
+      "taste-skill",
+      "taste-skill-v1",
+      "gpt-tasteskill",
+      "image-to-code-skill",
+      "redesign-skill",
+      "soft-skill",
+      "output-skill",
+      "minimalist-skill",
+      "brutalist-skill",
+      "stitch-skill",
+      "imagegen-frontend-web",
+      "imagegen-frontend-mobile",
+      "brandkit"
+    ],
+    "scroll-world": [
+      "scroll-world"
     ]
   },
   "skills": {
@@ -152,6 +184,32 @@
     "remote-browser": "browser-use",
     "x402": "browser-use",
     "graphify": "graphify",
-    "markitdown": "markitdown"
+    "markitdown": "markitdown",
+    "loop-budget": "loop-engineering",
+    "loop-constraints": "loop-engineering",
+    "loop-triage": "loop-engineering",
+    "loop-verifier": "loop-engineering",
+    "minimal-fix": "loop-engineering",
+    "ci-triage": "loop-engineering",
+    "issue-triage": "loop-engineering",
+    "dependency-triage": "loop-engineering",
+    "pr-review-triage": "loop-engineering",
+    "post-merge-scan": "loop-engineering",
+    "changelog-scan": "loop-engineering",
+    "draft-release-notes": "loop-engineering",
+    "taste-skill": "taste-skill",
+    "taste-skill-v1": "taste-skill",
+    "gpt-tasteskill": "taste-skill",
+    "image-to-code-skill": "taste-skill",
+    "redesign-skill": "taste-skill",
+    "soft-skill": "taste-skill",
+    "output-skill": "taste-skill",
+    "minimalist-skill": "taste-skill",
+    "brutalist-skill": "taste-skill",
+    "stitch-skill": "taste-skill",
+    "imagegen-frontend-web": "taste-skill",
+    "imagegen-frontend-mobile": "taste-skill",
+    "brandkit": "taste-skill",
+    "scroll-world": "scroll-world"
   }
 }

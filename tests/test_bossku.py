@@ -102,6 +102,15 @@ class SkillTests(unittest.TestCase):
         sid, score = find_skill("cofounder mode what should we build next", ROOT)
         self.assertTrue(score >= 0)
 
+    def test_find_loop_skills_from_description(self):
+        sid, score = find_skill("ci failure", ROOT)
+        self.assertEqual(sid, "ci-triage")
+        self.assertGreater(score, 0)
+        sid, _ = find_skill("open pull requests", ROOT)
+        self.assertEqual(sid, "pr-review-triage")
+        sid, _ = find_skill("release notes", ROOT)
+        self.assertEqual(sid, "draft-release-notes")
+
 
 class ValidateTests(unittest.TestCase):
     def test_validate_repo_passes(self):
