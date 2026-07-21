@@ -56,6 +56,8 @@ class InstallTests(unittest.TestCase):
                 count_managed_skills(agents, ROOT),
                 count_managed_skills(claude, ROOT),
             )
+            for sid in ("loop-triage", "minimal-fix", "ci-triage", "loop-verifier"):
+                self.assertTrue((agents / sid).is_dir(), msg=f"missing core loop skill {sid}")
             removed = uninstall_user(root=ROOT, home=home)
             self.assertTrue(len(removed["removed_skills"]) >= 0)
 
@@ -139,6 +141,12 @@ class SkillTests(unittest.TestCase):
         self.assertEqual(sid, "pr-review-triage")
         sid, _ = find_skill("release notes", ROOT)
         self.assertEqual(sid, "draft-release-notes")
+        sid, score = find_skill("agent loop triage", ROOT)
+        self.assertEqual(sid, "loop-triage")
+        self.assertGreater(score, 0)
+        sid, score = find_skill("address review comment minimal patch", ROOT)
+        self.assertEqual(sid, "minimal-fix")
+        self.assertGreater(score, 0)
 
 
 class ValidateTests(unittest.TestCase):

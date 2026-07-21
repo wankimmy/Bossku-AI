@@ -30,7 +30,7 @@ BosskuAI cofounder mode must be able to route to expert skills for:
 
 - **superpowers:** brainstorm, plans, TDD, systematic debug, code review workflows (`using-superpowers`, `brainstorming`, `writing-plans`, `systematic-debugging`, …)
 - **marketingskills:** deep marketing/CRO/SEO/copy (`product-marketing`, `copywriting`, `cro`, …)
-- **loop-engineering:** agent loops for CI, PRs, issues, deps, releases (`loop-triage`, `ci-triage`, `pr-review-triage`, …)
+- **loop-engineering:** always-on loop discipline (minimal-fix, constraints, budget, verifier); agent loops for CI, PRs, issues, deps, releases (`loop-triage`, `ci-triage`, `pr-review-triage`, …)
 - **taste-skill:** anti-slop landing/portfolio UI (`taste-skill`, `soft-skill`, `minimalist-skill`, `brutalist-skill`, `redesign-skill`, …)
 - **scroll-world:** scroll-scrub fly-through cinematic landings (Higgsfield pipeline + scrub engine)
 - **hallmark**, **browser-use**, **graphify**, **markitdown** when the task matches their descriptions
@@ -75,7 +75,7 @@ BosskuAI cofounder mode must be able to route to expert skills for:
 - Dependency / CVE sweeps: `dependency-triage`
 - Post-merge cleanup (TODOs, stale flags): `post-merge-scan`
 - Release changelog / notes: `changelog-scan` → `draft-release-notes`
-- Budgeted agent loops (caps, guardrails): `loop-budget`, `loop-constraints`, `loop-triage`
+- Budgeted agent loops (caps, guardrails): `loop-budget`, `loop-constraints`, `loop-triage` — always apply loop discipline on fix/CI/PR work even without an explicit loop request
 - Sweep CI + issues + recent commits into a loop backlog: `loop-triage`
 
 ## Decision quality bar

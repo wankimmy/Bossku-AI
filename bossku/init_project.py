@@ -47,6 +47,7 @@ def init_project(
     block = (
         "BosskuAI is active. Before multi-step work, match the task to an installed skill "
         "(read skill descriptions and pack routing in the global Bossku-AI AGENTS.md). "
+        "Loop engineering is always on for fix/CI/PR/loop work (see global AGENTS.md). "
         "Load one primary skill, then plan → execute → audit. "
         "Save durable decisions with `bossku remember`."
     )

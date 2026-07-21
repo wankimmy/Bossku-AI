@@ -17,6 +17,8 @@ pip install -e /path/to/Bossku-AI
 bossku install --profile full --vault "/path/to/Obsidian/Vault"
 ```
 
+`--profile core` installs co-founder essentials plus the **loop-engineering** pack (12 skills). Loop discipline is always on in [`AGENTS.md`](../AGENTS.md#loop-engineering-always-on). After pulling Bossku-AI changes, run `bossku update` so installed skills match the repo.
+
 Skills are copied to:
 
 - `~/.agents/skills/` — Cursor, Codex, and OpenCode (OpenCode also scans `~/.claude/skills/`)

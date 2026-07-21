@@ -38,6 +38,17 @@ Simplest thing that works: YAGNI → stdlib → native → installed dep → min
 
 No generic placeholders, filler verbs, fake-perfect numbers, or em-dash decoration. For UI work, load `bosskuai-taste` before generating.
 
+## Loop engineering (always on)
+
+For fixes, CI/PR/issue work, agent loops, and multi-step changes:
+
+1. Prefer smallest diff (`minimal-fix` mindset).
+2. Respect denylists / no auto-push (`loop-constraints` defaults if no `loop-constraints.md`).
+3. Cap retries / avoid endless re-tries (`loop-budget` mindset).
+4. Before claiming done on a fix: verify with a real check (`loop-verifier` mindset).
+
+Route CI → `ci-triage`; PRs → `pr-review-triage`; backlog sweeps → `loop-triage`. Disable with "normal mode" (same switch as Ponytail).
+
 ## Risk pauses
 
 Ask before payments, auth, secrets, privacy, data loss, or migrations.

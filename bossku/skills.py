@@ -40,6 +40,16 @@ def load_vendored_ids(root: Path | None = None) -> set[str]:
     return set(load_vendored(root).keys())
 
 
+def load_pack_skill_ids(pack_name: str, root: Path | None = None) -> list[str]:
+    path = vendored_path(root)
+    if not path.is_file():
+        return []
+    data = json.loads(path.read_text(encoding="utf-8"))
+    packs = data.get("packs", {})
+    raw = packs.get(pack_name, [])
+    return [str(sid) for sid in raw]
+
+
 def load_aliases(root: Path | None = None) -> dict[str, str]:
     path = aliases_path(root)
     if not path.is_file():
@@ -273,7 +283,16 @@ def _profile_skills(profile: str, root: Path | None) -> list[str]:
         "bosskuai-taste",
     ]
     if profile == "core":
-        return [s for s in core if (skills_dir(root) / s).is_dir()]
+        base_dir = skills_dir(root)
+        loop_ids = load_pack_skill_ids("loop-engineering", root)
+        combined: list[str] = []
+        seen: set[str] = set()
+        for sid in [*core, *loop_ids]:
+            if sid in seen:
+                continue
+            seen.add(sid)
+            combined.append(sid)
+        return [s for s in combined if (base_dir / s).is_dir()]
     return list_skill_ids(root)
 
 
