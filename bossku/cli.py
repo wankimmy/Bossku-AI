@@ -6,11 +6,11 @@ import sys
 from pathlib import Path
 
 from bossku import __version__
+from bossku.doctor import format_doctor_success, gather_doctor_issues
 from bossku.init_project import init_project
 from bossku.install import install_user, uninstall_user, update_user
-from bossku.memory import load_user_config, remember, save_user_config, sync_project
-from bossku.paths import agents_skills_dir, claude_skills_dir, repo_root
-from bossku.skills import find_skill, validate_skills
+from bossku.memory import remember, sync_project
+from bossku.skills import find_skill
 from bossku.validate import validate_repo
 
 
@@ -32,7 +32,13 @@ def main(argv: list[str] | None = None) -> int:
     p_init.add_argument("--profile", choices=["core", "full"], default="core")
 
     sub.add_parser("update", help="Refresh user-level skills from repo", parents=[parent])
-    sub.add_parser("doctor", help="Check install health", parents=[parent])
+    p_doctor = sub.add_parser("doctor", help="Check install health", parents=[parent])
+    p_doctor.add_argument(
+        "--project",
+        type=Path,
+        default=None,
+        help="Also verify project AGENTS.md + CLAUDE.md adapters",
+    )
 
     p_remember = sub.add_parser("remember", help="Save curated memory", parents=[parent])
     p_remember.add_argument("--kind", required=True, choices=["decision", "plan", "learning", "project"])
@@ -69,7 +75,7 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(result, indent=2))
             return 0
         if args.command == "doctor":
-            return _doctor(root, home)
+            return _doctor(root, home, getattr(args, "project", None))
         if args.command == "remember":
             result = remember(args.project, args.kind, args.note, home=home)
             print(json.dumps(result, indent=2))
@@ -101,30 +107,15 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
-def _doctor(root: Path | None, home: Path | None) -> int:
-    issues: list[str] = []
-    try:
-        repo_root(root)
-    except FileNotFoundError as exc:
-        issues.append(str(exc))
-    issues.extend(validate_skills(root))
-    cfg = load_user_config(home)
-    if not cfg.get("installed_from"):
-        issues.append("user install not detected; run `bossku install`")
-    else:
-        h = home if home is not None else Path.home()
-        for label, path in (
-            ("~/.agents/skills", agents_skills_dir(h)),
-            ("~/.claude/skills", claude_skills_dir(h)),
-        ):
-            if not path.is_dir():
-                issues.append(f"missing skill directory {label}; run `bossku install`")
+def _doctor(root: Path | None, home: Path | None, project: Path | None = None) -> int:
+    issues = gather_doctor_issues(root, home, project=project)
     if issues:
         print("doctor: issues found")
         for item in issues:
             print(f"  - {item}")
         return 1
-    print(f"doctor: ok (bossku {__version__})")
+    for line in format_doctor_success(root, home, version=__version__):
+        print(line)
     return 0
 
 

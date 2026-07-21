@@ -13,6 +13,19 @@ from bossku.paths import (
 from bossku.skills import copy_skills_to, is_managed_skill_name, write_routing_cache
 
 
+def tools_coverage_map(agents_dest: Path, claude_dest: Path) -> dict:
+    agents_s = str(agents_dest)
+    claude_s = str(claude_dest)
+    init_hint = "project AGENTS.md (bossku init)"
+    claude_hint = "project CLAUDE.md @AGENTS.md (bossku init)"
+    return {
+        "cursor": {"skills": agents_s, "instructions": init_hint},
+        "codex": {"skills": agents_s, "instructions": init_hint},
+        "opencode": {"skills": [agents_s, claude_s], "instructions": init_hint},
+        "claude_code": {"skills": claude_s, "instructions": claude_hint},
+    }
+
+
 def install_user(
     *,
     root: Path | None = None,
@@ -26,6 +39,14 @@ def install_user(
     claude_dest = claude_skills_dir(h)
     installed_agents = copy_skills_to(agents_dest, r, profile)
     installed_claude = copy_skills_to(claude_dest, r, profile)
+    agents_n = len(installed_agents)
+    claude_n = len(installed_claude)
+    if agents_n == 0 or claude_n == 0:
+        raise RuntimeError("install copied zero skills to one or both skill destinations")
+    if agents_n != claude_n:
+        raise RuntimeError(
+            f"skill mirror mismatch: agents={agents_n} claude={claude_n}; re-run `bossku install`"
+        )
     cache_path = user_config_dir(h) / "routing-cache.json"
     write_routing_cache(cache_path, r)
     cfg_path = user_config_dir(h) / "config.json"
@@ -41,7 +62,10 @@ def install_user(
     return {
         "agents_skills": str(agents_dest),
         "claude_skills": str(claude_dest),
-        "installed_count": len(installed_agents),
+        "agents_count": agents_n,
+        "claude_count": claude_n,
+        "installed_count": agents_n,
+        "tools": tools_coverage_map(agents_dest, claude_dest),
         "routing_cache": str(cache_path),
     }
 

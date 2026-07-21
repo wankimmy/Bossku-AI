@@ -283,6 +283,20 @@ def is_managed_skill_name(name: str, root: Path | None = None) -> bool:
     return name in load_vendored_ids(root)
 
 
+def count_managed_skills(dest_dir: Path, root: Path | None = None) -> int:
+    if not dest_dir.is_dir():
+        return 0
+    total = 0
+    for child in dest_dir.iterdir():
+        if not child.is_dir():
+            continue
+        if not (child / "SKILL.md").is_file():
+            continue
+        if is_managed_skill_name(child.name, root):
+            total += 1
+    return total
+
+
 def validate_skills(root: Path | None = None) -> list[str]:
     errors: list[str] = []
     base = skills_dir(root)

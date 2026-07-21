@@ -3,11 +3,20 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from bossku.cli import _doctor
+from bossku.doctor import gather_doctor_issues
 from bossku.init_project import init_project, upsert_managed_block
 from bossku.install import install_user, uninstall_user
 from bossku.memory import remember, sync_project
+from bossku.paths import user_config_dir
 from bossku.redact import redact
-from bossku.skills import find_skill, is_managed_skill_name, list_skill_ids, load_vendored_ids, resolve_skill_id
+from bossku.skills import (
+    count_managed_skills,
+    find_skill,
+    is_managed_skill_name,
+    load_vendored_ids,
+    resolve_skill_id,
+)
 from bossku.validate import claude_imports_agents_md, validate_repo
 
 
@@ -35,8 +44,18 @@ class InstallTests(unittest.TestCase):
             home = Path(tmp)
             result = install_user(root=ROOT, home=home, profile="core")
             self.assertGreater(result["installed_count"], 0)
+            self.assertEqual(result["agents_count"], result["claude_count"])
+            self.assertIn("tools", result)
+            for key in ("cursor", "codex", "opencode", "claude_code"):
+                self.assertIn(key, result["tools"])
             agents = home / ".agents" / "skills"
+            claude = home / ".claude" / "skills"
             self.assertTrue(agents.is_dir())
+            self.assertTrue(claude.is_dir())
+            self.assertEqual(
+                count_managed_skills(agents, ROOT),
+                count_managed_skills(claude, ROOT),
+            )
             removed = uninstall_user(root=ROOT, home=home)
             self.assertTrue(len(removed["removed_skills"]) >= 0)
 
@@ -126,6 +145,52 @@ class ValidateTests(unittest.TestCase):
     def test_validate_repo_passes(self):
         errors = validate_repo(ROOT)
         self.assertEqual(errors, [], msg="\n".join(errors))
+
+
+class DoctorTests(unittest.TestCase):
+    def _write_fake_install(self, home: Path) -> None:
+        cfg_dir = user_config_dir(home)
+        cfg_dir.mkdir(parents=True, exist_ok=True)
+        (cfg_dir / "config.json").write_text(
+            json.dumps({"installed_from": str(ROOT), "profile": "core"}),
+            encoding="utf-8",
+        )
+
+    def test_doctor_fails_when_skill_dirs_empty(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            self._write_fake_install(home)
+            (home / ".agents" / "skills").mkdir(parents=True)
+            (home / ".claude" / "skills").mkdir(parents=True)
+            issues = gather_doctor_issues(ROOT, home)
+            self.assertTrue(any("no managed skills" in i for i in issues))
+
+    def test_doctor_ok_after_install(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            install_user(root=ROOT, home=home, profile="core")
+            issues = gather_doctor_issues(ROOT, home)
+            self.assertEqual(issues, [], msg="\n".join(issues))
+
+    def test_doctor_project_adapter_without_init(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            project = Path(tmp) / "bare"
+            project.mkdir()
+            (project / "AGENTS.md").write_text("# no block\n", encoding="utf-8")
+            install_user(root=ROOT, home=home, profile="core")
+            issues = gather_doctor_issues(ROOT, home, project=project)
+            self.assertTrue(any("managed block" in i or "CLAUDE.md" in i for i in issues))
+
+    def test_doctor_project_adapter_after_init(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            project = Path(tmp) / "ready"
+            install_user(root=ROOT, home=home, profile="core")
+            init_project(project, root=ROOT)
+            issues = gather_doctor_issues(ROOT, home, project=project)
+            self.assertEqual(issues, [], msg="\n".join(issues))
+            self.assertEqual(_doctor(ROOT, home, project), 0)
 
 
 if __name__ == "__main__":

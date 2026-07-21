@@ -19,10 +19,14 @@ bossku install --profile full --vault "/path/to/Obsidian/Vault"
 
 Skills are copied to:
 
-- `~/.agents/skills/` — Cursor, Codex, OpenCode
-- `~/.claude/skills/` — Claude Code
+- `~/.agents/skills/` — Cursor, Codex, and OpenCode (OpenCode also scans `~/.claude/skills/`)
+- `~/.claude/skills/` — Claude Code (and OpenCode)
+
+Bossku does **not** duplicate skills into `~/.cursor/skills/`, `~/.codex/skills/`, or `~/.config/opencode/skills/`; those tools discover the paths above per their upstream docs.
 
 No symlinks. Unrelated skills in those folders are left untouched.
+
+After `bossku install` or `bossku update`, the JSON includes `tools` (per-tool skill paths) and `agents_count` / `claude_count` (must match). Run `bossku doctor` for a human-readable coverage summary; use `bossku doctor --project .` to verify instruction adapters in a repo.
 
 Coding agents pick skills from installed folders using each skill's `description` (especially **Use when…**) plus your project `AGENTS.md`. After pulling Bossku-AI changes, run `bossku update`. For CLI hints: `bossku skills find "<task>"`.
 
@@ -60,6 +64,8 @@ bossku init /path/to/project --portable --profile core
 
 ```bash
 bossku update
+bossku doctor
+bossku doctor --project /path/to/project
 bossku uninstall          # removes managed skills only
 bossku uninstall --purge  # also removes ~/.bosskuai/config.json
 ```
