@@ -9,7 +9,7 @@ from bossku import __version__
 from bossku.init_project import init_project
 from bossku.install import install_user, uninstall_user, update_user
 from bossku.memory import load_user_config, remember, save_user_config, sync_project
-from bossku.paths import repo_root
+from bossku.paths import agents_skills_dir, claude_skills_dir, repo_root
 from bossku.skills import find_skill, validate_skills
 from bossku.validate import validate_repo
 
@@ -111,6 +111,14 @@ def _doctor(root: Path | None, home: Path | None) -> int:
     cfg = load_user_config(home)
     if not cfg.get("installed_from"):
         issues.append("user install not detected; run `bossku install`")
+    else:
+        h = home if home is not None else Path.home()
+        for label, path in (
+            ("~/.agents/skills", agents_skills_dir(h)),
+            ("~/.claude/skills", claude_skills_dir(h)),
+        ):
+            if not path.is_dir():
+                issues.append(f"missing skill directory {label}; run `bossku install`")
     if issues:
         print("doctor: issues found")
         for item in issues:

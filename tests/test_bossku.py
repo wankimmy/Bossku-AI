@@ -8,7 +8,7 @@ from bossku.install import install_user, uninstall_user
 from bossku.memory import remember, sync_project
 from bossku.redact import redact
 from bossku.skills import find_skill, is_managed_skill_name, list_skill_ids, load_vendored_ids, resolve_skill_id
-from bossku.validate import validate_repo
+from bossku.validate import claude_imports_agents_md, validate_repo
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -76,6 +76,16 @@ class InitTests(unittest.TestCase):
             self.assertIn("Keep this line.", text)
             self.assertIn("bosskuai:start", text)
             self.assertTrue((project / ".bossku" / "memory" / "project.md").is_file())
+            claude = (project / "CLAUDE.md").read_text(encoding="utf-8")
+            self.assertTrue(claude_imports_agents_md(claude))
+
+    def test_init_writes_claude_import_on_empty_project(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp) / "fresh"
+            init_project(project, root=ROOT)
+            claude = (project / "CLAUDE.md").read_text(encoding="utf-8")
+            self.assertTrue(claude_imports_agents_md(claude))
+            self.assertTrue((project / "AGENTS.md").is_file())
 
 
 class MemoryTests(unittest.TestCase):

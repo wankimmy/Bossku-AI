@@ -1,8 +1,8 @@
 # BosskuAI
 
-Lightweight AI co-founder toolkit for **Cursor**, **Claude Code**, **Codex**, and **OpenCode**.
+Open-source AI co-founder toolkit for **Cursor**, **Claude Code**, **Codex**, and **OpenCode**.
 
-One canonical skill library, a small Python CLI, thin project adapters, and optional one-way Obsidian export for durable memory.
+One canonical skill library, plan → execute → audit agents, project memory, and the `bossku` CLI — optional one-way Obsidian export for durable memory.
 
 ## Quick start
 

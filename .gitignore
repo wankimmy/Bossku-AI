@@ -19,6 +19,8 @@ build/
 # BosskuAI local state
 .bosskuai-backups/
 .bossku/
+.superpowers/
+data/
 
 # Logs
 *.log
