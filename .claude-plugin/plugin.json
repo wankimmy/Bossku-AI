@@ -1,0 +1,28 @@
+{
+  "name": "bossku-ai",
+  "version": "2.0.0",
+  "description": "AI co-founder plugin for Claude Code with product, engineering, growth, research, and memory-first workflows.",
+  "author": {
+    "name": "BosskuAI",
+    "url": "https://github.com/wankimmy"
+  },
+  "homepage": "https://github.com/wankimmy/Bossku-AI",
+  "repository": "https://github.com/wankimmy/Bossku-AI",
+  "license": "MIT",
+  "keywords": [
+    "claude-code",
+    "plugin",
+    "skills",
+    "ai-cofounder",
+    "product-strategy",
+    "engineering"
+  ],
+  "skills": "./skills/",
+  "agents": [
+    "./agents/orchestrator.md",
+    "./agents/planner.md",
+    "./agents/executor.md",
+    "./agents/auditor.md",
+    "./agents/final-reviewer.md"
+  ]
+}

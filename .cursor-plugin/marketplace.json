@@ -1,0 +1,24 @@
+{
+  "name": "bosskuai-marketplace",
+  "owner": {
+    "name": "BosskuAI"
+  },
+  "metadata": {
+    "description": "BosskuAI plugins for Cursor.",
+    "version": "2.0.0"
+  },
+  "plugins": [
+    {
+      "name": "bossku-ai",
+      "source": "./",
+      "description": "AI co-founder plugin with reusable skills, subagents, and memory-first workflows.",
+      "version": "2.0.0",
+      "keywords": [
+        "skills",
+        "subagents",
+        "memory",
+        "workflows"
+      ]
+    }
+  ]
+}

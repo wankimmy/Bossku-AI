@@ -1,0 +1,21 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {},
+  "permission": {},
+  "references": {
+    "bossku-contract": {
+      "path": "AGENTS.md",
+      "description": "Canonical BosskuAI cross-tool contract, response indicator, routing, memory, and verification discipline."
+    },
+    "bossku-skills": {
+      "path": "skills",
+      "description": "BosskuAI skill library. OpenCode also discovers skills from ~/.agents/skills and ~/.claude/skills after bossku install."
+    },
+    "bossku-agents": {
+      "path": "agents",
+      "description": "Editor-driven agent contracts for orchestration, planning, execution, audit, and final review."
+    }
+  },
+  "mcp": {},
+  "tools": {}
+}

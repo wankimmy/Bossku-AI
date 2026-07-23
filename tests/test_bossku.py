@@ -17,7 +17,7 @@ from bossku.skills import (
     load_vendored_ids,
     resolve_skill_id,
 )
-from bossku.validate import claude_imports_agents_md, validate_repo
+from bossku.validate import claude_imports_agents_md, package_version, validate_plugin_manifests, validate_repo
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -152,6 +152,12 @@ class SkillTests(unittest.TestCase):
 class ValidateTests(unittest.TestCase):
     def test_validate_repo_passes(self):
         errors = validate_repo(ROOT)
+        self.assertEqual(errors, [], msg="\n".join(errors))
+
+    def test_package_version_matches_manifests(self):
+        version = package_version(ROOT)
+        self.assertEqual(version, "2.0.0")
+        errors = validate_plugin_manifests(ROOT)
         self.assertEqual(errors, [], msg="\n".join(errors))
 
 

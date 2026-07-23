@@ -1,0 +1,26 @@
+{
+  "name": "bosskuai",
+  "interface": {
+    "displayName": "BosskuAI"
+  },
+  "plugins": [
+    {
+      "name": "bossku-ai",
+      "description": "AI co-founder plugin with reusable skills and memory-first workflows for Codex workspaces.",
+      "version": "2.0.0",
+      "source": {
+        "source": "local",
+        "path": "./../.."
+      },
+      "interface": {
+        "displayName": "BosskuAI",
+        "shortDescription": "Repo-local memory and routing habits for Codex workspaces.",
+        "category": "Productivity"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      }
+    }
+  ]
+}

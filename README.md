@@ -17,6 +17,37 @@ bossku init .
 
 Open the project in any supported coding agent. Say `bossku` or ask for cofounder mode.
 
+## Plugin / marketplace install
+
+Install BosskuAI as a native plugin on Claude Code, Cursor, and Codex. OpenCode uses skill discovery plus the `.opencode` harness (no marketplace plugin).
+
+### Claude Code
+
+```text
+/plugin marketplace add wankimmy/Bossku-AI
+/plugin install bossku-ai@bosskuai-marketplace
+```
+
+Manifests: [`.claude-plugin/`](.claude-plugin/).
+
+### Cursor
+
+Clone or link this repo into `~/.cursor/plugins/local/bossku-ai`, or install from a team marketplace that points at this repository. Manifests: [`.cursor-plugin/`](.cursor-plugin/).
+
+### Codex
+
+```bash
+codex plugin marketplace add wankimmy/Bossku-AI
+```
+
+Then install **BosskuAI** from the Plugins Directory in the ChatGPT desktop app. Manifests: [`.codex-plugin/`](.codex-plugin/) and [`.agents/plugins/marketplace.json`](.agents/plugins/marketplace.json).
+
+### OpenCode
+
+Run `bossku install` so skills land in `~/.agents/skills` and `~/.claude/skills`. OpenCode also reads [`.opencode/opencode.jsonc`](.opencode/opencode.jsonc) for `AGENTS.md` and agent references when this repo is your workspace.
+
+See [`docs/installation.md`](docs/installation.md) for the CLI path and per-project setup.
+
 ## Commands
 
 | Command | Purpose |
@@ -37,6 +68,11 @@ Open the project in any supported coding agent. Say `bossku` or ask for cofounde
 - [`skills/`](skills/) — canonical skill library (~196 skills, including vendored packs)
 - [`skills/vendored.json`](skills/vendored.json) — third-party skill provenance
 - [`agents/`](agents/) — orchestrator, planner, executor, auditor, final reviewer
+- [`.claude-plugin/`](.claude-plugin/) — Claude Code plugin + marketplace manifests
+- [`.cursor-plugin/`](.cursor-plugin/) — Cursor plugin + marketplace manifests
+- [`.codex-plugin/`](.codex-plugin/) — Codex plugin manifest
+- [`.agents/plugins/`](.agents/plugins/) — Codex marketplace catalog
+- [`.opencode/`](.opencode/) — OpenCode references harness
 - [`bossku/`](bossku/) — CLI package (stdlib only)
 - [`docs/third-party.md`](docs/third-party.md) — MIT attribution for vendored packs
 

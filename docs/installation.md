@@ -5,6 +5,37 @@
 - Python 3.11+
 - Git
 
+## Plugin / marketplace install
+
+BosskuAI ships native plugin manifests for Claude Code, Cursor, and Codex. OpenCode uses skill discovery plus the `.opencode` harness.
+
+### Claude Code
+
+```text
+/plugin marketplace add wankimmy/Bossku-AI
+/plugin install bossku-ai@bosskuai-marketplace
+```
+
+Skills and agents load from this repository via [`.claude-plugin/plugin.json`](../.claude-plugin/plugin.json). Refresh after updates with `/plugin marketplace update` and reinstall if needed.
+
+### Cursor
+
+For local development, clone or link this repo to `~/.cursor/plugins/local/bossku-ai`. Cursor reads [`.cursor-plugin/plugin.json`](../.cursor-plugin/plugin.json) and the thin rule in [`.cursor/rules/bosskuai.mdc`](../.cursor/rules/bosskuai.mdc).
+
+For team distribution, point a Cursor marketplace at this repository using [`.cursor-plugin/marketplace.json`](../.cursor-plugin/marketplace.json).
+
+### Codex
+
+```bash
+codex plugin marketplace add wankimmy/Bossku-AI
+```
+
+Restart the ChatGPT desktop app, open the Plugins Directory, choose the **BosskuAI** marketplace, and install **bossku-ai**. Catalog: [`.agents/plugins/marketplace.json`](../.agents/plugins/marketplace.json).
+
+### OpenCode
+
+OpenCode does not use a Claude-style marketplace plugin. Install skills with the CLI below, or open this repo as the workspace so [`.opencode/opencode.jsonc`](../.opencode/opencode.jsonc) references `AGENTS.md`, `skills/`, and `agents/`.
+
 ## Install the CLI
 
 ```bash
@@ -34,12 +65,12 @@ Coding agents pick skills from installed folders using each skill's `description
 
 ## Tool compatibility
 
-| Tool | Project instructions | Skills (`bossku install`) |
-|---|---|---|
-| Cursor | `AGENTS.md` | `~/.agents/skills/` |
-| Codex | `AGENTS.md` | `~/.agents/skills/` |
-| OpenCode | `AGENTS.md` (uses `CLAUDE.md` only if `AGENTS.md` is absent) | `~/.agents/skills/` and `~/.claude/skills/` |
-| Claude Code | `CLAUDE.md` with a bare `@AGENTS.md` line (imports `AGENTS.md` at session start) | `~/.claude/skills/` |
+| Tool | Plugin / marketplace | Project instructions | Skills |
+|---|---|---|---|
+| Cursor | [`.cursor-plugin/`](../.cursor-plugin/) | `AGENTS.md` | `~/.agents/skills/` or bundled plugin skills |
+| Codex | [`.codex-plugin/`](../.codex-plugin/) + [`.agents/plugins/`](../.agents/plugins/) | `AGENTS.md` | `~/.agents/skills/` or bundled plugin skills |
+| OpenCode | [`.opencode/`](../.opencode/) references only | `AGENTS.md` (uses `CLAUDE.md` only if `AGENTS.md` is absent) | `~/.agents/skills/` and `~/.claude/skills/` |
+| Claude Code | [`.claude-plugin/`](../.claude-plugin/) | `CLAUDE.md` with a bare `@AGENTS.md` line | `~/.claude/skills/` or bundled plugin skills |
 
 Keep `AGENTS.md` as the canonical contract. `bossku init` adds `CLAUDE.md` containing only `@AGENTS.md` so Claude Code shares the same rules without duplicating them. On Windows, prefer this import over symlinking `CLAUDE.md` to `AGENTS.md`.
 
