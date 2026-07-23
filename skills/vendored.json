@@ -113,6 +113,9 @@
     ],
     "scroll-world": [
       "scroll-world"
+    ],
+    "dcg": [
+      "dcg"
     ]
   },
   "skills": {
@@ -210,6 +213,7 @@
     "imagegen-frontend-web": "taste-skill",
     "imagegen-frontend-mobile": "taste-skill",
     "brandkit": "taste-skill",
-    "scroll-world": "scroll-world"
+    "scroll-world": "scroll-world",
+    "dcg": "dcg"
   }
 }

@@ -66,7 +66,7 @@ class InstallTests(unittest.TestCase):
             home = Path(tmp)
             install_user(root=ROOT, home=home, profile="full")
             agents = home / ".agents" / "skills"
-            for sid in ("product-marketing", "brainstorming", "hallmark", "graphify", "browser-use", "markitdown"):
+            for sid in ("product-marketing", "brainstorming", "hallmark", "graphify", "browser-use", "markitdown", "dcg"):
                 self.assertTrue((agents / sid).is_dir(), msg=f"missing {sid}")
             uninstall_user(root=ROOT, home=home)
 

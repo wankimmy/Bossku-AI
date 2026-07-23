@@ -75,6 +75,7 @@ Load vendored packs from [`skills/vendored.json`](skills/vendored.json). See [`d
 | Office/PDF/HTML → Markdown | `markitdown` (requires `markitdown[all]` pip package) |
 | Agent loops: CI/PR/issue sweeps, budgeted triage | loop-engineering — `loop-triage`, `loop-verifier`, `minimal-fix` (+ pattern skills: `ci-triage`, `pr-review-triage`, etc.) |
 | Scroll-scrub fly-through / diorama cinematic landing | `scroll-world` (Higgsfield + portable scrub engine; not generic GSAP-only heroes) |
+| Agent shell/git safety / destructive command hooks | `dcg` (Destructive Command Guard; install upstream binary separately) |
 
 ## Verification
 

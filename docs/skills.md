@@ -13,7 +13,7 @@ Canonical skills live in [`skills/`](../skills/). Each folder contains `SKILL.md
 
 `bossku install --profile core` installs Bossku co-founder essentials plus the **loop-engineering** pack (12 loop/triage/CI/PR skills). Always-on loop discipline is in [`AGENTS.md`](../AGENTS.md#loop-engineering-always-on).
 
-`bossku install --profile full` installs the entire library (~196 skills), including all other vendored packs.
+`bossku install --profile full` installs the entire library (~197 skills), including all other vendored packs.
 
 ## Vendored packs
 
@@ -28,6 +28,7 @@ Canonical skills live in [`skills/`](../skills/). Each folder contains `SKILL.md
 | loop-engineering | 12 loop/triage/CI/PR skills | — |
 | taste-skill | 13 anti-slop frontend / imagegen skills | — |
 | scroll-world | Scroll-scrub Higgsfield cinematic world landing | Higgsfield CLI, ffmpeg |
+| dcg | Destructive Command Guard (agent shell/git safety hooks) | `dcg` binary (upstream installer) |
 
 Attribution: [`docs/third-party.md`](third-party.md). Optional deps: [`requirements-optional.txt`](../requirements-optional.txt).
 

@@ -7,6 +7,7 @@
     "bosskuai-social-content-calendar": "bosskuai-content-calendar",
     "bosskuai-agent-security-hardening": "bosskuai-prompt-injection-defense",
     "bosskuai-grill-me": "bosskuai-grill-with-docs",
-    "bosskuai-zoom-out": "bosskuai-codebase-analysis"
+    "bosskuai-zoom-out": "bosskuai-codebase-analysis",
+    "destructive_command_guard": "dcg"
   }
 }
