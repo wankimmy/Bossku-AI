@@ -20,7 +20,28 @@ Skills and agents load from this repository via [`.claude-plugin/plugin.json`](.
 
 ### Cursor
 
-For local development, clone or link this repo to `~/.cursor/plugins/local/bossku-ai`. Cursor reads [`.cursor-plugin/plugin.json`](../.cursor-plugin/plugin.json) and the thin rule in [`.cursor/rules/bosskuai.mdc`](../.cursor/rules/bosskuai.mdc).
+**Windows (PowerShell):**
+
+```powershell
+git clone https://github.com/wankimmy/Bossku-AI $env:USERPROFILE\.cursor\plugins\local\bossku-ai
+```
+
+Or link an existing clone:
+
+```powershell
+$pluginDir = "$env:USERPROFILE\.cursor\plugins\local\bossku-ai"
+New-Item -ItemType Directory -Force -Path (Split-Path $pluginDir) | Out-Null
+if (Test-Path $pluginDir) { Remove-Item $pluginDir -Recurse -Force }
+New-Item -ItemType Junction -Path $pluginDir -Target "C:\path\to\Bossku-AI"
+```
+
+**macOS / Linux:**
+
+```bash
+git clone https://github.com/wankimmy/Bossku-AI ~/.cursor/plugins/local/bossku-ai
+```
+
+Restart Cursor after install. Cursor reads [`.cursor-plugin/plugin.json`](../.cursor-plugin/plugin.json) and the thin rule in [`.cursor/rules/bosskuai.mdc`](../.cursor/rules/bosskuai.mdc).
 
 For team distribution, point a Cursor marketplace at this repository using [`.cursor-plugin/marketplace.json`](../.cursor-plugin/marketplace.json).
 
@@ -34,7 +55,14 @@ Restart the ChatGPT desktop app, open the Plugins Directory, choose the **Bossku
 
 ### OpenCode
 
-OpenCode does not use a Claude-style marketplace plugin. Install skills with the CLI below, or open this repo as the workspace so [`.opencode/opencode.jsonc`](../.opencode/opencode.jsonc) references `AGENTS.md`, `skills/`, and `agents/`.
+OpenCode does not use a Claude-style marketplace plugin. Install skills with the CLI, then open this repo as the workspace:
+
+```bash
+pip install -e /path/to/Bossku-AI
+bossku install --profile full
+```
+
+[`.opencode/opencode.jsonc`](../.opencode/opencode.jsonc) references `AGENTS.md`, `skills/`, and `agents/`.
 
 ## Install the CLI
 

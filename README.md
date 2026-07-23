@@ -23,6 +23,8 @@ Install BosskuAI as a native plugin on Claude Code, Cursor, and Codex. OpenCode 
 
 ### Claude Code
 
+Run inside Claude Code:
+
 ```text
 /plugin marketplace add wankimmy/Bossku-AI
 /plugin install bossku-ai@bosskuai-marketplace
@@ -32,7 +34,28 @@ Manifests: [`.claude-plugin/`](.claude-plugin/).
 
 ### Cursor
 
-Clone or link this repo into `~/.cursor/plugins/local/bossku-ai`, or install from a team marketplace that points at this repository. Manifests: [`.cursor-plugin/`](.cursor-plugin/).
+**Windows (PowerShell):**
+
+```powershell
+git clone https://github.com/wankimmy/Bossku-AI $env:USERPROFILE\.cursor\plugins\local\bossku-ai
+```
+
+Or link an existing clone:
+
+```powershell
+$pluginDir = "$env:USERPROFILE\.cursor\plugins\local\bossku-ai"
+New-Item -ItemType Directory -Force -Path (Split-Path $pluginDir) | Out-Null
+if (Test-Path $pluginDir) { Remove-Item $pluginDir -Recurse -Force }
+New-Item -ItemType Junction -Path $pluginDir -Target "C:\path\to\Bossku-AI"
+```
+
+**macOS / Linux:**
+
+```bash
+git clone https://github.com/wankimmy/Bossku-AI ~/.cursor/plugins/local/bossku-ai
+```
+
+Restart Cursor after install. Manifests: [`.cursor-plugin/`](.cursor-plugin/).
 
 ### Codex
 
@@ -40,11 +63,18 @@ Clone or link this repo into `~/.cursor/plugins/local/bossku-ai`, or install fro
 codex plugin marketplace add wankimmy/Bossku-AI
 ```
 
-Then install **BosskuAI** from the Plugins Directory in the ChatGPT desktop app. Manifests: [`.codex-plugin/`](.codex-plugin/) and [`.agents/plugins/marketplace.json`](.agents/plugins/marketplace.json).
+Then restart the ChatGPT desktop app, open **Plugins**, choose the **BosskuAI** marketplace, and install **bossku-ai**. Manifests: [`.codex-plugin/`](.codex-plugin/) and [`.agents/plugins/marketplace.json`](.agents/plugins/marketplace.json).
 
 ### OpenCode
 
-Run `bossku install` so skills land in `~/.agents/skills` and `~/.claude/skills`. OpenCode also reads [`.opencode/opencode.jsonc`](.opencode/opencode.jsonc) for `AGENTS.md` and agent references when this repo is your workspace.
+No marketplace plugin. Install skills once per machine, then open this repo (or any `bossku init` project) as the workspace:
+
+```bash
+pip install -e /path/to/Bossku-AI
+bossku install --profile full
+```
+
+OpenCode reads [`.opencode/opencode.jsonc`](.opencode/opencode.jsonc) for `AGENTS.md` and agent references.
 
 See [`docs/installation.md`](docs/installation.md) for the CLI path and per-project setup.
 
