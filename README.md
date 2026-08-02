@@ -1,6 +1,6 @@
 # BosskuAI
 
-Open-source AI co-founder toolkit for **Cursor**, **Claude Code**, **Codex**, and **OpenCode**.
+Open-source AI co-founder toolkit for **Cursor**, **Claude Code**, **Codex**, **OpenCode**, and **OMP**.
 
 One canonical skill library, plan → execute → audit agents, project memory, and the `bossku` CLI — optional one-way Obsidian export for durable memory.
 
@@ -76,6 +76,17 @@ bossku install --profile full
 
 OpenCode reads [`.opencode/opencode.jsonc`](.opencode/opencode.jsonc) for `AGENTS.md` and agent references.
 
+### OMP
+
+Install the native Windows binary, then open this repository from OMP:
+
+```powershell
+irm https://omp.sh/install.ps1 | iex
+omp --cwd C:\path\to\Bossku-AI
+```
+
+OMP reads the canonical contract through [`.omp/AGENTS.md`](.omp/AGENTS.md) and discovers the same user-level skills installed for the other tools. The project config uses `tools.approvalMode: write`, so workspace writes can proceed while actions outside the workspace still require approval.
+
 See [`docs/installation.md`](docs/installation.md) for the CLI path and per-project setup.
 
 ## Commands
@@ -83,7 +94,7 @@ See [`docs/installation.md`](docs/installation.md) for the CLI path and per-proj
 | Command | Purpose |
 |---|---|
 | `bossku install` | Copy skills to `~/.agents/skills` and `~/.claude/skills` |
-| `bossku init <project>` | Add project adapter + `.bossku/memory/` |
+| `bossku init <project>` | Add cross-tool adapters + `.bossku/memory/` |
 | `bossku init <project> --portable` | Vendor skills into the project |
 | `bossku update` | Refresh user-level skills from this repo |
 | `bossku remember --project . --kind decision "..."` | Save curated memory |
@@ -103,6 +114,7 @@ See [`docs/installation.md`](docs/installation.md) for the CLI path and per-proj
 - [`.codex-plugin/`](.codex-plugin/) — Codex plugin manifest
 - [`.agents/plugins/`](.agents/plugins/) — Codex marketplace catalog
 - [`.opencode/`](.opencode/) — OpenCode references harness
+- [`.omp/`](.omp/) - OMP project instructions and safe approval defaults
 - [`bossku/`](bossku/) — CLI package (stdlib only)
 - [`docs/third-party.md`](docs/third-party.md) — MIT attribution for vendored packs
 

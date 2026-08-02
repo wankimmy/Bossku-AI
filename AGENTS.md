@@ -1,6 +1,6 @@
 # BosskuAI
 
-Portable AI co-founder layer for **Cursor**, **Claude Code**, **Codex**, and **OpenCode**.
+Portable AI co-founder layer for **Cursor**, **Claude Code**, **Codex**, **OpenCode**, and **OMP**.
 
 ## Mandatory response indicator
 
@@ -15,7 +15,7 @@ Every response must begin with:
 - Say `bossku` or ask for cofounder mode.
 - Before non-trivial work, match the request to an installed skill using each skill's `description` (especially **Use when…**) and the pack routing table below.
 - Load one primary skill; at most one secondary when clearly needed. Put the primary skill id in the mandatory indicator.
-- If the domain is unclear, load `cofounder` first; if still stuck, run `bossku skills find "<task>"` and follow the best match.
+- If the domain is unclear, run `bossku skills find "<task>"`. It returns a ranked shortlist; when `confident` is `false` the top hit is weak, so read `matches` and pick, rather than trusting `skill_id`. Fall back to `cofounder` if nothing fits.
 - Trivial tasks: answer directly (still show the indicator).
 
 ## Co-founder workflow
@@ -63,6 +63,8 @@ Ask before payments, auth, secrets, privacy, data loss, or migrations.
 
 Load vendored packs from [`skills/vendored.json`](skills/vendored.json). See [`docs/third-party.md`](docs/third-party.md).
 
+Vendored packs are reviewed on a 180-day window — run `bossku skills stocktake` to see which are due. Do not reword a vendored skill in place; a re-vendor overwrites it. Improve its routing via `CURATED_TRIGGERS` in [`bossku/index.py`](bossku/index.py) instead.
+
 | Task | Primary skill(s) |
 |---|---|
 | New product / UI that must not look AI-generated | `taste-skill` or `hallmark` (+ `bosskuai-taste` for Bossku anti-slop content rules) |
@@ -82,6 +84,7 @@ Load vendored packs from [`skills/vendored.json`](skills/vendored.json). See [`d
 Before declaring done: re-check the request, review changed files, run the relevant check, and state anything not verified.
 
 ```bash
+python -m bossku skills index --root .   # only if a skill was added/renamed/reworded
 python -m bossku validate --root .
 python -m unittest discover -s tests -v
 ```

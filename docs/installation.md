@@ -64,6 +64,16 @@ bossku install --profile full
 
 [`.opencode/opencode.jsonc`](../.opencode/opencode.jsonc) references `AGENTS.md`, `skills/`, and `agents/`.
 
+### OMP
+
+On Windows, install OMP with the upstream PowerShell installer:
+
+```powershell
+irm https://omp.sh/install.ps1 | iex
+```
+
+OMP discovers BosskuAI's existing `~/.agents/skills/` and `~/.claude/skills/` installs, so `bossku install` does not create a third copy. `bossku init` creates a thin `.omp/AGENTS.md` import and a project-local `.omp/config.yml` with `tools.approvalMode: write`.
+
 ## Install the CLI
 
 ```bash
@@ -80,8 +90,8 @@ bossku install --profile full --vault "/path/to/Obsidian/Vault"
 
 Skills are copied to:
 
-- `~/.agents/skills/` — Cursor, Codex, and OpenCode (OpenCode also scans `~/.claude/skills/`)
-- `~/.claude/skills/` — Claude Code (and OpenCode)
+- `~/.agents/skills/` - Cursor, Codex, OpenCode, and OMP (OpenCode and OMP also scan `~/.claude/skills/`)
+- `~/.claude/skills/` - Claude Code, OpenCode, and OMP
 
 Bossku does **not** duplicate skills into `~/.cursor/skills/`, `~/.codex/skills/`, or `~/.config/opencode/skills/`; those tools discover the paths above per their upstream docs.
 
@@ -99,6 +109,7 @@ Coding agents pick skills from installed folders using each skill's `description
 | Codex | [`.codex-plugin/`](../.codex-plugin/) + [`.agents/plugins/`](../.agents/plugins/) | `AGENTS.md` | `~/.agents/skills/` or bundled plugin skills |
 | OpenCode | [`.opencode/`](../.opencode/) references only | `AGENTS.md` (uses `CLAUDE.md` only if `AGENTS.md` is absent) | `~/.agents/skills/` and `~/.claude/skills/` |
 | Claude Code | [`.claude-plugin/`](../.claude-plugin/) | `CLAUDE.md` with a bare `@AGENTS.md` line | `~/.claude/skills/` or bundled plugin skills |
+| OMP | [`.omp/`](../.omp/) native project adapter | `.omp/AGENTS.md` importing the canonical `AGENTS.md` | `~/.agents/skills/` and `~/.claude/skills/` |
 
 Keep `AGENTS.md` as the canonical contract. `bossku init` adds `CLAUDE.md` containing only `@AGENTS.md` so Claude Code shares the same rules without duplicating them. On Windows, prefer this import over symlinking `CLAUDE.md` to `AGENTS.md`.
 
@@ -114,6 +125,8 @@ Creates:
 - `CLAUDE.md` with `@AGENTS.md`
 - `.bossku/project.json`
 - `.bossku/memory/{project,decisions,plans,learnings,handoff}.md`
+- `.omp/AGENTS.md` importing the canonical project contract
+- `.omp/config.yml` with project-scoped `tools.approvalMode: write`
 
 ## Portable mode (cloud/shared repos)
 

@@ -17,7 +17,13 @@ from bossku.skills import (
     load_vendored_ids,
     resolve_skill_id,
 )
-from bossku.validate import claude_imports_agents_md, package_version, validate_plugin_manifests, validate_repo
+from bossku.validate import (
+    claude_imports_agents_md,
+    omp_imports_agents_md,
+    package_version,
+    validate_plugin_manifests,
+    validate_repo,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -46,7 +52,7 @@ class InstallTests(unittest.TestCase):
             self.assertGreater(result["installed_count"], 0)
             self.assertEqual(result["agents_count"], result["claude_count"])
             self.assertIn("tools", result)
-            for key in ("cursor", "codex", "opencode", "claude_code"):
+            for key in ("cursor", "codex", "opencode", "claude_code", "omp"):
                 self.assertIn(key, result["tools"])
             agents = home / ".agents" / "skills"
             claude = home / ".claude" / "skills"
@@ -99,6 +105,10 @@ class InitTests(unittest.TestCase):
             self.assertTrue((project / ".bossku" / "memory" / "project.md").is_file())
             claude = (project / "CLAUDE.md").read_text(encoding="utf-8")
             self.assertTrue(claude_imports_agents_md(claude))
+            omp_agents = (project / ".omp" / "AGENTS.md").read_text(encoding="utf-8")
+            self.assertTrue(omp_imports_agents_md(omp_agents))
+            omp_config = (project / ".omp" / "config.yml").read_text(encoding="utf-8")
+            self.assertIn("approvalMode: write", omp_config)
 
     def test_init_writes_claude_import_on_empty_project(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -107,6 +117,8 @@ class InitTests(unittest.TestCase):
             claude = (project / "CLAUDE.md").read_text(encoding="utf-8")
             self.assertTrue(claude_imports_agents_md(claude))
             self.assertTrue((project / "AGENTS.md").is_file())
+            omp_agents = (project / ".omp" / "AGENTS.md").read_text(encoding="utf-8")
+            self.assertTrue(omp_imports_agents_md(omp_agents))
 
 
 class MemoryTests(unittest.TestCase):

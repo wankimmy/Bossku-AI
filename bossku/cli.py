@@ -10,8 +10,12 @@ from bossku.doctor import format_doctor_success, gather_doctor_issues
 from bossku.init_project import init_project
 from bossku.install import install_user, uninstall_user, update_user
 from bossku.memory import remember, sync_project
-from bossku.skills import find_skill
+from bossku.index import write_index
+from bossku.skills import find_skill, overdue_packs, pack_stocktake, rank_skills
 from bossku.validate import validate_repo
+
+CONFIDENT_SCORE = 6.0
+CONFIDENT_MARGIN = 1.25
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -52,6 +56,13 @@ def main(argv: list[str] | None = None) -> int:
     p_find_sub = p_find.add_subparsers(dest="skills_cmd", required=True)
     p_find_cmd = p_find_sub.add_parser("find", parents=[parent])
     p_find_cmd.add_argument("task")
+    p_find_cmd.add_argument("--limit", type=int, default=5, help="shortlist size")
+    p_find_sub.add_parser("index", help="Rebuild skills/skill-index.json", parents=[parent])
+    p_stock = p_find_sub.add_parser(
+        "stocktake", help="Age vendored packs against the review window", parents=[parent]
+    )
+    p_stock.add_argument("--strict", action="store_true", help="exit 1 when a pack is overdue")
+    p_stock.add_argument("--json", action="store_true", dest="as_json")
 
     sub.add_parser("validate", help="Validate repository layout", parents=[parent])
     p_uninstall = sub.add_parser("uninstall", help="Remove user-level BosskuAI skills", parents=[parent])
@@ -87,7 +98,30 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "skills":
             if args.skills_cmd == "find":
                 sid, score = find_skill(args.task, root)
-                print(json.dumps({"skill_id": sid, "score": score}, indent=2))
+                matches = rank_skills(args.task, root, limit=max(args.limit, 1))
+                runner_up = matches[1][1] if len(matches) > 1 else 0.0
+                print(
+                    json.dumps(
+                        {
+                            "skill_id": sid,
+                            "score": score,
+                            # Lexical matching is a fallback, not an oracle: say so when the
+                            # top hit is weak or barely beats the next one, and read the
+                            # shortlist instead of trusting skill_id.
+                            "confident": score >= CONFIDENT_SCORE
+                            and score >= runner_up * CONFIDENT_MARGIN,
+                            "matches": [
+                                {"skill_id": s, "score": round(v, 3)} for s, v in matches
+                            ],
+                        },
+                        indent=2,
+                    )
+                )
+            elif args.skills_cmd == "index":
+                dest = write_index(root)
+                print(json.dumps({"index": str(dest)}, indent=2))
+            elif args.skills_cmd == "stocktake":
+                return _stocktake(root, strict=args.strict, as_json=args.as_json)
             return 0
         if args.command == "validate":
             errors = validate_repo(root)
@@ -96,6 +130,13 @@ def main(argv: list[str] | None = None) -> int:
                     print(err, file=sys.stderr)
                 return 1
             print("validate: ok")
+            # A pack going stale is a prompt to review, not a broken repo: warn, stay green.
+            stale = overdue_packs(root)
+            if stale:
+                print(
+                    f"warning: {len(stale)} vendored pack(s) due for review "
+                    f"({', '.join(stale)}); run `bossku skills stocktake`"
+                )
             return 0
         if args.command == "uninstall":
             result = uninstall_user(root=root, home=home, purge=args.purge)
@@ -105,6 +146,30 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     return 0
+
+
+def _stocktake(root: Path | None, *, strict: bool = False, as_json: bool = False) -> int:
+    rows = pack_stocktake(root)
+    if as_json:
+        print(json.dumps(rows, indent=2))
+    else:
+        print(f"{'PACK':<20}{'SKILLS':>7}{'LAST SYNCED':>14}{'AGE':>7}  STATUS")
+        for r in rows:
+            age = "never" if r["age_days"] is None else f"{r['age_days']}d"
+            status = "OVERDUE" if r["overdue"] else "ok"
+            print(f"{r['pack']:<20}{r['skills']:>7}{r['last_synced'] or '-':>14}{age:>7}  {status}")
+        overdue = [r for r in rows if r["overdue"]]
+        window = rows[0]["review_days"] if rows else 0
+        print()
+        if overdue:
+            print(f"{len(overdue)} pack(s) past the {window}-day review window:")
+            for r in overdue:
+                print(f"  {r['pack']}: re-vendor from {r['upstream'] or 'upstream'}, "
+                      f"then update last_synced in skills/vendored.json")
+        else:
+            print(f"all {len(rows)} packs within the {window}-day review window.")
+        print("note: dates are recorded syncs, not a live upstream check.")
+    return 1 if strict and any(r["overdue"] for r in rows) else 0
 
 
 def _doctor(root: Path | None, home: Path | None, project: Path | None = None) -> int:

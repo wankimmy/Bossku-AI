@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: affaan-m/ECC (origin oh-my-agent-check)
   source: agent-architecture-audit
-tools: Read, Write, Edit, Bash, Grep, Glob
+allowed-tools: Read, Write, Edit, Bash, Grep, Glob
 ---
 
 # Agent Architecture Audit

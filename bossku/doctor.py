@@ -5,7 +5,7 @@ from pathlib import Path
 from bossku.memory import load_user_config
 from bossku.paths import MARKER_START, agents_skills_dir, claude_skills_dir, repo_root
 from bossku.skills import count_managed_skills, validate_skills
-from bossku.validate import claude_imports_agents_md
+from bossku.validate import claude_imports_agents_md, omp_imports_agents_md
 
 
 def gather_doctor_issues(
@@ -52,6 +52,8 @@ def gather_doctor_issues(
         proj = project.resolve()
         agents_file = proj / "AGENTS.md"
         claude_file = proj / "CLAUDE.md"
+        omp_agents_file = proj / ".omp" / "AGENTS.md"
+        omp_config_file = proj / ".omp" / "config.yml"
         if not agents_file.is_file():
             issues.append(f"missing project AGENTS.md at {proj}; run `bossku init`")
         elif MARKER_START not in agents_file.read_text(encoding="utf-8"):
@@ -62,6 +64,14 @@ def gather_doctor_issues(
             issues.append(
                 f"project CLAUDE.md must include bare @AGENTS.md; run `bossku init {proj}`"
             )
+        if not omp_agents_file.is_file():
+            issues.append(f"missing project .omp/AGENTS.md at {proj}; run `bossku init`")
+        elif not omp_imports_agents_md(omp_agents_file.read_text(encoding="utf-8")):
+            issues.append(
+                f"project .omp/AGENTS.md must include bare @../AGENTS.md; run `bossku init {proj}`"
+            )
+        if not omp_config_file.is_file():
+            issues.append(f"missing project .omp/config.yml at {proj}; run `bossku init`")
 
     return issues
 
@@ -79,8 +89,11 @@ def format_doctor_success(
     n = count_managed_skills(agents_path, r)
     lines = [f"doctor: ok (bossku {version})"]
     lines.append(
-        f"  cursor, codex, opencode: {agents_path} ({n} managed skills)"
+        f"  cursor, codex, opencode, omp: {agents_path} ({n} managed skills)"
     )
     lines.append(f"  claude_code: {claude_path} ({n} managed skills)")
-    lines.append("  project instructions: run `bossku init <project>` for AGENTS.md + CLAUDE.md")
+    lines.append(
+        "  project instructions: run `bossku init <project>` for AGENTS.md, "
+        "CLAUDE.md, and .omp/"
+    )
     return lines

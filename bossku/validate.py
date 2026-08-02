@@ -4,11 +4,14 @@ import json
 import re
 from pathlib import Path
 
+from bossku.index import index_is_stale, index_path
 from bossku.paths import repo_root
 from bossku.skills import (
     is_managed_skill_name,
     list_skill_ids,
+    load_provenance,
     load_vendored_ids,
+    pack_stocktake,
     skills_dir,
     validate_skills,
 )
@@ -17,6 +20,8 @@ from bossku.skills import (
 REQUIRED_FILES = (
     "AGENTS.md",
     "CLAUDE.md",
+    ".omp/AGENTS.md",
+    ".omp/config.yml",
     "README.md",
     "pyproject.toml",
     "skills/aliases.json",
@@ -32,6 +37,7 @@ REQUIRED_AGENTS = (
 )
 
 CLAUDE_AGENTS_IMPORT = "@AGENTS.md"
+OMP_AGENTS_IMPORT = "@../AGENTS.md"
 PLUGIN_NAME = "bossku-ai"
 MARKETPLACE_NAME = "bosskuai-marketplace"
 CODEX_MARKETPLACE_NAME = "bosskuai"
@@ -252,6 +258,15 @@ def claude_imports_agents_md(text: str) -> bool:
     return False
 
 
+def omp_imports_agents_md(text: str) -> bool:
+    """True if .omp/AGENTS.md imports the canonical project AGENTS.md."""
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped == OMP_AGENTS_IMPORT and "`" not in line:
+            return True
+    return False
+
+
 def validate_repo(root: Path | None = None) -> list[str]:
     errors: list[str] = []
     r = repo_root(root)
@@ -263,6 +278,12 @@ def validate_repo(root: Path | None = None) -> list[str]:
         if not claude_imports_agents_md(claude_path.read_text(encoding="utf-8")):
             errors.append(
                 "CLAUDE.md must include a bare @AGENTS.md import line for Claude Code"
+            )
+    omp_agents_path = r / ".omp" / "AGENTS.md"
+    if omp_agents_path.is_file():
+        if not omp_imports_agents_md(omp_agents_path.read_text(encoding="utf-8")):
+            errors.append(
+                ".omp/AGENTS.md must include a bare @../AGENTS.md import line for OMP"
             )
     agents = r / "agents"
     if not agents.is_dir():
@@ -276,10 +297,30 @@ def validate_repo(root: Path | None = None) -> list[str]:
     except FileNotFoundError:
         errors.append("missing skills directory")
     errors.extend(validate_skills(r))
+    if not index_path(r).is_file():
+        errors.append("missing skills/skill-index.json (run `bossku skills index`)")
+    elif index_is_stale(r):
+        errors.append(
+            "skills/skill-index.json is stale for the current skills "
+            "(run `bossku skills index`)"
+        )
     vendored = load_vendored_ids(r)
     for sid in vendored:
         if sid not in set(list_skill_ids(r)):
             errors.append(f"vendored skill missing folder: {sid}")
+    # Provenance completeness is deterministic, so it is an error. Whether a pack is
+    # *due* for review depends on today's date and only ever warns - see `_stocktake`.
+    provenance, _ = load_provenance(r)
+    for row in pack_stocktake(r):
+        meta = provenance.get(row["pack"], {})
+        if not meta:
+            errors.append(
+                f"vendored pack {row['pack']} has no provenance entry in skills/vendored.json"
+            )
+        elif not row["last_synced"]:
+            errors.append(f"vendored pack {row['pack']} is missing last_synced")
+        elif not meta.get("upstream"):
+            errors.append(f"vendored pack {row['pack']} is missing upstream")
     legacy_product = [
         "app/artisan",
         "web/package.json",

@@ -44,6 +44,9 @@ def init_project(
     init_memory_templates(project)
     agents_path = project / "AGENTS.md"
     claude_path = project / "CLAUDE.md"
+    omp_dir = project / ".omp"
+    omp_agents_path = omp_dir / "AGENTS.md"
+    omp_config_path = omp_dir / "config.yml"
     block = (
         "BosskuAI is active. Before multi-step work, match the task to an installed skill "
         "(read skill descriptions and pack routing in the global Bossku-AI AGENTS.md). "
@@ -68,6 +71,23 @@ def init_project(
             claude_path.write_text(claude_stub + "\n" + text, encoding="utf-8")
     else:
         claude_path.write_text(claude_stub, encoding="utf-8")
+    omp_dir.mkdir(parents=True, exist_ok=True)
+    omp_stub = "@../AGENTS.md\n"
+    if omp_agents_path.exists():
+        text = omp_agents_path.read_text(encoding="utf-8")
+        has_omp_import = any(
+            line.strip() == "@../AGENTS.md" and "`" not in line
+            for line in text.splitlines()
+        )
+        if not has_omp_import:
+            omp_agents_path.write_text(omp_stub + "\n" + text, encoding="utf-8")
+    else:
+        omp_agents_path.write_text(omp_stub, encoding="utf-8")
+    if not omp_config_path.exists():
+        omp_config_path.write_text(
+            "tools:\n  approvalMode: write\n",
+            encoding="utf-8",
+        )
     portable_info = None
     if portable:
         dest = project / ".bossku" / "skills"
@@ -77,5 +97,6 @@ def init_project(
         "project": str(project),
         "meta": str(meta_file),
         "memory": str(meta / "memory"),
+        "omp": str(omp_dir),
         "portable_skills": portable_info,
     }

@@ -23,6 +23,10 @@ def tools_coverage_map(agents_dest: Path, claude_dest: Path) -> dict:
         "codex": {"skills": agents_s, "instructions": init_hint},
         "opencode": {"skills": [agents_s, claude_s], "instructions": init_hint},
         "claude_code": {"skills": claude_s, "instructions": claude_hint},
+        "omp": {
+            "skills": [agents_s, claude_s],
+            "instructions": "project .omp/AGENTS.md @../AGENTS.md (bossku init)",
+        },
     }
 
 

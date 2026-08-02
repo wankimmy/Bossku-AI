@@ -19,4 +19,22 @@ BosskuAI vendors Agent Skills from these MIT-licensed upstream projects. Provena
 
 `dcg` is a thin Bossku skill that documents the upstream Destructive Command Guard CLI/hooks; the Rust binary is not bundled. Upstream license is MIT **with an OpenAI/Anthropic rider** — read the upstream `LICENSE` before redistributing the binary or derivative works.
 
-Refresh vendored skills by re-copying from upstream and updating `vendored.json`.
+## Review cadence
+
+Models improve faster than vendored prompt text does, so packs are reviewed on a
+rolling window rather than only when something breaks. `skills/vendored.json` records
+`provenance.<pack>.last_synced` and a shared `review_days` (default 180).
+
+```bash
+python -m bossku skills stocktake            # age every pack against the window
+python -m bossku skills stocktake --strict   # exit 1 when a pack is overdue (CI)
+```
+
+`bossku validate` prints a warning for overdue packs but stays green - a pack going
+stale is a prompt to review, not a broken repo. Missing provenance *is* a hard error.
+
+To refresh a pack: re-copy from upstream, re-run `bossku skills index`, then set
+`last_synced` to today in `skills/vendored.json`.
+
+These dates are recorded syncs, not a live upstream check - the tool reports that a
+pack is due for review, never that upstream actually changed.

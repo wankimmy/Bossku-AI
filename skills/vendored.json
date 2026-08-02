@@ -1,5 +1,48 @@
 {
   "version": "1.0.0",
+  "review_days": 180,
+  "provenance": {
+    "marketingskills": {
+      "upstream": "coreyhaines31/marketingskills",
+      "last_synced": "2026-07-16"
+    },
+    "superpowers": {
+      "upstream": "obra/superpowers",
+      "last_synced": "2026-07-16"
+    },
+    "hallmark": {
+      "upstream": "togethercomputer/hallmark",
+      "last_synced": "2026-07-16"
+    },
+    "browser-use": {
+      "upstream": "browser-use/browser-use",
+      "last_synced": "2026-07-16"
+    },
+    "graphify": {
+      "upstream": "Graphify-Labs/graphify",
+      "last_synced": "2026-07-16"
+    },
+    "markitdown": {
+      "upstream": "microsoft/markitdown",
+      "last_synced": "2026-07-16"
+    },
+    "loop-engineering": {
+      "upstream": "cobusgreyling/loop-engineering",
+      "last_synced": "2026-07-21"
+    },
+    "taste-skill": {
+      "upstream": "Leonxlnx/taste-skill",
+      "last_synced": "2026-07-21"
+    },
+    "scroll-world": {
+      "upstream": "oso95/scroll-world",
+      "last_synced": "2026-07-21"
+    },
+    "dcg": {
+      "upstream": "Dicklesworthstone/destructive_command_guard",
+      "last_synced": "2026-07-24"
+    }
+  },
   "packs": {
     "marketingskills": [
       "ab-testing",

@@ -28,7 +28,8 @@ Specialist behavior lives in skills, not separate agent services.
 ## Cross-tool adapters
 
 - **Cursor, Codex, OpenCode** load project `AGENTS.md` (OpenCode falls back to `CLAUDE.md` only when `AGENTS.md` is missing).
+- **OMP** loads `.omp/AGENTS.md`, which imports the canonical project `AGENTS.md`, and reuses both installed skill directories.
 - **Claude Code** loads `CLAUDE.md`; Bossku-AI repos and `bossku init` projects use `@AGENTS.md` so Claude imports the same contract without a second copy.
 - **Plugin manifests** at `.claude-plugin/`, `.cursor-plugin/`, `.codex-plugin/`, and `.agents/plugins/` let each host install skills and agents from this repo without copying via the CLI.
 - **OpenCode** uses `.opencode/opencode.jsonc` for references; skills still come from `bossku install` or bundled plugin paths.
-- **Skills** install to `~/.agents/skills/` (Cursor, Codex, OpenCode) and `~/.claude/skills/` (Claude Code; OpenCode scans both). No extra copy under `~/.config/opencode/skills` or `~/.codex/skills/`. `bossku doctor` verifies managed skill counts in both mirrors. See [installation.md](installation.md#tool-compatibility).
+- **Skills** install to `~/.agents/skills/` (Cursor, Codex, OpenCode, OMP) and `~/.claude/skills/` (Claude Code; OpenCode and OMP scan both). No extra OMP copy is needed. `bossku doctor` verifies managed skill counts in both mirrors. See [installation.md](installation.md#tool-compatibility).

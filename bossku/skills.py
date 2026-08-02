@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json
+import math
 import re
 import shutil
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 
 from bossku.paths import COFOUNDER_SKILL, MANAGED_SKILL_PREFIX, repo_root
@@ -38,6 +40,60 @@ def load_vendored(root: Path | None = None) -> dict[str, str]:
 
 def load_vendored_ids(root: Path | None = None) -> set[str]:
     return set(load_vendored(root).keys())
+
+
+DEFAULT_REVIEW_DAYS = 180
+
+
+def load_provenance(root: Path | None = None) -> tuple[dict[str, dict], int]:
+    path = vendored_path(root)
+    if not path.is_file():
+        return {}, DEFAULT_REVIEW_DAYS
+    data = json.loads(path.read_text(encoding="utf-8"))
+    review_days = int(data.get("review_days", DEFAULT_REVIEW_DAYS))
+    return data.get("provenance", {}), review_days
+
+
+def pack_stocktake(root: Path | None = None, today: date | None = None) -> list[dict]:
+    """Age each vendored pack against the review window.
+
+    `last_synced` is a recorded date, not an upstream check: this reports that a pack
+    is due for review, never that upstream actually changed.
+    """
+    path = vendored_path(root)
+    if not path.is_file():
+        return []
+    data = json.loads(path.read_text(encoding="utf-8"))
+    provenance, review_days = load_provenance(root)
+    now = today or date.today()
+
+    rows: list[dict] = []
+    for pack, ids in data.get("packs", {}).items():
+        meta = provenance.get(pack, {})
+        synced_raw = meta.get("last_synced")
+        try:
+            synced = date.fromisoformat(synced_raw) if synced_raw else None
+        except ValueError:
+            synced = None
+        age = (now - synced).days if synced else None
+        rows.append(
+            {
+                "pack": pack,
+                "skills": len(ids),
+                "upstream": meta.get("upstream", ""),
+                "last_synced": synced_raw or "",
+                "age_days": age,
+                "review_days": review_days,
+                # An unrecorded sync date is treated as due: silence should not read as fresh.
+                "overdue": age is None or age > review_days,
+            }
+        )
+    rows.sort(key=lambda r: (-1 if r["age_days"] is None else -r["age_days"]))
+    return rows
+
+
+def overdue_packs(root: Path | None = None, today: date | None = None) -> list[str]:
+    return [r["pack"] for r in pack_stocktake(root, today) if r["overdue"]]
 
 
 def load_pack_skill_ids(pack_name: str, root: Path | None = None) -> list[str]:
@@ -107,10 +163,12 @@ def parse_skill_md(path: Path) -> SkillMeta:
 def _parse_frontmatter(text: str) -> dict:
     if not text.startswith("---"):
         return {}
-    end = text.find("---", 3)
-    if end == -1:
+    # Close on a line that is exactly `---`; a bare find() would stop at any `---`
+    # inside a description and silently truncate the frontmatter.
+    match = re.search(r"^---[ \t]*$", text[3:], re.MULTILINE)
+    if match is None:
         return {}
-    block = text[3:end].strip()
+    block = text[3 : 3 + match.start()].strip()
     out: dict[str, object] = {}
     key: str | None = None
     lines = block.splitlines()
@@ -128,8 +186,10 @@ def _parse_frontmatter(text: str) -> dict:
             key_part, val = line.split(":", 1)
             key = key_part.strip()
             val = val.strip()
-            if val in (">", "|"):
-                folded = val == ">"
+            # Block scalars carry optional chomping/indent indicators (`>-`, `|+`, `>2`).
+            # Matching only bare `>`/`|` turned `description: >-` into the string ">-".
+            if re.fullmatch(r"[>|][-+]?\d?", val):
+                folded = val.startswith(">")
                 i += 1
                 parts: list[str] = []
                 while i < len(lines):
@@ -158,15 +218,6 @@ def _parse_frontmatter(text: str) -> dict:
     return out
 
 
-def load_all_skills(root: Path | None = None) -> dict[str, SkillMeta]:
-    base = skills_dir(root)
-    skills: dict[str, SkillMeta] = {}
-    for sid in list_skill_ids(root):
-        meta = parse_skill_md(base / sid / "SKILL.md")
-        skills[sid] = meta
-    return skills
-
-
 def resolve_skill_id(skill_id: str, root: Path | None = None) -> str:
     aliases = load_aliases(root)
     seen: set[str] = set()
@@ -179,71 +230,127 @@ def resolve_skill_id(skill_id: str, root: Path | None = None) -> str:
     return current
 
 
+def rank_skills(task: str, root: Path | None = None, limit: int = 5) -> list[tuple[str, float]]:
+    """Rank skills for a task, best first. Uses skills/skill-index.json when present."""
+    from bossku.index import build_index, compute_idf, load_index, tokenize, variants
+
+    data = load_index(root)
+    if data is None:
+        data = build_index(root)
+    entries: dict[str, dict] = data.get("skills", {})
+    if not entries:
+        return []
+
+    idf = compute_idf(entries)
+    task_l = " " + re.sub(r"\s+", " ", task.lower().strip()) + " "
+
+    # Weight each query term by rarity, and remember its morphological variants once.
+    default_idf = max(idf.values(), default=1.0)
+    q_terms: dict[str, tuple[float, set[str]]] = {}
+    for token in tokenize(task):
+        if token not in q_terms:
+            q_terms[token] = (idf.get(token, default_idf), variants(token))
+    q_mass = sum(w for w, _ in q_terms.values()) or 1.0
+
+    scored: list[tuple[str, float]] = []
+    for sid, entry in entries.items():
+        scored.append((sid, _score_entry(sid, entry, task_l, q_terms, q_mass)))
+    scored.sort(key=lambda pair: (-pair[1], pair[0]))
+    return scored[:limit]
+
+
 def find_skill(task: str, root: Path | None = None) -> tuple[str, float]:
-    task_l = task.lower()
-    skills = load_all_skills(root)
+    from bossku.index import load_index
+
     aliases = load_aliases(root)
-    best_id = COFOUNDER_SKILL if COFOUNDER_SKILL in skills else "bosskuai-workspace-assistant"
-    best_score = 0.0
-    for sid, meta in skills.items():
-        score = _score(task_l, meta)
-        if score > best_score:
-            best_score = score
-            best_id = sid
+    task_l = task.lower()
+    data = load_index(root)
+    known = set((data or {}).get("skills", {})) or set(list_skill_ids(root))
+
     for alias, target in aliases.items():
-        if alias.replace("bosskuai-", "").replace("-", " ") in task_l:
-            if target in skills:
-                return target, 1.5
-    return resolve_skill_id(best_id, root), best_score
+        if alias.replace("bosskuai-", "").replace("-", " ") in task_l and target in known:
+            return target, 1.5
+
+    ranked = rank_skills(task, root, limit=1)
+    fallback = COFOUNDER_SKILL if COFOUNDER_SKILL in known else "bosskuai-workspace-assistant"
+    if not ranked or ranked[0][1] <= 0:
+        return fallback, 0.0
+    return resolve_skill_id(ranked[0][0], root), round(ranked[0][1], 3)
 
 
-def _score(task: str, meta: SkillMeta) -> float:
-    score = 0.0
-    if meta.skill_id.replace("bosskuai-", "").replace("-", " ") in task:
-        score += 2.0
-    if meta.skill_id in task:
-        score += 3.0
-    for trigger in meta.triggers:
-        if trigger.lower() in task:
-            score += 2.5
-    for kw in meta.keywords:
-        if kw.lower() in task:
-            score += 1.0
-    desc = meta.description.lower()
-    if task in desc:
-        score += 6.0
-    words = [w.strip(".,!?") for w in task.split()]
-    if len(words) >= 2:
-        for i in range(len(words) - 1):
-            bigram = f"{words[i]} {words[i + 1]}"
-            if bigram in desc:
-                score += 4.0
-    for part in meta.skill_id.replace("bosskuai-", "").split("-"):
-        if len(part) >= 3 and part in task:
-            score += 1.5
-    for word in words:
-        if len(word) >= 5 and word in desc:
-            score += 0.5
+def _contains(haystack: str, phrase: str) -> bool:
+    return f" {phrase} " in haystack
+
+
+def _score_entry(
+    sid: str,
+    entry: dict,
+    task_l: str,
+    q_terms: dict[str, tuple[float, set[str]]],
+    q_mass: float,
+) -> float:
+    """Score by how much of the query a skill explains, plus exact phrase evidence.
+
+    Coverage-based rather than additive: an incidental word ("design *tokens*" hitting
+    `token-saver`) explains one term out of several, so it cannot outrank a skill that
+    accounts for the whole request.
+    """
+    from bossku.index import singular, tokenize
+
+    ident = sid.replace("bosskuai-", "").replace("-", " ")
+    id_tokens = {singular(t) for t in sid.replace("bosskuai-", "").split("-") if len(t) >= 2}
+    triggers = entry.get("triggers", [])
+    trigger_words = {w for t in triggers for w in tokenize(t)}
+    keywords = set(entry.get("keywords", []))
+
+    # How much of the query's information mass does this skill account for?
+    matched = 0.0
+    for weight, forms in q_terms.values():
+        if forms & id_tokens:
+            matched += weight * 3.0
+        elif forms & trigger_words:
+            matched += weight * 2.0
+        elif forms & keywords:
+            matched += weight * 1.0
+    coverage = matched / (q_mass * 3.0)
+    score = 18.0 * coverage
+
+    # Exact multi-word phrases are precise evidence and survive on their own merit.
+    for field, weight in (("triggers", 5.0), ("phrases", 1.8)):
+        for phrase in entry.get(field, []):
+            words = phrase.split()
+            if len(words) >= 2 and _contains(task_l, phrase):
+                score += weight + 0.9 * len(words)
+
+    if _contains(task_l, sid) or _contains(task_l, ident):
+        score += 3.0 if len(id_tokens) > 1 else 1.5
+
     return score
 
 
 def write_routing_cache(dest: Path, root: Path | None = None) -> None:
-    skills = load_all_skills(root)
-    aliases = load_aliases(root)
+    """Mirror the routing index next to the install so hosts get triggers, not just names."""
+    from bossku.index import build_index, load_index
+
+    data = load_index(root) or build_index(root)
+    entries: dict[str, dict] = data.get("skills", {})
     payload = {
-        "version": "2.0.0",
+        "version": data.get("version", "2.1.0"),
+        "fingerprint": data.get("fingerprint", ""),
         "skills": [
             {
                 "id": sid,
-                "name": meta.name,
-                "description": meta.description,
-                "triggers": meta.triggers,
-                "keywords": meta.keywords,
+                "name": entry.get("name", sid),
+                "description": entry.get("description", ""),
+                "triggers": entry.get("triggers", []),
+                "keywords": entry.get("keywords", []),
+                "model_role": entry.get("model_role", "coder"),
+                "pack": entry.get("pack", "bossku"),
             }
-            for sid, meta in sorted(skills.items())
+            for sid, entry in sorted(entries.items())
         ],
-        "aliases": aliases,
-        "default_skill_id": COFOUNDER_SKILL if COFOUNDER_SKILL in skills else "bosskuai-workspace-assistant",
+        "aliases": load_aliases(root),
+        "default_skill_id": COFOUNDER_SKILL if COFOUNDER_SKILL in entries else "bosskuai-workspace-assistant",
     }
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(json.dumps(payload, indent=2), encoding="utf-8")
@@ -316,6 +423,28 @@ def count_managed_skills(dest_dir: Path, root: Path | None = None) -> int:
     return total
 
 
+KNOWN_FRONTMATTER_KEYS = frozenset(
+    {
+        "name",
+        "description",
+        "metadata",
+        "license",
+        "user_invocable",
+        "allowed-tools",
+        "argument-hint",
+        "compatibility",
+        "version",
+        "triggers",
+        "keywords",
+        "model_role",
+    }
+)
+
+# Hosts read `description` on every session, so it is a shared context budget.
+MAX_DESCRIPTION_CHARS = 1200
+MIN_DESCRIPTION_CHARS = 40
+
+
 def validate_skills(root: Path | None = None) -> list[str]:
     errors: list[str] = []
     base = skills_dir(root)
@@ -326,7 +455,7 @@ def validate_skills(root: Path | None = None) -> list[str]:
             errors.append(f"alias {alias} conflicts with real skill folder")
         if target not in ids and target not in aliases.values():
             errors.append(f"alias {alias} points to missing skill {target}")
-    for sid in ids:
+    for sid in sorted(ids):
         skill_md = base / sid / "SKILL.md"
         if not skill_md.is_file():
             errors.append(f"missing SKILL.md for {sid}")
@@ -334,9 +463,27 @@ def validate_skills(root: Path | None = None) -> list[str]:
         text = skill_md.read_text(encoding="utf-8")
         if not text.startswith("---"):
             errors.append(f"{sid}/SKILL.md missing YAML frontmatter")
-    seen: set[str] = set()
-    for sid in ids:
-        if sid in seen:
-            errors.append(f"duplicate skill id {sid}")
-        seen.add(sid)
+            continue
+        front = _parse_frontmatter(text)
+        if not front:
+            errors.append(f"{sid}/SKILL.md frontmatter did not parse")
+            continue
+        if not str(front.get("name", "")).strip():
+            errors.append(f"{sid}/SKILL.md missing name")
+        description = str(front.get("description", "")).strip()
+        if not description:
+            errors.append(f"{sid}/SKILL.md missing description")
+        elif len(description) < MIN_DESCRIPTION_CHARS:
+            errors.append(
+                f"{sid}/SKILL.md description too short ({len(description)} chars); "
+                "routing needs enough signal to match on"
+            )
+        elif len(description) > MAX_DESCRIPTION_CHARS:
+            errors.append(
+                f"{sid}/SKILL.md description too long ({len(description)} chars, "
+                f"max {MAX_DESCRIPTION_CHARS}); it loads into every session"
+            )
+        unknown = sorted(set(front) - KNOWN_FRONTMATTER_KEYS)
+        if unknown:
+            errors.append(f"{sid}/SKILL.md unknown frontmatter key(s): {', '.join(unknown)}")
     return errors
