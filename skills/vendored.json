@@ -41,6 +41,10 @@
     "dcg": {
       "upstream": "Dicklesworthstone/destructive_command_guard",
       "last_synced": "2026-07-24"
+    },
+    "emil-skills": {
+      "upstream": "emilkowalski/skills",
+      "last_synced": "2026-08-10"
     }
   },
   "packs": {
@@ -159,6 +163,17 @@
     ],
     "dcg": [
       "dcg"
+    ],
+    "emil-skills": [
+      "animate",
+      "animation-vocabulary",
+      "apple-design",
+      "emil-design-eng",
+      "find-animation-opportunities",
+      "improve-animations",
+      "pick-ui-library",
+      "prototype",
+      "review-animations"
     ]
   },
   "skills": {
@@ -257,6 +272,15 @@
     "imagegen-frontend-mobile": "taste-skill",
     "brandkit": "taste-skill",
     "scroll-world": "scroll-world",
-    "dcg": "dcg"
+    "dcg": "dcg",
+    "animate": "emil-skills",
+    "animation-vocabulary": "emil-skills",
+    "apple-design": "emil-skills",
+    "emil-design-eng": "emil-skills",
+    "find-animation-opportunities": "emil-skills",
+    "improve-animations": "emil-skills",
+    "pick-ui-library": "emil-skills",
+    "prototype": "emil-skills",
+    "review-animations": "emil-skills"
   }
 }

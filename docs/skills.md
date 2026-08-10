@@ -13,7 +13,7 @@ Canonical skills live in [`skills/`](../skills/). Each folder contains `SKILL.md
 
 `bossku install --profile core` installs Bossku co-founder essentials plus the **loop-engineering** pack (12 loop/triage/CI/PR skills). Always-on loop discipline is in [`AGENTS.md`](../AGENTS.md#loop-engineering-always-on).
 
-`bossku install --profile full` installs the entire library (~197 skills), including all other vendored packs.
+`bossku install --profile full` installs the entire library (~206 skills), including all other vendored packs.
 
 ## Vendored packs
 
@@ -29,6 +29,7 @@ Canonical skills live in [`skills/`](../skills/). Each folder contains `SKILL.md
 | taste-skill | 13 anti-slop frontend / imagegen skills | — |
 | scroll-world | Scroll-scrub Higgsfield cinematic world landing | Higgsfield CLI, ffmpeg |
 | dcg | Destructive Command Guard (agent shell/git safety hooks) | `dcg` binary (upstream installer) |
+| emil-skills | 9 motion craft / design engineering skills | — |
 
 Attribution: [`docs/third-party.md`](third-party.md). Optional deps: [`requirements-optional.txt`](../requirements-optional.txt).
 
@@ -44,6 +45,8 @@ Attribution: [`docs/third-party.md`](third-party.md). Optional deps: [`requireme
 | `bosskuai-tdd-loop` | `test-driven-development` | Superpowers TDD workflow requested |
 | `bosskuai-diagnose-loop`, `bosskuai-ratchet-loop` | `loop-triage`, `loop-verifier`, `minimal-fix` | Loop-engineering agent loops (CI/PR/issue sweeps) |
 | `bosskuai-gsap-animation`, `bosskuai-lenis-smooth-scroll` | `scroll-world` | Higgsfield scroll-scrub fly-through world landing; use Bossku GSAP/Lenis for code-only motion |
+| `bosskuai-taste`, `taste-skill`, `hallmark` | `emil-design-eng`, `animate`, `apple-design` | Motion craft (easing, duration, interruption, gesture); keep taste/hallmark for layout, type, color, content |
+| `bosskuai-throwaway-prototype`, `bosskuai-rapid-prototype` | `prototype` | UI variants behind a live picker; keep Bossku skills for logic spikes / MVP scaffolds |
 
 ## Aliases (merged Bossku duplicates)
 

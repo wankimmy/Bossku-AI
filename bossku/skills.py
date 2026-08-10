@@ -437,6 +437,7 @@ KNOWN_FRONTMATTER_KEYS = frozenset(
         "triggers",
         "keywords",
         "model_role",
+        "disable-model-invocation",
     }
 )
 

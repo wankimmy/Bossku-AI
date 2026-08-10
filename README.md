@@ -106,7 +106,7 @@ See [`docs/installation.md`](docs/installation.md) for the CLI path and per-proj
 ## Layout
 
 - [`AGENTS.md`](AGENTS.md) — cross-tool contract
-- [`skills/`](skills/) — canonical skill library (~197 skills, including vendored packs)
+- [`skills/`](skills/) — canonical skill library (~206 skills, including vendored packs)
 - [`skills/vendored.json`](skills/vendored.json) — third-party skill provenance
 - [`agents/`](agents/) — orchestrator, planner, executor, auditor, final reviewer
 - [`.claude-plugin/`](.claude-plugin/) — Claude Code plugin + marketplace manifests
@@ -120,7 +120,7 @@ See [`docs/installation.md`](docs/installation.md) for the CLI path and per-proj
 
 ## Vendored skill packs
 
-BosskuAI ships skills from **marketingskills**, **superpowers**, **hallmark**, **taste-skill**, **loop-engineering**, **scroll-world**, **browser-use**, **graphify**, and a thin **markitdown** wrapper. Use `bossku install --profile full` to install all of them.
+BosskuAI ships skills from **marketingskills**, **superpowers**, **hallmark**, **taste-skill**, **loop-engineering**, **scroll-world**, **emil-skills**, **browser-use**, **graphify**, and a thin **markitdown** wrapper. Use `bossku install --profile full` to install all of them.
 
 Optional CLIs for some packs: see [`requirements-optional.txt`](requirements-optional.txt).
 

@@ -54,6 +54,9 @@ ROUTING_CASES = [
     ("build a three.js hero with a rotating model", {"bosskuai-3d-web-development"}),
     ("git worktree for this feature branch", {"using-git-worktrees"}),
     ("write release notes for v2", {"draft-release-notes"}),
+    ("review this animation for craft issues", {"review-animations"}),
+    ("what should I use for toasts", {"pick-ui-library"}),
+    ("scrolltrigger pinned section with gsap", {"bosskuai-gsap-animation"}),
 ]
 
 

@@ -92,7 +92,52 @@ CURATED_TRIGGERS: dict[str, list[str]] = {
     ],
     "bosskuai-docker": ["dockerfile", "docker compose", "containerize"],
     "bosskuai-gsap-animation": [
-        "gsap", "scrolltrigger", "timeline animation", "scroll animation", "animate",
+        "gsap", "scrolltrigger", "timeline animation", "scroll animation",
+        "pinned section", "scroll storytelling", "gsap timeline",
+    ],
+    "bosskuai-throwaway-prototype": [
+        "throwaway spike", "throwaway prototype", "prove it works",
+        "one-question prototype", "spike to learn",
+    ],
+    "bosskuai-rapid-prototype": [
+        "mvp scaffold", "demo build", "hackathon prototype", "rapid prototype",
+        "poc scaffold",
+    ],
+    "animate": [
+        "add a transition", "animate this component", "build an animation",
+        "make a transition", "component feel alive",
+    ],
+    "review-animations": [
+        "review this animation", "motion review", "animation code review",
+        "critique this motion", "review the animations",
+    ],
+    "improve-animations": [
+        "audit the animations", "improve the motion", "animation roadmap",
+        "improve the animations", "motion audit",
+    ],
+    "find-animation-opportunities": [
+        "what could be animated", "make this feel alive", "animation opportunities",
+        "where should we animate",
+    ],
+    "animation-vocabulary": [
+        "what's it called when", "name for this effect", "what is this animation called",
+        "animation vocabulary",
+    ],
+    "pick-ui-library": [
+        "which library for", "what should I use for toasts", "drag and drop library",
+        "pick a ui library", "which package for charts",
+    ],
+    "prototype": [
+        "variants behind a picker", "try a few versions", "ui variant picker",
+        "multiple versions of this ui", "prototype three versions",
+    ],
+    "apple-design": [
+        "ios feel", "spring interaction", "sheet drag gesture",
+        "apple style ui", "fluid interface", "rubber band scroll",
+    ],
+    "emil-design-eng": [
+        "make this feel right", "ui polish", "design engineering",
+        "emil kowalski", "invisible details",
     ],
     "bosskuai-laravel-security": [
         "secure laravel", "laravel security", "mass assignment", "csrf", "policy gate",
