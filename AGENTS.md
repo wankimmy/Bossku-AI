@@ -53,6 +53,8 @@ Route CI → `ci-triage`; PRs → `pr-review-triage`; backlog sweeps → `loop-t
 
 Ask before payments, auth, secrets, privacy, data loss, or migrations.
 
+When a request is general, ambiguous, or touches many files, ask 1-3 numbered yes/no questions before acting (`1-yes/no  2-A/B`). This applies to every skill — individual skills do not repeat it.
+
 ## Memory
 
 - Project memory lives in `.bossku/memory/`.

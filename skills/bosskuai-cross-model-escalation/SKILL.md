@@ -5,31 +5,92 @@ description: "Use when the current model is stuck, low-confidence, or repeating 
 
 # BosskuAI Cross-Model Escalation
 
-Use this when the current model is stuck, low-confidence, missing a capability, or repeating failed attempts. It defines how to bring in another model, tool surface, or session for scoped assistance across Claude, Codex, and Cursor without losing ownership of the task.
+Use this skill when the active model should **stop thrashing and get help** from another model. The goal is not to abandon ownership of the task, but to bring in the right second opinion or helper path before time and context are wasted.
 
-## Fast Path
+## How this differs from nearby skills
 
-1. Confirm the requested outcome and constraints.
-2. Use the smallest checklist needed; do not load the full playbook by default.
-3. Produce the artifact, review, or decision in the user-requested format.
-4. State verification performed and any remaining risk.
+- **`bosskuai-ai-model-selection`**: chooses the best model for a task profile. **This skill** decides when to escalate mid-task and how to frame the helper request.
+- **`bosskuai-subagent-delegation`**: splits independent workstreams in parallel. **This skill** is for a blocked or uncertain main workstream, even when the task is still single-threaded.
+- **`bosskuai-context-limit-continuation`**: stops and hands work to a new session because of context or quota pressure. **This skill** is proactive and can happen before limits are a problem.
 
-## When To Open The Playbook
+## Auto-trigger logic
 
-Open `../../references/playbooks/bosskuai-cross-model-escalation-playbook.md` only when the task needs detailed framework choices, longer checklists, examples, or implementation depth.
+Escalate when **any** of the following are true:
 
-## Default Output
+| Signal | What it means | Action |
+|--------|----------------|--------|
+| Same path failed twice | The model is looping on the same fix, search, or explanation | Stop retrying and ask another model for a fresh angle |
+| Low confidence on high-impact work | Architecture, security, business logic, migrations, billing, auth, or destructive ops still feel uncertain | Get a second opinion before finalizing |
+| Capability mismatch | The task needs longer context, different modality, stronger reasoning, or better coding/tool behavior than the current model offers | Switch to a better-fit helper model |
+| Conflicting evidence | Two plausible explanations remain after reading the local evidence | Ask another model to challenge the current hypothesis |
+| Tool/vendor limitation | Current tool surface cannot browse, cannot edit safely, or is degraded/unavailable | Hand off to another tool/model with a compact brief |
+| User asks for backup | The user explicitly asks to call another model, get a second opinion, or escalate | Do it without extra ceremony |
 
-- Start with the answer or changed recommendation.
-- Use concise bullets for tradeoffs.
-- Avoid generic AI/SaaS phrasing.
-- For implementation work, include exact files, commands, tests, or review notes.
+## Escalation workflow
 
-## Verification
+1. **Name the blocker clearly** — one sentence: what is stuck, uncertain, or missing.
+2. **Keep one owner** — the current session stays responsible for synthesis and final verification.
+3. **Choose the helper mode**:
+   - **Second-opinion consult**: read-only reasoning or review
+   - **Scoped implementation assist**: concrete patch/test plan for a narrow file set
+   - **Cross-tool handoff**: another IDE/model completes the next phase
+4. **Use `bosskuai-ai-model-selection`** to choose the best helper model for the remaining question or phase.
+5. **Write a tight helper brief** — include:
+   - blocker
+   - what was tried
+   - exact question to answer
+   - files or evidence to inspect
+   - what must not change
+   - expected output format
+6. **Integrate skeptically** — do not trust the helper blindly. Re-check against local code, tests, and requirements.
+7. **If switching sessions or tools**, update `.bossku/memory/handoff.md` first so Claude, Codex, and Cursor can continue without chat history.
 
-Before finalizing, check:
+## Tool-specific patterns
 
-- Did the output solve the actual request?
-- Are assumptions and risks visible?
-- Is there a concrete next action?
-- Did we avoid loading unnecessary specialist context?
+### Claude Code
+
+- If the Opus-tier model is stuck on strategy or diagnosis, ask the Sonnet-tier model for a concrete patch shape, simpler hypothesis, or diff review. A different model often beats a bigger one on a stuck problem.
+- Before escalating at all, try raising `effort` or restating the question — a stuck run is frequently an under-specified prompt, not an under-powered model.
+- If Claude is still blocked because the task needs a different model family or tool surface, package a cross-tool brief and continue in Codex or Cursor.
+- Keep Claude as the synthesizer when it still owns the main task; use the helper model for a bounded question, not a broad rewrite.
+
+### Codex
+
+- If the small/fast model stalls during implementation, escalate first to the flagship in the same family for a scoped re-plan or skeptical review. Confirm the current model id from the vendor's docs rather than a remembered version.
+- If the OpenAI path still feels blocked, hand the narrowed question to Claude or a Cursor plan model with a short brief.
+- Prefer a separate planner/reviewer-style pass for read-only help before opening a new write-heavy branch of work.
+
+### Cursor
+
+- Keep **Composer 2** as the execution surface.
+- If Composer edits are looping or unclear, open a **Plan mode** pass with the strongest available reasoning model for a second opinion.
+- If one planning model is unhelpful, switch to another planning model rather than retrying the same prompt shape repeatedly.
+
+## Helper brief template
+
+```text
+Need cross-model help.
+Current owner/tool:
+Blocked on:
+What has already been tried:
+Exact question for helper:
+Files to inspect:
+Constraints / do not change:
+Expected output:
+```
+
+## Guardrails
+
+- Do not escalate just because the task is large; use `bosskuai-subagent-delegation` when the work is parallelizable.
+- Do not wait for context exhaustion if the real problem is model fit or repeated failure.
+- Do not hand vague context to another model. Narrow the ask to one concrete question or file set.
+- Do not let multiple models make unsynchronized broad edits to the same files.
+- Do not use helper output as truth. The owning session still verifies code, logic, and security implications.
+
+## References
+
+- Pair with **`bosskuai-ai-model-selection`** to choose the helper model
+- Pair with **`bosskuai-subagent-delegation`** when the helper work can run in parallel
+- Pair with **`bosskuai-context-limit-continuation`** when the escalation requires a fresh session or tool switch
+- `.bossku/memory/handoff.md`
+- `../../references/memory-first-handoff-protocol.md`

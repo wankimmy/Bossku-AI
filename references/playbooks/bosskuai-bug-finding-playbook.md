@@ -1,15 +1,8 @@
-# bosskuai-bug-finding Full Playbook
+# BosskuAI Bug Finding Playbook
 
-Original detailed operating notes moved out of SKILL.md to reduce prompt bloat.
+Use this for bug hunts, regression analysis, suspicious changes, failure-path review, finding likely defects before shipping, and deep incident investigation using logs, DB state, queues, and runtime evidence.
 
----
-
----
-name: bosskuai-bug-finding
-description: Use this for bug hunts, regression analysis, suspicious changes, failure-path review, finding likely defects before shipping, and deep incident investigation using logs, DB state, queues, and runtime evidence.
----
-
-# BosskuAI Bug Finding
+Reference document. No skill of this name is installed; load it from the skill that links here.
 
 Use this skill when the goal is to find what is wrong or what is likely to break. Two modes:
 - **Standard mode** — trace defects from code paths and patterns alone.
@@ -186,4 +179,3 @@ Missing protections:
 ## Further reading
 
 - `bug-finding-detailed-playbook.md` — extended step-by-step workflow and detailed templates that complement this playbook.
-

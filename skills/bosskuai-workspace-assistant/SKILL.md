@@ -18,9 +18,9 @@ If the domain is already clear, load the expert skill directly instead.
 ## Core workflow
 
 1. Use root `AGENTS.md` quick reference to choose 1 primary skill and at most 1 secondary skill.
-2. Read `ai-assistant/memory/active-continuation.md` first. If `semantic-memory.sqlite3` exists, query it before opening broad memory files.
+2. Read `.bossku/memory/handoff.md` first. If `semantic-memory.sqlite3` exists, query it before opening broad memory files.
 3. Read nearby code, docs, manifests, and tests before concluding anything repo-specific.
-4. For non-trivial tasks, if the plan is likely to matter later, store a compact pre-execution entry in `ai-assistant/memory/plan-log.md` and sync vector memory before execution.
+4. For non-trivial tasks, if the plan is likely to matter later, store a compact pre-execution entry in `.bossku/memory/plans.md` and sync vector memory before execution.
 5. Prefer the smallest safe change that fits the current architecture.
 6. Run the loaded skill workflow instead of inventing a new one.
 7. Before finishing, verify the work and decide whether memory, checklist, pitfall, playbook, or skill promotion is warranted.
@@ -55,7 +55,7 @@ Do not declare done until:
 - `../../references/checklists/learning-promotion-checklist.md`
 - `../../references/checklists/continuous-learning-checklist.md`
 - `../../references/session-handoff-template.md`
-- `../../memory/plan-log.md`
-- `../../memory/learning-log.md`
-- `../../memory/agent-profile.md`
-- `../../memory/project-understanding.md`
+- `.bossku/memory/plans.md`
+- `.bossku/memory/learnings.md`
+- `.bossku/memory/project.md`
+- `.bossku/memory/project.md`

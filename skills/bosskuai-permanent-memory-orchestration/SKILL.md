@@ -23,7 +23,7 @@ Use this skill when the user asks for:
 For every meaningful task:
 
 1. **Retrieve first**
-   - Read `ai-assistant/memory/active-continuation.md` if active.
+   - Read `.bossku/memory/handoff.md` if active.
    - Query vector memory before broad file reads:
 
      ```bash
@@ -83,11 +83,11 @@ Do not store:
 |---|---|---|
 | `conversation` | `ai-assistant/memory/conversation-memory.md` | useful cross-tool chat/request history |
 | `durable` | `ai-assistant/memory/durable-memory.md` | stable decisions, preferences, constraints |
-| `plan` | `ai-assistant/memory/plan-log.md` | reusable non-trivial plans |
-| `learning` | `ai-assistant/memory/learning-log.md` | outcomes, verification, next actions |
-| `bug` | `ai-assistant/memory/bug-patterns.md` | recurring defects and fixes |
-| `market` | `ai-assistant/memory/market-notes.md` | positioning, competitor, GTM notes |
-| `continuation` | `ai-assistant/memory/active-continuation.md` | unfinished work only |
+| `plan` | `.bossku/memory/plans.md` | reusable non-trivial plans |
+| `learning` | `.bossku/memory/learnings.md` | outcomes, verification, next actions |
+| `bug` | `.bossku/memory/learnings.md` | recurring defects and fixes |
+| `market` | `.bossku/memory/project.md` | positioning, competitor, GTM notes |
+| `continuation` | `.bossku/memory/handoff.md` | unfinished work only |
 
 Raw events are also appended to `ai-assistant/memory/conversation-log.jsonl` for audit, but the model should retrieve from the vector DB and curated markdown memory first.
 

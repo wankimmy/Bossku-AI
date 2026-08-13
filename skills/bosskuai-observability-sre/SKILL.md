@@ -3,37 +3,66 @@ name: bosskuai-observability-sre
 description: Use this for logs, metrics, tracing, alerts, SLOs, health checks, dashboards, incident detection, and production reliability instrumentation.
 ---
 
-# Bosskuai Observability Sre
+# BosskuAI Observability & SRE
 
-Use this for logs, metrics, tracing, alerts, SLOs, health checks, dashboards, incident detection, and production reliability instrumentation.
+Use this skill when the question is **whether production failure would be noticed**, and how fast.
 
-## Fast Path
+## How this differs from nearby skills
 
-1. Define user-impacting SLI before adding dashboards.
-2. Log request id, user/tenant id where safe, job id, payment/refund ids, and correlation ids.
-3. Alert on symptoms, not noise: error rate, latency, queue age, failed payment/webhook spikes.
-4. Add health/readiness checks for app, DB, Redis, queue, storage, and external dependencies.
+- **`bosskuai-incident-response`**: runs an incident already in progress; this skill builds the detection that starts it.
+- **`bosskuai-performance-profiling`**: diagnoses a known slow path; this skill tells you which path is slow in production.
+- **`bosskuai-devops-iac`**: builds the deployment pipeline; this skill instruments what the pipeline ships.
 
-## Default Checks
+## Start from user impact, not dashboards
 
-- Define user-impacting SLI before adding dashboards.
-- Log request id, user/tenant id where safe, job id, payment/refund ids, and correlation ids.
-- Alert on symptoms, not noise: error rate, latency, queue age, failed payment/webhook spikes.
-- Add health/readiness checks for app, DB, Redis, queue, storage, and external dependencies.
-- Write incident runbook and rollback trigger with owner.
+Define the SLI first: the measurable thing a user experiences (request success rate, checkout latency, job completion time). Dashboards and alerts derive from it. A dashboard built before an SLI measures whatever was easy to collect.
 
-## When To Open The Playbook
+## Instrument for correlation
 
-Open `../../references/playbooks/bosskuai-observability-sre-playbook.md` only when the task needs detailed workflow, implementation examples, or release-grade depth.
+Every log line for a request or job should carry enough identity to reconstruct a story:
 
-## Output Quality
+- Request id, propagated across services and into background jobs.
+- Tenant/org id and user id where privacy allows.
+- Job id and attempt number for queued work.
+- Domain ids that matter for recovery: payment, invoice, refund, webhook event.
+- Trace/span id when distributed tracing exists.
 
-- Start with the verdict or action.
-- Separate confirmed facts, assumptions, and risks.
-- Include exact files, commands, tests, metrics, or rollback triggers when relevant.
-- Do not claim legal, security, or cost certainty without evidence.
+## Alert on symptoms, not causes
+
+Alert when users are affected: error rate, latency percentile breach, queue age growth, failed payment or webhook spikes, drop in a core business event. Cause-based alerts (CPU, memory) belong on dashboards unless they directly predict user pain. Every alert needs an owner and a runbook link, or it trains people to ignore alerts.
+
+## Health checks
+
+Separate **liveness** (is the process up) from **readiness** (can it serve). Readiness should check the dependencies the app truly needs: database, cache, queue, storage, and critical external services. A readiness check that always returns 200 is worse than none.
+
+## Guardrails
+
+- Never log secrets, tokens, full card data, passwords, or unredacted personal data.
+- Watch cardinality: unbounded label values on metrics get expensive fast.
+- Sample high-volume traces, but never sample away errors.
+- Do not add an alert without defining the response to it.
+- Retention and sampling are cost decisions; state them explicitly rather than defaulting.
+
+## Output format
+
+```text
+User-impacting SLI: [what it measures]
+SLO (if set): [target and window]
+
+Current coverage:
+  Logs: [what exists, what is missing]
+  Metrics: [what exists, what is missing]
+  Traces: [what exists, what is missing]
+  Health checks: [liveness / readiness state]
+
+Gaps:
+  P0/P1/P2 - [blind spot] - [what would go unnoticed] - [instrumentation to add]
+
+Alerts: [signal - threshold - owner - runbook]
+Cost note: [retention / cardinality / sampling implications]
+Verification: [how the signal was confirmed to fire]
+```
 
 ## References
 
-- `../../references/playbooks/bosskuai-observability-sre-playbook.md`
 - `../../references/checklists/observability-sre-checklist.md`

@@ -3,39 +3,65 @@ name: bosskuai-cost-optimization
 description: Use this for cloud/server/API/model cost control, token budgets, queue sizing, storage costs, vendor spend, and unit economics.
 ---
 
-# Bosskuai Cost Optimization
+# BosskuAI Cost Optimization
 
-Use this for cloud/server/API/model cost control, token budgets, queue sizing, storage costs, vendor spend, and unit economics.
+Use this skill when spend is the problem: infrastructure, vendor APIs, model tokens, storage, or the unit economics underneath them.
 
-## Fast Path
+## How this differs from nearby skills
 
-1. Measure before optimizing: request volume, token usage, queue duration, DB load, storage, vendor API calls.
-2. Separate product quality modes: cheap default, frontier escalation, batch/offline jobs.
-3. Cache only safe, scoped, invalidatable data.
-4. Track cost per active user, per job, per lead, or per successful transaction.
+- **`bosskuai-performance-profiling`**: makes something faster; this skill makes it cheaper, which is sometimes the opposite decision.
+- **`bosskuai-financial-modeling`**: models company-level revenue and runway; this skill attacks the cost line items feeding it.
+- **`bosskuai-token-saver`**: reduces context cost inside an agent session; this skill covers total product spend including models.
+- **`bosskuai-ai-model-selection`**: picks a model for capability; this skill sets the cost envelope it must fit.
 
-## Default Checks
+## Measure before optimizing
 
-- Measure before optimizing: request volume, token usage, queue duration, DB load, storage, vendor API calls.
-- Separate product quality modes: cheap default, frontier escalation, batch/offline jobs.
-- Cache only safe, scoped, invalidatable data.
-- Track cost per active user, per job, per lead, or per successful transaction.
-- Never reduce cost by weakening security, audit, or critical correctness.
+Name the cost driver with a number before changing anything. Request volume, tokens per call, queue duration, database load, egress, storage growth, vendor call counts. Optimizing an unmeasured cost usually moves work rather than removing it, and the savings claim cannot be checked afterwards.
 
-## When To Open The Playbook
+## Where SaaS spend actually concentrates
 
-Open `../../references/playbooks/bosskuai-cost-optimization-playbook.md` only when the task needs detailed workflow, implementation examples, or release-grade depth.
+- **Model/API calls**: prompt size, retries, context re-sent per turn, and calls made on paths users never see.
+- **Egress and bandwidth**: often invisible until the bill; check media and export paths.
+- **Storage growth**: logs, backups, uploaded media, soft-deleted rows, and old analytics events.
+- **Always-on compute**: idle instances, oversized workers, and environments nobody uses.
+- **Queue and retry loops**: failed jobs retrying forever cost real money.
+- **Per-seat vendor tools**: seats provisioned and never reclaimed.
 
-## Output Quality
+## Tiering, not blanket downgrades
 
-- Start with the verdict or action.
-- Separate confirmed facts, assumptions, and risks.
-- Include exact files, commands, tests, metrics, or rollback triggers when relevant.
-- Do not claim legal, security, or cost certainty without evidence.
+Separate quality modes rather than degrading everything: a cheap default path, escalation to a stronger model or larger instance only when the task warrants it, and batch/offline processing for work with no latency requirement. This preserves quality where users notice and cuts cost where they do not.
+
+## Caching rules
+
+Cache only what is safe, scoped, and invalidatable. Every cache needs a key that includes tenant and permission scope, an explicit TTL or invalidation event, and a decision about what a stale read would cost. Caching authorization-dependent data on a shared key is a security bug wearing a performance costume.
+
+## Unit economics
+
+Track cost per active user, per job, per lead, or per successful transaction. Absolute spend rising is not automatically bad; cost per successful outcome rising is.
+
+## Guardrails
+
+- Never reduce cost by weakening security, audit trails, tenant isolation, or backup integrity.
+- Do not cut observability to the point where the next incident goes undetected. That trade shows up later at a higher price.
+- Do not claim a saving without a before and after number.
+- Watch for cost shifted rather than removed: moving work to a queue still burns compute.
+- Check whether committed-use or reserved pricing beats optimization effort before rewriting code.
+
+## Output format
+
+```text
+Measured baseline:
+  [cost driver] - [current number] - [source of measurement]
+
+Biggest levers:
+  1. [change] - [estimated saving] - [risk] - [effort]
+
+Unit economics: [cost per user / job / transaction, before -> after]
+Quality tiers: [cheap default / escalation / batch]
+Guardrails preserved: [security, audit, observability untouched]
+Verification: [how the saving will be confirmed]
+```
 
 ## References
 
-- `../../references/playbooks/bosskuai-cost-optimization-playbook.md`
 - `../../references/checklists/cost-optimization-checklist.md`
-
-- Track LLM cost separately from general API cost when model usage is material.

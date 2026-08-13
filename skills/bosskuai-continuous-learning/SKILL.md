@@ -26,7 +26,7 @@ Use this skill when recent work produced a lesson worth keeping beyond the curre
 
 When a lesson is a small repeatable behavior rather than a fact or a log entry, store it as an **instinct**: one trigger, one action, confidence-weighted. Adapted from ECC continuous-learning-v2.
 
-One file per instinct in `ai-assistant/memory/instincts/`, named by id:
+One file per instinct in `.bossku/memory/instincts/`, named by id:
 
 ```yaml
 ---
@@ -82,7 +82,7 @@ Return:
 - `../../references/checklists/learning-promotion-checklist.md`
 - `../../references/checklists/continuous-learning-checklist.md`
 - `../../references/playbooks/continuous-learning-playbook.md`
-- `../../memory/plan-log.md`
-- `../../memory/learning-log.md`
-- `../../memory/bug-patterns.md`
-- `../../memory/market-notes.md`
+- `.bossku/memory/plans.md`
+- `.bossku/memory/learnings.md`
+- `.bossku/memory/learnings.md`
+- `.bossku/memory/project.md`

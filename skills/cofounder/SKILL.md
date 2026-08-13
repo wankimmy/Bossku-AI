@@ -117,14 +117,12 @@ Risk/rollback: [main risk + mitigation]
 - `../../references/checklists/expert-cofounder-stack-checklist.md`
 - `../../references/playbooks/bosskuai-product-strategy-playbook.md`
 - `../../references/playbooks/project-management-playbook.md`
-- `../../references/playbooks/bosskuai-launch-commercialization-playbook.md`
-- `../../references/playbooks/bosskuai-marketing-growth-playbook.md`
-- `../../references/playbooks/bosskuai-financial-modeling-playbook.md`
-- `../../references/playbooks/bosskuai-saas-billing-ops-playbook.md`
-- `../../references/playbooks/bosskuai-tenant-isolation-security-playbook.md`
-- `../../references/playbooks/bosskuai-observability-sre-playbook.md`
-- `../../references/playbooks/bosskuai-cost-optimization-playbook.md`
-- `../../references/playbooks/bosskuai-eval-driven-agent-improvement-playbook.md`
+- `../../references/playbooks/financial-modeling-detailed-playbook.md`
+
+For operational depth, load the specialist skill directly rather than a playbook:
+`bosskuai-saas-billing-ops`, `bosskuai-tenant-isolation-security`,
+`bosskuai-observability-sre`, `bosskuai-cost-optimization`,
+`bosskuai-eval-driven-agent-improvement`.
 
 ## Deep-mode flows (Claude Code)
 
@@ -134,4 +132,4 @@ For high-stakes requests, three opt-in slash commands run multi-agent flows:
 - **`/decide`** — propose-then-critique. The cofounder generates a recommendation; a separate sub-agent attacks it using the failure-modes table; the cofounder revises. Use for hard-to-undo decisions.
 - **`/implement`** — write-then-review for non-trivial diffs. The implementer writes code + tests; a separate sub-agent reviews against `bosskuai-rigorous-code-review` and the relevant specialist's anti-patterns; the implementer revises.
 
-Default flow stays single-call. See `../../../docs/multi-agent-architecture.md` for cost, latency, and when NOT to use deep-mode. On Codex/Cursor the same patterns are documented as manual prompt sequences.
+Default flow stays single-call. See `../../docs/architecture.md` for cost, latency, and when NOT to use deep-mode. On Codex/Cursor the same patterns are documented as manual prompt sequences.

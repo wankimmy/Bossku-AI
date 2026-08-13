@@ -59,6 +59,8 @@ CURATED_TRIGGERS: dict[str, list[str]] = {
     ],
     "bosskuai-ai-model-selection": [
         "which model", "what model", "model choice", "pick a model", "model routing",
+        "opus or sonnet", "sonnet or haiku", "model to use", "cheaper model",
+        "effort level", "model pricing", "context window",
     ],
     "bosskuai-project-understanding": [
         "how does this work", "explain the codebase", "understand this repo",
@@ -213,6 +215,149 @@ CURATED_TRIGGERS: dict[str, list[str]] = {
     "bosskuai-legal-compliance": ["gdpr", "terms of service", "privacy policy", "compliance"],
     "draft-release-notes": ["release notes", "changelog for release", "what shipped"],
     "bosskuai-content-calendar": ["content calendar", "posting schedule", "editorial calendar"],
+
+    # --- security, tenancy, billing ---
+    "bosskuai-prompt-injection-defense": [
+        "prompt injection", "jailbreak", "untrusted input", "ignore previous instructions",
+        "tool abuse", "memory poisoning", "exfiltration", "agent security",
+        "malicious instructions in a file", "instructions inside fetched content",
+    ],
+    "bosskuai-tenant-isolation-security": [
+        "cross tenant", "cross-tenant", "tenant leak", "wrong tenant", "org scoping",
+        "row level security", "multi-tenant", "sees another customer's data", "workspace isolation",
+    ],
+    "bosskuai-saas-billing-ops": [
+        "subscription", "dunning", "failed payment", "past due", "invoice", "proration",
+        "entitlement", "plan change", "refund", "stripe webhook", "billing",
+    ],
+    "bosskuai-cybersecurity-risk": [
+        "security review", "threat model", "vulnerability", "auth bypass", "abuse case",
+        "trust boundary", "is this secure", "pentest",
+    ],
+
+    # --- reliability, quality, delivery ---
+    "bosskuai-observability-sre": [
+        "logging", "metrics", "tracing", "alerting", "slo", "sli", "dashboard",
+        "health check", "would we even notice", "monitoring",
+    ],
+    "bosskuai-qa-automation-strategy": [
+        "test strategy", "what should we test", "regression suite", "ci gate",
+        "flaky tests", "test pyramid", "coverage",
+    ],
+    "bosskuai-integration-testing": [
+        "integration test", "contract test", "pact", "test doubles", "fixtures", "mocking strategy",
+    ],
+    "bosskuai-engineering-delivery": [
+        "ship this", "implement this", "build this feature", "delivery plan", "ready to hand off",
+    ],
+    "bosskuai-coding-best-practices": [
+        "code quality", "clean this up", "is this good code", "naming", "error handling", "maintainability",
+    ],
+    "bosskuai-devops-iac": [
+        "ci/cd", "pipeline", "terraform", "deployment workflow", "secrets management",
+        "rollback", "environment promotion",
+    ],
+    "bosskuai-github-workflow": [
+        "github actions", "pull request workflow", "dependabot", "repo settings", "branch protection",
+    ],
+
+    # --- architecture and data ---
+    "bosskuai-software-architecture": [
+        "architecture", "module boundaries", "system design", "should we split",
+        "layering", "structural refactor", "monolith or services",
+    ],
+    "bosskuai-architecture-deepening": [
+        "refactor opportunity", "too coupled", "hard to test", "consolidate modules",
+    ],
+    "bosskuai-data-architecture": [
+        "data model", "warehouse", "analytics pipeline", "entity ownership", "retention policy",
+    ],
+    "bosskuai-business-logic-review": [
+        "state machine", "workflow rules", "approval flow", "edge cases", "business rules",
+    ],
+
+    # --- agents and AI systems ---
+    "bosskuai-agent-architecture-audit": [
+        "agent audit", "agent is broken", "wrapper regression", "agent quality", "why is my agent",
+    ],
+    "bosskuai-agent-introspection": [
+        "agent looping", "burning tokens", "agent drifted", "empty result", "agent stuck",
+    ],
+    "bosskuai-eval-driven-agent-improvement": [
+        "eval", "evals", "eval set", "llm judge", "pass rate", "regression harness", "scorecard",
+    ],
+    "bosskuai-prompt-optimizer": [
+        "improve this prompt", "prompt engineering", "rewrite the prompt", "system prompt",
+    ],
+    "bosskuai-subagent-delegation": [
+        "delegate", "subagent", "parallelize this", "spawn agents", "fan out",
+    ],
+    "bosskuai-context-budget": ["context window", "too much context", "token bloat", "trim context"],
+    "bosskuai-token-saver": ["save tokens", "reduce tokens", "cheaper session"],
+    "bosskuai-cross-model-escalation": ["stuck", "escalate to another model", "try a different model"],
+    "bosskuai-permanent-memory-orchestration": ["remember this", "memory design", "durable memory"],
+
+    # --- research, product, growth ---
+    "bosskuai-deep-research": [
+        "research", "due diligence", "evaluate options", "compare tools", "with citations", "investigate",
+    ],
+    "bosskuai-market-analysis": ["market size", "tam", "demand validation", "market research"],
+    "bosskuai-competitor-intelligence": ["competitor", "competitive analysis", "what are they shipping"],
+    "bosskuai-customer-discovery": ["user interviews", "customer interviews", "survey design", "personas"],
+    "bosskuai-product-strategy": ["roadmap", "what should we build", "prioritize", "product direction"],
+    "bosskuai-planning-execution": ["milestones", "sequencing", "delivery plan", "who owns what"],
+    "bosskuai-growth-experiment": ["growth experiment", "test this channel", "activation experiment"],
+    "bosskuai-marketing-growth": ["go to market", "gtm", "distribution", "positioning", "growth loops"],
+    "bosskuai-paid-acquisition-monetization": ["google ads", "cac", "paid acquisition", "monetization"],
+    "bosskuai-sales-strategy": ["icp", "pipeline", "objection handling", "founder led sales"],
+    "bosskuai-lead-intelligence": ["lead list", "prospect research", "warm intro", "qualify leads"],
+    "bosskuai-seo-geo": ["seo", "geo", "search intent", "answer engine", "discoverability"],
+    "bosskuai-launch-commercialization": ["launch plan", "go live", "commercialize"],
+    "bosskuai-customer-success-support": ["support sop", "ticket triage", "sla", "time to first value"],
+    "bosskuai-operations": ["vendor management", "process docs", "capacity planning", "sop"],
+    "bosskuai-analytics-metrics": ["north star metric", "event tracking", "funnel", "kpi", "instrumentation"],
+
+    # --- frontend and UI ---
+    "bosskuai-ui-ux-design-to-code": [
+        "ui review", "interface critique", "accessibility", "wcag", "responsive", "design to code",
+    ],
+    "bosskuai-design-systems": ["design system", "design tokens", "component library", "DESIGN.md"],
+    "bosskuai-taste": ["looks ai generated", "make it not look generic", "design direction", "anti-slop"],
+    "bosskuai-3d-web-development": ["three.js", "react three fiber", "webgl", "3d scene", "shader"],
+    "bosskuai-lenis-smooth-scroll": ["lenis", "smooth scroll", "scroll sync"],
+    "bosskuai-hyperframes": ["hyperframes", "frame animation"],
+
+    # --- stack specific ---
+    "bosskuai-laravel-development": ["laravel", "eloquent", "artisan", "blade"],
+    "bosskuai-laravel-tdd": ["laravel test", "pest", "phpunit"],
+    "bosskuai-laravel-verification": ["verify laravel", "laravel check"],
+    "bosskuai-polyglot-engineering": ["which language", "language tradeoff", "ecosystem choice"],
+    "bosskuai-vps-docker-deployment": ["vps", "deploy to server", "self host"],
+    "bosskuai-redis-caching-queues": ["redis", "cache", "queue", "worker", "job backlog"],
+
+    # --- meta: the toolkit itself ---
+    "bosskuai-skill-creator": ["create a skill", "new skill", "improve a skill", "skill frontmatter"],
+    "bosskuai-skill-stocktake": ["skill audit", "stocktake", "which skills are stale"],
+    "bosskuai-customize-bosskuai": ["edit agents.md", "skill-index", "bossku config"],
+    "bosskuai-claude-md-management": ["claude.md", "rules file", "agent instructions"],
+    "bosskuai-claude-code-setup": ["claude code setup", "mcp servers", "hooks", "slash commands"],
+    "bosskuai-rules-distill": ["distill rules", "extract principles", "consolidate guidance"],
+    "bosskuai-continuous-learning": ["capture this lesson", "learn from this", "post task learning"],
+    "bosskuai-workspace-assistant": ["workspace", "across projects", "what am i working on"],
+    "bosskuai-handoff": ["handoff", "hand this off", "next session"],
+    "bosskuai-recipes": ["recipe", "how do i do x with bossku"],
+    "bosskuai-council": ["council", "debate this", "go or no go", "multiple perspectives"],
+    "bosskuai-search-first": ["is there a library", "build or buy", "existing package", "reinvent"],
+    "bosskuai-documentation-lookup": ["official docs", "context7", "look up the docs"],
+    "bosskuai-grill-with-docs": ["grill", "verify against docs", "check my understanding"],
+    "bosskuai-engineering-principles": ["engineering principles", "why do we do it this way"],
+    "bosskuai-ponytail": ["simplest thing", "yagni", "minimal code", "over-engineered"],
+    "bosskuai-human-output": ["sound human", "less robotic", "rewrite naturally"],
+    "bosskuai-autonomous-loops": ["autonomous loop", "loop architecture", "multi step pipeline"],
+    "bosskuai-ratchet-loop": ["ratchet", "incremental tightening", "no backsliding"],
+    "bosskuai-pr-check": ["check this pr", "pr review", "review my changes"],
+    "bosskuai-greptile-review-loop": ["greptile"],
+    "cofounder": ["cofounder", "co-founder", "what should i do next", "advise me"],
 }
 
 # Explicit role assignments; the rest fall back to keyword heuristics.

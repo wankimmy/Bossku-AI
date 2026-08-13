@@ -1,15 +1,8 @@
-# bosskuai-agent-security-hardening Full Playbook
+# BosskuAI Agent Security Hardening Playbook
 
-Original detailed operating notes moved out of SKILL.md to reduce prompt bloat.
+Use this for securing AI-agent workspaces themselves, including instruction files, MCP setups, memory, external content, prompt-injection surfaces, and least-privilege configuration.
 
----
-
----
-name: bosskuai-agent-security-hardening
-description: Use this for securing AI-agent workspaces themselves, including instruction files, MCP setups, memory, external content, prompt-injection surfaces, and least-privilege configuration.
----
-
-# BosskuAI Agent Security Hardening
+Reference document. No skill of this name is installed; load it from the skill that links here.
 
 Use this skill when the task involves the security of the **agent harness itself** — not just the application being built.
 

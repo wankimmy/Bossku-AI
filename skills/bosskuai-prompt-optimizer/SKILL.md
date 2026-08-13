@@ -190,7 +190,7 @@ payments, privacy, tenant isolation, migrations, production, or secrets.
   verification gate (`bosskuai-laravel-verification` for app/, or the stack's gate)
 - Final prompt: integration test + `bosskuai-rigorous-code-review` across phases
 - Between sessions: `bosskuai-handoff` writes the pickup doc;
-  `bosskuai-context-limit-continuation` + `ai-assistant/memory/active-continuation.md`
+  `bosskuai-context-limit-continuation` + `.bossku/memory/handoff.md`
   preserve state for the next tool/session
 
 ## Output Format
