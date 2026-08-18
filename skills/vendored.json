@@ -45,6 +45,10 @@
     "emil-skills": {
       "upstream": "emilkowalski/skills",
       "last_synced": "2026-08-10"
+    },
+    "graft": {
+      "upstream": "NanoNets/Graft",
+      "last_synced": "2026-08-18"
     }
   },
   "packs": {
@@ -174,6 +178,9 @@
       "pick-ui-library",
       "prototype",
       "review-animations"
+    ],
+    "graft": [
+      "graft"
     ]
   },
   "skills": {
@@ -281,6 +288,7 @@
     "improve-animations": "emil-skills",
     "pick-ui-library": "emil-skills",
     "prototype": "emil-skills",
-    "review-animations": "emil-skills"
+    "review-animations": "emil-skills",
+    "graft": "graft"
   }
 }

@@ -120,7 +120,7 @@ See [`docs/installation.md`](docs/installation.md) for the CLI path and per-proj
 
 ## Vendored skill packs
 
-BosskuAI ships skills from **marketingskills**, **superpowers**, **hallmark**, **taste-skill**, **loop-engineering**, **scroll-world**, **emil-skills**, **browser-use**, **graphify**, and a thin **markitdown** wrapper. Use `bossku install --profile full` to install all of them.
+BosskuAI ships skills from **marketingskills**, **superpowers**, **hallmark**, **taste-skill**, **loop-engineering**, **scroll-world**, **emil-skills**, **browser-use**, **graft**, **graphify**, and a thin **markitdown** wrapper. Use `bossku install --profile full` to install all of them.
 
 Optional CLIs for some packs: see [`requirements-optional.txt`](requirements-optional.txt).
 

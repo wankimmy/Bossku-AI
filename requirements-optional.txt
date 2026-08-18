@@ -5,6 +5,8 @@
 # markitdown skill — document conversion
 markitdown[all]>=0.1.0
 
+# graft skill — context graph CLI (npm, not pip): npm install -g @nanonets/graft
+
 # graphify skill — knowledge graph CLI
 graphifyy>=0.8.0
 

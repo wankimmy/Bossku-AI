@@ -49,6 +49,18 @@ For fixes, CI/PR/issue work, agent loops, and multi-step changes:
 
 Route CI → `ci-triage`; PRs → `pr-review-triage`; backlog sweeps → `loop-triage`. Disable with "normal mode" (same switch as Ponytail).
 
+## Context first (always on)
+
+When the repo has a `graft/` index, get context from graft before grepping or reading source files:
+
+1. `graft ask "<question>" --source` — locate and understand (the default).
+2. `graft grep "<symbol>"` — every occurrence, when you need to be exhaustive.
+3. `graft callers <symbol> --depth 2` — blast radius, before a rename or signature change.
+4. `graft skeleton <file>` — a file's API in ~200 tokens.
+5. `graft map` — orientation in an unfamiliar repo.
+
+One call usually answers; act on it rather than chaining tools. Load the `graft` skill for the full guide. No `graft/` directory means no index — run `graft build` (needs `@nanonets/graft`) or work normally with the standard file tools. Disable with "normal mode" (same switch as Ponytail).
+
 ## Risk pauses
 
 Ask before payments, auth, secrets, privacy, data loss, or migrations.
@@ -74,7 +86,8 @@ Vendored packs are reviewed on a 180-day window — run `bossku skills stocktake
 | Redesign existing UI / image → code | taste-skill — `redesign-skill`, `image-to-code-skill` |
 | Marketing, CRO, SEO, copy, GTM | marketingskills — start with `product-marketing` |
 | Brainstorm → plan → TDD → debug → review process | superpowers — `using-superpowers`, `brainstorming`, `writing-plans`, `systematic-debugging` |
-| Codebase map / architecture graph | `graphify` (requires `graphifyy` CLI) |
+| Codebase map, call tracing, where-does-X-live (source code) | `graft` (requires `@nanonets/graft` CLI + `graft build`) |
+| Mixed-media corpus → knowledge graph (docs, papers, video, Neo4j/Obsidian export) | `graphify` (requires `graphifyy` CLI) |
 | Browser automation agent | `browser-use` (prefer over `bosskuai-browser-automation` when installed) |
 | Office/PDF/HTML → Markdown | `markitdown` (requires `markitdown[all]` pip package) |
 | Agent loops: CI/PR/issue sweeps, budgeted triage | loop-engineering — `loop-triage`, `loop-verifier`, `minimal-fix` (+ pattern skills: `ci-triage`, `pr-review-triage`, etc.) |

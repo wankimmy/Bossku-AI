@@ -70,6 +70,12 @@ CURATED_TRIGGERS: dict[str, list[str]] = {
     "bosskuai-codebase-analysis": [
         "trace", "call chain", "execution path", "side effects", "where is this called",
     ],
+    "graft": [
+        "graft", "graft ask", "graft grep", "graft callers", "graft map",
+        "where does this live", "where is the code for", "who calls this",
+        "call sites", "blast radius", "what breaks if i change", "before renaming",
+        "context graph", "repo map", "file line spans",
+    ],
     "bosskuai-code-revamp": [
         "refactor", "legacy", "modernize", "clean up", "tech debt", "restructure",
     ],
@@ -369,6 +375,7 @@ CURATED_ROLES: dict[str, str] = {
     "bosskuai-rigorous-code-review": "reviewer",
     "bosskuai-deep-research": "researcher",
     "bosskuai-market-analysis": "researcher",
+    "graft": "coder",
 }
 
 _ROLE_HINTS: tuple[tuple[str, tuple[str, ...]], ...] = (
