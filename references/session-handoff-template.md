@@ -2,7 +2,7 @@
 
 Use this at the end of meaningful tasks to preserve continuity.
 
-For **full cross-tool requirements** (read order, mandatory `learning-log.md` fields, trivial exception), use [`memory-first-handoff-protocol.md`](memory-first-handoff-protocol.md).
+For the **cross-tool contract** (read order, `bossku remember` kinds, trivial exception, `handoff.md` template), use [`memory-first-handoff-protocol.md`](memory-first-handoff-protocol.md).
 
 ## Summary
 

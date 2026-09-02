@@ -15,7 +15,7 @@ Use this skill when the first task is understanding the workspace before going d
 ## Workflow
 
 1. Read orientation artifacts first: nearest README, `AGENTS.md`, `CLAUDE.md`, docs, manifests, env examples, CI/runtime config.
-2. Read `.bossku/memory/handoff.md` first. If `semantic-memory.sqlite3` exists, query it before opening broad memory files.
+2. Read `.bossku/memory/handoff.md` and `.bossku/memory/project.md` first if they exist; leave the rest of memory until a task needs it.
 3. Confirm documentation claims from real source code. Do not stop at README-level understanding.
 4. Sample source intelligently:
    - entry points and framework config
@@ -28,9 +28,8 @@ Use this skill when the first task is understanding the workspace before going d
    - stack and architecture style
    - code organization and source-of-truth files
    - confirmed facts vs inference vs unknowns
-6. Update `.bossku/memory/project.md` and `.bossku/memory/project.md` when durable understanding changed.
-7. If either indexed memory file changed, refresh recall with `python3 ./ai-assistant/scripts/vector_memory.py sync`.
-8. Recommend the next 1-3 most relevant skills.
+6. Update `.bossku/memory/project.md` (`bossku remember --kind project`) when durable understanding changed.
+7. Recommend the next 1-3 most relevant skills.
 
 ## Guardrails
 
@@ -55,4 +54,4 @@ Return a concise summary covering:
 - `../../references/playbooks/project-understanding-playbook.md`
 - `../../references/checklists/project-understanding-checklist.md`
 - `.bossku/memory/project.md`
-- `.bossku/memory/project.md`
+- `.bossku/memory/handoff.md`

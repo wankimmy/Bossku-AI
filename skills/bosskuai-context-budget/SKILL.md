@@ -30,7 +30,7 @@ Scan all component directories and estimate token consumption:
 - Extract `description` frontmatter length
 - Flag: files >200 lines (heavy), description >30 words (bloated frontmatter)
 
-**Skills** (`ai-assistant/skills/*/SKILL.md`)
+**Skills** (`skills/*/SKILL.md`, or the installed copies under `~/.claude/skills/` and `~/.agents/skills/`)
 - Count tokens per SKILL.md
 - Flag: files >400 lines
 - Check for duplicate copies in other tool dirs (`.cursor/`, `.codex/`) — skip identical copies to avoid double-counting
@@ -49,10 +49,10 @@ Scan all component directories and estimate token consumption:
 - Count tokens per file in the instruction chain (CLAUDE.md, AGENTS.md, rule files)
 - Flag: combined total >300 lines
 
-**BosskuAI runtime personas** (`agents/*.md` → DB injection)
-- The Laravel pipeline injects only the `<!-- runtime-core:start -->...<!-- runtime-core:end -->` block of each pipeline persona per LLM call; the full .md serves editor mode
-- Flag: runtime-core blocks >250 tokens per role, or pipeline `agents/*.md` missing a runtime-core block (falls back to injecting the full file)
-- Verify with `php artisan bosskuai:sync-personas --dry-run` after editing personas
+**BosskuAI agent contracts** (`agents/*.md`)
+- Hosts inject only the `<!-- runtime-core:start -->...<!-- runtime-core:end -->` block of each contract per call; the rest of the file is editor-side documentation
+- Flag: runtime-core blocks >250 tokens per role, or a contract missing the block
+- Verify with `python -m bossku validate --root .` after editing contracts
 
 ### Phase 2: Classify
 

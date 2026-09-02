@@ -104,52 +104,54 @@ claude -p --allowedTools "Read,Write,Edit,Bash" "Implement the fixes from securi
 
 ---
 
-## 2. BosskuAI Runtime Revise Loop
+## 2. BosskuAI Agent-Contract Loop
 
-**The built-in autonomous loop.** The Docker/Laravel orchestrator
-(`app/app/Services/Orchestrator/OrchestratorService.php`) already runs an
-autonomous Plan → Execute → Audit → Final-Review pipeline with a revise loop:
+**The built-in loop.** BosskuAI 2.x has no runtime service; the loop is the
+chain of agent contracts in `agents/*.md`, driven by whichever host is running
+the session. The orchestrator scopes the work and hands the executor a *closed*
+loop: a pass signal, a loop owner, and a max-iteration budget.
 
 ```
-Router classifies → workflow chain selected (WorkflowRouteHelper)
+orchestrator restates goal, success criteria, out-of-scope
        │
        ▼
-┌──────────────────────────────────────────────────────┐
-│  REVISE LOOP (capped by max_revision_rounds)         │
-│                                                      │
-│  executor implements → auditor reviews               │
-│       │                                              │
-│       ├─ verdict PASS → continue to final review     │
-│       ├─ verdict REVISE → executor retries with      │
-│       │   audit feedback (ExecutorStuckDetector      │
-│       │   breaks no-progress repeats)                │
-│       └─ cap reached → escalate, never report        │
-│           "capped" as "pass"                         │
-└──────────────────────────────────────────────────────┘
+planner (strategy, file list, phases) → designer (UI work only)
        │
        ▼
-LearningEngine extracts pattern/failure/preference events from the run
+┌─ REVISE LOOP (capped by the budget set up front) ──────────────┐
+│ executor implements → auditor reviews                          │
+│   ├─ PASS   → code-simplifier → final-reviewer (high-risk only)│
+│   ├─ REVISE → executor retries with the audit feedback         │
+│   └─ cap reached → escalate; never report "capped" as "pass"   │
+└────────────────────────────────────────────────────────────────┘
+       │
+       ▼
+learning capture is manual: `bossku remember` via `bosskuai-continuous-learning`
 ```
 
 ### Tuning the loop
 
-- `max_revision_rounds` (Settings) **defaults to 1** — effectively one retry.
-  Raise it when running unattended so REVISE verdicts actually loop.
+- **Loop owner by task shape** (from the orchestrator contract): bug →
+  `bosskuai-diagnose-loop`; behavior change → `bosskuai-tdd-loop`; PR/review →
+  `bosskuai-greptile-review-loop`; performance → `bosskuai-ratchet-loop`.
+- **Budget before handoff.** State the pass signal and max iterations in the
+  executor brief. One retry is the sane default for attended runs; raise it for
+  unattended runs so REVISE verdicts actually loop.
 - Personas injected per role come from the `runtime-core` blocks in
-  `agents/*.md` (synced via `php artisan bosskuai:sync-personas`). Keep them
-  compact — loop depth multiplies persona cost.
+  `agents/*.md`. Keep them compact — loop depth multiplies persona cost
+  (`bosskuai-context-budget` measures it).
 - Watch for degraded iterations: a fallback model returning a near-empty
   response can pass as "Completed". Use `bosskuai-agent-introspection` when a
   loop completes suspiciously fast or empty.
 
-### When runtime loop vs editor-side loop
+### When contract chain vs editor-side loop
 
-| Use Case | Runtime pipeline | Editor-side loop (claude -p etc.) |
-|----------|-----------------|----------------------------------|
-| Task arrives via the BosskuAI app | Yes | No |
+| Use Case | Agent-contract chain (in-session) | Editor-side loop (`claude -p`, scripts) |
+|----------|-----------------------------------|------------------------------------------|
+| Interactive task with a human in the loop | Yes | No |
 | Scripted multi-step workflows | No | Yes |
 | Custom loop architecture (DAG, waves) | No | Yes |
-| Learning capture | Automatic (LearningEngine) | Manual (`auto_memory.py remember`) |
+| Learning capture | Manual (`bossku remember`) | Manual (`bossku remember` as a final step) |
 
 ---
 

@@ -95,9 +95,6 @@ CURATED_TRIGGERS: dict[str, list[str]] = {
         "rest api", "graphql", "endpoint design", "api contract", "versioning",
         "pagination", "idempotency",
     ],
-    "bosskuai-vps-docker-deployment": [
-        "vps", "deploy to server", "ship to production", "provision", "nginx",
-    ],
     "bosskuai-docker": ["dockerfile", "docker compose", "containerize"],
     "bosskuai-gsap-animation": [
         "gsap", "scrolltrigger", "timeline animation", "scroll animation",
@@ -151,21 +148,10 @@ CURATED_TRIGGERS: dict[str, list[str]] = {
         "secure laravel", "laravel security", "mass assignment", "csrf", "policy gate",
         "secure", "harden", "vulnerability",
     ],
-    "bosskuai-prompt-injection-defense": [
-        "prompt injection", "jailbreak", "tool abuse", "memory poisoning",
-        "untrusted input to llm",
-    ],
-    "bosskuai-tenant-isolation-security": [
-        "multi-tenant", "multitenant", "tenant isolation", "cross-tenant", "row level security",
-    ],
-    "bosskuai-observability-sre": [
-        "logging", "metrics", "tracing", "alerting", "slo", "dashboards", "monitoring",
-    ],
     "bosskuai-context-limit-continuation": [
         "running out of context", "context limit", "token limit", "compact", "out of tokens",
     ],
-    "bosskuai-handoff": ["handoff", "hand off", "pass to another agent", "continue in a new session"],
-    "ci-triage": ["ci failing", "ci pipeline", "build failing", "github actions failing", "red build"],
+    "ci-triage": ["ci failing", "ci pipeline", "build failing", "github actions failing", "red build", "ci is red", "ci is failing", "ci failed", "red on main", "build is red", "failing check", "failed run", "workflow failed", "why did ci fail", "tests failing in ci", "red pipeline"],
     "pr-review-triage": [
         "pr comments", "review comments", "address feedback", "unresolved comments",
         "pull request", "pull requests", "open prs", "review queue",
@@ -211,7 +197,6 @@ CURATED_TRIGGERS: dict[str, list[str]] = {
         "rm -rf", "destructive command", "dangerous command", "shell safety",
         "guard rails for shell", "block dangerous", "force push protection",
     ],
-    "bosskuai-redis-caching-queues": ["redis", "cache", "queue", "worker", "pub sub", "rate limit"],
     "bosskuai-investor-prep": ["investor update", "pitch deck", "fundraising", "due diligence", "data room"],
     "using-git-worktrees": ["worktree", "git worktree", "parallel branches"],
     "bosskuai-mongodb": ["mongodb", "mongo", "aggregation pipeline", "document store"],
@@ -223,15 +208,8 @@ CURATED_TRIGGERS: dict[str, list[str]] = {
     "bosskuai-content-calendar": ["content calendar", "posting schedule", "editorial calendar"],
 
     # --- security, tenancy, billing ---
-    "bosskuai-prompt-injection-defense": [
-        "prompt injection", "jailbreak", "untrusted input", "ignore previous instructions",
-        "tool abuse", "memory poisoning", "exfiltration", "agent security",
-        "malicious instructions in a file", "instructions inside fetched content",
-    ],
-    "bosskuai-tenant-isolation-security": [
-        "cross tenant", "cross-tenant", "tenant leak", "wrong tenant", "org scoping",
-        "row level security", "multi-tenant", "sees another customer's data", "workspace isolation",
-    ],
+    "bosskuai-prompt-injection-defense": ["prompt injection", "jailbreak", "tool abuse", "memory poisoning", "untrusted input to llm", "untrusted input", "ignore previous instructions", "exfiltration", "agent security", "malicious instructions in a file", "instructions inside fetched content"],
+    "bosskuai-tenant-isolation-security": ["multi-tenant", "multitenant", "tenant isolation", "cross-tenant", "row level security", "cross tenant", "tenant leak", "wrong tenant", "org scoping", "sees another customer's data", "workspace isolation"],
     "bosskuai-saas-billing-ops": [
         "subscription", "dunning", "failed payment", "past due", "invoice", "proration",
         "entitlement", "plan change", "refund", "stripe webhook", "billing",
@@ -242,10 +220,7 @@ CURATED_TRIGGERS: dict[str, list[str]] = {
     ],
 
     # --- reliability, quality, delivery ---
-    "bosskuai-observability-sre": [
-        "logging", "metrics", "tracing", "alerting", "slo", "sli", "dashboard",
-        "health check", "would we even notice", "monitoring",
-    ],
+    "bosskuai-observability-sre": ["logging", "metrics", "tracing", "alerting", "slo", "dashboards", "monitoring", "sli", "dashboard", "health check", "would we even notice", "slos", "alerts", "set up alerts", "error budget", "uptime monitoring", "health checks"],
     "bosskuai-qa-automation-strategy": [
         "test strategy", "what should we test", "regression suite", "ci gate",
         "flaky tests", "test pyramid", "coverage",
@@ -301,7 +276,7 @@ CURATED_TRIGGERS: dict[str, list[str]] = {
     "bosskuai-context-budget": ["context window", "too much context", "token bloat", "trim context"],
     "bosskuai-token-saver": ["save tokens", "reduce tokens", "cheaper session"],
     "bosskuai-cross-model-escalation": ["stuck", "escalate to another model", "try a different model"],
-    "bosskuai-permanent-memory-orchestration": ["remember this", "memory design", "durable memory"],
+    "bosskuai-permanent-memory-orchestration": ["remember this", "bossku remember", "save a decision", "record a decision", "record this decision", "project memory", "durable memory", "memory design", "obsidian", "sync memory to obsidian", "export memory to obsidian", "obsidian export", "bossku sync"],
 
     # --- research, product, growth ---
     "bosskuai-deep-research": [
@@ -338,19 +313,19 @@ CURATED_TRIGGERS: dict[str, list[str]] = {
     "bosskuai-laravel-tdd": ["laravel test", "pest", "phpunit"],
     "bosskuai-laravel-verification": ["verify laravel", "laravel check"],
     "bosskuai-polyglot-engineering": ["which language", "language tradeoff", "ecosystem choice"],
-    "bosskuai-vps-docker-deployment": ["vps", "deploy to server", "self host"],
-    "bosskuai-redis-caching-queues": ["redis", "cache", "queue", "worker", "job backlog"],
+    "bosskuai-vps-docker-deployment": ["vps", "deploy to server", "ship to production", "provision", "nginx", "self host"],
+    "bosskuai-redis-caching-queues": ["redis", "cache", "queue", "worker", "pub sub", "rate limit", "job backlog"],
 
     # --- meta: the toolkit itself ---
-    "bosskuai-skill-creator": ["create a skill", "new skill", "improve a skill", "skill frontmatter"],
-    "bosskuai-skill-stocktake": ["skill audit", "stocktake", "which skills are stale"],
+    "bosskuai-skill-creator": ["create a skill", "new skill", "write a skill", "improve a skill", "improve this skill", "enhance a skill", "rewrite a skill", "skill description", "skill frontmatter"],
+    "bosskuai-skill-stocktake": ["skill audit", "audit skills", "audit existing skills", "audit my skills", "review my skills", "improve existing skills", "enhance existing skills", "skill overlap", "stale skills", "skill health", "stocktake", "which skills are stale"],
     "bosskuai-customize-bosskuai": ["edit agents.md", "skill-index", "bossku config"],
     "bosskuai-claude-md-management": ["claude.md", "rules file", "agent instructions"],
     "bosskuai-claude-code-setup": ["claude code setup", "mcp servers", "hooks", "slash commands"],
     "bosskuai-rules-distill": ["distill rules", "extract principles", "consolidate guidance"],
-    "bosskuai-continuous-learning": ["capture this lesson", "learn from this", "post task learning"],
+    "bosskuai-continuous-learning": ["capture this lesson", "learn from this", "save this learning", "save learning", "lesson learned", "what did we learn", "post task learning"],
     "bosskuai-workspace-assistant": ["workspace", "across projects", "what am i working on"],
-    "bosskuai-handoff": ["handoff", "hand this off", "next session"],
+    "bosskuai-handoff": ["handoff", "hand off", "hand this off", "pass to another agent", "continue in a new session", "next session", "handoff doc", "write a handoff"],
     "bosskuai-recipes": ["recipe", "how do i do x with bossku"],
     "bosskuai-council": ["council", "debate this", "go or no go", "multiple perspectives"],
     "bosskuai-search-first": ["is there a library", "build or buy", "existing package", "reinvent"],
@@ -363,6 +338,60 @@ CURATED_TRIGGERS: dict[str, list[str]] = {
     "bosskuai-ratchet-loop": ["ratchet", "incremental tightening", "no backsliding"],
     "bosskuai-pr-check": ["check this pr", "pr review", "review my changes"],
     "bosskuai-greptile-review-loop": ["greptile"],
+    "bosskuai-go-development": [
+        "golang", "go service", "go microservice", "goroutine", "goroutines", "channels",
+        "context.context", "errgroup", "pgx", "sqlc", "go test", "race detector", "pprof",
+        "net/http", "echo framework", "chi router", "gin", "go module", "go.mod",
+    ],
+    "bosskuai-react-development": ["react", "react 19", "react 18", "jsx", "tsx", "hooks", "useeffect", "usestate", "react component", "next.js", "nextjs", "app router", "react router", "tanstack query", "react query", "zustand", "redux", "react-hook-form", "testing library", "vite react", "runs twice", "renders twice", "re-render", "rerender", "re-renders", "refetch", "infinite render loop", "stale closure", "strict mode double"],
+    "bosskuai-expo-react-native": [
+        "react native", "expo", "expo router", "eas build", "eas update", "expo go",
+        "development build", "config plugin", "reanimated", "flashlist", "mobile app",
+        "ios and android app", "push notifications", "deep link", "app.json", "eas.json",
+    ],
+    "bosskuai-mobile-app-release": [
+        "app store", "play store", "google play", "testflight", "app review", "submit the app",
+        "publish the app", "release the app", "launch the app", "launch to mobile", "eas submit",
+        "fastlane", "staged rollout", "phased release", "app rejected", "data safety",
+        "privacy nutrition", "versioncode", "build number", "ota update",
+    ],
+    "bosskuai-aws-deployment": [
+        "aws", "ecs", "fargate", "lambda", "app runner", "eks", "ec2", "rds", "aurora",
+        "s3", "cloudfront", "alb", "vpc", "iam", "secrets manager", "cloudwatch", "terraform aws",
+        "cdk", "deploy to aws", "amplify", "sqs", "ses", "ecr", "ap-southeast-5",
+    ],
+    "bosskuai-hostinger-hosting": [
+        "hostinger", "hpanel", "kvm vps", "hostinger vps", "hostinger shared hosting",
+        "monarx", "suspended by hostinger", "abuse email", "botnet", "xmrig", "crypto miner",
+        "server compromised", "hacked server", "rebuild the server", "litespeed",
+    ],
+    "bosskuai-ci-cd-pipelines": [
+        "ci/cd", "ci cd", "cicd", "github actions", "workflow yaml", ".github/workflows",
+        "gitlab ci", "pipeline", "pipeline is slow", "speed up ci", "required checks",
+        "branch protection", "merge queue", "oidc", "deploy workflow", "release workflow",
+        "actions cache", "matrix build", "flaky ci", "actionlint",
+    ],
+    "bosskuai-web-performance": [
+        "core web vitals", "web vitals", "lcp", "inp", "cls", "lighthouse", "pagespeed",
+        "page speed", "bundle size", "code splitting", "hydration", "time to interactive",
+        "first contentful paint", "largest contentful paint", "layout shift", "slow page",
+        "page load", "website slow", "frontend performance", "crux", "rum",
+    ],
+    "bosskuai-cto-strategy": [
+        "cto", "as a cto", "chief technology officer", "tech strategy", "technology strategy",
+        "technical roadmap", "build vs buy", "build or buy", "engineering org", "org design",
+        "hiring plan", "engineering budget", "technical due diligence", "due diligence",
+        "soc 2", "iso 27001", "tech radar", "platform bet", "board deck technical",
+        "technical debt strategy", "vendor strategy", "ai strategy",
+    ],
+    "bosskuai-tech-lead": [
+        "tech lead", "as a tech lead", "engineering manager", "team lead", "lead engineer",
+        "sprint planning", "break down the epic", "slice the work", "estimate", "estimation",
+        "rfc", "adr", "definition of done", "code ownership", "codeowners", "pr standards",
+        "review culture", "release management", "branching strategy", "on-call rotation",
+        "dora metrics", "cycle time", "tech debt triage", "mentoring", "unblock the team",
+        "1:1", "one on one", "retro", "postmortem process",
+    ],
     "cofounder": ["cofounder", "co-founder", "what should i do next", "advise me"],
 }
 
@@ -375,6 +404,16 @@ CURATED_ROLES: dict[str, str] = {
     "bosskuai-rigorous-code-review": "reviewer",
     "bosskuai-deep-research": "researcher",
     "bosskuai-market-analysis": "researcher",
+    "bosskuai-go-development": "coder",
+    "bosskuai-react-development": "coder",
+    "bosskuai-expo-react-native": "coder",
+    "bosskuai-mobile-app-release": "planner",
+    "bosskuai-aws-deployment": "coder",
+    "bosskuai-hostinger-hosting": "coder",
+    "bosskuai-ci-cd-pipelines": "coder",
+    "bosskuai-web-performance": "coder",
+    "bosskuai-cto-strategy": "planner",
+    "bosskuai-tech-lead": "planner",
     "graft": "coder",
 }
 

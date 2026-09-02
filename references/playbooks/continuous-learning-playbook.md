@@ -14,18 +14,18 @@ Use this after meaningful work to convert lessons into durable improvements with
    - repeat likelihood
    - blast radius if forgotten
 4. Route each candidate to the strongest artifact:
-   - memory for stable project facts
-   - learning log for chronological durable lessons
-   - bug patterns for recurring or severe failure classes
-   - market notes for durable GTM lessons
+   - `project.md` (`bossku remember --kind project`) for stable project facts
+   - `learnings.md` (`--kind learning`) for verified lessons, recurring bugs, and verification results
+   - `decisions.md` (`--kind decision`) for choices and their reasons
+   - `plans.md` (`--kind plan`) for plans another session may continue
    - checklist for repeatable verification steps
    - pitfall for recurring traps
    - playbook for reusable workflows
    - skill or rule only when future agent behavior should change broadly
 5. Make the smallest safe update and avoid duplicate wording across multiple artifacts.
-6. Run `bash ./ai-assistant/scripts/learning-doctor.sh` when available to catch stale counts, contradictory memory, stale continuation state, or empty high-value memory files.
-7. If the repo itself changed enough to invalidate current understanding, run `bash ./ai-assistant/scripts/project-understanding.sh` to prepare a safe refresh packet.
-7. Record whether the learning was:
+6. Re-read the touched memory file for stale counts, contradictory entries, or a `handoff.md` that is no longer active; append a dated correction rather than rewriting history.
+7. If the repo changed enough to invalidate current understanding, rerun `bosskuai-project-understanding` and refresh `project.md`.
+8. Record whether the learning was:
    - captured only
    - promoted
    - deferred pending more evidence

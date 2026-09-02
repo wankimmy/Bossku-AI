@@ -9,6 +9,8 @@ Use this skill when a task is long enough that the current model session may run
 
 **Not covered here:** training or fine-tuning ML models. For choosing *which* commercial/chat model to use, load **`bosskuai-ai-model-selection`** in the same pass. If the problem is that the current model is blocked but context is still healthy, use **`bosskuai-cross-model-escalation`** instead of this skill.
 
+If the user simply *asks* for a handoff while context is still healthy, use **`bosskuai-handoff`**; this skill is the budget-forced variant, and both write the same `.bossku/memory/handoff.md`.
+
 ## Trigger thresholds — when to activate this skill
 
 Activate this skill (stop and hand off) when **any** of the following are true:
@@ -38,7 +40,7 @@ If the estimate is tight (1,000–1,500 lines), explicitly note this at the star
 4. Summarize what has already been completed, what remains, and any key decisions already made.
 5. **Update memory for the handoff** — Fill or overwrite `.bossku/memory/handoff.md` with goal, done, remaining, key files, risks, and a **paste block** for the next session. This is the durable bridge other tools can read; clear that file when the task is fully done.
 6. **Recommend the next model** — Apply **`bosskuai-ai-model-selection`** for the *remaining* work (not the whole original task if the phase changed). Give a **primary** and **fallback** model by concrete name when the tool exposes them, with one-line tradeoffs (reasoning vs speed vs cost vs context).
-7. **Tell the user clearly** to **start a new chat or session** (or switch model in-product) using the **recommended model**, paste the continuation block, and point them at `active-continuation.md` if their workspace uses shared memory.
+7. **Tell the user clearly** to **start a new chat or session** (or switch model in-product) using the **recommended model**, paste the continuation block; `.bossku/memory/handoff.md` is the file the next session reads first.
 8. Provide a compact continuation state in the reply so the user can act even before opening the memory file.
 9. Ask the user to retry, continue, or start a fresh prompt so the work can resume cleanly.
 10. If files were changed, name them clearly so the next turn can verify the current state quickly.
@@ -51,7 +53,7 @@ If the estimate is tight (1,000–1,500 lines), explicitly note this at the star
 - important risks or open questions
 - **recommended model(s)** for finishing the remainder (primary + fallback)
 - explicit **user instruction**: new session/chat + which model + paste block
-- confirmation that **`active-continuation.md`** was updated (or why skipping is justified)
+- confirmation that **`.bossku/memory/handoff.md`** was updated (or why skipping is justified)
 - short retry / continue instruction for the user
 
 ---
@@ -75,16 +77,15 @@ Apply these practices to keep sessions lean and avoid premature context exhausti
 
 ### Skill and instruction loading
 
-- **Root CLAUDE.md** is always loaded — keep it lean (model assignment + core rules + skill routing pointer only).
-- **bosskuAI/CLAUDE.md** — read at session start for meaningful tasks; skip for quick/trivial tasks.
+- **Root `AGENTS.md` / `CLAUDE.md`** are always loaded — keep them lean (core rules + skill routing pointer only).
 - **Memory files** — read only the files relevant to the current task, not the entire memory directory.
 - **Checklists** — load a checklist only when actively working through it; skip if you can apply the judgment directly.
 
 ### Model selection for token efficiency
 
-- Use `claude-sonnet-4-6` for implementation and execution phases — it is faster and cheaper per token.
-- Reserve `claude-opus-4-6` for planning, ambiguous analysis, and architecture decisions where deeper reasoning has clear payoff.
-- Do not use Opus for tasks that are clearly mechanical (formatting, boilerplate generation, simple edits).
+- Take the current roster from `bosskuai-ai-model-selection`; do not hardcode model ids in this skill or in handoff notes.
+- Use the lighter execution-tier model for implementation and mechanical phases (formatting, boilerplate, simple edits) — faster and cheaper per token.
+- Reserve the strongest reasoning-tier model for planning, ambiguous analysis, and architecture decisions where deeper reasoning has clear payoff.
 
 ## Guardrails
 
@@ -99,3 +100,4 @@ Apply these practices to keep sessions lean and avoid premature context exhausti
 - `../../references/checklists/context-limit-continuation-checklist.md`
 - Pair with **`bosskuai-ai-model-selection`** for model recommendations at handoff.
 - Pair with **`bosskuai-cross-model-escalation`** when the issue is model fit or repeated failure rather than context pressure.
+- Pair with **`bosskuai-handoff`** when the user requests a handoff without context pressure.

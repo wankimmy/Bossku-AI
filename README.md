@@ -106,7 +106,7 @@ See [`docs/installation.md`](docs/installation.md) for the CLI path and per-proj
 ## Layout
 
 - [`AGENTS.md`](AGENTS.md) — cross-tool contract
-- [`skills/`](skills/) — canonical skill library (~206 skills, including vendored packs)
+- [`skills/`](skills/) — canonical skill library (~220 skills, including vendored packs)
 - [`skills/vendored.json`](skills/vendored.json) — third-party skill provenance
 - [`agents/`](agents/) — orchestrator, planner, executor, auditor, final reviewer
 - [`.claude-plugin/`](.claude-plugin/) — Claude Code plugin + marketplace manifests

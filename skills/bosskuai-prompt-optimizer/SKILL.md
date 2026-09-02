@@ -263,7 +263,7 @@ A compact version for experienced users:
 Add a REST API endpoint for user profile updates with validation
 ```
 
-**Phase 0 detects:** `composer.json`, Laravel 11 (the app/ backend)
+**Phase 0 detects:** `composer.json`, Laravel 12 backend
 
 **Optimized Prompt (Full):**
 

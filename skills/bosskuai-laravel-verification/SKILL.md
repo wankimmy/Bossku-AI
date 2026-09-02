@@ -1,6 +1,6 @@
 ---
 name: bosskuai-laravel-verification
-description: "Verification loop for Laravel projects: env checks, linting, static analysis, tests with coverage, security scans, and deployment readiness. Run before PRs, after major changes, and pre-deploy — including the BosskuAI app/ backend."
+description: "Verification loop for Laravel projects: env checks, linting, static analysis, tests with coverage, security scans, and deployment readiness. Run before PRs, after major changes, and pre-deploy."
 license: MIT
 metadata:
   author: affaan-m/ECC
@@ -180,8 +180,6 @@ php artisan route:cache
 php artisan view:cache
 php artisan schedule:list
 ```
-
-BosskuAI note: for the `app/` backend, run these inside the PHP container (`docker compose exec app ...`); persona edits additionally need `php artisan bosskuai:sync-personas --dry-run` to confirm clean propagation.
 
 ## Related Skills
 

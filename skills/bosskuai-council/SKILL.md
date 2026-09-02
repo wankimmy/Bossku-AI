@@ -159,7 +159,7 @@ Keep it scannable on a phone screen.
 Do **not** write ad-hoc notes to shadow paths from this skill.
 
 If the council materially changes the recommendation:
-- use `bosskuai-continuous-learning` to store the lesson in `ai-assistant/memory/` (the shared durable memory)
+- use `bosskuai-continuous-learning` to store the lesson in `.bossku/memory/` via `bossku remember` (the shared durable memory)
 - or use `bosskuai-handoff` if the outcome belongs in a session pickup doc
 - or update the relevant GitHub / Linear issue directly if the decision changes active execution truth
 

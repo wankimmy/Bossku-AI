@@ -38,8 +38,8 @@ Use this skill when the task is to **audit or improve Claude instructions**: `CL
 
 **Shared BosskuAI files**
 - `AGENTS.md` remains the tool-neutral contract.
-- `ai-assistant/memory/` remains the durable cross-tool coordination layer.
-- `ai-assistant/references/` holds longer checklists and playbooks.
+- `.bossku/memory/` remains the durable cross-tool coordination layer (written via `bossku remember`).
+- BosskuAI `references/` (checklists, playbooks, pitfalls) holds longer guidance that skills link to.
 
 ## Quality checks
 
@@ -73,7 +73,7 @@ Use this skill when the task is to **audit or improve Claude instructions**: `CL
     - `.bossku/memory/learnings.md` for a durable note
     - `CLAUDE.md` for Claude startup behavior
     - `.claude/rules/*.md` for persistent Claude rule surfaces
-    - `ai-assistant/references/` for longer checklist or playbook guidance
+    - a BosskuAI `references/` checklist or playbook for longer guidance
     - no change for one-off chatter
 11. Preserve cross-tool consistency: shared behavior should live in shared files first, then be mirrored lightly in Claude-specific files if needed.
 

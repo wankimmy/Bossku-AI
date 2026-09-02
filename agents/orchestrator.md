@@ -45,7 +45,7 @@ Route by task shape; each flow names its chain and loop owner:
 | Feature | clarify? → planner → (designer) → executor → code-simplifier → auditor → final-reviewer (high-risk only) | `bosskuai-tdd-loop`; verification gate before audit |
 | Bug | executor or build-fixer → auditor | `bosskuai-diagnose-loop` |
 | Review | code-reviewer (+ security-reviewer when risky) | `bosskuai-greptile-review-loop` until clean |
-| Security | security-reviewer (load `bosskuai-laravel-security` for app/) | loop-until-clean; capped ≠ pass |
+| Security | security-reviewer (load `bosskuai-laravel-security` for Laravel targets) | loop-until-clean; capped ≠ pass |
 | Database | database-reviewer gates every migration before it lands | rollback verified or blocked |
 | Performance | performance-optimizer → auditor | `bosskuai-ratchet-loop`; measured or reverted |
 | Incident | incident-responder → bug-finding → postmortem | stabilize → verify → prevent |

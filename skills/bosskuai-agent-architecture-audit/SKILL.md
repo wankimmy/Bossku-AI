@@ -32,11 +32,11 @@ A diagnostic workflow for agent systems that hide failures behind wrapper layers
 - Agent run failures mid-task — use `bosskuai-agent-introspection`
 - General code debugging — use `bosskuai-diagnose-loop`
 - Code review — use `bosskuai-rigorous-code-review`
-- Security scanning — use `bosskuai-cybersecurity-risk` or `bosskuai-agent-security-hardening`
+- Security scanning — use `bosskuai-cybersecurity-risk` or `bosskuai-prompt-injection-defense`
 - Agent performance benchmarking — use `bosskuai-eval-driven-agent-improvement`
 - Writing new features — use the appropriate workflow skill
 
-**BosskuAI grounding:** when the target is this repo's own pipeline, the 12 layers map to real components — system prompt + persona injection (`AgentPersonaService`, runtime-core blocks in `agents/*.md`), long-term memory admission (`LearningEngine`, `PostMemoryEvaluationService`), hidden fallback loops (`ModelFallbackService` — a near-empty fallback response passing as "Completed" is a layer-11 finding), and tool/route selection (`DeterministicTaskClassifier`, `RiskRuleEngine`).
+**BosskuAI grounding:** when the target is this repo's own pipeline (a Python CLI plus skill library; there is no runtime service), the 12 layers map to real components — system prompt + persona injection (`runtime-core` blocks in `agents/*.md`, which hosts inject per role), tool/route selection (`find_skill` in `bossku/skills.py` over `skills/skill-index.json` plus `CURATED_TRIGGERS` in `bossku/index.py`; a `confident: false` top hit acted on as if certain is a finding), long-term memory admission (`remember` in `bossku/memory.py` writing `.bossku/memory/` through `bossku/redact.py`), and contract drift (`bossku/validate.py`). Anything that names a Laravel service class describes BosskuAI 1.x and is stale.
 
 ## The 12-Layer Stack
 

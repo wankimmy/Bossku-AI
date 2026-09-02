@@ -13,7 +13,7 @@ Canonical skills live in [`skills/`](../skills/). Each folder contains `SKILL.md
 
 `bossku install --profile core` installs Bossku co-founder essentials plus the **loop-engineering** pack (12 loop/triage/CI/PR skills). Always-on loop discipline is in [`AGENTS.md`](../AGENTS.md#loop-engineering-always-on).
 
-`bossku install --profile full` installs the entire library (~206 skills), including all other vendored packs.
+`bossku install --profile full` installs the entire library (~220 skills), including all other vendored packs.
 
 ## Vendored packs
 

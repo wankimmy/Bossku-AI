@@ -30,7 +30,7 @@ Use this skill when the task is to **set up or improve Claude Code for a reposit
 
 **Commands and skills**
 - `.claude/commands/` for repeatable prompts with clear inputs and outputs.
-- `ai-assistant/skills/` for reusable expert workflows that should remain tool-agnostic when possible.
+- Skills (`skills/<id>/SKILL.md`, installed to `~/.claude/skills/` and `~/.agents/skills/`) for reusable expert workflows that should remain tool-agnostic when possible.
 
 **MCPs and hooks**
 - MCPs for external systems where direct tooling materially improves accuracy.
@@ -55,7 +55,7 @@ Use this skill when the task is to **set up or improve Claude Code for a reposit
 1. Read root instructions, README, manifests, CI files, test commands, package managers, and directory layout.
 2. Identify core workflows: build, test, lint, run, deploy, codegen, docs, database, and secrets.
 3. Identify high-risk domains: auth, billing, tenancy, migrations, production deploy, external APIs, and generated files.
-4. Identify existing assistant surfaces: `AGENTS.md`, `CLAUDE.md`, `.claude/`, `.cursor/`, `.codex/`, `ai-assistant/`.
+4. Identify existing assistant surfaces: `AGENTS.md`, `CLAUDE.md`, `.claude/`, `.cursor/`, `.codex/`, `.agents/`, `.bossku/`.
 
 ### Phase 2 - Recommend Claude Code surfaces
 

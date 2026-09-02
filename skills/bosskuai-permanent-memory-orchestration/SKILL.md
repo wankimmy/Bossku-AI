@@ -1,128 +1,76 @@
 ---
 name: bosskuai-permanent-memory-orchestration
-description: Use when the task touches permanent memory, vector DB sync, cross-tool recall, routing memory hygiene, durable plans, or forgetting past decisions.
+description: "Use when the task touches BosskuAI project memory (.bossku/memory), bossku remember or bossku sync, Obsidian export, cross-tool recall between Claude Code, Cursor and Codex, memory hygiene, durable decisions or plans, or the agent forgetting past decisions."
 ---
 
-# bosskuai-permanent-memory-orchestration
+# BosskuAI Permanent Memory Orchestration
 
-## Purpose
+Make BosskuAI remember useful context across Claude Code, Cursor, Codex, OpenCode, and OMP by writing curated Markdown memory that every tool can read, and letting the CLI export it to Obsidian.
 
-Make BosskuAI remember useful context across Claude Code, Cursor, and Codex by writing durable memory files and syncing them into the local SQLite vector index.
+## How this differs from nearby skills
 
-Use this skill when the user asks for:
+- **`bosskuai-continuous-learning`**: decides *whether* a lesson is durable and *which* artifact should hold it; this skill owns the memory mechanics once the answer is "memory".
+- **`bosskuai-handoff`** / **`bosskuai-context-limit-continuation`**: write the ephemeral `handoff.md` bridge; this skill covers the durable files.
+- **`bosskuai-claude-md-management`** / **`bosskuai-rules-distill`**: instruction and rule files; memory is facts and decisions, not behavior rules.
 
-- permanent memory
-- vector DB memory
-- cross-tool memory
-- remembering past conversations across Claude Code, Cursor, and Codex
-- auto-saving plans, decisions, learnings, or handoffs
-- memory hygiene, retrieval quality, or long-term context issues
+## The real memory system (BosskuAI 2.x)
+
+There is no vector database, no hook-driven capture, and no `ai-assistant/` tree. Memory is plain Markdown under `.bossku/memory/` in the project, written through the CLI so redaction and export run every time.
+
+| Kind | File | Store here |
+|---|---|---|
+| `project` | `.bossku/memory/project.md` | what the repo is, stack, constraints, source-of-truth files |
+| `decision` | `.bossku/memory/decisions.md` | choices worth defending later, with the reason |
+| `plan` | `.bossku/memory/plans.md` | compact plans another session may continue |
+| `learning` | `.bossku/memory/learnings.md` | verified outcomes, recurring bugs, verification results |
+| (manual) | `.bossku/memory/handoff.md` | unfinished work only; clear when done; never exported |
+
+```bash
+bossku remember --project . --kind decision "Use toolkit-only main; runtime moved to the CLI."
+bossku remember --project . --kind learning "Pest needs 2G memory on the fixed-tenant schema; see docs/testing.md."
+bossku sync --project .        # re-export after manual edits or when the vault was offline
+```
+
+`bossku remember` appends a UTC-stamped section, redacts secrets, and immediately runs the Obsidian export when a vault is configured. `bossku init <project>` seeds the five template files.
+
+## Obsidian export (auto-sync)
+
+- **One-way**: repo → `<vault>/BosskuAI/<project-name>/`. Never write into the vault directly and never treat vault edits as the source; if a vault file was edited by hand, the next export writes a `*.conflict.md` copy beside it instead of overwriting.
+- **Vault path** lives only in `~/.bosskuai/config.json` (`obsidian_vault`, set by `bossku install --vault <path>`). If it is missing, `remember` reports `vault: skipped` and memory still saves locally.
+- **Never exported**: `handoff.md`, instincts, raw prompts, transcripts, logs.
+- Host workspaces may run their own vault syncs (hooks that mirror other memory folders or session logs). Those are outside BosskuAI; keep writing through `bossku remember` so the curated export stays consistent, and do not duplicate the same note into two systems.
 
 ## Default flow
 
-For every meaningful task:
+1. **Retrieve first.** Read `.bossku/memory/handoff.md` if it is non-empty, then only the kind files the task needs (`project.md` for orientation, `decisions.md` before proposing a change of direction, `plans.md` when continuing work, `learnings.md` before debugging a known area). Do not dump the whole directory.
+2. **Plan, then store the plan** when it spans multiple files or phases or another session may pick it up: `bossku remember --kind plan`.
+3. **Execute.**
+4. **Record outcomes** a future session would otherwise relearn: `--kind decision` for choices, `--kind learning` for verified lessons, `--kind project` when durable facts about the repo changed.
+5. **Confirm the export** from the command's `vault` result (`ok`, `skipped`, or `pending`) and state it in the reply when the user cares about Obsidian.
 
-1. **Retrieve first**
-   - Read `.bossku/memory/handoff.md` if active.
-   - Query vector memory before broad file reads:
+## Memory hygiene
 
-     ```bash
-     python3 ai-assistant/scripts/auto_memory.py query "<task summary>" --limit 5
-     ```
-
-2. **Plan with frontier model**
-   - Use the strongest available model for task decomposition, risk detection, architecture, and implementation plan.
-   - Store durable plans:
-
-     ```bash
-     python3 ai-assistant/scripts/auto_memory.py remember --tool <claude|cursor|codex> --kind plan "<compact plan>"
-     ```
-
-3. **Execute with lower-cost model**
-   - Use the lighter execution model for mechanical edits, local refactors, docs updates, and straightforward implementation.
-   - Escalate back to frontier model if the execution step touches payments, auth, privacy, data loss, migrations, security, or repeated failures.
-
-4. **Audit with frontier model**
-   - Review the diff, tests, assumptions, and risk areas.
-   - Record reusable findings:
-
-     ```bash
-     python3 ai-assistant/scripts/auto_memory.py remember --tool <claude|cursor|codex> --kind learning "<outcome, verification, risks, next action>"
-     ```
-
-5. **Sync vector DB**
-   - After any memory write:
-
-     ```bash
-     python3 ai-assistant/scripts/auto_memory.py sync
-     ```
-
-## What to store
-
-Store only durable information:
-
-- decisions
-- user preferences
-- project constraints
-- architecture choices
-- recurring bug patterns
-- verification results
-- unfinished handoff state
-- product or market direction that should be reused
-
-Do not store:
-
-- secrets, tokens, passwords, private keys
-- full logs unless explicitly needed
-- temporary one-off chat content
-- unverified assumptions as facts
-
-## Memory targets
-
-| Kind | File | Use |
-|---|---|---|
-| `conversation` | `ai-assistant/memory/conversation-memory.md` | useful cross-tool chat/request history |
-| `durable` | `ai-assistant/memory/durable-memory.md` | stable decisions, preferences, constraints |
-| `plan` | `.bossku/memory/plans.md` | reusable non-trivial plans |
-| `learning` | `.bossku/memory/learnings.md` | outcomes, verification, next actions |
-| `bug` | `.bossku/memory/learnings.md` | recurring defects and fixes |
-| `market` | `.bossku/memory/project.md` | positioning, competitor, GTM notes |
-| `continuation` | `.bossku/memory/handoff.md` | unfinished work only |
-
-Raw events are also appended to `ai-assistant/memory/conversation-log.jsonl` for audit, but the model should retrieve from the vector DB and curated markdown memory first.
-
-## Tool-specific behavior
-
-### Claude Code
-
-When hooks are enabled, `UserPromptSubmit` captures incoming user prompts and `Stop` syncs vector memory. The hook is advisory and local-only.
-
-Enable:
-
-```bash
-bash scripts/enable-hooks.sh
-```
-
-### Cursor
-
-Cursor project rules cannot reliably force automatic model switching or hook execution in every environment. The rule must still enforce the protocol:
-
-- retrieve memory first
-- plan before execution
-- save durable plan/outcome via `auto_memory.py remember`
-- sync after memory writes
-
-### Codex
-
-Use `.codex/config.toml` and specialist agents:
-
-- planner/reviewer: frontier model
-- main executor: lower-cost model
-- reviewer/security reviewer before declaring done
+- Fix stale or contradictory entries when you find them; append a dated correction rather than silently rewriting history.
+- Keep entries to a few lines. Link to files, PRs, or docs instead of pasting them.
+- Do not store secrets, tokens, `.env` contents, full logs, customer data, one-off chatter, or unverified assumptions presented as facts. `bossku/redact.py` catches common token shapes; it is a backstop, not permission.
+- `handoff.md` is ephemeral: clear it when the work completes.
 
 ## Failure handling
 
-- If vector DB is missing, run `python3 ai-assistant/scripts/auto_memory.py sync`.
-- If retrieval returns weak hits, read targeted memory files directly.
-- If a memory write fails, state the failure and continue with explicit handoff in the final answer.
-- If hook payload has no useful text, do not invent a memory entry.
+- `vault: pending` (vault folder unavailable): local memory is saved; run `bossku sync --project .` later.
+- `vault: skipped` (no vault configured): tell the user how to set it (`bossku install --vault <path>`); do not invent an export.
+- Missing `.bossku/memory/`: run `bossku init <project>` or let `remember` create it.
+- If a write fails, say so and put the continuation state in the reply.
+
+## Output
+
+- memory files read
+- entries written (kind + one-line summary)
+- export status (`ok` / `skipped` / `pending`, plus conflict files if any)
+- stale memory corrected or flagged
+
+## References
+
+- `../../docs/memory.md`
+- `../../bossku/memory.py`
+- `../../references/memory-first-handoff-protocol.md`

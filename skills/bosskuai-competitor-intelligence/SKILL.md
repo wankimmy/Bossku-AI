@@ -44,7 +44,7 @@ description: Use this skill for structured competitor tracking — feature compa
 
 4. **Build the comparison matrix** — Populate a structured table: rows = competitors, columns = tracking dimensions. Include a "Last verified" date per cell. Flag cells where data could not be confirmed.
 
-5. **Identify changes since last check** — Compare against the previous snapshot (if one exists in `ai-assistant/memory/`). Highlight changes: new feature, price change, messaging shift, funding event, key hire.
+5. **Identify changes since last check** — Compare against the previous snapshot (if one exists in `.bossku/memory/project.md`). Highlight changes: new feature, price change, messaging shift, funding event, key hire.
 
 6. **Draw strategic implications** — For each significant change, state: "This means we should consider..." Keep implications concrete and actionable, not generic.
 
@@ -77,7 +77,7 @@ description: Use this skill for structured competitor tracking — feature compa
 - Respect robots.txt on all scraped domains.
 - Rate-limit scraping: minimum 2 seconds between requests per domain.
 - Do not republish scraped content verbatim — summarise and attribute.
-- Keep competitor matrices in `ai-assistant/memory/` so delta detection works across sessions.
+- Keep competitor matrices in `.bossku/memory/project.md` (`bossku remember --kind project`) so delta detection works across sessions.
 - Never present inferred pricing as confirmed without a direct source.
 
 ## Further reading
