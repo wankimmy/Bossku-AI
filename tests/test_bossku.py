@@ -1,10 +1,19 @@
+import io
 import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from bossku.cli import _doctor
 from bossku.doctor import gather_doctor_issues
+from bossku.hooks import (
+    HOOK_MARKER,
+    hooks_status,
+    install_hooks,
+    run_sync_hook,
+    uninstall_hooks,
+)
 from bossku.init_project import init_project, upsert_managed_block
 from bossku.install import install_user, uninstall_user
 from bossku.memory import remember, sync_project
@@ -132,6 +141,115 @@ class MemoryTests(unittest.TestCase):
             self.assertEqual(result["kind"], "decision")
             sync = sync_project(project, home=home)
             self.assertEqual(sync["status"], "skipped")
+
+
+class HooksTests(unittest.TestCase):
+    def test_install_skips_tools_not_present(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            result = install_hooks(home=home)
+            for tool in ("claude_code", "cursor", "codex", "opencode"):
+                self.assertEqual(result[tool]["status"], "skipped_not_found")
+            self.assertFalse((home / ".claude").exists())
+
+    def test_install_preserves_existing_unrelated_hook(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            claude_dir = home / ".claude"
+            claude_dir.mkdir(parents=True)
+            existing = {
+                "hooks": {
+                    "Stop": [
+                        {"hooks": [{"type": "command", "command": "echo unrelated-hook"}]}
+                    ]
+                }
+            }
+            (claude_dir / "settings.json").write_text(json.dumps(existing, indent=2), encoding="utf-8")
+
+            result = install_hooks(home=home, tools=("claude_code",))
+            self.assertEqual(result["claude_code"]["status"], "installed")
+
+            data = json.loads((claude_dir / "settings.json").read_text(encoding="utf-8"))
+            stop = data["hooks"]["Stop"]
+            self.assertEqual(len(stop), 2)
+            dumped = json.dumps(stop)
+            self.assertIn("echo unrelated-hook", dumped)
+            self.assertIn(HOOK_MARKER, dumped)
+
+            backups = list(claude_dir.glob("settings.json.bak-*"))
+            self.assertEqual(len(backups), 1)
+
+    def test_install_is_idempotent(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            (home / ".cursor").mkdir(parents=True)
+
+            first = install_hooks(home=home, tools=("cursor",))
+            self.assertEqual(first["cursor"]["status"], "installed")
+            before = (home / ".cursor" / "hooks.json").read_text(encoding="utf-8")
+
+            second = install_hooks(home=home, tools=("cursor",))
+            self.assertEqual(second["cursor"]["status"], "already_installed")
+            after = (home / ".cursor" / "hooks.json").read_text(encoding="utf-8")
+            self.assertEqual(before, after)
+
+    def test_uninstall_removes_only_bossku_entry(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            codex_dir = home / ".codex"
+            codex_dir.mkdir(parents=True)
+            existing = {"hooks": {"Stop": [{"hooks": [{"type": "command", "command": "echo unrelated"}]}]}}
+            (codex_dir / "hooks.json").write_text(json.dumps(existing, indent=2), encoding="utf-8")
+
+            install_hooks(home=home, tools=("codex",))
+            result = uninstall_hooks(home=home, tools=("codex",))
+            self.assertEqual(result["codex"]["status"], "removed")
+
+            data = json.loads((codex_dir / "hooks.json").read_text(encoding="utf-8"))
+            dumped = json.dumps(data["hooks"]["Stop"])
+            self.assertIn("echo unrelated", dumped)
+            self.assertNotIn(HOOK_MARKER, dumped)
+
+    def test_install_all_four_tools(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            (home / ".claude").mkdir(parents=True)
+            (home / ".cursor").mkdir(parents=True)
+            (home / ".codex").mkdir(parents=True)
+            (home / ".config" / "opencode").mkdir(parents=True)
+
+            result = install_hooks(home=home)
+            for tool in ("claude_code", "cursor", "codex", "opencode"):
+                self.assertEqual(result[tool]["status"], "installed", msg=f"{tool}: {result[tool]}")
+
+            status = hooks_status(home)
+            for tool in ("claude_code", "cursor", "codex", "opencode"):
+                self.assertTrue(status[tool], msg=f"{tool} not reported installed")
+
+            plugin = (home / ".config" / "opencode" / "plugins" / "bossku-sync.js").read_text(encoding="utf-8")
+            self.assertIn("session.idle", plugin)
+            self.assertIn("sync-hook", plugin)
+
+    def test_sync_hook_reads_cwd_from_stdin(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            project = home / "proj"
+            project.mkdir()
+            init_project(project, root=ROOT)
+
+            fake_stdin = io.StringIO(json.dumps({"cwd": str(project)}))
+            with mock.patch("sys.stdin", fake_stdin):
+                result = run_sync_hook(home=home)
+            self.assertEqual(result["status"], "skipped")
+
+    def test_sync_hook_falls_back_to_explicit_project(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            project = home / "proj"
+            project.mkdir()
+            init_project(project, root=ROOT)
+            result = run_sync_hook(project=project, home=home)
+            self.assertEqual(result["status"], "skipped")
 
 
 class SkillTests(unittest.TestCase):

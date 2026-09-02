@@ -7,6 +7,7 @@ from pathlib import Path
 
 from bossku import __version__
 from bossku.doctor import format_doctor_success, gather_doctor_issues
+from bossku.hooks import install_hooks, run_sync_hook, uninstall_hooks
 from bossku.init_project import init_project
 from bossku.install import install_user, uninstall_user, update_user
 from bossku.memory import remember, sync_project
@@ -52,6 +53,24 @@ def main(argv: list[str] | None = None) -> int:
     p_sync = sub.add_parser("sync", help="Export project memory to Obsidian", parents=[parent])
     p_sync.add_argument("--project", type=Path, required=True)
 
+    p_sync_hook = sub.add_parser(
+        "sync-hook",
+        help="Internal: run from a tool session-end hook; reads project cwd from stdin JSON",
+        parents=[parent],
+    )
+    p_sync_hook.add_argument("--project", type=Path, default=None)
+
+    p_hooks = sub.add_parser(
+        "hooks", help="Manage session-end sync hooks (Claude Code, Cursor, Codex, OpenCode)", parents=[parent]
+    )
+    p_hooks_sub = p_hooks.add_subparsers(dest="hooks_cmd", required=True)
+    p_hooks_install = p_hooks_sub.add_parser("install", parents=[parent])
+    p_hooks_install.add_argument(
+        "--tools", type=str, default=None, help="comma-separated subset: claude_code,cursor,codex,opencode"
+    )
+    p_hooks_uninstall = p_hooks_sub.add_parser("uninstall", parents=[parent])
+    p_hooks_uninstall.add_argument("--tools", type=str, default=None)
+
     p_find = sub.add_parser("skills", help="Skill utilities", parents=[parent])
     p_find_sub = p_find.add_subparsers(dest="skills_cmd", required=True)
     p_find_cmd = p_find_sub.add_parser("find", parents=[parent])
@@ -93,6 +112,18 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         if args.command == "sync":
             result = sync_project(args.project, home=home)
+            print(json.dumps(result, indent=2))
+            return 0
+        if args.command == "sync-hook":
+            result = run_sync_hook(project=args.project, home=home)
+            print(json.dumps(result, indent=2))
+            return 0
+        if args.command == "hooks":
+            tools = tuple(args.tools.split(",")) if args.tools else None
+            if args.hooks_cmd == "install":
+                result = install_hooks(home=home, tools=tools)
+            else:
+                result = uninstall_hooks(home=home, tools=tools)
             print(json.dumps(result, indent=2))
             return 0
         if args.command == "skills":

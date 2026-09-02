@@ -72,6 +72,7 @@ When a request is general, ambiguous, or touches many files, ask 1-3 numbered ye
 - Project memory lives in `.bossku/memory/`.
 - Export to Obsidian is one-way, curated, and vault-local under `BosskuAI/<project>/`.
 - Never store secrets in memory files.
+- `bossku hooks install` optionally wires a session-end sync safety net into Claude Code, Cursor, Codex, and OpenCode — additive only, opt-in, never run automatically by `bossku install`.
 
 ## Pack routing
 

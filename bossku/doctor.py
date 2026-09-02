@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from bossku.hooks import hooks_status
 from bossku.memory import load_user_config
 from bossku.paths import MARKER_START, agents_skills_dir, claude_skills_dir, repo_root
 from bossku.skills import count_managed_skills, validate_skills
@@ -96,4 +97,13 @@ def format_doctor_success(
         "  project instructions: run `bossku init <project>` for AGENTS.md, "
         "CLAUDE.md, and .omp/"
     )
+    status = hooks_status(h)
+    installed = [tool for tool, on in status.items() if on]
+    if installed:
+        lines.append(f"  session-end sync hooks: {', '.join(sorted(installed))}")
+    else:
+        lines.append(
+            "  session-end sync hooks: none installed; run `bossku hooks install` "
+            "for automatic Obsidian sync on session end"
+        )
     return lines

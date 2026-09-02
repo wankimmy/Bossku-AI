@@ -15,7 +15,7 @@ Make BosskuAI remember useful context across Claude Code, Cursor, Codex, OpenCod
 
 ## The real memory system (BosskuAI 2.x)
 
-There is no vector database, no hook-driven capture, and no `ai-assistant/` tree. Memory is plain Markdown under `.bossku/memory/` in the project, written through the CLI so redaction and export run every time.
+There is no vector database, no hook-driven *capture*, and no `ai-assistant/` tree. Memory is plain Markdown under `.bossku/memory/` in the project, written through the CLI so redaction and export run every time. `bossku remember` still writes and exports every entry; an optional hook-driven *sync* safety net (below) can additionally re-run the export at session end, but nothing generates memory content on its own.
 
 | Kind | File | Store here |
 |---|---|---|
@@ -38,7 +38,21 @@ bossku sync --project .        # re-export after manual edits or when the vault 
 - **One-way**: repo → `<vault>/BosskuAI/<project-name>/`. Never write into the vault directly and never treat vault edits as the source; if a vault file was edited by hand, the next export writes a `*.conflict.md` copy beside it instead of overwriting.
 - **Vault path** lives only in `~/.bosskuai/config.json` (`obsidian_vault`, set by `bossku install --vault <path>`). If it is missing, `remember` reports `vault: skipped` and memory still saves locally.
 - **Never exported**: `handoff.md`, instincts, raw prompts, transcripts, logs.
-- Host workspaces may run their own vault syncs (hooks that mirror other memory folders or session logs). Those are outside BosskuAI; keep writing through `bossku remember` so the curated export stays consistent, and do not duplicate the same note into two systems.
+- Host workspaces may run their own, separate vault syncs (third-party plugins that mirror other memory folders or session logs). Those are outside BosskuAI; keep writing through `bossku remember` so the curated export stays consistent, and do not duplicate the same note into two systems.
+
+### Session-end sync hooks (opt-in)
+
+`bossku remember` already exports inline, every call — the hooks below are a safety net for content that was written but never re-synced (vault was offline, a file was hand-edited), not a new write path.
+
+```bash
+bossku hooks install               # wire a Stop/session-end hook into every installed tool
+bossku hooks install --tools codex # just one: claude_code, cursor, codex, opencode
+bossku hooks uninstall             # remove only BosskuAI's own hook entries
+```
+
+Each hook runs `bossku sync-hook`, which re-runs the same `sync_project()` used by `remember`. Installation is additive-only: it appends to whatever hook config already exists (`~/.claude/settings.json`, `~/.cursor/hooks.json`, `~/.codex/hooks.json`, or a dedicated `~/.config/opencode/plugins/bossku-sync.js`) and never touches other entries — a tool whose config directory doesn't exist yet is skipped, not created. `bossku doctor` reports which tools currently have the hook installed.
+
+**Codex caveat**: Codex requires interactively approving new hooks once before it will run them (a hook-trust gate) — `bossku hooks install` writes the hook, but it only starts firing after the user does one normal interactive Codex turn and approves it. There is no way to grant this non-interactively without bypassing the trust check, which BosskuAI's installer deliberately does not do.
 
 ## Default flow
 
@@ -73,4 +87,5 @@ bossku sync --project .        # re-export after manual edits or when the vault 
 
 - `../../docs/memory.md`
 - `../../bossku/memory.py`
+- `../../bossku/hooks.py`
 - `../../references/memory-first-handoff-protocol.md`
