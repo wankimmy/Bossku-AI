@@ -438,6 +438,7 @@ KNOWN_FRONTMATTER_KEYS = frozenset(
         "keywords",
         "model_role",
         "disable-model-invocation",
+        "origin",  # ECC provenance marker on vendored skills
     }
 )
 

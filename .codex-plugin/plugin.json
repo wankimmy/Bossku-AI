@@ -1,6 +1,6 @@
 {
   "name": "bossku-ai",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Use BosskuAI when a Codex workspace needs repo-local memory, routing, and evaluation habits.",
   "author": {
     "name": "BosskuAI",

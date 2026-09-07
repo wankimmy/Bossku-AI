@@ -1,9 +1,8 @@
 ---
 name: issue-triage
 description: >
-  Use when deduping, prioritizing, and labeling open issues or discussions
-  (propose-only; never auto-close). Triggers: issue backlog, triage queue,
-  top actionable issues.
+  Scan open issues and discussions. Dedupe, prioritize, and propose labels.
+  Updates issue-triage-state.md. L1 propose-only — never auto-label or close.
 user_invocable: true
 ---
 

@@ -166,6 +166,7 @@ CURATED_TRIGGERS: dict[str, list[str]] = {
     "taste-skill": [
         "landing page", "does not look ai", "doesn't look ai generated", "ai slop",
         "make it look good", "design taste", "beautiful ui", "marketing site",
+        "anti-slop ui", "premium landing", "design dials", "portfolio site", "avoid inter",
     ],
     "marketing-plan": [
         "go to market", "gtm plan", "growth plan", "marketing roadmap", "aarrr",
@@ -393,6 +394,35 @@ CURATED_TRIGGERS: dict[str, list[str]] = {
         "1:1", "one on one", "retro", "postmortem process",
     ],
     "cofounder": ["cofounder", "co-founder", "what should i do next", "advise me"],
+
+    # --- loop-engineering: vendored verbatim, so routing wording lives here not in the descriptions ---
+    "loop-budget": ["token budget", "spend budget", "over budget", "budget check", "run log spend", "loop spend", "cap the spend", "early exit"],
+    "loop-constraints": ["loop constraints", "denylist", "no auto push", "allowed paths", "loop guardrails", "constraints file", "binding rules for the loop"],
+    "loop-triage": ["triage recent changes", "backlog sweep", "sweep the backlog", "loop triage", "findings report", "what needs attention", "state file", "linear board"],
+    "loop-verifier": ["verify the fix", "independent verification", "did the fix work", "reasons to reject", "confirm diff scope", "verify before done", "prove it is fixed"],
+    "minimal-fix": ["fix this test", "address review comment", "minimal patch", "smallest fix", "smallest diff", "fix the typo", "one line fix", "fix the failing test"],
+    "post-merge-scan": ["post merge cleanup", "post-merge", "recent merges", "stale flags", "broken doc links", "follow-up cleanup", "after the merge", "leftover todos"],
+    "changelog-scan": ["changelog scan", "release note content", "what merged since", "gather commits for changelog", "changelog drafter", "release prep"],
+
+    # --- emil-skills additions ---
+    "animate-expo": ["animate in expo", "react native animation", "reanimated", "gesture handler", "expo haptics", "sheet animation react native", "stutters on device", "screen transition expo", "press feedback", "haptics"],
+    "ask-sonner": ["sonner", "sonner toast", "toaster component", "toasts not showing", "toast appears twice", "toast behind modal", "toast dark mode", "promise toast"],
+    "write-swift": ["swift", "swift 6", "swiftui", "swift concurrency", "actor isolation", "data race", "retain cycle", "swift testing", "swift macros", "some vs any", "sendable", "main actor", "xcode"],
+
+    # --- i-have-adhd ---
+    "i-have-adhd": ["adhd", "adhd mode", "i have adhd", "action first", "no preamble", "just tell me what to do", "stop burying the answer", "numbered steps", "shorter answers", "too much text", "get to the point"],
+
+    # --- ecc (curated subset) ---
+    "mysql-patterns": ["mysql", "mariadb", "innodb", "mysql index", "mariadb schema", "replica lag", "replication lag", "mysql connection pool", "mysql query slow", "utf8mb4", "explain analyze"],
+    "database-migrations": ["schema migration", "data migration", "zero downtime migration", "rollback migration", "backfill column", "expand contract", "rename column safely", "prisma migrate", "drizzle migration", "add a column without downtime", "migration plan"],
+    "error-handling": ["error handling", "typed errors", "error boundary", "retry logic", "retries", "circuit breaker", "exponential backoff", "user facing error message", "custom exception", "result type", "graceful failure"],
+    "mcp-server-patterns": ["mcp server", "build an mcp server", "model context protocol", "mcp tool definition", "mcp resources", "streamable http", "stdio transport", "mcp sdk", "write an mcp server", "expose tools over mcp"],
+    "e2e-testing": ["playwright", "e2e test", "end to end test", "page object model", "flaky e2e", "playwright config", "playwright ci", "test artifacts", "trace viewer", "e2e suite"],
+    "accessibility": ["accessibility", "a11y", "wcag", "wcag 2.2", "screen reader", "keyboard navigation", "focus order", "aria", "contrast ratio", "color contrast", "accessible form", "axe"],
+    "architecture-decision-records": ["adr", "architecture decision record", "decision record", "record the architecture decision", "why did we choose", "document this decision", "adr log", "write an adr"],
+    "vue-patterns": ["vue", "vue 3", "composition api", "pinia", "vue router", "ref vs reactive", "composable", "vue component", "watcheffect", "defineprops", "vite vue", "script setup"],
+    "python-patterns": ["python", "pythonic", "pep 8", "type hints", "dataclass", "pydantic", "python idioms", "python code review", "mypy", "asyncio", "python packaging", "python script"],
+    "python-testing": ["pytest", "python tests", "pytest fixture", "parametrize", "monkeypatch", "unittest mock", "pytest coverage", "conftest", "test this python"],
 }
 
 # Explicit role assignments; the rest fall back to keyword heuristics.
@@ -415,6 +445,19 @@ CURATED_ROLES: dict[str, str] = {
     "bosskuai-cto-strategy": "planner",
     "bosskuai-tech-lead": "planner",
     "graft": "coder",
+    "animate-expo": "coder",
+    "ask-sonner": "coder",
+    "write-swift": "coder",
+    "mysql-patterns": "coder",
+    "database-migrations": "coder",
+    "error-handling": "coder",
+    "mcp-server-patterns": "coder",
+    "e2e-testing": "coder",
+    "accessibility": "reviewer",
+    "architecture-decision-records": "planner",
+    "vue-patterns": "coder",
+    "python-patterns": "coder",
+    "python-testing": "coder",
 }
 
 _ROLE_HINTS: tuple[tuple[str, tuple[str, ...]], ...] = (
@@ -503,7 +546,9 @@ def _clean(phrases: list[str], limit: int) -> list[str]:
     seen: set[str] = set()
     out: list[str] = []
     for p in phrases:
-        p = re.sub(r"\s+", " ", p).strip()
+        # Scoring matches against a lowercased query, so a trigger written with a
+        # capital ("what should I use for toasts") could never earn its phrase bonus.
+        p = re.sub(r"\s+", " ", p).strip().lower()
         if p and p not in seen:
             seen.add(p)
             out.append(p)

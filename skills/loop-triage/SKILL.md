@@ -1,9 +1,9 @@
 ---
 name: loop-triage
 description: >
-  Use when sweeping recent CI failures, open issues, commits, and loop state into a
-  prioritized, actionable backlog for an agent loop. Triggers: daily triage, what
-  should the loop work on, CI/issues/commits sweep.
+  Triage recent changes, CI failures, issues, and conversations.
+  Produces a concise, actionable findings report suitable for a loop to consume.
+  Writes structured output to a state file or Linear board.
 user_invocable: true
 ---
 

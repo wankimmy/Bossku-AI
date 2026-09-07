@@ -7,7 +7,7 @@
     {
       "name": "bossku-ai",
       "description": "AI co-founder plugin with reusable skills and memory-first workflows for Codex workspaces.",
-      "version": "2.0.0",
+      "version": "2.1.0",
       "source": {
         "source": "local",
         "path": "./../.."

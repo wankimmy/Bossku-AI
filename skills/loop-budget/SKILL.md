@@ -1,8 +1,6 @@
 ---
 name: loop-budget
-description: >
-  Use when checking token or spend budget at the start or end of an agent loop run.
-  Enforces early exit when over cap, paused, or when there is no actionable work.
+description: Check token budget and run-log spend before and after a loop run. Enforces early exit when over budget or when there is no actionable work.
 ---
 
 # Loop Budget Guard

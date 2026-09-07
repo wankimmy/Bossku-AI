@@ -1,9 +1,8 @@
 ---
 name: loop-constraints
 description: >
-  Use when enforcing loop allowlists, denylists, pause flags, and loop-constraints.md
-  before any triage or action skill runs. Triggers: start of loop run, guardrails,
-  loop-pause-all, path denylist.
+  Read loop-constraints.md at the start of every run and enforce every rule.
+  This skill runs BEFORE triage or any action skill. Constraints are binding.
 user_invocable: true
 ---
 

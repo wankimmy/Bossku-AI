@@ -1,10 +1,6 @@
 ---
 name: design-taste-frontend
-description: >
-  Use when building or redesigning landing pages, portfolios, and marketing frontends
-  that must not look AI-templated. Triggers: taste-skill, anti-slop UI, premium landing,
-  design dials, avoid Inter/purple defaults. Reads the brief, infers design direction,
-  real design systems when applicable, audit-first on redesigns, strict pre-flight.
+description: Anti-slop frontend skill for landing pages, portfolios, and redesigns. The agent reads the brief, infers the right design direction, and ships interfaces that do not look templated. Real design systems when applicable, audit-first on redesigns, strict pre-flight check.
 ---
 
 # tasteskill: Anti-Slop Frontend Skill

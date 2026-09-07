@@ -6,7 +6,7 @@ Loaded only when the user has opted into the **custom** theme route in Step 1 of
 
 ## Two routes, plain English
 
-- **catalog** — the named-theme catalogue. Hallmark's 20 themes (Specimen, Midnight, Brutal, Garden, Atelier, Newsprint, Terminal, Manifesto, Almanac, Sport, Studio, Riso, Bloom, Coral, Cobalt, Aurora, Editorial, Carnival, Lumen, Hum). Each one is a fixed combination of paper-band, display-style, and accent-hue. The rotation rule cycles through them so two consecutive runs don't read alike. **This is the default.** Most briefs use it.
+- **catalog** — the named-theme catalogue. Hallmark's 21 themes (Specimen, Midnight, Brutal, Garden, Atelier, Newsprint, Terminal, Manifesto, Almanac, Sport, Studio, Riso, Bloom, Coral, Cobalt, Aurora, Editorial, Carnival, Lumen, Hum, Grid). Each one is a fixed combination of paper-band, display-style, and accent-hue. The rotation rule cycles through them so two consecutive runs don't read alike. **This is the default.** Most briefs use it.
 - **custom** — made-to-measure, at the depth the brief needs:
   - **Tuned** — a one-off OKLCH palette + font pairing built for one brief, *keeping* Hallmark's structures, archetypes, and macrostructures. The rules (paper L bands, accent chroma caps, font ban list, all slop-test gates) still apply; only the *combination* is per-brief.
   - **Bespoke** — when the brief's *structure itself* is the ask, custom goes further and designs the whole page from first principles — its own palette, type, **and** composition — dropping the catalog's structures too, floored only by the universal slop-test gates. Same route, deeper end. See **§ Bespoke depth** below.
@@ -25,7 +25,7 @@ Hallmark must **not** offer catalog-vs-custom on every prompt. That's friction, 
 
 If any signal fires, ask one short follow-up before picking a theme:
 
-> *"This brief reads like a custom palette would fit better than the 20 named themes. Want me to construct a custom OKLCH palette + free-font pairing tuned to <one-line summary of the vibe>, or stay on the catalog for variety + speed?"*
+> *"This brief reads like a custom palette would fit better than the 21 named themes. Want me to construct a custom OKLCH palette + free-font pairing tuned to <one-line summary of the vibe>, or stay on the catalog for variety + speed?"*
 
 Wait for the user to answer. If they say custom (or yes / go) → continue this protocol from § A. If they say catalog (or no / stay catalog) → drop the fork and proceed with the catalog route. **Default to catalog** — silence routes to catalog, not custom.
 

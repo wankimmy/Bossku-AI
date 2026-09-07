@@ -13,7 +13,7 @@ Canonical skills live in [`skills/`](../skills/). Each folder contains `SKILL.md
 
 `bossku install --profile core` installs Bossku co-founder essentials plus the **loop-engineering** pack (12 loop/triage/CI/PR skills). Always-on loop discipline is in [`AGENTS.md`](../AGENTS.md#loop-engineering-always-on).
 
-`bossku install --profile full` installs the entire library (~220 skills), including all other vendored packs.
+`bossku install --profile full` installs the entire library (~240 skills), including all other vendored packs.
 
 ## Vendored packs
 
@@ -29,7 +29,9 @@ Canonical skills live in [`skills/`](../skills/). Each folder contains `SKILL.md
 | taste-skill | 13 anti-slop frontend / imagegen skills | — |
 | scroll-world | Scroll-scrub Higgsfield cinematic world landing | Higgsfield CLI, ffmpeg |
 | dcg | Destructive Command Guard (agent shell/git safety hooks) | `dcg` binary (upstream installer) |
-| emil-skills | 9 motion craft / design engineering skills | — |
+| emil-skills | 12 motion craft / design engineering skills (web + Expo animation, Sonner, Swift) | — |
+| i-have-adhd | Action-first, numbered, no-preamble output shape (explicit `/i-have-adhd`) | — |
+| ecc | 10 curated engineering skills: MySQL/MariaDB, migrations, error handling, MCP servers, Playwright E2E, WCAG 2.2, ADRs, Vue 3, Python, pytest | — |
 
 Attribution: [`docs/third-party.md`](third-party.md). Optional deps: [`requirements-optional.txt`](../requirements-optional.txt).
 
@@ -47,6 +49,16 @@ Attribution: [`docs/third-party.md`](third-party.md). Optional deps: [`requireme
 | `bosskuai-gsap-animation`, `bosskuai-lenis-smooth-scroll` | `scroll-world` | Higgsfield scroll-scrub fly-through world landing; use Bossku GSAP/Lenis for code-only motion |
 | `bosskuai-taste`, `taste-skill`, `hallmark` | `emil-design-eng`, `animate`, `apple-design` | Motion craft (easing, duration, interruption, gesture); keep taste/hallmark for layout, type, color, content |
 | `bosskuai-throwaway-prototype`, `bosskuai-rapid-prototype` | `prototype` | UI variants behind a live picker; keep Bossku skills for logic spikes / MVP scaffolds |
+| `bosskuai-expo-react-native` | `animate-expo` | Motion, gestures, sheets, haptics in Expo; keep the Bossku skill for app structure, EAS, and release |
+| `bosskuai-human-output`, `bosskuai-token-saver` | `i-have-adhd` | Reader asked for action-first output; it is an explicit mode that persists until "stop adhd mode" |
+| `bosskuai-database-engineering` | `mysql-patterns`, `database-migrations` | MySQL/MariaDB specifics (InnoDB, replica lag) or a zero-downtime migration plan |
+| `bosskuai-browser-automation`, `bosskuai-qa-automation-strategy` | `e2e-testing` | Writing or de-flaking a Playwright suite (POM, config, CI artifacts) |
+| `bosskuai-ui-ux-design-to-code` | `accessibility` | Formal WCAG 2.2 AA build or audit |
+| `bosskuai-claude-code-setup` | `mcp-server-patterns` | Building an MCP server, not just configuring one |
+| `bosskuai-coding-best-practices` | `error-handling` | Typed errors, retries, circuit breakers, user-facing failure messages |
+| `bosskuai-tech-lead` | `architecture-decision-records` | Writing the ADR file itself |
+| `bosskuai-nuxt-development` | `vue-patterns` | Vue 3 / Pinia work outside Nuxt |
+| — | `python-patterns`, `python-testing` | Bossku has no Python skill of its own; these are the defaults |
 
 ## Aliases (merged Bossku duplicates)
 

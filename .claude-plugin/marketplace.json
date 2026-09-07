@@ -6,14 +6,14 @@
   },
   "metadata": {
     "description": "BosskuAI plugins for Claude Code.",
-    "version": "2.0.0"
+    "version": "2.1.0"
   },
   "plugins": [
     {
       "name": "bossku-ai",
       "source": "./",
       "description": "AI co-founder plugin for Claude Code with reusable skills, agents, and memory-first workflows.",
-      "version": "2.0.0",
+      "version": "2.1.0",
       "author": {
         "name": "BosskuAI"
       },

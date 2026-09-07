@@ -1,8 +1,6 @@
 ---
 name: changelog-scan
-description: >
-  Use when gathering recent merges, PRs, and commits for release-note content.
-  Triggers: changelog scan, what shipped, release prep, changelog-drafter loop.
+description: Scan recent merges/PRs/commits for release note content. Structured output for drafter.
 user_invocable: true
 ---
 

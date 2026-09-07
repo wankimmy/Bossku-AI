@@ -4,15 +4,15 @@
   "provenance": {
     "marketingskills": {
       "upstream": "coreyhaines31/marketingskills",
-      "last_synced": "2026-07-16"
+      "last_synced": "2026-09-07"
     },
     "superpowers": {
       "upstream": "obra/superpowers",
-      "last_synced": "2026-07-16"
+      "last_synced": "2026-09-07"
     },
     "hallmark": {
       "upstream": "togethercomputer/hallmark",
-      "last_synced": "2026-07-16"
+      "last_synced": "2026-09-07"
     },
     "browser-use": {
       "upstream": "browser-use/browser-use",
@@ -20,7 +20,7 @@
     },
     "graphify": {
       "upstream": "Graphify-Labs/graphify",
-      "last_synced": "2026-07-16"
+      "last_synced": "2026-09-07"
     },
     "markitdown": {
       "upstream": "microsoft/markitdown",
@@ -28,27 +28,35 @@
     },
     "loop-engineering": {
       "upstream": "cobusgreyling/loop-engineering",
-      "last_synced": "2026-07-21"
+      "last_synced": "2026-09-07"
     },
     "taste-skill": {
       "upstream": "Leonxlnx/taste-skill",
-      "last_synced": "2026-07-21"
+      "last_synced": "2026-09-07"
     },
     "scroll-world": {
       "upstream": "oso95/scroll-world",
-      "last_synced": "2026-07-21"
+      "last_synced": "2026-09-07"
     },
     "dcg": {
       "upstream": "Dicklesworthstone/destructive_command_guard",
-      "last_synced": "2026-07-24"
+      "last_synced": "2026-09-07"
     },
     "emil-skills": {
       "upstream": "emilkowalski/skills",
-      "last_synced": "2026-08-10"
+      "last_synced": "2026-09-07"
     },
     "graft": {
       "upstream": "NanoNets/Graft",
       "last_synced": "2026-08-18"
+    },
+    "i-have-adhd": {
+      "upstream": "ayghri/i-have-adhd",
+      "last_synced": "2026-09-07"
+    },
+    "ecc": {
+      "upstream": "affaan-m/ECC",
+      "last_synced": "2026-09-07"
     }
   },
   "packs": {
@@ -177,10 +185,28 @@
       "improve-animations",
       "pick-ui-library",
       "prototype",
-      "review-animations"
+      "review-animations",
+      "animate-expo",
+      "ask-sonner",
+      "write-swift"
     ],
     "graft": [
       "graft"
+    ],
+    "i-have-adhd": [
+      "i-have-adhd"
+    ],
+    "ecc": [
+      "accessibility",
+      "architecture-decision-records",
+      "database-migrations",
+      "e2e-testing",
+      "error-handling",
+      "mcp-server-patterns",
+      "mysql-patterns",
+      "python-patterns",
+      "python-testing",
+      "vue-patterns"
     ]
   },
   "skills": {
@@ -289,6 +315,20 @@
     "pick-ui-library": "emil-skills",
     "prototype": "emil-skills",
     "review-animations": "emil-skills",
-    "graft": "graft"
+    "graft": "graft",
+    "animate-expo": "emil-skills",
+    "ask-sonner": "emil-skills",
+    "write-swift": "emil-skills",
+    "i-have-adhd": "i-have-adhd",
+    "accessibility": "ecc",
+    "architecture-decision-records": "ecc",
+    "database-migrations": "ecc",
+    "e2e-testing": "ecc",
+    "error-handling": "ecc",
+    "mcp-server-patterns": "ecc",
+    "mysql-patterns": "ecc",
+    "python-patterns": "ecc",
+    "python-testing": "ecc",
+    "vue-patterns": "ecc"
   }
 }

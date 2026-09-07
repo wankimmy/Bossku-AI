@@ -1,9 +1,9 @@
 ---
 name: minimal-fix
 description: >
-  Use when applying the smallest possible fix for one explicit CI failure, reviewer
-  comment, or issue. Triggers: fix this test, address review comment, minimal patch.
-  Never refactor unrelated code.
+  Produce the smallest possible code change that fixes a specific, well-scoped
+  issue (CI failure, reviewer comment, typo). Use only when the fix target is
+  explicit. Never refactor unrelated code.
 user_invocable: true
 ---
 

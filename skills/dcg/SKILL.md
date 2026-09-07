@@ -64,12 +64,18 @@ enabled = ["database.postgresql", "containers.docker", "kubernetes"]
 | `DCG_PACKS` | Comma-separated packs to enable |
 | `DCG_DISABLE` | Packs to disable |
 | `DCG_BYPASS=1` | Escape hatch (bypass entirely) |
+| `DCG_CONFIG=/path/to/config.toml` | Explicit config file (highest-priority file layer; also how a repo-local `.dcg.toml` is trusted deliberately) |
+| `DCG_FAIL_CLOSED=1` | Deny when hook input cannot be parsed, instead of the default fail-open allow (opt-in) |
 
 ## Agent behavior
 
 - If `dcg` blocks a command, do **not** invent workarounds that re-run the same destruction. Ask the user; suggest safer alternatives (`git stash`, `--force-with-lease`, `git clean -n`).
 - Truly needed destructive ops: have the user run them manually in a separate terminal after a conscious decision.
 - Test manually: `echo '{"tool_name":"Bash","tool_input":{"command":"git reset --hard"}}' | dcg` (exit `2` = blocked, `0` = allow).
+
+Config precedence: `DCG_*` env vars > `DCG_CONFIG` file > `~/.config/dcg/config.toml` > `/etc/dcg/config.toml` (Unix only) > repo-local `.dcg.toml` (enforcement-only).
+
+Documented against upstream v0.6.9 (2026-07). Newer releases may add packs; `dcg --help` is authoritative.
 
 ## Threat model
 

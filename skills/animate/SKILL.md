@@ -5,7 +5,7 @@ description: Build an animation from scratch, making the decisions in the order 
 
 # Building Animations
 
-A construction skill. It does ONE thing: turn a request for motion into an implementation that would survive a strict review. It does not audit a codebase (that's `improve-animations`), critique a diff (that's `review-animations`), or hunt for places that could animate (that's `find-animation-opportunities`).
+A construction skill. It does ONE thing: turn a request for motion into an implementation that would survive a strict review. It does not audit a codebase (that's `improve-animations`), critique a diff (that's `review-animations`), hunt for places that could animate (that's `find-animation-opportunities`), or build for React Native (that's `animate-expo`).
 
 ## Operating Posture
 

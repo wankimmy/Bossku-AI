@@ -1,8 +1,6 @@
 ---
 name: draft-release-notes
-description: >
-  Use when drafting user-facing release notes from changelog-scan output (propose
-  only). Triggers: release notes, draft changelog, ship announcement.
+description: Turn changelog-scan output into polished, categorized release notes draft. Propose only.
 user_invocable: true
 ---
 

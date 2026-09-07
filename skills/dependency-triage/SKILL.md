@@ -1,9 +1,8 @@
 ---
 name: dependency-triage
 description: >
-  Use when scanning package manifests and lockfiles for outdated deps and CVEs,
-  grouped by patch/minor/major risk. Triggers: dependency sweep, security updates,
-  renovate backlog.
+  Scan package manifests and lockfiles for outdated packages and known CVEs.
+  Groups updates by risk (patch, minor, major). Use in dependency sweeper loops.
 user_invocable: true
 ---
 

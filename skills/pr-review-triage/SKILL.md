@@ -1,8 +1,8 @@
 ---
 name: pr-review-triage
 description: >
-  Use when checking open pull requests for CI status, review comments, and merge
-  readiness. Triggers: PR babysitter, unblock PR, merge readiness, stale PRs.
+  Triage open pull requests for CI status, review comments, and merge readiness.
+  Use in PR babysitter loops. Respects project review norms and required checks.
 user_invocable: true
 ---
 

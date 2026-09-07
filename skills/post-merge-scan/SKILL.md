@@ -1,8 +1,8 @@
 ---
 name: post-merge-scan
 description: >
-  Use when scanning recent merges to main for follow-up cleanup: TODOs, deprecations,
-  broken doc links, stale flags. Triggers: post-merge cleanup, merge follow-ups.
+  Scan recent merges to main for follow-up cleanup: TODOs, deprecations,
+  broken doc links, stale flags. Use in post-merge cleanup loops.
 user_invocable: true
 ---
 

@@ -1,9 +1,9 @@
 ---
 name: loop-verifier
 description: >
-  Use when independently verifying a loop implementer or minimal-fix before merge.
-  Maker/checker split: run tests, confirm scope, reject unless evidence is strong.
-  Triggers: after minimal-fix, before merge, loop verification.
+  Independent verification agent for loop-produced changes. Finds reasons to
+  reject. Runs tests. Confirms diff scope. Use after minimal-fix or any
+  implementer sub-agent — never in the same role as the implementer.
 user_invocable: true
 ---
 

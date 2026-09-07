@@ -36,7 +36,7 @@ Simplest thing that works: YAGNI → stdlib → native → installed dep → min
 
 ## Anti-slop (always on)
 
-No generic placeholders, filler verbs, fake-perfect numbers, or em-dash decoration. For UI layout, type, color, and content, load `bosskuai-taste` before generating. For anything that moves (easing, duration, interruption, gesture), load `emil-design-eng` or `animate`; Emil motion decisions override `taste-skill` / `hallmark` easing opinions.
+No generic placeholders, filler verbs, fake-perfect numbers, or em-dash decoration. For UI layout, type, color, and content, load `bosskuai-taste` before generating. For anything that moves (easing, duration, interruption, gesture), load `emil-design-eng` or `animate` (`animate-expo` in React Native); Emil motion decisions override `taste-skill` / `hallmark` easing opinions.
 
 ## Loop engineering (always on)
 
@@ -97,6 +97,12 @@ Vendored packs are reviewed on a 180-day window — run `bossku skills stocktake
 | Motion craft / easing / gesture / UI polish | emil-skills — `animate` to build, `review-animations` to critique, `improve-animations` to audit a codebase (`emil-design-eng` / `apple-design` for philosophy) |
 | Frontend library choice (toast, DnD, charts, OTP, …) | `pick-ui-library` |
 | UI variant exploration behind a live picker | `prototype` (vs `bosskuai-throwaway-prototype` for logic spikes / `bosskuai-rapid-prototype` for MVP scaffolds) |
+| Sonner toasts / Swift or SwiftUI code | emil-skills — `ask-sonner`, `write-swift` |
+| Reader wants action-first, numbered, no-preamble answers | `i-have-adhd` (explicit `/i-have-adhd`; persists until "stop adhd mode" / "normal mode") |
+| MySQL/MariaDB tuning, schema or data migrations | ecc — `mysql-patterns`, `database-migrations` (Bossku `bosskuai-database-engineering` for generic design) |
+| Python code or pytest | ecc — `python-patterns`, `python-testing` |
+| Vue 3 / Pinia outside Nuxt | ecc — `vue-patterns` (`bosskuai-nuxt-development` for Nuxt) |
+| Build an MCP server, Playwright E2E, WCAG 2.2 audit, ADR, error/retry design | ecc — `mcp-server-patterns`, `e2e-testing`, `accessibility`, `architecture-decision-records`, `error-handling` |
 
 ## Verification
 

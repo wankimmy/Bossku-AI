@@ -1,8 +1,8 @@
 ---
 name: ci-triage
 description: >
-  Use when classifying CI failures as flake, regression, env, or config before any
-  fix attempt. Triggers: red CI, failed workflow, CI sweeper, pipeline failure.
+  Parse CI failures, identify failing job/step, classify as flake, regression,
+  env, or config. Use in CI sweeper loops before any fix attempt.
 user_invocable: true
 ---
 

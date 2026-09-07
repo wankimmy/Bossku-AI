@@ -57,6 +57,20 @@ ROUTING_CASES = [
     ("review this animation for craft issues", {"review-animations"}),
     ("what should I use for toasts", {"pick-ui-library"}),
     ("scrolltrigger pinned section with gsap", {"bosskuai-gsap-animation"}),
+    # v2.1.0 additions: i-have-adhd, emil additions, curated ECC subset
+    ("i have adhd, give me the answer action first", {"i-have-adhd"}),
+    ("write pytest fixtures for the parser module", {"python-testing"}),
+    ("our mariadb replica lag keeps growing", {"mysql-patterns", "bosskuai-database-engineering"}),
+    ("plan a zero downtime column rename migration", {"database-migrations", "bosskuai-database-engineering"}),
+    ("build an mcp server that exposes our api as tools", {"mcp-server-patterns"}),
+    ("audit this form for wcag 2.2 keyboard and contrast", {"accessibility", "bosskuai-ui-ux-design-to-code"}),
+    ("write an adr for choosing postgres over mongo", {"architecture-decision-records", "bosskuai-tech-lead"}),
+    ("the sonner toast appears behind the modal", {"ask-sonner"}),
+    ("swift 6 data race inside my actor", {"write-swift"}),
+    ("animate the bottom sheet in expo with reanimated", {"animate-expo", "bosskuai-expo-react-native"}),
+    ("pinia store and vue router setup for a vue 3 app", {"vue-patterns", "bosskuai-nuxt-development"}),
+    ("add retries with a circuit breaker to the payment client", {"error-handling"}),
+    ("de-flake our playwright e2e suite in ci", {"e2e-testing", "bosskuai-browser-automation", "bosskuai-qa-automation-strategy"}),
 ]
 
 

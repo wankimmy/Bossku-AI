@@ -286,7 +286,7 @@ class ValidateTests(unittest.TestCase):
 
     def test_package_version_matches_manifests(self):
         version = package_version(ROOT)
-        self.assertEqual(version, "2.0.0")
+        self.assertEqual(version, "2.1.0")
         errors = validate_plugin_manifests(ROOT)
         self.assertEqual(errors, [], msg="\n".join(errors))
 
