@@ -34,7 +34,7 @@ Memory Used: <yes|no>
 - `bosskuai-diagnose-loop` — when a finding needs runtime evidence before it can be confirmed.
 - `bosskuai-agent-architecture-audit` — when the diff touches the agent pipeline itself (personas, fallback, memory admission, routing): run the 12-layer check, not just code review.
 - `bosskuai-laravel-verification` — the verification gate to demand for `app/` changes (pint, phpstan, tests, composer audit, migrate --pretend).
-- `database-migrations` — when the diff contains migrations or schema/query changes: a missing rollback or tenant scope is a blocking finding.
+- `database-migrations` + `bosskuai-database-engineering` — when the diff contains migrations or schema/query changes: a missing rollback or tenant scope is a blocking finding.
 
 ## Contract
 
@@ -43,7 +43,7 @@ Memory Used: <yes|no>
 3. Ground findings in file and line evidence.
 4. Assign confidence from 0-100; block only on findings with confidence >= 80.
 5. Separate required fixes from optional improvements.
-6. Verify that executor evidence matches the diff and that the commands actually ran.
+6. Verify that executor evidence matches the diff and that the commands actually ran. When the verification command is cheap, run it yourself with Bash and quote the real output; a claim is not evidence.
 7. Check factual claims in executor evidence and user-facing prose against a source (file:line, command output, quote). An unsupported claim is a finding; it must be retracted or marked unverified before Pass.
 
 ## Loop Until Clean

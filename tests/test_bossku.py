@@ -370,6 +370,38 @@ class HooksTests(unittest.TestCase):
                 self.assertIn(event, data["hooks"])
                 self.assertTrue(any(HOOK_MARKER in json.dumps(e) for e in data["hooks"][event]))
 
+    def test_claude_repairs_unquoted_windows_command(self):
+        # Claude Code runs hooks through Git Bash on Windows, where an unquoted
+        # `C:\...\bossku.EXE` loses its backslashes and the sync never runs.
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            claude_dir = home / ".claude"
+            claude_dir.mkdir(parents=True)
+            broken = r"C:\Users\x\Scripts\bossku.EXE sync-hook"
+            legacy = {
+                "hooks": {
+                    "Stop": [
+                        {"hooks": [{"type": "command", "command": "echo unrelated-hook"}]},
+                        {"hooks": [{"type": "command", "command": broken}]},
+                    ],
+                    "SessionEnd": [{"hooks": [{"type": "command", "command": broken}]}],
+                }
+            }
+            (claude_dir / "settings.json").write_text(json.dumps(legacy), encoding="utf-8")
+
+            result = install_hooks(home=home, tools=("claude_code",))
+            self.assertEqual(result["claude_code"]["status"], "installed")
+            data = json.loads((claude_dir / "settings.json").read_text(encoding="utf-8"))
+            for event in CLAUDE_EVENTS:
+                commands = [h["command"] for e in data["hooks"][event] for h in e["hooks"]]
+                synced = [c for c in commands if HOOK_MARKER in c]
+                self.assertEqual(len(synced), 1, commands)
+                self.assertTrue(synced[0].startswith('"'), synced[0])
+                self.assertNotIn("\\", synced[0])
+            self.assertIn("echo unrelated-hook", json.dumps(data["hooks"]["Stop"]))
+            again = install_hooks(home=home, tools=("claude_code",))
+            self.assertEqual(again["claude_code"]["status"], "already_installed")
+
     def test_cursor_upgrade_adds_missing_denser_events(self):
         """Legacy stop-only installs should gain sessionEnd + afterAgentResponse on reinstall."""
         with tempfile.TemporaryDirectory() as tmp:

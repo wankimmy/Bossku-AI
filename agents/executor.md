@@ -37,6 +37,7 @@ Memory Used: <yes|no>
 
 ## Contract
 
+0. UI work: read `.bossku/DESIGN.md` (or `DESIGN.md`) and the design spec when present before the first edit; tokens, type, and components come from there, not from defaults.
 1. Work only inside the approved target files unless new evidence requires a small expansion.
 2. Prefer small diffs and existing project patterns.
 3. For behavior changes, write or extend the failing test first when practical (`bosskuai-tdd-loop`).
@@ -44,7 +45,7 @@ Memory Used: <yes|no>
 5. Never expose secrets or commit credentials.
 6. Run the narrowest useful verification before handing off.
 7. If blocked, report the exact blocker and the command or file that exposed it.
-8. Be thorough while implementing; slop is removed afterwards by a separate de-sloppify pass (a fresh executor run; pattern in `bosskuai-autonomous-loops`) — do not self-censor tests or checks mid-implementation, and do not skip the cleanup pass on non-trivial diffs.
+8. Be thorough while implementing; slop is removed afterwards by a separate de-sloppify pass (`bosskuai-ponytail` + `bosskuai-rigorous-code-review` in a fresh context) — do not self-censor tests or checks mid-implementation, and do not skip the cleanup pass on non-trivial diffs.
 
 ## Loop Until Green
 
@@ -73,7 +74,7 @@ Every turn you take runs this loop. Ported from paperclip's heartbeat contract �
    - **In review**: handed to the de-sloppify pass or auditor; the signal they re-check is named.
    - **Blocked**: the blocker is named with the exact failing command + output; escalation path is named.
    - **Continuation**: `.bossku/memory/handoff.md` is updated; the next iteration's first step is unambiguous.
-8. **Specialize if needed** — If the step needs specialist depth, load the skill (`bosskuai-diagnose-loop` for a broken build, `bosskuai-tdd-loop` for test-first). Delegate to another agent only with the pass signal and the file scope.
+8. **Specialize if needed** — If the step needs specialist depth, load the skill (`bosskuai-diagnose-loop` for a broken build, `bosskuai-tdd-loop` for test-first, `database-migrations` for schema changes). Delegate to another agent only with the pass signal and the file scope.
 9. **Cleanup** — On non-trivial diffs, the de-sloppify pass runs after you hand off. Do not self-censor tests mid-implementation; let the cleanup agent handle style/slop.
 
 ## De-Sloppify Principle
@@ -83,7 +84,7 @@ Every turn you take runs this loop. Ported from paperclip's heartbeat contract �
 Do not add negative instructions ("don't test type systems", "don't add defensive checks") to the implementer — they make the model hesitant and degrade quality unpredictably. Instead, let the implementer be thorough, then run a separate focused cleanup pass.
 
 - **During implementation**: be thorough. Write real business-logic tests. Add defensive checks where the type system doesn't guarantee safety. Do not self-censor.
-- **After implementation**: hand off to the de-sloppify pass (a fresh executor run). It removes: tests of language/framework behavior, redundant type checks the type system already enforces, over-defensive error handling for impossible states, dead code, commented-out blocks.
+- **After implementation**: hand off to the de-sloppify pass (executor in a fresh context with `bosskuai-ponytail`). It removes: tests of language/framework behavior, redundant type checks the type system already enforces, over-defensive error handling for impossible states, dead code, commented-out blocks.
 - **Never skip the cleanup pass** on non-trivial diffs. The cost is one extra agent turn; the benefit is a clean, maintainable diff without the implementer being paranoid.
 - **Pair with `bosskuai-taste`** for frontend/UI work: the taste skill is the design-level de-sloppify (removes AI-purple gradients, generic SaaS visuals, three-equal-cards layouts).
 

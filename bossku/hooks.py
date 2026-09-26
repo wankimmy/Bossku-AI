@@ -94,6 +94,24 @@ def _sync_cmd() -> str:
     return f"{resolve_bossku_command()} sync-hook"
 
 
+def _claude_sync_cmd() -> str:
+    """Quoted forward-slash path: Claude Code runs hooks through Git Bash on Windows,
+    where an unquoted `C:\\Users\\...\\bossku.EXE` loses its backslashes."""
+    exe = shutil.which("bossku")
+    if exe:
+        return f'"{Path(exe).as_posix()}" sync-hook'
+    return f'"{Path(sys.executable).as_posix()}" -m bossku sync-hook'
+
+
+def _has_command(entries: list, command: str) -> bool:
+    return any(
+        isinstance(hook, dict) and hook.get("command") == command
+        for entry in entries
+        if isinstance(entry, dict)
+        for hook in entry.get("hooks", [])
+    )
+
+
 # --- Codex continue-safe wrappers ----------------------------------------
 
 _CODEX_SH = """#!/usr/bin/env bash
@@ -215,7 +233,13 @@ def install_claude_code_hook(home: Path) -> dict:
     if not isinstance(hooks, dict):
         hooks = {}
         data["hooks"] = hooks
-    entry = {"hooks": [{"type": "command", "command": _sync_cmd()}]}
+    command = _claude_sync_cmd()
+    entry = {"hooks": [{"type": "command", "command": command}]}
+    for ev in CLAUDE_EVENTS:
+        bucket = hooks.get(ev)
+        # Our own entry from an older install may hold a command this shell cannot run.
+        if isinstance(bucket, list) and _has_marker(bucket, HOOK_MARKER) and not _has_command(bucket, command):
+            hooks[ev] = _strip_marker(bucket, HOOK_MARKER)
     added = [ev for ev in CLAUDE_EVENTS if _ensure_event(hooks, ev, json.loads(json.dumps(entry)))]
     if not added:
         return {"status": "already_installed", "path": str(path), "events": list(CLAUDE_EVENTS)}

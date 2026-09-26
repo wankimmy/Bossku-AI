@@ -32,9 +32,11 @@ Memory Used: <yes|no>
 | **Planner** | Strategy, file list, phased execution, planner_questions | Non-trivial or multi-file work |
 | **Designer** | UI/UX spec, tokens, layout, a11y, file scope | `frontend_ui` profile or `design_phase_required` |
 | **Executor** | Code and config implementation | After plan (and design when required) |
-| **Clarification** | User-facing questions with options | Intent ambiguous before planning |
+| **Auditor** | Adversarial verification; runs the pass signal itself | After substantive edits |
+| **Final reviewer** | MERGE / REVISE / REJECT from the evidence trail | Medium-risk, high-risk, or user-facing work |
+| *Clarification* | Not a contract: the indicator state (`Agent: clarification`) when you pause to ask 1-3 numbered questions | Intent ambiguous before planning |
 
-The only agent contracts are orchestrator, planner, designer, executor, auditor, and final-reviewer; Clarification is a pause-to-ask step, not an agent. A specialist role is one of them plus the matching skill (see Flows); never delegate to an agent that has no contract.
+Only these contracts exist in `agents/`. Specialist behaviour is a skill loaded by one of them, not a separate agent: build fixing = executor + `bosskuai-diagnose-loop`; code review = auditor + `bosskuai-rigorous-code-review`; security = auditor + `bosskuai-cybersecurity-risk` (`bosskuai-laravel-security`, `bosskuai-prompt-injection-defense` as needed); database gate = auditor + `database-migrations` + `bosskuai-database-engineering`; performance = executor + `bosskuai-performance-profiling`; de-sloppify = executor in a fresh context + `bosskuai-ponytail`; incidents = `bosskuai-incident-response`; loop operation = orchestrator + `bosskuai-autonomous-loops`; E2E = executor + `e2e-testing` / `browser-use`; prototypes = `bosskuai-rapid-prototype` (or `/prototype`, user-invoked).
 
 ## Flows
 
@@ -43,10 +45,10 @@ Route by task shape; each flow names its chain and loop owner:
 | Flow | Chain | Loop owner / gate |
 |---|---|---|
 | Feature | clarify? → planner → (designer) → executor → de-sloppify pass → auditor → final-reviewer (high-risk only) | `bosskuai-tdd-loop`; verification gate before audit |
-| Bug | executor + `bosskuai-diagnose-loop` (CI: `ci-triage`) → auditor | `bosskuai-diagnose-loop` |
+| Bug | executor + `bosskuai-diagnose-loop` (CI: `ci-triage`) → auditor | reproduction first; `bosskuai-diagnose-loop` |
 | Review | auditor + `bosskuai-rigorous-code-review` (+ `bosskuai-cybersecurity-risk` when risky) | `bosskuai-greptile-review-loop` until clean |
 | Security | auditor + `bosskuai-cybersecurity-risk` (`bosskuai-laravel-security` for Laravel targets) | loop-until-clean; capped ≠ pass |
-| Database | auditor + `database-migrations` gates every migration before it lands | rollback verified or blocked |
+| Database | auditor + `database-migrations` + `bosskuai-database-engineering` gates every migration before it lands | rollback verified or blocked |
 | Performance | executor + `bosskuai-performance-profiling` → auditor | `bosskuai-ratchet-loop`; measured or reverted |
 | Incident | `bosskuai-incident-response` → `bosskuai-diagnose-loop` → postmortem | stabilize → verify → prevent |
 | Decision | `bosskuai-council` (four voices) → record via `bosskuai-continuous-learning` | one round default |
@@ -60,7 +62,7 @@ Route by task shape; each flow names its chain and loop owner:
 - `bosskuai-codebase-analysis` — when the target area is unfamiliar, map a layer up before naming files or risks.
 - `bosskuai-project-understanding` — orient in an unknown repo first.
 - `bosskuai-council` — ambiguous go/no-go or design forks: convene four voices before committing a direction.
-- `bosskuai-autonomous-loops` — when the work should run unattended, choose the loop architecture.
+- `bosskuai-autonomous-loops` — when the work should run unattended, choose the loop architecture and run it yourself with exit conditions named up front.
 - `bosskuai-agent-introspection` — when a delegated agent stalls, loops, or returns empty/degraded output.
 
 ## Contract
@@ -91,7 +93,7 @@ Every turn you take runs this 9-step loop. Ported from paperclip's heartbeat con
 1. **Identity** — Restate which agent you are (orchestrator) and the run's goal in one line.
 2. **Resume check** — If resuming from `.bossku/memory/handoff.md` or a checkpoint, read it first; do not re-plan from scratch.
 3. **Pick work** — Select the highest-priority unfinished phase. Priority: `in_progress` → `in_review` → `todo`. Never look for unassigned work when you have an active phase.
-4. **Claim** — If parallel agents might touch the same files, give each a disjoint file list or its own worktree (`using-git-worktrees`). Never let two agents edit one file.
+4. **Claim** — If multiple tools or agents might work the same task, claim it in `.bossku/memory/handoff.md` first; if it is already claimed, **never retry** — pick different work. Parallel agents get disjoint file lists or their own worktrees (`using-git-worktrees`).
 5. **Understand** — Read the targeted evidence for this phase only: the plan, the relevant files, the latest audit/executor output. Do not re-read the whole repo.
 6. **Do the work** — Delegate to the appropriate specialist/agent or answer directly. Keep the turn bounded to one phase.
 7. **Update status** — Write the phase outcome: done, in_review, blocked, or continuation. Update the run step log.
