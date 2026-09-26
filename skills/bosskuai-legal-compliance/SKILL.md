@@ -11,7 +11,7 @@ Use this skill when the main question is **whether product, data, or operational
 
 - **`bosskuai-cybersecurity-risk`**: focuses on security, abuse, and trust boundaries; this skill focuses on policy, regulatory, and contractual obligations around the product.
 - **`bosskuai-product-strategy`**: decides what to ship; this skill checks which compliance constraints shape that decision.
-- **`bosskuai-agent-security-hardening`**: secures the AI workspace itself; this skill reviews legal/compliance implications in the product or business process.
+- **`bosskuai-prompt-injection-defense`**: secures the AI workspace itself; this skill reviews legal/compliance implications in the product or business process.
 
 ## Mindset
 

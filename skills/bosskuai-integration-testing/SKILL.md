@@ -12,7 +12,7 @@ Use this skill when the question is **how to test the seams between components**
 - **`bosskuai-engineering-delivery`**: shapes the full delivery workflow including the test pyramid; this skill goes deep on the integration layer specifically — contract design, test doubles, and fixture management.
 - **`bosskuai-coding-best-practices`**: covers general testability at implementation level; this skill covers the architecture of test doubles, contracts, and fixture strategies.
 - **`bosskuai-api-design`**: designs external contracts; this skill validates that those contracts are correctly implemented and don't drift between providers and consumers.
-- **`bosskuai-bug-finding`**: traces defects in running code; this skill prevents the class of defects that arise from integration assumption mismatch.
+- **`bosskuai-diagnose-loop`**: traces defects in running code; this skill prevents the class of defects that arise from integration assumption mismatch.
 
 ## Mindset
 

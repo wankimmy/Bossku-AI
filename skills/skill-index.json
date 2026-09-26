@@ -1,6 +1,6 @@
 {
   "version": "2.1.0",
-  "fingerprint": "b9d6af6dfb5fb55a",
+  "fingerprint": "0297851c83b64a20",
   "count": 240,
   "aliases": {
     "bosskuai-caveman": "bosskuai-token-saver",
@@ -28,11 +28,9 @@
       ],
       "exclusions": [],
       "phrases": [
-        "experiment",
         "test this change",
         "variant copy",
         "multivariate test",
-        "hypothesis",
         "should i test this",
         "which version is better",
         "test two versions",
@@ -43,19 +41,8 @@
         "ice score",
         "experimentation program",
         "experiment playbook",
-        "the user mentions \"a",
-        "b test",
-        "\"split test",
-        "\"experiment",
-        "\"test this change",
-        "\"variant copy",
-        "\"multivariate test",
-        "\"hypothesis",
-        "\"should i test this",
-        "\"which version is better",
-        "\"test two versions",
-        "ever someone is comparing two approaches",
-        "wants to measure which performs better"
+        "comparing two approaches",
+        "measure which performs better"
       ],
       "keywords": [
         "ab",
@@ -143,7 +130,6 @@
       ],
       "exclusions": [],
       "phrases": [
-        "building",
         "auditing ui that must meet wcag 2"
       ],
       "keywords": [
@@ -251,15 +237,8 @@
         "animated explainer ad",
         "motion collage ad",
         "i need more ad variations",
-        "the user mentions 'ad copy variations",
-        "'ad creative",
-        "'generate headlines",
-        "'rsa headlines",
-        "'bulk ad copy",
-        "'ad iterations",
-        "'creative testing",
-        "'ad performance optimization",
-        "'write me some ads"
+        "produce ad copy at scale",
+        "iterate on existing ads"
       ],
       "keywords": [
         "ad",
@@ -335,12 +314,8 @@
       ],
       "exclusions": [],
       "phrases": [
-        "ppc",
         "paid media",
-        "roas",
-        "cpa",
         "ad campaign",
-        "retargeting",
         "audience targeting",
         "google ads",
         "facebook ads",
@@ -349,28 +324,13 @@
         "cost per click",
         "ad spend",
         "should i run ads",
-        "abm",
         "account-based marketing",
         "b2b ads",
         "lead quality",
         "negative keywords",
         "performance max",
         "thought leader ads",
-        "when should i kill an ad",
-        "the user mentions 'ppc",
-        "'paid media",
-        "'roas",
-        "'cpa",
-        "'ad campaign",
-        "'retargeting",
-        "'audience targeting",
-        "'google ads",
-        "'facebook ads",
-        "'linkedin ads",
-        "'ad budget",
-        "'cost per click",
-        "'ad spend",
-        "'shou"
+        "when should i kill an ad"
       ],
       "keywords": [
         "ads",
@@ -446,9 +406,6 @@
       ],
       "exclusions": [],
       "phrases": [
-        "aeo",
-        "geo",
-        "llmo",
         "answer engine optimization",
         "generative engine optimization",
         "llm optimization",
@@ -461,22 +418,10 @@
         "how do i show up in ai answers",
         "llm mentions",
         "optimize for claude/gemini",
-        "llms.txt",
-        "okf",
         "open knowledge format",
         "knowledge bundle",
         "agent-readable site",
-        "the user mentions 'ai seo",
-        "'aeo",
-        "'geo",
-        "'llmo",
-        "'answer engine optimization",
-        "'generative engine optimization",
-        "'llm optimization",
-        "'ai overviews",
-        "'optimize for chatgpt",
-        "'optimize for perplexity",
-        "ever someone wants their content to be cited",
+        "their content to be cited",
         "surfaced by ai assistants",
         "ai search engines"
       ],
@@ -564,27 +509,13 @@
         "conversion tracking",
         "utm parameters",
         "tag manager",
-        "gtm",
         "analytics implementation",
         "how do i measure this",
         "track conversions",
-        "attribution",
-        "mixpanel",
-        "segment",
         "are my events firing",
-        "analytics isn",
-        "the user mentions \"set up tracking",
-        "\"ga4",
-        "\"google analytics",
-        "\"conversion tracking",
-        "\"event tracking",
-        "\"utm parameters",
-        "\"tag manager",
-        "\"gtm",
-        "\"analytics implementation",
-        "\"tracking plan",
-        "\"how do i",
-        "wants to measure marketing results"
+        "analytics isn't working",
+        "how to know if something is working",
+        "measure marketing results"
       ],
       "keywords": [
         "analytics",
@@ -746,7 +677,6 @@
       "phrases": [
         "animating anything in an expo app",
         "adding gestures",
-        "sheets",
         "screen transitions",
         "fixing motion that stutters on device"
       ],
@@ -829,10 +759,8 @@
       "phrases": [
         "the bouncy thing when a popover opens",
         "the ios rubber-band scroll",
-        "what",
-        "the user asks \"what's it called when…",
-        "wants the right word to prompt an ai",
-        "designer with"
+        "what's it called when…",
+        "the right word to prompt an ai"
       ],
       "keywords": [
         "animation",
@@ -1060,10 +988,7 @@
       ],
       "exclusions": [],
       "phrases": [
-        "writing",
         "editing prose: headlines",
-        "tone",
-        "ctas",
         "anti-ai-writing patterns"
       ],
       "keywords": [
@@ -1290,11 +1215,7 @@
       ],
       "exclusions": [],
       "phrases": [
-        "building",
-        "editing any interface: color",
-        "layout",
-        "components",
-        "motion"
+        "editing any interface: color"
       ],
       "keywords": [
         "antislop",
@@ -1376,18 +1297,12 @@
       ],
       "exclusions": [],
       "phrases": [
-        "building",
         "reviewing gesture-driven ui",
         "spring animations",
-        "drag",
-        "swipe",
         "sheet interactions",
-        "momentum",
         "interruptible transitions",
         "translucent materials",
-        "depth",
-        "typography (optical sizing",
-        "tracking"
+        "optical sizing"
       ],
       "keywords": [
         "apple",
@@ -1620,21 +1535,12 @@
         "improve app visibility",
         "app store ranking",
         "audit my listing",
-        "why aren",
+        "why aren't people downloading my app",
         "improve my app conversion",
         "keyword optimization for app",
         "compare my app to competitors",
-        "the user mentions 'aso audit",
-        "'app store optimization",
-        "'optimize my app listing",
-        "'improve app visibility",
-        "'app store ranking",
-        "'audit my listing",
-        "'why aren't people downloading my app",
-        "'improve",
-        "the user shares an app store",
-        "google play url",
-        "wants to improve it"
+        "app store",
+        "google play url"
       ],
       "keywords": [
         "aso",
@@ -1869,7 +1775,6 @@
       "phrases": [
         "an agent run loops",
         "burns tokens",
-        "drifts",
         "returns empty",
         "degraded results"
       ],
@@ -2253,13 +2158,8 @@
       ],
       "exclusions": [],
       "phrases": [
-        "deploying",
         "operating on aws across ecs",
-        "queues",
-        "secrets",
-        "terraform",
         "oidc deploys",
-        "backups",
         "disaster recovery"
       ],
       "keywords": [
@@ -2471,18 +2371,11 @@
       ],
       "exclusions": [],
       "phrases": [
-        "designing",
-        "speeding up",
         "fixing ci",
         "cd pipelines",
         "including github actions",
-        "matrices",
-        "caching",
-        "concurrency",
         "artifact promotion",
-        "releases",
-        "monorepo filters",
-        "secrets"
+        "monorepo filters"
       ],
       "keywords": [
         "ci",
@@ -2989,10 +2882,7 @@
         "out of tokens"
       ],
       "exclusions": [],
-      "phrases": [
-        "context",
-        "token"
-      ],
+      "phrases": [],
       "keywords": [
         "context",
         "limit",
@@ -3240,10 +3130,8 @@
       "exclusions": [],
       "phrases": [
         "the current model is stuck",
-        "low-confidence",
         "tool surface",
         "session across claude",
-        "codex",
         "cursor without losing task ownership"
       ],
       "keywords": [
@@ -3320,16 +3208,10 @@
       "exclusions": [],
       "phrases": [
         "acting as a cto on technology strategy",
-        "roadmaps",
         "architecture bets",
-        "build-vs-buy",
         "engineering organization",
-        "hiring",
-        "budgets",
-        "security",
         "compliance posture",
-        "technical debt",
-        "vendors"
+        "technical debt"
       ],
       "keywords": [
         "cto",
@@ -3955,10 +3837,7 @@
       "exclusions": [],
       "phrases": [
         "diagnose/debug this",
-        "diagnose",
-        "debug this",
         "bug reports",
-        "throwing",
         "perf regressions"
       ],
       "keywords": [
@@ -4314,16 +4193,11 @@
       "phrases": [
         "building react native",
         "expo apps with expo router",
-        "update",
         "development builds",
         "config plugins",
         "native modules",
-        "navigation",
         "offline storage",
-        "notifications",
-        "deep links",
-        "permissions",
-        "devic"
+        "deep links"
       ],
       "keywords": [
         "expo",
@@ -4533,14 +4407,8 @@
       ],
       "exclusions": [],
       "phrases": [
-        "building",
         "reviewing go backends",
-        "workers",
-        "clis",
         "including module layout",
-        "errors",
-        "context",
-        "http",
         "common routers",
         "table tests",
         "the race detector"
@@ -4617,9 +4485,7 @@
       "phrases": [
         "iteratively improving a github pr",
         "gitlab mr",
-        "actionable comments are resolved",
-        "including re-review",
-        "bounded fi"
+        "actionable comments are resolved"
       ],
       "keywords": [
         "greptile",
@@ -4730,11 +4596,7 @@
       ],
       "exclusions": [],
       "phrases": [
-        "the user mentions hallucination",
-        "citations",
-        "accuracy",
-        "only use these documents",
-        "asks to verify claims"
+        "verify claims"
       ],
       "keywords": [
         "grounding",
@@ -4860,15 +4722,7 @@
         "gsap timeline"
       ],
       "exclusions": [],
-      "phrases": [
-        "responsive matchmedia",
-        "react usegsap",
-        "context cleanup",
-        "splittext",
-        "flip interactions",
-        "performance-safe motion",
-        "lenis smooth-scroll coordination"
-      ],
+      "phrases": [],
       "keywords": [
         "gsap",
         "animation",
@@ -4928,9 +4782,7 @@
       ],
       "exclusions": [],
       "phrases": [
-        "the user asks to hand off",
-        "wrap up for another agent",
-        "session"
+        "wrap up for another agent"
       ],
       "keywords": [
         "handoff",
@@ -4987,14 +4839,8 @@
       "exclusions": [],
       "phrases": [
         "large tool outputs",
-        "logs",
-        "files",
         "search results",
-        "when configuring",
-        "verifying headroom for claude code",
-        "codex",
-        "cursor",
-        "mcp cli"
+        "verifying headroom for claude code"
       ],
       "keywords": [
         "headroom",
@@ -5059,16 +4905,10 @@
       ],
       "exclusions": [],
       "phrases": [
-        "deploying",
-        "hardening",
         "recovering hostinger workloads across kvm vps",
-        "email",
-        "nginx",
-        "mysql",
-        "backups",
         "malware cleanup",
         "abuse suspension",
-        "rebuild-vs-clean decisions; use"
+        "rebuild-vs-clean decisions"
       ],
       "keywords": [
         "hostinger",
@@ -5589,7 +5429,6 @@
       ],
       "exclusions": [],
       "phrases": [
-        "writing",
         "testing laravel features test-first"
       ],
       "keywords": [
@@ -5700,9 +5539,6 @@
       ],
       "exclusions": [],
       "phrases": [
-        "marketing",
-        "sales",
-        "monetization",
         "country strategy"
       ],
       "keywords": [
@@ -5860,17 +5696,7 @@
         "scroll sync"
       ],
       "exclusions": [],
-      "phrases": [
-        "sync",
-        "anchors",
-        "nested containers",
-        "scroll snap",
-        "horizontal",
-        "infinite scroll",
-        "cleanup",
-        "perf",
-        "accessibility"
-      ],
+      "phrases": [],
       "keywords": [
         "lenis",
         "smooth",
@@ -6100,13 +5926,10 @@
       ],
       "exclusions": [],
       "phrases": [
-        "including signing",
         "play tracks",
         "review rejections",
         "privacy forms",
-        "ota policy",
-        "versioning",
-        "cras"
+        "ota policy"
       ],
       "keywords": [
         "mobile",
@@ -6553,7 +6376,7 @@
       ],
       "exclusions": [],
       "phrases": [
-        "the task touches bosskuai project memory ("
+        "the task touches bosskuai project memory"
       ],
       "keywords": [
         "permanent",
@@ -6725,13 +6548,11 @@
       ],
       "exclusions": [],
       "phrases": [
-        "the user asks for ponytail",
         "lazy mode",
-        "the simplest",
         "shortest solution",
         "fewer files",
-        "dependencies",
-        "while bosskuai-token-saver gov"
+        "complains about over-engineering",
+        "governs what to build"
       ],
       "keywords": [
         "ponytail",
@@ -6780,12 +6601,10 @@
       ],
       "exclusions": [],
       "phrases": [
-        "checking",
         "preparing a github pr",
         "gitlab mr",
         "perforce changelist for submission",
         "including unresolved review comments",
-        "pending",
         "failed checks",
         "incomplete descriptions",
         "actionable findings"
@@ -7015,13 +6834,9 @@
       ],
       "exclusions": [],
       "phrases": [
-        "the user asks to optimize",
-        "improve",
-        "draft a prompt for bosskuai; identify intent",
-        "gaps",
-        "select relevant skills",
-        "agents",
-        "loops"
+        "draft a prompt for bosskuai",
+        "identify intent",
+        "select relevant skills"
       ],
       "keywords": [
         "prompt",
@@ -7283,17 +7098,11 @@
       ],
       "exclusions": [],
       "phrases": [
-        "building",
         "auditing react",
         "typescript frontends",
-        "including components",
         "state management",
         "data fetching",
-        "caching",
-        "forms",
-        "routing",
-        "rendering performance",
-        "accessibility"
+        "rendering performance"
       ],
       "keywords": [
         "react",
@@ -7371,15 +7180,10 @@
       ],
       "exclusions": [],
       "phrases": [
-        "authoring",
-        "validating",
-        "sharing",
         "running a bosskuai recipe: a repeatable yaml",
         "json workflow with typed parameters",
         "a prompt template",
-        "required skills; triggers include recipe",
-        "cookbook",
-        "reusa"
+        "triggers include recipe"
       ],
       "keywords": [
         "recipes",
@@ -7691,7 +7495,6 @@
       "exclusions": [],
       "phrases": [
         "deciding whether to adopt an existing package",
-        "service",
         "internal utility",
         "pattern before building custom code",
         "workflow logic"
@@ -7999,8 +7802,10 @@
       ],
       "exclusions": [],
       "phrases": [
-        "cursor (parallel tabs)",
-        "codex (parallel runs)"
+        "logic plus patterns for claude code",
+        "agent tool + worktrees",
+        "parallel tabs",
+        "parallel runs"
       ],
       "keywords": [
         "subagent",
@@ -8055,11 +7860,9 @@
       ],
       "exclusions": [],
       "phrases": [
-        "creating",
         "redesigning landing pages",
-        "portfolios",
-        "design-system",
-        "accessibilit"
+        "must avoid generic ai aesthetics",
+        "pair with implementation"
       ],
       "keywords": [
         "taste",
@@ -8125,12 +7928,10 @@
       ],
       "exclusions": [],
       "phrases": [
-        "red-green-refactor",
         "user wants to build features",
         "fix bugs using tdd",
-        "mentions \"red-green-refactor",
-        "wants integration tests",
-        "asks for test-first development"
+        "integration tests",
+        "test-first development"
       ],
       "keywords": [
         "tdd",
@@ -8208,12 +8009,7 @@
         "acting as a tech lead",
         "engineering manager on delivery",
         "including slicing work",
-        "estimating",
         "negotiating scope",
-        "rfcs",
-        "adrs",
-        "ownership",
-        "releases",
         "quality gates",
         "on-call readiness"
       ],
@@ -8409,7 +8205,7 @@
       ],
       "exclusions": [],
       "phrases": [
-        "the user explicitly asks for terse output",
+        "terse output",
         "lower token use",
         "caveman mode",
         "compressed prompts",
@@ -8527,14 +8323,10 @@
       "exclusions": [],
       "phrases": [
         "deploying docker workloads to a vps",
-        "including hardening",
         "production compose",
-        "caddy",
-        "traefik",
         "nginx tls proxies",
         "registry deploys",
         "low-downtime rollout",
-        "migrations",
         "off-box backups",
         "restore drills"
       ],
@@ -8618,17 +8410,10 @@
       ],
       "exclusions": [],
       "phrases": [
-        "diagnosing",
         "improving web performance",
         "including core web vitals",
-        "bundles",
-        "images",
-        "fonts",
-        "caching",
-        "cdns",
         "hydration cost",
-        "third-party scripts",
-        "ci performance budge"
+        "third-party scripts"
       ],
       "keywords": [
         "web",
@@ -8874,7 +8659,7 @@
       ],
       "exclusions": [],
       "phrases": [
-        "the user needs to navigate websites",
+        "navigate websites",
         "interact with web pages",
         "fill forms",
         "take screenshots",
@@ -9061,11 +8846,8 @@
       "exclusions": [],
       "phrases": [
         "cancel flow",
-        "offboarding",
         "save offer",
-        "dunning",
         "failed payment recovery",
-        "win-back",
         "exit survey",
         "pause subscription",
         "involuntary churn",
@@ -9073,20 +8855,8 @@
         "churn rate is too high",
         "how do i keep users",
         "customers are leaving",
-        "the user mentions 'churn",
-        "'cancel flow",
-        "'offboarding",
-        "'save offer",
-        "'dunning",
-        "'failed payment recovery",
-        "'win-back",
-        "'retention",
-        "'exit survey",
-        "'pause subscription",
-        "'involuntary churn",
-        "'people",
-        "ever someone is losing subscribers",
-        "wants to build systems to prevent it"
+        "losing subscribers",
+        "build systems to prevent it"
       ],
       "keywords": [
         "churn",
@@ -9228,10 +8998,7 @@
       "exclusions": [],
       "phrases": [
         "for questions about n8n",
-        "make",
         "zapier integration",
-        "playwright",
-        "puppeteer",
         "selenium on cloud infrastructure",
         "1password vault integration"
       ],
@@ -9309,23 +9076,12 @@
       ],
       "exclusions": [],
       "phrases": [
-        "co-marketing",
         "partner marketing",
         "joint campaign",
         "who should we partner with",
         "integration marketing",
-        "cross-promotion",
         "collaborate with another company",
-        "partnership ideas",
-        "co-brand",
-        "the user says 'co-marketing",
-        "'partner marketing",
-        "'joint campaign",
-        "'who should we partner with",
-        "'integration marketing",
-        "'cross-promotion",
-        "'collaborate with another company",
-        "'partnership ideas"
+        "partnership ideas"
       ],
       "keywords": [
         "co",
@@ -9404,11 +9160,6 @@
       ],
       "exclusions": [],
       "phrases": [
-        "engineering",
-        "security",
-        "marketing",
-        "sales",
-        "prioritization",
         "next-step decision making"
       ],
       "keywords": [
@@ -9474,20 +9225,13 @@
         "reach out to prospects",
         "sales email",
         "follow-up email sequence",
-        "nobody",
-        "the user wants to write cold outreach emails",
+        "nobody's replying to my emails",
+        "how do i write a cold email",
+        "write cold outreach emails",
         "prospecting emails",
         "cold email campaigns",
         "sales development emails",
-        "sdr emails",
-        "the user mentions \"cold outreach",
-        "\"prospecting email",
-        "\"outbound email",
-        "\"email to leads",
-        "\"reach out to prospects",
-        "\"sales email",
-        "\"follow-up email sequence",
-        "\"nobody's replying to my emails"
+        "sdr emails"
       ],
       "keywords": [
         "cold",
@@ -9557,41 +9301,30 @@
     "community-marketing": {
       "path": "skills/community-marketing/SKILL.md",
       "name": "community-marketing",
-      "description": "Build and leverage online communities to drive product growth and brand loyalty. Use when the user wants to create a community strategy, grow a Discord or Slack community, manage a forum or subreddit, build brand advocates, increase word-of-mouth, drive community-led growth, engage users post-signup, or turn customers into evangelists. Trigger phrases: \\\"build a community,\\\" \\\"community strategy,\\\" \\\"Discord community,\\\" \\\"Slack community,\\\" \\\"community-led growth,\\\" \\\"brand advocates,\\\" \\\"user community,\\\" \\\"forum strategy,\\\" \\\"community engagement,\\\" \\\"grow our community,\\\" \\\"ambassador program,\\\" \\\"community flywheel.\\",
+      "description": "Build and leverage online communities to drive product growth and brand loyalty. Use when the user wants to create a community strategy, grow a Discord or Slack community, manage a forum or subreddit, build brand advocates, increase word-of-mouth, drive community-led growth, engage users post-signup, or turn customers into evangelists. Trigger phrases: \"build a community,\" \"community strategy,\" \"Discord community,\" \"Slack community,\" \"community-led growth,\" \"brand advocates,\" \"user community,\" \"forum strategy,\" \"community engagement,\" \"grow our community,\" \"ambassador program,\" \"community flywheel.\"",
       "triggers": [
         "community marketing"
       ],
       "exclusions": [],
       "phrases": [
-        "build a community,\\",
-        "community strategy,\\",
-        "discord community,\\",
-        "slack community,\\",
-        "community-led growth,\\",
-        "brand advocates,\\",
-        "user community,\\",
-        "forum strategy,\\",
-        "community engagement,\\",
-        "grow our community,\\",
-        "ambassador program,\\",
-        "the user wants to create a community strategy",
-        "grow a discord",
+        "build a community",
+        "community strategy",
+        "discord community",
         "slack community",
+        "community-led growth",
+        "brand advocates",
+        "user community",
+        "forum strategy",
+        "community engagement",
+        "grow our community",
+        "ambassador program",
+        "community flywheel",
+        "create a community strategy",
+        "grow a discord",
         "manage a forum",
-        "subreddit",
         "build brand advocates",
         "increase word-of-mouth",
-        "drive community-led growth",
-        "engage users p",
-        "phrases: \\\"build a community",
-        "\\\" \\\"community strategy",
-        "\\\" \\\"discord community",
-        "\\\" \\\"slack community",
-        "\\\" \\\"community-led growth",
-        "\\\" \\\"brand advocates",
-        "\\\" \\\"user community",
-        "\\\" \\\"forum strategy",
-        "\\\" \\\"community e"
+        "drive community-led growth"
       ],
       "keywords": [
         "community",
@@ -9678,15 +9411,7 @@
         "competitor landscape",
         "competitor dossier",
         "competitive audit",
-        "research these competitors",
-        "the user mentions 'competitor profile",
-        "'competitor research",
-        "'competitor analysis",
-        "'profile this competitor",
-        "'analyze competitor",
-        "'competitive intelligence",
-        "'competitor deep dive",
-        "'who are my c"
+        "research these competitors"
       ],
       "keywords": [
         "competitor",
@@ -9771,15 +9496,7 @@
         "competitive landing pages",
         "how do we compare to x",
         "battle card",
-        "competitor teardown",
-        "the user mentions 'alternative page",
-        "'vs page",
-        "'competitor comparison",
-        "'comparison page",
-        "'[product] vs [product]",
-        "'[product] alternative",
-        "'competitive landing pages",
-        "'how do we compare to x"
+        "competitor teardown"
       ],
       "keywords": [
         "competitors",
@@ -9866,17 +9583,8 @@
         "what content should i create",
         "blog topics",
         "content pillars",
-        "i don",
-        "the user mentions \"content strategy",
-        "\"what should i write about",
-        "\"content ideas",
-        "\"blog strategy",
-        "\"topic clusters",
-        "\"content planning",
-        "\"editorial calendar",
-        "\"content marketing",
-        "\"content roadmap",
-        "not just writing it"
+        "i don't know what to write",
+        "help deciding what content to produce"
       ],
       "keywords": [
         "content",
@@ -9955,7 +9663,6 @@
         "edit this copy",
         "review my copy",
         "copy feedback",
-        "proofread",
         "polish this",
         "make this better",
         "copy sweep",
@@ -9968,18 +9675,6 @@
         "update this page",
         "this content is outdated",
         "content audit",
-        "the user mentions 'edit this copy",
-        "'review my copy",
-        "'copy feedback",
-        "'proofread",
-        "'polish this",
-        "'make this better",
-        "'copy sweep",
-        "'tighten this up",
-        "'this reads awkwardly",
-        "'clean up this text",
-        "the user already has copy",
-        "wants it improved",
         "refreshed rather than rewritten from scratch"
       ],
       "keywords": [
@@ -10063,25 +9758,12 @@
         "headline help",
         "cta copy",
         "value proposition",
-        "tagline",
-        "subheadline",
         "hero section copy",
         "above the fold",
         "this copy is weak",
         "make this more compelling",
         "help me describe my product",
-        "the user says \"write copy for",
-        "\"improve this copy",
-        "\"rewrite this page",
-        "\"marketing copy",
-        "\"headline help",
-        "\"cta copy",
-        "\"value proposition",
-        "\"tagline",
-        "\"subheadline",
-        "\"hero section copy",
-        "\"above the",
-        "convert"
+        "working on website text that needs to persuade"
       ],
       "keywords": [
         "copywriting",
@@ -10158,22 +9840,14 @@
       "exclusions": [],
       "phrases": [
         "conversion rate optimization",
-        "this page isn",
+        "this page isn't converting",
         "improve conversions",
-        "why isn",
+        "why isn't this page working",
         "my landing page sucks",
         "form abandonment",
-        "nobody",
+        "nobody's converting",
         "low conversion rate",
-        "this page needs work",
-        "the user says 'cro",
-        "'conversion rate optimization",
-        "'this page isn't converting",
-        "'improve conversions",
-        "'why isn't this page working",
-        "'my landing page sucks",
-        "'form abandonment",
-        "'nobody's converti"
+        "this page needs work"
       ],
       "keywords": [
         "cro",
@@ -10256,11 +9930,9 @@
         "survey analysis",
         "support ticket analysis",
         "voice of customer",
-        "voc",
         "build personas",
         "customer personas",
         "jobs to be done",
-        "jtbd",
         "what do customers say",
         "what are customers struggling with",
         "reddit mining",
@@ -10271,17 +9943,7 @@
         "forum research",
         "competitor reviews",
         "customer sentiment",
-        "find out why customers churn/convert/buy",
-        "the user mentions \"customer research",
-        "\"icp research",
-        "\"talk to customers",
-        "\"analyze transcripts",
-        "\"customer interviews",
-        "\"survey analysis",
-        "\"support ticket analysis",
-        "\"voice of customer",
-        "\"voc",
-        "\"bui"
+        "find out why customers churn/convert/buy"
       ],
       "keywords": [
         "customer",
@@ -10453,14 +10115,12 @@
       ],
       "exclusions": [],
       "phrases": [
-        "installing",
         "configuring command safety hooks",
+        "explaining blocked destructive commands",
         "git reset --hard",
-        "force-push)",
         "enabling security packs",
         "hardening cursor",
-        "claude code",
-        "codex agent wor"
+        "claude code"
       ],
       "keywords": [
         "dcg",
@@ -10571,29 +10231,15 @@
         "backlinks from directories",
         "list my product",
         "submit to product hunt",
-        "betalist",
-        "taaft",
-        "futurepedia",
         "g2 listing",
         "capterra listing",
-        "alternativeto",
-        "saashub",
         "ai directories",
         "mcp registry",
         "agent directory",
         "dofollow backlinks",
         "launch directories",
         "directory tracker",
-        "the user mentions \"directory submissions",
-        "\"submit to directories",
-        "\"backlinks from directories",
-        "\"list my product",
-        "\"submit to product hunt",
-        "\"betalist",
-        "\"taaft",
-        "\"futurepedia",
-        "\"g2 listing",
-        "\"capter",
+        "planning the directory layer of a product launch",
         "an ongoing backlink campaign"
       ],
       "keywords": [
@@ -10834,16 +10480,7 @@
         "email workflow",
         "what emails should i send",
         "welcome series",
-        "email cadence",
-        "the user mentions \"email sequence",
-        "\"drip campaign",
-        "\"nurture sequence",
-        "\"onboarding emails",
-        "\"welcome sequence",
-        "\"re-engagement emails",
-        "\"email automation",
-        "\"lifecycle emails",
-        "\"trigger-based emails"
+        "email cadence"
       ],
       "keywords": [
         "emails",
@@ -11010,8 +10647,7 @@
       "phrases": [
         "designing error types",
         "circuit breakers",
-        "user-facing failure messages in typescript",
-        "python"
+        "user-facing failure messages in typescript"
       ],
       "keywords": [
         "error",
@@ -11118,11 +10754,8 @@
       ],
       "exclusions": [],
       "phrases": [
-        "t animate but should, and reject everything that shouldn",
         "what could be animated here?",
-        "make this feel more alive",
-        "the user asks \"what could be animated here?",
-        "wants to \"make this feel more alive"
+        "make this feel more alive"
       ],
       "keywords": [
         "find",
@@ -11251,8 +10884,6 @@
         "engineering as marketing",
         "free tool",
         "marketing tool",
-        "calculator",
-        "generator",
         "interactive tool",
         "lead gen tool",
         "build a tool for leads",
@@ -11262,17 +10893,7 @@
         "audit tool",
         "should i build a free tool",
         "tools for lead gen",
-        "the user mentions \"engineering as marketing",
-        "\"free tool",
-        "\"marketing tool",
-        "\"calculator",
-        "\"generator",
-        "\"interactive tool",
-        "\"lead gen tool",
-        "\"build a tool for leads",
-        "\"free resource",
-        "\"roi calculator",
-        "ever someone wants to build something useful",
+        "build something useful",
         "give it away to attract leads",
         "earn links"
       ],
@@ -11349,13 +10970,7 @@
         "gpt tasteskill"
       ],
       "exclusions": [],
-      "phrases": [
-        "(pinning",
-        "stacking",
-        "scrubbing)",
-        "inline micro-images",
-        "massive section spacing"
-      ],
+      "phrases": [],
       "keywords": [
         "gpt",
         "tasteskill",
@@ -11590,13 +11205,9 @@
       ],
       "exclusions": [],
       "phrases": [
-        "the user asks to build a new app",
+        "build a new app",
         "landing page",
-        "wants to redesign something",
-        "invokes hallmark by name",
-        "uses audit",
-        "redesign",
-        "study"
+        "invokes hallmark by name"
       ],
       "keywords": [
         "hallmark",
@@ -11768,33 +11379,15 @@
         "cover photo",
         "profile banner",
         "listing screenshot",
-        "flux",
         "flux kontext",
-        "midjourney",
-        "dall-e",
         "gpt image",
         "chatgpt images",
-        "ideogram",
         "gemini image",
         "nano banana",
-        "recraft",
         "stable diffusion",
-        "canva",
-        "figma",
         "image optimization",
         "compress images",
-        "webp",
-        "og image",
-        "the user mentions 'ai image generation",
-        "'generate an image",
-        "'create a graphic",
-        "'product mockup",
-        "'hero image",
-        "'social media graphic",
-        "'banner image",
-        "'cover photo",
-        "'profile banner",
-        "'listing scre"
+        "og image"
       ],
       "keywords": [
         "image",
@@ -12098,8 +11691,7 @@
       "exclusions": [],
       "phrases": [
         "audit the motion",
-        "make this app feel better",
-        "the user asks to \"improve the animations"
+        "make this app feel better"
       ],
       "keywords": [
         "improve",
@@ -12225,27 +11817,14 @@
       "phrases": [
         "product hunt",
         "feature release",
-        "announcement",
-        "go-to-market",
         "beta launch",
         "early access",
-        "waitlist",
         "product update",
         "how do i launch this",
         "launch checklist",
         "gtm plan",
-        "re about to ship",
-        "the user mentions 'launch",
-        "'product hunt",
-        "'feature release",
-        "'announcement",
-        "'go-to-market",
-        "'beta launch",
-        "'early access",
-        "'waitlist",
-        "'product update",
-        "'how do i launch this",
-        "'launch checklist"
+        "we're about to ship",
+        "preparing to release something publicly"
       ],
       "keywords": [
         "launch",
@@ -12324,32 +11903,15 @@
         "lead magnet",
         "gated content",
         "content upgrade",
-        "downloadable",
-        "ebook",
         "cheat sheet",
-        "checklist",
         "template download",
-        "opt-in",
-        "freebie",
         "pdf download",
         "resource library",
         "content offer",
         "email capture content",
         "notion template",
         "spreadsheet template",
-        "what should i give away for emails",
-        "the user mentions \"lead magnet",
-        "\"gated content",
-        "\"content upgrade",
-        "\"downloadable",
-        "\"ebook",
-        "\"cheat sheet",
-        "\"checklist",
-        "\"template download",
-        "\"opt-in",
-        "\"freebie",
-        "\"pdf download",
-        "\"resource library"
+        "what should i give away for emails"
       ],
       "keywords": [
         "lead",
@@ -12637,15 +12199,7 @@
         "debate this",
         "have the council review",
         "marketing mentors",
-        "the user mentions 'marketing council",
-        "'board of advisors",
-        "'advisory board",
-        "'what would seth godin say",
-        "'what would ogilvy think",
-        "'channel hormozi",
-        "'get multiple perspectives",
-        "'debate this",
-        "'ha"
+        "how a famous marketer would approach their problem"
       ],
       "keywords": [
         "marketing",
@@ -12728,18 +12282,9 @@
         "ways to promote",
         "ideas to grow",
         "what else can i try",
-        "i don",
+        "i don't know how to market this",
         "brainstorm marketing",
-        "what marketing should i do",
-        "the user asks for 'marketing ideas",
-        "'growth ideas",
-        "'how to market",
-        "'marketing strategies",
-        "'marketing tactics",
-        "'ways to promote",
-        "'ideas to grow",
-        "'what else can i try",
-        "'i don't know how to marke"
+        "what marketing should i do"
       ],
       "keywords": [
         "marketing",
@@ -12824,15 +12369,7 @@
         "always-on marketing",
         "marketing automation workflow",
         "run this every week",
-        ") rather than a one-off task",
-        "the user mentions 'marketing loop",
-        "'recurring marketing workflow",
-        "'automate my marketing",
-        "'marketing on autopilot",
-        "'weekly marketing review",
-        "'ad fatigue check",
-        "'content refresh loop",
-        "'churn wat"
+        "rather than a one-off task"
       ],
       "keywords": [
         "marketing",
@@ -12918,15 +12455,7 @@
         "90-day marketing plan",
         "12-month marketing roadmap",
         "fractional cmo plan",
-        "fcmo plan",
-        "the user mentions \"marketing plan",
-        "\"growth plan",
-        "\"gtm plan",
-        "\"go-to-market plan",
-        "\"aarrr plan",
-        "\"90-day marketing plan",
-        "\"12-month marketing roadmap",
-        "\"fractional cmo plan"
+        "fcmo plan"
       ],
       "keywords": [
         "marketing",
@@ -13002,32 +12531,13 @@
       ],
       "exclusions": [],
       "phrases": [
-        "psychology",
         "mental models",
         "cognitive bias",
-        "persuasion",
         "behavioral science",
         "why people buy",
-        "decision-making",
         "consumer behavior",
-        "anchoring",
         "social proof",
-        "scarcity",
         "loss aversion",
-        "framing",
-        "nudge",
-        "the user mentions 'psychology",
-        "'mental models",
-        "'cognitive bias",
-        "'persuasion",
-        "'behavioral science",
-        "'why people buy",
-        "'decision-making",
-        "'consumer behavior",
-        "'anchoring",
-        "'social proof",
-        "'scarcity",
-        "ever someone wants to understand",
         "leverage how people think",
         "make decisions in a marketing context"
       ],
@@ -13112,9 +12622,7 @@
       ],
       "exclusions": [],
       "phrases": [
-        "the user needs docx",
         "html converted",
-        "when grep",
         "read tools cannot parse a binary document"
       ],
       "keywords": [
@@ -13169,11 +12677,7 @@
       ],
       "exclusions": [],
       "phrases": [
-        "building",
         "debugging an mcp server — tools",
-        "resources",
-        "prompts",
-        "validation",
         "transport choice"
       ],
       "keywords": [
@@ -13358,9 +12862,6 @@
       "phrases": [
         "designing mysql",
         "mariadb schemas",
-        "indexes",
-        "when a query",
-        "transaction",
         "replica lags"
       ],
       "keywords": [
@@ -13443,16 +12944,10 @@
         "pdf/ua tagging"
       ],
       "phrases": [
-        "the user is using",
-        "evaluating",
         "considering opendataloader-pdf",
         "odl to extract",
-        "parse",
         "convert pdf content to text",
-        "markdown",
-        "json",
         "html — including scanned-pdf ocr",
-        "tables",
         "bounding boxes"
       ],
       "keywords": [
@@ -13529,36 +13024,20 @@
       ],
       "exclusions": [],
       "phrases": [
-        "offer",
         "offer design",
         "build an offer",
         "grand slam offer",
         "irresistible offer",
         "value stack",
         "bonus stack",
-        "guarantee",
         "risk reversal",
         "money-back guarantee",
-        "scarcity",
-        "urgency",
         "high-ticket offer",
         "productize a service",
         "naming an offer",
         "payment plan",
-        "down-sell",
         "upsell offer",
-        "why isn",
-        "the user mentions 'offer",
-        "'offer design",
-        "'build an offer",
-        "'grand slam offer",
-        "'irresistible offer",
-        "'value stack",
-        "'bonus stack",
-        "'guarantee",
-        "'risk reversal",
-        "'money-back guarantee",
-        "'scarcity"
+        "why isn't my offer converting"
       ],
       "keywords": [
         "offers",
@@ -13645,22 +13124,13 @@
         "onboarding checklist",
         "aha moment",
         "new user experience",
-        "users aren",
+        "users aren't activating",
         "nobody completes setup",
         "low activation rate",
-        "users sign up but don",
+        "users sign up but don't use the product",
         "time to value",
         "first session experience",
-        "the user mentions \"onboarding flow",
-        "\"activation rate",
-        "\"user activation",
-        "\"first-run experience",
-        "\"empty states",
-        "\"onboarding checklist",
-        "\"aha moment",
-        "\"new user experience",
-        "\"users aren't activating",
-        "ever users are signing up but not sticking around"
+        "users are signing up but not sticking around"
       ],
       "keywords": [
         "onboarding",
@@ -13852,10 +13322,8 @@
       ],
       "exclusions": [],
       "phrases": [
-        "paywall",
         "upgrade screen",
         "upgrade modal",
-        "upsell",
         "feature gate",
         "convert free to paid",
         "freemium conversion",
@@ -13863,19 +13331,9 @@
         "limit reached screen",
         "plan upgrade prompt",
         "in-app pricing",
-        "free users won",
+        "free users won't upgrade",
         "trial to paid conversion",
-        "how do i get users to pay",
-        "the user mentions \"paywall",
-        "\"upgrade screen",
-        "\"upgrade modal",
-        "\"upsell",
-        "\"feature gate",
-        "\"convert free to paid",
-        "\"freemium conversion",
-        "\"trial expiration screen",
-        "\"limit reached screen",
-        "\"plan upgrad"
+        "how do i get users to pay"
       ],
       "keywords": [
         "paywalls",
@@ -13955,9 +13413,7 @@
         "which package for charts"
       ],
       "exclusions": [],
-      "phrases": [
-        "on its own"
-      ],
+      "phrases": [],
       "keywords": [
         "pick",
         "ui",
@@ -14014,23 +13470,11 @@
         "lead capture popup",
         "email popup",
         "announcement banner",
-        "overlay",
         "collect emails with a popup",
         "exit popup",
         "scroll trigger",
         "sticky bar",
-        "notification bar",
-        "the user mentions \"exit intent",
-        "\"popup conversions",
-        "\"modal optimization",
-        "\"lead capture popup",
-        "\"email popup",
-        "\"announcement banner",
-        "\"overlay",
-        "\"collect emails with a popup",
-        "\"exit popup",
-        "\"scroll",
-        "\"sticky bar"
+        "notification bar"
       ],
       "keywords": [
         "popups",
@@ -14211,24 +13655,12 @@
         "value metric",
         "van westendorp",
         "willingness to pay",
-        "monetization",
         "my pricing is wrong",
         "pricing page",
         "annual vs monthly",
         "per seat pricing",
         "should i offer a free plan",
-        "the user mentions 'pricing",
-        "'pricing tiers",
-        "'freemium",
-        "'free trial",
-        "'packaging",
-        "'price increase",
-        "'value metric",
-        "'van westendorp",
-        "'willingness to pay",
-        "'monetization",
-        "'how much should i charge",
-        "ever someone is figuring out what to charge",
+        "figuring out what to charge",
         "how to structure their plans"
       ],
       "keywords": [
@@ -14308,20 +13740,9 @@
         "product context",
         "marketing context",
         "set up context",
-        "positioning",
         "who is my target audience",
         "describe my product",
-        "icp",
-        "ideal customer profile",
-        "the user mentions 'product context",
-        "'marketing context",
-        "'set up context",
-        "'positioning",
-        "'who is my target audience",
-        "'describe my product",
-        "'icp",
-        "'ideal customer profile",
-        "wants to avoid repeat"
+        "ideal customer profile"
       ],
       "keywords": [
         "product",
@@ -14402,20 +13823,9 @@
         "comparison pages",
         "integration pages",
         "building many pages for seo",
-        "pseo",
         "generate 100 pages",
         "data-driven pages",
-        "templated landing pages",
-        "the user mentions \"programmatic seo",
-        "\"template pages",
-        "\"pages at scale",
-        "\"directory pages",
-        "\"location pages",
-        "\"[keyword] + [city] pages",
-        "\"comparison pages",
-        "\"integration pages",
-        "\"building many pages",
-        "locations"
+        "templated landing pages"
       ],
       "keywords": [
         "programmatic",
@@ -14510,16 +13920,7 @@
         "early adopters",
         "design partners",
         "beta users",
-        "who has this problem",
-        "the user mentions \"prospecting",
-        "\"build a prospect list",
-        "\"find prospects",
-        "\"find leads",
-        "\"lead gen list",
-        "\"find saas companies that",
-        "\"find b2b companies",
-        "\"find local businesses",
-        "\"icp-fit accounts"
+        "who has this problem"
       ],
       "keywords": [
         "prospecting",
@@ -14599,9 +14000,7 @@
         "prototype three versions"
       ],
       "exclusions": [],
-      "phrases": [
-        "on its own"
-      ],
+      "phrases": [],
       "keywords": [
         "prototype",
         "variant",
@@ -14658,7 +14057,6 @@
       ],
       "exclusions": [],
       "phrases": [
-        "press",
         "press release",
         "press coverage",
         "media outreach",
@@ -14667,33 +14065,15 @@
         "media list",
         "media kit",
         "press kit",
-        "newsjacking",
         "news hijack",
-        "haro",
-        "qwoted",
-        "featured",
         "help a reporter",
         "reporter request",
         "tech press",
-        "techcrunch",
         "earned media",
         "thought leadership placement",
-        "op-ed",
         "guest article",
         "press contacts",
-        "how do i get press",
-        "the user mentions 'pr",
-        "'public relations",
-        "'press",
-        "'press release",
-        "'press coverage",
-        "'media outreach",
-        "'pitch a journalist",
-        "'get featured",
-        "'media list",
-        "'media kit",
-        "'press kit",
-        "'newsjacking"
+        "how do i get press"
       ],
       "keywords": [
         "public",
@@ -14781,10 +14161,8 @@
       ],
       "exclusions": [],
       "phrases": [
-        "writing",
         "reviewing python code",
         "idiomatic structure",
-        "typing",
         "pep 8 is in question"
       ],
       "keywords": [
@@ -14870,10 +14248,7 @@
       ],
       "exclusions": [],
       "phrases": [
-        "writing pytest tests — fixtures",
-        "mocks",
-        "parametrization",
-        "coverage"
+        "writing pytest tests — fixtures"
       ],
       "keywords": [
         "python",
@@ -14939,9 +14314,7 @@
       "phrases": [
         "receiving code review feedback",
         "before implementing suggestions",
-        "especially if feedback seems unclear",
-        "verification",
-        "not performative agreemen"
+        "especially if feedback seems unclear"
       ],
       "keywords": [
         "receiving",
@@ -15063,9 +14436,6 @@
       ],
       "exclusions": [],
       "phrases": [
-        "referral",
-        "affiliate",
-        "ambassador",
         "word of mouth",
         "viral loop",
         "refer a friend",
@@ -15074,17 +14444,6 @@
         "how to get referrals",
         "customers referring customers",
         "affiliate payout",
-        "the user mentions 'referral",
-        "'affiliate",
-        "'ambassador",
-        "'word of mouth",
-        "'viral loop",
-        "'refer a friend",
-        "'partner program",
-        "'referral incentive",
-        "'how to get referrals",
-        "'customers referring customer",
-        "ever someone wants existing users",
         "partners to bring in new customers"
       ],
       "keywords": [
@@ -15161,8 +14520,8 @@
       ],
       "exclusions": [],
       "phrases": [
-        "the agent is running in a sandbox (no gui)",
-        "needs to navigate websites",
+        "the agent is running in a sandbox",
+        "navigate websites",
         "interact with web pages",
         "fill forms",
         "take screenshots",
@@ -15317,29 +14676,15 @@
         "revenue operations",
         "lead scoring",
         "lead routing",
-        "mql",
-        "sql",
         "pipeline stages",
         "deal desk",
         "crm automation",
         "marketing-to-sales handoff",
         "data hygiene",
-        "leads aren",
+        "leads aren't getting to sales",
         "pipeline management",
         "lead qualification",
-        "when should marketing hand off to sales",
-        "the user mentions 'revops",
-        "'revenue operations",
-        "'lead scoring",
-        "'lead routing",
-        "'mql",
-        "'sql",
-        "'pipeline stages",
-        "'deal desk",
-        "'crm automation",
-        "'marketing-to-sales handoff",
-        "'data hygiene",
-        "'leads a"
+        "when should marketing hand off to sales"
       ],
       "keywords": [
         "revops",
@@ -15417,8 +14762,6 @@
       "phrases": [
         "sales deck",
         "pitch deck",
-        "one-pager",
-        "leave-behind",
         "objection handling",
         "deal-specific roi analysis",
         "demo script",
@@ -15428,18 +14771,7 @@
         "buyer persona card",
         "help my sales team",
         "sales materials",
-        "what should i give my sales reps",
-        "the user mentions 'sales deck",
-        "'pitch deck",
-        "'one-pager",
-        "'leave-behind",
-        "'objection handling",
-        "'deal-specific roi analysis",
-        "'demo script",
-        "'talk track",
-        "'sales playbook",
-        "'proposal template",
-        "'buye"
+        "what should i give my sales reps"
       ],
       "keywords": [
         "sales",
@@ -15517,9 +14849,7 @@
       "phrases": [
         "schema markup",
         "structured data",
-        "json-ld",
         "rich snippets",
-        "schema.org",
         "faq schema",
         "product schema",
         "review schema",
@@ -15528,11 +14858,7 @@
         "knowledge panel",
         "star ratings in search",
         "add structured data",
-        "the user mentions \"schema markup",
-        "\"structured data",
-        "\"json-ld",
-        "\"rich snippets",
-        "\"schema"
+        "their pages to show enhanced results in google"
       ],
       "keywords": [
         "schema",
@@ -15610,9 +14936,6 @@
       "phrases": [
         "fly through the world",
         "3d world",
-        "browse-through-the-industry",
-        "the user wants a \"3d world",
-        "browse-through-the-industry\" hero",
         "a scroll cinematic",
         "a diorama landing",
         "to turn a business into a scrollable world"
@@ -15702,24 +15025,14 @@
         "my traffic dropped",
         "lost rankings",
         "not showing up in google",
-        "site isn",
+        "site isn't ranking",
         "google update hit me",
         "page speed",
         "core web vitals",
         "crawl errors",
         "indexing issues",
         "my seo is bad",
-        "help with seo",
-        "the user mentions \"seo audit",
-        "\"technical seo",
-        "\"why am i not ranking",
-        "\"seo issues",
-        "\"on-page seo",
-        "\"meta tags review",
-        "\"seo health check",
-        "\"my traffic dropped",
-        "\"lost rankings",
-        "\"not showing up in g"
+        "help with seo"
       ],
       "keywords": [
         "seo",
@@ -15801,21 +15114,12 @@
         "free trial signup",
         "reduce signup dropoff",
         "account creation flow",
-        "people aren",
+        "people aren't signing up",
         "signup abandonment",
         "trial conversion rate",
         "nobody completes registration",
         "too many steps to sign up",
         "simplify our signup",
-        "the user mentions \"signup conversions",
-        "\"registration friction",
-        "\"signup form optimization",
-        "\"free trial signup",
-        "\"reduce signup dropoff",
-        "\"account creation flow",
-        "\"people aren't signing up",
-        "\"signup",
-        "ever the user has a signup",
         "registration flow that isn't performing"
       ],
       "keywords": [
@@ -15892,7 +15196,6 @@
       ],
       "exclusions": [],
       "phrases": [
-        "sitemap",
         "site map",
         "visual sitemap",
         "site structure",
@@ -15900,24 +15203,12 @@
         "information architecture",
         "navigation design",
         "url structure",
-        "breadcrumbs",
         "internal linking strategy",
         "website planning",
         "what pages do i need",
         "how should i organize my site",
         "site navigation",
-        "the user mentions \"sitemap",
-        "\"site map",
-        "\"visual sitemap",
-        "\"site structure",
-        "\"page hierarchy",
-        "\"information architecture",
-        "\"ia",
-        "\"navigation design",
-        "\"url structure",
-        "\"breadcrumbs",
-        "\"internal linking",
-        "how they connect"
+        "planning what pages a website should have"
       ],
       "keywords": [
         "site",
@@ -16000,28 +15291,13 @@
         "abandoned cart text",
         "post-purchase sms",
         "klaviyo sms",
-        "postscript",
-        "attentive",
-        "twilio",
         "a2p 10dlc",
-        "tcpa",
         "sms compliance",
         "short code",
         "toll-free sms",
         "mms campaign",
         "should i do sms",
-        "sms vs email",
-        "the user mentions \"sms marketing",
-        "\"text message campaigns",
-        "\"sms sequence",
-        "\"sms automation",
-        "\"abandoned cart text",
-        "\"post-purchase sms",
-        "\"klaviyo sms",
-        "\"postscript",
-        "\"attentive",
-        "\"twilio",
-        "\"a2p 10dl"
+        "sms vs email"
       ],
       "keywords": [
         "sms",
@@ -16102,7 +15378,6 @@
         "social media",
         "content calendar",
         "social scheduling",
-        "engagement",
         "viral content",
         "what should i post",
         "repurpose this content",
@@ -16111,8 +15386,6 @@
         "social media strategy",
         "grow my following",
         "tiktok video",
-        "reels",
-        "shorts",
         "video script",
         "video hook",
         "short-form video",
@@ -16122,19 +15395,7 @@
         "competitor monitoring",
         "top posts to comment on",
         "find people asking for",
-        "carousel",
-        "slide-by-slide",
-        "document post",
-        "the user mentions 'linkedin post",
-        "'twitter thread",
-        "'social media",
-        "'content calendar",
-        "'social scheduling",
-        "'engagement",
-        "'viral content",
-        "'what should i post",
-        "'repurpose this content",
-        "'tweet idea"
+        "document post"
       ],
       "keywords": [
         "social",
@@ -16628,7 +15889,6 @@
       "exclusions": [],
       "phrases": [
         "implementing any feature",
-        "bugfix",
         "before writing implementation code"
       ],
       "keywords": [
@@ -16744,9 +16004,7 @@
         "using superpowers"
       ],
       "exclusions": [],
-      "phrases": [
-        "use skills"
-      ],
+      "phrases": [],
       "keywords": [
         "using",
         "superpowers",
@@ -16780,9 +16038,7 @@
       "exclusions": [],
       "phrases": [
         "about to claim work is complete",
-        "fixed",
-        "passing",
-        "before committing"
+        "confirming output before making any success claims"
       ],
       "keywords": [
         "verification",
@@ -16835,20 +16091,6 @@
       "phrases": [
         "video production",
         "ai video",
-        "remotion",
-        "hyperframes",
-        "heygen",
-        "synthesia",
-        "veo",
-        "sora",
-        "runway",
-        "kling",
-        "seedance",
-        "hailuo",
-        "minimax",
-        "pika",
-        "hunyuan",
-        "wan",
         "video generation",
         "ai avatar",
         "talking head video",
@@ -16861,18 +16103,7 @@
         "match this video style",
         "reverse-engineer this video",
         "edit like this reference",
-        "make me a video",
-        "the user mentions 'video production",
-        "'ai video",
-        "'remotion",
-        "'hyperframes",
-        "'heygen",
-        "'synthesia",
-        "'veo",
-        "'sora",
-        "'runway",
-        "'kling",
-        "'seedance"
+        "make me a video"
       ],
       "keywords": [
         "video",
@@ -16960,11 +16191,8 @@
       ],
       "exclusions": [],
       "phrases": [
-        "building",
         "reviewing vue 3",
-        "nuxt",
         "pinia code — composition api",
-        "reactivity",
         "router navigation"
       ],
       "keywords": [
@@ -17054,11 +16282,8 @@
       ],
       "exclusions": [],
       "phrases": [
-        "writing",
-        "reviewing",
         "migrating swift",
         "when a concurrency error",
-        "a hang",
         "a data race",
         "a retain cycle",
         "a performance problem needs fixing"
@@ -17140,7 +16365,6 @@
       ],
       "exclusions": [],
       "phrases": [
-        "you have a spec",
         "requirements for a multi-step task",
         "before touching code"
       ],
@@ -17254,10 +16478,8 @@
       "phrases": [
         "just use it",
         "build it in",
-        "the user asks about x402",
-        "pay-per-use",
         "usdc payments",
-        "wants browser use cloud without an api key"
+        "browser use cloud without an api key"
       ],
       "keywords": [
         "x402",

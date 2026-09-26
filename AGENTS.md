@@ -107,9 +107,9 @@ Vendored packs are reviewed on a 180-day window — run `bossku skills stocktake
 | Agent loops: CI/PR/issue sweeps, budgeted triage | loop-engineering — `loop-triage`, `loop-verifier`, `minimal-fix` (+ pattern skills: `ci-triage`, `pr-review-triage`, etc.) |
 | Scroll-scrub fly-through / diorama cinematic landing | `scroll-world` (Higgsfield + portable scrub engine; not generic GSAP-only heroes) |
 | Agent shell/git safety / destructive command hooks | `dcg` (Destructive Command Guard; install upstream binary separately) |
-| Motion craft / easing / gesture / UI polish | emil-skills — `animate` to build, `review-animations` to critique, `improve-animations` to audit a codebase (`emil-design-eng` / `apple-design` for philosophy) |
-| Frontend library choice (toast, DnD, charts, OTP, …) | `pick-ui-library` |
-| UI variant exploration behind a live picker | `prototype` (vs `bosskuai-throwaway-prototype` for logic spikes / `bosskuai-rapid-prototype` for MVP scaffolds) |
+| Motion craft / easing / gesture / UI polish | emil-skills — `animate` to build, `/review-animations` to critique (user-invoked), `improve-animations` to audit a codebase (`emil-design-eng` / `apple-design` for philosophy) |
+| Frontend library choice (toast, DnD, charts, OTP, …) | `/pick-ui-library` (user-invoked) |
+| UI variant exploration behind a live picker | `/prototype` (user-invoked; vs `bosskuai-throwaway-prototype` for logic spikes / `bosskuai-rapid-prototype` for MVP scaffolds) |
 | Sonner toasts / Swift or SwiftUI code | emil-skills — `ask-sonner`, `write-swift` |
 | Reader wants action-first, numbered, no-preamble answers | `i-have-adhd` (explicit `/i-have-adhd`; persists until "stop adhd mode" / "normal mode") |
 | MySQL/MariaDB tuning, schema or data migrations | ecc — `mysql-patterns`, `database-migrations` (Bossku `bosskuai-database-engineering` for generic design) |

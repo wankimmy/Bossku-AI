@@ -120,7 +120,7 @@ planner (strategy, file list, phases) → designer (UI work only)
        ▼
 ┌─ REVISE LOOP (capped by the budget set up front) ──────────────┐
 │ executor implements → auditor reviews                          │
-│   ├─ PASS   → code-simplifier → final-reviewer (high-risk only)│
+│   ├─ PASS   → de-sloppify → final-reviewer (high-risk only)    │
 │   ├─ REVISE → executor retries with the audit feedback         │
 │   └─ cap reached → escalate; never report "capped" as "pass"   │
 └────────────────────────────────────────────────────────────────┘
@@ -627,7 +627,7 @@ The loop **architecture** lives here; the discipline **inside** an iteration liv
 - `bosskuai-subagent-delegation` — parallel/worktree execution mechanics for the patterns above
 - `bosskuai-handoff` + `bosskuai-context-limit-continuation` — context bridging between sessions (the editor-side equivalent of SHARED_TASK_NOTES.md)
 
-The `loop-operator` agent contract (`agents/loop-operator.md`) drives these patterns end-to-end.
+The orchestrator contract (`agents/orchestrator.md`, Autonomous run flow) drives these patterns end-to-end.
 
 ## References
 

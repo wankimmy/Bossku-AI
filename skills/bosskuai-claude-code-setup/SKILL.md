@@ -10,7 +10,7 @@ Use this skill when the task is to **set up or improve Claude Code for a reposit
 ## How this differs from nearby skills
 
 - **`bosskuai-claude-md-management`**: maintains Claude instruction files after setup; this skill designs the setup from repo needs.
-- **`bosskuai-agent-security-hardening`**: evaluates risk and least privilege; this skill applies that lens to Claude Code configuration.
+- **`bosskuai-prompt-injection-defense`**: evaluates risk and least privilege; this skill applies that lens to Claude Code configuration.
 - **`bosskuai-project-understanding`**: maps what the repo is; this skill turns that map into Claude Code configuration.
 - **`bosskuai-devops-iac`**: handles delivery infrastructure; this skill handles the AI assistant operating environment.
 

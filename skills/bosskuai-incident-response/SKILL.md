@@ -9,7 +9,7 @@ Use this skill when a production system is degraded, down, or behaving incorrect
 
 ## How this differs from nearby skills
 
-- **`bosskuai-bug-finding`**: traces technical root causes from code and evidence; load alongside this skill once the incident is stabilized and root cause investigation begins.
+- **`bosskuai-diagnose-loop`**: traces technical root causes from code and evidence; load alongside this skill once the incident is stabilized and root cause investigation begins.
 - **`bosskuai-cybersecurity-risk`**: assesses security threat surfaces; load alongside this skill when the incident has a suspected security or abuse vector.
 - **`bosskuai-devops-iac`**: reviews operational infrastructure; load alongside when the incident points to infra, deployment, or config failures.
 - **`bosskuai-business-logic-review`**: validates business rule correctness; load when the incident reveals a misencoded business rule rather than an infrastructure failure.
@@ -63,7 +63,7 @@ Use this as the default severity model. Adjust thresholds to your SLAs:
    - DB migration or data job completions
    - Alert firing sequence
 9. **Identify the blast radius** — Who and what is affected? Is the scope growing, stable, or shrinking?
-10. **Delegate technical investigation** to `bosskuai-bug-finding` deep investigation mode once the incident is stable.
+10. **Delegate technical investigation** to `bosskuai-diagnose-loop` once the incident is stable.
 
 ### Phase 4 — Resolve and verify (when fix is ready)
 

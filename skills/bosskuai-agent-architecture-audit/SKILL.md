@@ -258,5 +258,5 @@ Audits should produce structured reports following this shape:
 - `bosskuai-agent-introspection` — Debug agent runtime failures (loops, timeouts, state errors)
 - `bosskuai-eval-driven-agent-improvement` — Benchmark and regression-test agent behavior
 - `bosskuai-cybersecurity-risk` — Security audit for code and configuration
-- `bosskuai-agent-security-hardening` — Harden agent workspaces, MCP setups, and injection surfaces
+- `bosskuai-prompt-injection-defense` — Harden agent workspaces, MCP setups, and injection surfaces
 - `bosskuai-context-budget` — Quantify context overhead when layer 1-5 duplication is the finding

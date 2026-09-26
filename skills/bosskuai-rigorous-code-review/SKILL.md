@@ -9,7 +9,7 @@ Use this skill when the goal is to **review** code (diffs, PRs, new modules, or 
 
 ## How this differs from nearby skills
 
-- **`bosskuai-bug-finding`**: traces failure paths and defects; load both when review should emphasize *what breaks*.
+- **`bosskuai-diagnose-loop`**: traces failure paths and defects; load both when review should emphasize *what breaks*.
 - **`bosskuai-coding-best-practices`**: quality and conventions when *writing* or refactoring; this skill stresses *challenge and gatekeeping* on a proposed change.
 - **`bosskuai-code-revamp`**: use when a **large** structural change is explicitly appropriate; this skill **flags** that need but does **not** expand scope unless evidence demands it.
 - **`bosskuai-codebase-analysis`**: orientation and structure mapping; skim or use first if the review target sits in an unfamiliar area.

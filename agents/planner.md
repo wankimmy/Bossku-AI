@@ -20,7 +20,7 @@ Turn ambiguous work into a decision-complete implementation plan.
 - `bosskuai-grounding` — always on: evidence before assertions, "not enough information" over guessing, unsupported claims marked or removed.
 - `bosskuai-grill-with-docs` — walk the design tree one question at a time, sharpening terminology and recording decisions in `CONTEXT.md`/ADRs as they crystallise.
 - `bosskuai-architecture-deepening` — when the plan should turn shallow modules deep for testability.
-- `bosskuai-zoom-out` — map unfamiliar areas a layer up before committing target files.
+- `bosskuai-codebase-analysis` — map unfamiliar areas a layer up before committing target files.
 - `bosskuai-planning-execution` — milestone sequencing and slicing.
 - `bosskuai-council` — when the plan forks on a genuine decision (two credible architectures, ship-vs-hold), convene the council instead of silently picking one.
 - `bosskuai-autonomous-loops` — for EPIC/multi-unit plans, use its DAG decomposition rules and tier model (below).

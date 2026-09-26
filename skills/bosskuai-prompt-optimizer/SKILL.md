@@ -104,13 +104,13 @@ guessing — `bosskuai-skill-stocktake` audits it.
 
 | Intent | Skills | Agent contracts |
 |--------|--------|-----------------|
-| New Feature | bosskuai-engineering-delivery, bosskuai-tdd-loop | planner, tdd-guide, code-reviewer |
-| Bug Fix | bosskuai-diagnose-loop, bosskuai-bug-finding | build-fixer, tdd-guide |
-| Refactor | bosskuai-code-revamp, bosskuai-architecture-deepening | refactor-cleaner, code-reviewer |
+| New Feature | bosskuai-engineering-delivery, bosskuai-tdd-loop | planner, executor, auditor |
+| Bug Fix | bosskuai-diagnose-loop | executor, auditor |
+| Refactor | bosskuai-code-revamp, bosskuai-architecture-deepening | executor, auditor |
 | Research | bosskuai-search-first, bosskuai-documentation-lookup, bosskuai-deep-research, bosskuai-grounding | — |
-| Testing | bosskuai-tdd-loop, bosskuai-integration-testing, bosskuai-qa-automation-strategy | tdd-guide, e2e-runner |
-| Review | bosskuai-rigorous-code-review, bosskuai-greptile-review-loop, bosskuai-pr-check, bosskuai-grounding | code-reviewer, security-reviewer, auditor |
-| Documentation | bosskuai-claude-md-management (instruction files) | doc-updater |
+| Testing | bosskuai-tdd-loop, bosskuai-integration-testing, bosskuai-qa-automation-strategy | executor |
+| Review | bosskuai-rigorous-code-review, bosskuai-greptile-review-loop, bosskuai-pr-check, bosskuai-grounding | auditor, final-reviewer |
+| Documentation | bosskuai-claude-md-management (instruction files) | executor |
 | Infrastructure | bosskuai-docker, bosskuai-devops-iac, bosskuai-vps-docker-deployment | — |
 | Design (MEDIUM-HIGH) | bosskuai-software-architecture | planner |
 | Design (EPIC) | bosskuai-planning-execution, bosskuai-grill-with-docs | planner, orchestrator |
@@ -162,10 +162,10 @@ Research → Plan → Implement (TDD) → Review → Verify → Commit
 ```
 
 This maps onto the BosskuAI pipeline: orchestrator/planner → executor →
-auditor (+ security-auditor when risky) → final-reviewer.
+auditor (+ `bosskuai-cybersecurity-risk` when risky) → final-reviewer.
 
 **Model recommendation** (follow the workspace model split — reasoning model
-to plan, coding model to execute; see `agents/model-router.md`):
+to plan, coding model to execute; see `bosskuai-ai-model-selection`):
 
 | Scope | Recommended split | Rationale |
 |-------|------------------|-----------|
@@ -209,7 +209,7 @@ answer, state it instead of asking.
 | Type | Component | Purpose |
 |------|-----------|---------|
 | Skill | bosskuai-tdd-loop | red→green→refactor discipline |
-| Agent | code-reviewer | post-implementation review |
+| Agent | auditor | post-implementation review |
 | Model | reasoning model (plan) + coding model (execute) | scope-appropriate split |
 
 ### Section 3: Optimized Prompt — Full Version
@@ -235,7 +235,7 @@ A compact version for experienced users:
 | Bug Fix | `bosskuai-diagnose-loop: failing repro first, fix to green, regression test.` |
 | Refactor | `bosskuai-code-revamp on [scope]; review; verify.` |
 | Research | `bosskuai-search-first on [topic]; plan from findings.` |
-| Review | `bosskuai-rigorous-code-review, then security-reviewer agent if risky.` |
+| Review | `bosskuai-rigorous-code-review, then bosskuai-cybersecurity-risk if risky.` |
 | Decision | `Convene bosskuai-council on: [question].` |
 | EPIC | `bosskuai-planning-execution multi-session plan for "[objective]"; bosskuai-handoff between sessions.` |
 

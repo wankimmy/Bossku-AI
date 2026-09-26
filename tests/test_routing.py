@@ -1,10 +1,12 @@
 import json
+import re
 import tempfile
 import unittest
 from datetime import date, timedelta
 from pathlib import Path
 
 from bossku.index import (
+    _derive_triggers,
     build_index,
     index_is_stale,
     index_path,
@@ -114,6 +116,15 @@ class FrontmatterTests(unittest.TestCase):
         text = "---\nname: x\ndescription: >-\n  hello\n  world\n---\nbody\n"
         self.assertEqual(_parse_frontmatter(text)["description"], "hello world")
 
+    def test_double_quoted_scalar_unescapes_like_yaml(self):
+        # Hosts read `\"` as a quote; stripping only the outer quotes left the
+        # backslashes in and garbled every phrase derived from the description.
+        text = '---\nname: x\ndescription: "Triggers: \\"build a community,\\" \\"grow it\\""\n---\n'
+        self.assertEqual(
+            _parse_frontmatter(text)["description"],
+            'Triggers: "build a community," "grow it"',
+        )
+
     def test_triple_dash_inside_value_does_not_close_frontmatter(self):
         text = '---\nname: x\ndescription: "a --- b"\nlicense: MIT\n---\nbody\n'
         front = _parse_frontmatter(text)
@@ -138,6 +149,32 @@ class IndexTests(unittest.TestCase):
             with self.subTest(skill=sid):
                 self.assertIn(entry["model_role"], ("planner", "coder", "reviewer", "researcher"))
                 self.assertTrue(entry["triggers"])
+
+    def test_derived_phrases_keep_quoted_examples_whole(self):
+        # Splitting the clause used to shred `"A/B test,"` into `the user mentions "a`
+        # and `b test`; `whenever` matched as `when` and left `ever ...` fragments.
+        _, phrases = _derive_triggers(
+            "x",
+            'Use when the user mentions "A/B test," "isn\'t converting," or wants to '
+            "measure which performs better, or improve it. "
+            "Use this whenever someone is losing subscribers.",
+        )
+        self.assertEqual(
+            phrases,
+            ["a/b test", "isn't converting", "measure which performs better", "losing subscribers"],
+        )
+
+    def test_shipped_phrases_are_clean(self):
+        index = build_index(ROOT)["skills"]
+        bad = [
+            (sid, phrase)
+            for sid, entry in index.items()
+            for phrase in entry["phrases"]
+            if len(phrase.split()) < 2
+            or re.search(r"(?<!\w)['\"“”‘’]|['\"“”‘’](?!\w)", phrase)
+            or phrase.startswith("the user")
+        ]
+        self.assertEqual(bad, [])
 
     def test_write_index_is_deterministic(self):
         first = json.dumps(build_index(ROOT), sort_keys=True)

@@ -214,11 +214,24 @@ def _parse_frontmatter(text: str) -> dict:
                 inner = val[1:-1]
                 out[key] = [p.strip().strip("'\"") for p in inner.split(",") if p.strip()]
             else:
-                out[key] = val.strip("'\"")
+                out[key] = _unquote_scalar(val)
             i += 1
             continue
         i += 1
     return out
+
+
+def _unquote_scalar(val: str) -> str:
+    """Read a YAML scalar the way hosts do, so the index sees the same description.
+
+    Stripping quote characters left `\\"` escapes behind, which garbled every
+    phrase derived from a double-quoted description that quotes its triggers.
+    """
+    if len(val) >= 2 and val[0] == val[-1] == '"':
+        return re.sub(r'\\(["\\])', r"\1", val[1:-1])
+    if len(val) >= 2 and val[0] == val[-1] == "'":
+        return val[1:-1].replace("''", "'")
+    return val
 
 
 def resolve_skill_id(skill_id: str, root: Path | None = None) -> str:

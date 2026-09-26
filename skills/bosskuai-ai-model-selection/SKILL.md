@@ -19,13 +19,14 @@ Model rosters move faster than this file. For anything Claude/Anthropic — mode
 
 ## Claude roster
 
-Current as of 2026-08. Ids are complete as written — never append date suffixes.
+Current as of 2026-09. Ids are complete as written — never append date suffixes.
 
 | Model | Id | Context | $/1M in | $/1M out | Best for |
 |---|---|---|---|---|---|
-| Claude Fable 5 | `claude-fable-5` | 1M | 10.00 | 50.00 | The hardest reasoning and longest-horizon agentic runs |
+| Claude Fable 5.1 | `claude-fable-5-1` | 1M | 10.00 | 50.00 | The hardest reasoning and longest-horizon agentic runs (succeeds `claude-fable-5`, same price) |
 | Claude Opus 5 | `claude-opus-5` | 1M | 5.00 | 25.00 | **Default.** Agentic coding, architecture, deep analysis |
-| Claude Sonnet 5 | `claude-sonnet-5` | 1M | 3.00 | 15.00 | High-volume production work at near-Opus quality |
+| Claude Opus 5.5 | `claude-opus-5-5` | 1M | 4.00 | 20.00 | Launching: use only when the user names it. Effort defaults to `medium`, and thinking cannot be disabled |
+| Claude Sonnet 5 | `claude-sonnet-5` | 1M | 2.00 | 10.00 | High-volume production work at near-Opus quality |
 | Claude Haiku 4.5 | `claude-haiku-4-5` | 200K | 1.00 | 5.00 | Extraction, classification, summarization at volume |
 
 Default to `claude-opus-5` unless the user names another model. Never downgrade for cost on the user's behalf — that is their call.

@@ -536,7 +536,19 @@ _ROLE_HINTS: tuple[tuple[str, tuple[str, ...]], ...] = (
 )
 
 _WORD = re.compile(r"[a-z0-9][a-z0-9+.#-]*")
-_QUOTED = re.compile(r"['‘’\"“”]([^'‘’\"“”]{3,60}?)['‘’\"“”]")
+# Quote marks only count at word edges, so the apostrophe in "isn't" neither opens
+# nor closes a span and "analytics isn't working" survives whole.
+_QUOTED = re.compile(r"(?<!\w)['‘\"“]((?:[^'‘’\"“”]|(?<=\w)['’](?=\w)){3,60}?)['’\"”](?!\w)")
+_TRIGGER_CLAUSE = re.compile(r"\b(?:Triggers?|Use (?:this )?when(?:ever)?)\b\s*:?\s*([^.]{3,200})", re.I)
+# `/` separates alternatives ("Three.js/React"), except inside initialisms like "A/B".
+_CLAUSE_SPLIT = re.compile(r"[,;()]| or | and |(?<!\b\w)/(?!\w\b)")
+_STRAY_QUOTE = re.compile(r"(?<!\w)['‘’\"“”]|['‘’\"“”](?!\w)")
+# Third-person scaffolding never occurs in a first-person request, so strip it:
+# "the user wants to create a community strategy" -> "create a community strategy".
+_SCAFFOLD = re.compile(
+    r"^(?:(?:the user|someone|they)\s+(?:\w+ly\s+)?(?:asks?|wants?|needs?|mentions?|says?|shares?|is|has|already has)"
+    r"|(?:wants?|needs?|asks?))\b(?:\s+(?:to|for|about|an?)\b)?\s*"
+)
 
 
 def index_path(root: Path | None = None) -> Path:
@@ -629,14 +641,28 @@ def _derive_triggers(skill_id: str, description: str) -> tuple[list[str], list[s
         if 3 <= len(phrase) <= 60 and not phrase.startswith("http"):
             derived.append(phrase)
 
-    for m in re.finditer(r"(?:Triggers?|Use when|Use this when)\s*:?\s*([^.]{3,200})", description, re.I):
-        for part in re.split(r",| or | and |/", m.group(1)):
-            phrase = part.strip().strip("'\"").lower()
-            if 4 <= len(phrase) <= 50 and len(tokenize(phrase)) <= 5:
+    # Quoted examples are already captured; blank them so the split below cannot
+    # shred `"A/B test,"` into `the user mentions "a` + `b test`. Keep a period that
+    # sat inside the quotes, or the clause runs on into the next sentence.
+    unquoted = _QUOTED.sub(lambda q: " . " if q.group(1).rstrip().endswith(".") else " , ", description)
+    for m in _TRIGGER_CLAUSE.finditer(unquoted):
+        parts = _CLAUSE_SPLIT.split(m.group(1))
+        if len(m.group(1)) == 200:
+            parts = parts[:-1]  # the cap cut the last part mid-word
+        for part in parts:
+            phrase = _SCAFFOLD.sub("", part.strip().lower())
+            # Unlike author-quoted examples, clause fragments need two content words,
+            # or "improve it" would claim every request that says "improve it".
+            if 4 <= len(phrase) <= 50 and 2 <= len(tokenize(phrase)) <= 5:
                 derived.append(phrase)
 
+    # The scorer only credits multi-word phrases; anything else is dead weight.
     curated = set(triggers)
-    return _clean(triggers, 40), _clean([p for p in derived if p not in curated], 40)
+    useful = [
+        p for p in derived
+        if p not in curated and len(p.split()) >= 2 and not _STRAY_QUOTE.search(p)
+    ]
+    return _clean(triggers, 40), _clean(useful, 40)
 
 
 def _derive_role(skill_id: str, description: str) -> str:

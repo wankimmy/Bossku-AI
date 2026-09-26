@@ -10,7 +10,7 @@ Use this skill when the task involves **security, privacy, abuse, or operational
 ## How this differs from nearby skills
 
 - **`bosskuai-rigorous-code-review`**: reviews code quality and correctness; load alongside this skill when a diff touches auth, payments, PII, or external APIs.
-- **`bosskuai-agent-security-hardening`**: secures the AI-agent harness itself (instructions, MCP, memory, hooks); load when the concern is the agent workspace, not the application.
+- **`bosskuai-prompt-injection-defense`**: secures the AI-agent harness itself (instructions, MCP, memory, hooks); load when the concern is the agent workspace, not the application.
 - **`bosskuai-business-logic-review`**: catches wrong rules; load alongside when authorization or approval logic may be exploitable.
 
 ## Mindset
