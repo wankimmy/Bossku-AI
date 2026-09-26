@@ -1,6 +1,6 @@
 ---
 name: bosskuai-nuxt-development
-description: Use when the app is Nuxt 3 or 4: rendering modes and routeRules, useFetch/useAsyncData, server routes, runtimeConfig secrets, hydration, and SEO meta, verified against official docs via Context7. Plain Vue components and Pinia go to vue-patterns.
+description: "Use when the app is Nuxt 3 or 4: rendering modes and routeRules, useFetch/useAsyncData, server routes, runtimeConfig secrets, hydration, and SEO meta, verified against official docs via Context7. Plain Vue components and Pinia go to vue-patterns."
 ---
 
 # BosskuAI Nuxt Development

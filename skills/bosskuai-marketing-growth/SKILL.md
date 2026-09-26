@@ -1,6 +1,6 @@
 ---
 name: bosskuai-marketing-growth
-description: Use this for a one-pass go-to-market or growth strategy: audience, positioning line, stage-fit channels, AARRR gap, growth loop, first experiments. For a full 12-month plan use marketing-plan; tactic lists marketing-ideas; posting calendars bosskuai-content-calendar.
+description: "Use this for a one-pass go-to-market or growth strategy: audience, positioning line, stage-fit channels, AARRR gap, growth loop, first experiments. For a full 12-month plan use marketing-plan; tactic lists marketing-ideas; posting calendars bosskuai-content-calendar."
 ---
 
 # BosskuAI Marketing and Growth

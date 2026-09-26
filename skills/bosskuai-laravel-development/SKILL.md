@@ -1,6 +1,6 @@
 ---
 name: bosskuai-laravel-development
-description: Use when building, refactoring, or auditing Laravel code: Eloquent, validation, policies, jobs, events, migrations, service boundaries, and performance. Security hardening, test-first work, and pre-deploy checks have their own Laravel skills.
+description: "Use when building, refactoring, or auditing Laravel code: Eloquent, validation, policies, jobs, events, migrations, service boundaries, and performance. Security hardening, test-first work, and pre-deploy checks have their own Laravel skills."
 ---
 
 # BosskuAI Laravel Development

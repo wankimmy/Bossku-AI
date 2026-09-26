@@ -1,6 +1,6 @@
 ---
 name: bosskuai-paid-acquisition-monetization
-description: Use this to decide whether paid acquisition is worth it yet: CAC/LTV/payback gates, stop-loss rules, channel choice by budget, and monetization model. To build or optimize Google/Meta/LinkedIn campaigns use ads; ad copy ad-creative; tier design pricing.
+description: "Use this to decide whether paid acquisition is worth it yet: CAC/LTV/payback gates, stop-loss rules, channel choice by budget, and monetization model. To build or optimize Google/Meta/LinkedIn campaigns use ads; ad copy ad-creative; tier design pricing."
 ---
 
 # BosskuAI Paid Acquisition and Monetization

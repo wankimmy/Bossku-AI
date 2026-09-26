@@ -1,6 +1,6 @@
 ---
 name: bosskuai-lead-intelligence
-description: Use this for named-contact research: investor, partner, press, and key-account contact lists, pre-meeting research on a person or company, warm-intro paths, outreach drafts, and the pre-send deliverability and consent check.
+description: "Use this for named-contact research: investor, partner, press, and key-account contact lists, pre-meeting research on a person or company, warm-intro paths, outreach drafts, and the pre-send deliverability and consent check."
 ---
 
 # Lead Intelligence

@@ -1,6 +1,6 @@
 ---
 name: bosskuai-competitor-intelligence
-description: Use this for recurring competitor monitoring: a dated comparison matrix, pricing/feature/messaging/hiring deltas since the last check, and what they mean. For a first deep profile use competitor-profiling; for vs/alternative pages use competitors.
+description: "Use this for recurring competitor monitoring: a dated comparison matrix, pricing/feature/messaging/hiring deltas since the last check, and what they mean. For a first deep profile use competitor-profiling; for vs/alternative pages use competitors."
 ---
 
 # BosskuAI Competitor Intelligence

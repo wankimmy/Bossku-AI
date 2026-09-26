@@ -654,6 +654,31 @@ KNOWN_FRONTMATTER_KEYS = frozenset(
     }
 )
 
+_TOP_LEVEL_SCALAR = re.compile(r"^([A-Za-z0-9_-]+):[ 	]+(.+)$")
+
+
+def _strict_yaml_problems(text: str) -> list[str]:
+    """Top-level plain values that real YAML parsers reject but Bossku's lenient parser accepts.
+
+    An unquoted `description: Use this for x: y` makes Claude Code, Codex, and Cursor drop the
+    description and show the file's H1 instead, so the skill routes by name only.
+    """
+    match = re.search(r"^---[ 	]*$", text[3:], re.MULTILINE)
+    if match is None:
+        return []
+    keys: list[str] = []
+    for line in text[3 : 3 + match.start()].splitlines():
+        found = _TOP_LEVEL_SCALAR.match(line)
+        if not found:
+            continue
+        value = found.group(2).strip()
+        if value[:1] in "\"'[{|>&*!%@`":
+            continue
+        if ": " in value or " #" in value or value.endswith(":"):
+            keys.append(found.group(1))
+    return keys
+
+
 # Hosts read `description` on every session, so it is a shared context budget.
 MAX_DESCRIPTION_CHARS = 1200
 MIN_DESCRIPTION_CHARS = 40
@@ -697,6 +722,11 @@ def validate_skills(root: Path | None = None) -> list[str]:
             errors.append(
                 f"{sid}/SKILL.md description too long ({len(description)} chars, "
                 f"max {MAX_DESCRIPTION_CHARS}); it loads into every session"
+            )
+        for key in _strict_yaml_problems(text):
+            errors.append(
+                f"{sid}/SKILL.md `{key}` needs quotes: hosts' YAML parsers reject ': ' or ' #' "
+                "in an unquoted value and drop the field"
             )
         unknown = sorted(set(front) - KNOWN_FRONTMATTER_KEYS)
         if unknown:

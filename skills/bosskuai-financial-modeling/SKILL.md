@@ -1,6 +1,6 @@
 ---
 name: bosskuai-financial-modeling
-description: Use this for forward-looking startup finance: revenue and ARR/MRR projections, runway and burn, unit economics, pricing model math, fundraising scenarios, and sensitivity analysis.
+description: "Use this for forward-looking startup finance: revenue and ARR/MRR projections, runway and burn, unit economics, pricing model math, fundraising scenarios, and sensitivity analysis."
 ---
 
 # Financial Modeling

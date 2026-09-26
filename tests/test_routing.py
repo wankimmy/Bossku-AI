@@ -422,6 +422,19 @@ class ValidatorTests(unittest.TestCase):
             )
             self.assertIn("broken relative link", " ".join(validate_skills(base)))
 
+    def test_flags_unquoted_colon_in_description(self):
+        # Hosts' YAML parsers reject `: ` in a plain value and drop the description.
+        with tempfile.TemporaryDirectory() as tmp:
+            base = self._repo(tmp)
+            self._skill(base, "colon", "name: colon\ndescription: Use this for research: lists, notes, and more words")
+            self.assertIn("needs quotes", " ".join(validate_skills(base)))
+            quoted = base / "skills" / "colon" / "SKILL.md"
+            quoted.write_text(
+                '---\nname: colon\ndescription: "Use this for research: lists, notes, and more words"\n---\n',
+                encoding="utf-8",
+            )
+            self.assertEqual(validate_skills(base), [])
+
     def test_accepts_a_well_formed_skill(self):
         with tempfile.TemporaryDirectory() as tmp:
             base = self._repo(tmp)

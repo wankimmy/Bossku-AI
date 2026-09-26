@@ -1,6 +1,6 @@
 ---
 name: bosskuai-seo-geo
-description: Use this for a one-pass SEO + AI-answer (GEO) readiness check of your own site or app before launch or after a site change, incl. SSR rendering and AI-crawler access. Deep audits: seo-audit; AI-citation strategy: ai-seo; JSON-LD: schema; IA: site-architecture.
+description: "Use this for a one-pass SEO + AI-answer (GEO) readiness check of your own site or app before launch or after a site change, incl. SSR rendering and AI-crawler access. Deep audits: seo-audit; AI-citation strategy: ai-seo; JSON-LD: schema; IA: site-architecture."
 ---
 
 # BosskuAI SEO and GEO

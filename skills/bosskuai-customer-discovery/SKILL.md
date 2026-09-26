@@ -1,6 +1,6 @@
 ---
 name: bosskuai-customer-discovery
-description: Use this to plan and run customer discovery interviews: hypothesis, recruiting segment, JTBD script, transcript tagging, persona and insight cards. To mine existing reviews, tickets, surveys or VOC at scale use customer-research.
+description: "Use this to plan and run customer discovery interviews: hypothesis, recruiting segment, JTBD script, transcript tagging, persona and insight cards. To mine existing reviews, tickets, surveys or VOC at scale use customer-research."
 ---
 
 # BosskuAI Customer Discovery
