@@ -1,6 +1,6 @@
 ---
 name: bosskuai-nuxt-development
-description: Use for expert Nuxt 4.x development, code auditing, and best-practice guidance grounded in official docs via Context7.
+description: Use when the app is Nuxt 3 or 4: rendering modes and routeRules, useFetch/useAsyncData, server routes, runtimeConfig secrets, hydration, and SEO meta, verified against official docs via Context7. Plain Vue components and Pinia go to vue-patterns.
 ---
 
 # BosskuAI Nuxt Development
@@ -13,6 +13,7 @@ Use this skill for building, auditing, or debugging Nuxt 3/4 applications, where
 - **`bosskuai-performance-profiling`**: profiles a running system; this skill covers Nuxt-specific hydration and payload costs.
 - **`bosskuai-ui-ux-design-to-code`**: interface and accessibility work; this skill covers the framework beneath it.
 - **`bosskuai-seo-geo`**: SEO strategy; this skill wires the meta, sitemap, and rendering that implement it.
+- **`vue-patterns`** (ecc): Vue components, Composition API, and Pinia outside Nuxt; this skill owns Nuxt rendering, data fetching, server routes, and config.
 
 ## Ground API details in official docs
 

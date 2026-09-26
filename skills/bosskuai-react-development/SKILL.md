@@ -43,6 +43,7 @@ Use this skill when the frontend is React and the answer depends on React's rend
 - Switching an input between controlled and uncontrolled (undefined → value) throws away user input.
 - No error boundary around data-driven regions means one bad response blanks the page; pair Suspense boundaries with error boundaries.
 - Next.js App Router: server components cannot use hooks or browser APIs; `"use client"` at the wrong level drags the whole subtree to the client; server actions must validate input like any API; `fetch` caching semantics changed in 15 (uncached by default).
+- Next.js 16: `middleware.ts` renamed `proxy.ts` (middleware deprecated), Cache Components with `"use cache"`, Turbopack is the default bundler.
 - React 19: `ref` is a normal prop; `useActionState`/`useOptimistic` replace hand-rolled pending states; `use()` reads promises and context conditionally; check library compatibility before upgrading.
 
 ## State decision table

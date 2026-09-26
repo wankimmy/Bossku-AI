@@ -31,6 +31,8 @@ Every log line for a request or job should carry enough identity to reconstruct 
 
 Alert when users are affected: error rate, latency percentile breach, queue age growth, failed payment or webhook spikes, drop in a core business event. Cause-based alerts (CPU, memory) belong on dashboards unless they directly predict user pain. Every alert needs an owner and a runbook link, or it trains people to ignore alerts.
 
+Page on SLO burn rate over a fast and a slow window rather than raw thresholds; propagate trace context through queue headers and job payloads so one request can be followed into its jobs.
+
 ## Health checks
 
 Separate **liveness** (is the process up) from **readiness** (can it serve). Readiness should check the dependencies the app truly needs: database, cache, queue, storage, and critical external services. A readiness check that always returns 200 is worse than none.

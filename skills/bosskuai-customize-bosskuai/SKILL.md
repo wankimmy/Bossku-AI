@@ -45,7 +45,7 @@ description is a **shared context budget** - keep it tight and specific.
 ```yaml
 ---
 name: <must equal the folder name>
-description: "What it does + when to use it. 40-1200 chars."
+description: "Use when <trigger situations>. Aim for <=300 chars (validator max 1200)."
 license: MIT              # optional
 allowed-tools: Read, Edit # optional; never `tools:` in a skill
 metadata:                 # optional
@@ -68,7 +68,7 @@ Rules:
 name: <agent-name>
 description: <one line>
 tools: ["Read", "Grep", "Glob"]
-model: <opus|coding|fast|reasoning|review>
+model: <inherit|sonnet|opus|haiku|fable|full model id>
 ---
 # <Agent Name> Agent
 

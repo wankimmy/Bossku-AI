@@ -1,6 +1,6 @@
 ---
 name: bosskuai-seo-geo
-description: Use this for SEO, GEO, content discoverability, information architecture, search intent alignment, answer-engine optimization, and making products or content easier to find and cite.
+description: Use this for a one-pass SEO + AI-answer (GEO) readiness check of your own site or app before launch or after a site change, incl. SSR rendering and AI-crawler access. Deep audits: seo-audit; AI-citation strategy: ai-seo; JSON-LD: schema; IA: site-architecture.
 ---
 
 # BosskuAI SEO and GEO
@@ -12,12 +12,13 @@ Use this skill when the task is about making content, pages, or products easier 
 - **`bosskuai-marketing-growth`**: demand generation and channel strategy; this skill handles organic discoverability specifically.
 - **`bosskuai-launch-commercialization`**: full launch plan; this skill supplies the SEO/GEO readiness component.
 - **`bosskuai-paid-acquisition-monetization`**: paid channels; this skill is organic discoverability only.
+- **`seo-audit`**: full technical and on-page audit, traffic drops, hreflang; primary for "fix our SEO". **`ai-seo`**: AI-citation strategy, content patterns, monitoring tools. **`schema`**, **`site-architecture`**, **`programmatic-seo`**: JSON-LD, IA and URLs, pages at scale.
 
 ## Maintenance (time-sensitive)
 
 **Annual review (required):** Refresh search and generative-engine guidance (what “good” citations and snippets look like, tooling, and platform policies) at least once per calendar year — **recommended window: Q1**. SEO and GEO shift with engine updates.
 
-**Last reviewed:** 2026-03.
+**Last reviewed:** 2026-09 (FAQ/HowTo rich results, Mobile-Friendly Test, AI crawler names).
 
 ## Mindset
 
@@ -60,7 +61,7 @@ Match content format and page structure to intent. A transactional keyword on a 
 Match schema type to page type:
 - Product pages: `Product` + `Offer` + `AggregateRating`
 - Articles: `Article` or `BlogPosting` with `datePublished`, `author`, `publisher`
-- FAQs: `FAQPage` with `Question`/`Answer` pairs
+- FAQs: keep visible Q&A on the page; Google stopped showing FAQ rich results on 2026-05-07, so `FAQPage` markup no longer earns a Google result feature
 - Local business: `LocalBusiness` with address, hours, geo
 - SaaS / tools: `SoftwareApplication`
 
@@ -68,7 +69,7 @@ Match schema type to page type:
 - [ ] Responsive layout across 320px–1440px
 - [ ] Touch targets ≥ 44×44px
 - [ ] No horizontal scroll on mobile
-- [ ] Google mobile-friendly test passes
+- [ ] Mobile rendering checked with Lighthouse or Search Console URL Inspection (Google retired the Mobile-Friendly Test in Dec 2023)
 
 ## On-page SEO checklist
 
@@ -91,6 +92,7 @@ Generative engines (ChatGPT, Perplexity, Gemini, Claude) cite sources that:
 - **Structured formatting** — bullet lists, tables, and headings are easier to extract than dense prose
 - **Answer variations of the question** — anticipate related phrasings in subheadings
 - **E-E-A-T signals** — Experience, Expertise, Authoritativeness, Trustworthiness: author bios, publication dates, references
+- **AI crawler access**: citations come from search bots, not training bots. Allow `OAI-SearchBot` (ChatGPT search), `Claude-SearchBot` and `Claude-User` (Claude), `PerplexityBot`, and `Googlebot` (AI Overviews use Googlebot). `GPTBot` and `ClaudeBot` are training crawlers and `Google-Extended` only controls Gemini training and grounding; search inclusion is governed by the search bots. ai-seo's bot table predates this split, so prefer this line.
 
 ## Content cluster model
 
@@ -103,6 +105,8 @@ Example cluster: Pillar = "AI Assistants for Teams" → Clusters = "Best AI assi
 
 ## Workflow
 
+Read `.agents/product-marketing.md` first if it exists, for ICP, positioning, and voice already defined.
+
 1. **Classify intent**: informational / navigational / transactional / investigational for each page/keyword.
 2. **Technical audit**: run through the technical SEO checklist above; note failures.
 3. **On-page review**: run through the on-page SEO checklist for the target page(s).
@@ -110,8 +114,8 @@ Example cluster: Pillar = "AI Assistants for Teams" → Clusters = "Best AI assi
 5. **Structured data**: identify which schema type fits each page; check implementation.
 6. **Content cluster mapping**: is the page part of a cluster? If not, define the cluster.
 7. **Keyword intent clustering**: Group target keywords by search intent (informational, navigational, transactional, investigational) to identify content gaps and cannibalization.
-8. **Schema markup generation**: Generate ready-to-paste JSON-LD for the appropriate schema type (Article, Product, FAQ, HowTo). Validate with Google's Rich Results Test.
-9. **AI visibility tracking**: Monitor how and whether the content is cited by generative engines (SGE, Perplexity, ChatGPT). Track citation frequency, quote accuracy, and link-back presence.
+8. **Schema markup generation**: Generate ready-to-paste JSON-LD for the appropriate schema type (Article, Product, Organization, BreadcrumbList, SoftwareApplication). Validate with Google's Rich Results Test. Do not promise FAQ or HowTo rich results; Google retired both.
+9. **AI visibility tracking**: Monitor how and whether the content is cited by generative engines (Google AI Overviews and AI Mode, ChatGPT search, Perplexity, Claude). Track citation frequency, quote accuracy, and link-back presence.
 10. **Prioritize**: order improvements by impact × effort. Technical blockers (noindex, crawl errors) always come first.
 
 ## Guardrails
@@ -163,7 +167,7 @@ Caveats:
 
 ### Search intent and information architecture
 
-- Map each page to one primary intent: informational, commercial, transactional, navigational, or comparison.
+- Map each page to one primary intent from the Intent classification table above.
 - Create page clusters around problems, locations, personas, and use cases.
 - Add internal links from high-intent pages to conversion pages.
 - Avoid thin pages that only swap location/category words.

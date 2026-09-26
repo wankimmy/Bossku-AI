@@ -55,7 +55,7 @@ Agree on a time-box before starting:
 ### 4. Build with explicit debt annotations
 Mark every intentional shortcut in the code:
 ```python
-# PROTO: hardcoded credentials — replace with env vars before production
+# PROTO: dummy key from .env.example
 # PROTO: no error handling — happy path only
 # PROTO: mocked data — wire real API endpoint later
 # PROTO: no auth — add Clerk/Supabase auth before production

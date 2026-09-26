@@ -12,6 +12,7 @@ Use this skill when the main question is **what to measure, how to instrument it
 - **`bosskuai-product-strategy`**: defines product bets and hypotheses; this skill defines how those bets will be measured.
 - **`bosskuai-marketing-growth`**: optimizes acquisition and distribution; this skill designs measurement across product and growth surfaces.
 - **`bosskuai-engineering-delivery`**: implements tracking; this skill decides the event model, funnel definitions, and metric semantics first.
+- **`analytics`**: GA4/GTM/UTM implementation, tracking plans and "are my events firing" debugging; this skill decides what to measure and whether the numbers can be trusted. **`ab-testing`** / **`bosskuai-growth-experiment`**: experiment design; this skill owns exposure events and metric semantics.
 
 ## Mindset
 
@@ -47,6 +48,7 @@ Use this skill when the main question is **what to measure, how to instrument it
 - How are users, sessions, orgs, devices, and anonymous states linked?
 - Where can attribution be lost or duplicated?
 - Are cross-platform identities reconciled clearly?
+- GA4 and Google Ads offer only data-driven and last-click models since Nov 2023; first-touch or multi-touch views need a warehouse or CDP.
 
 **Data quality**
 - Are dedupe, sampling, clock skew, and late events handled?
@@ -111,7 +113,7 @@ Use this section when the task involves understanding whether users are staying,
 - **D1 (Day 1 retention)**: % of users who returned the day after their first session. Measures first-impression stickiness and onboarding effectiveness.
 - **D7 (Week 1 retention)**: % of users who returned within 7 days. Measures whether the core value proposition was realized in the first week.
 - **D30 (Month 1 retention)**: % of users still active at 30 days. The primary signal for product-market fit in most consumer products.
-- Healthy SaaS benchmarks (B2B): D30 > 70%. Consumer apps: D30 > 25% is strong. Below 10% requires urgent product investigation.
+- Heuristic, unsourced: Healthy SaaS benchmarks (B2B): D30 > 70%. Consumer apps: D30 > 25% is strong. Below 10% requires urgent product investigation.
 - Track the retention curve shape, not just the endpoints: a curve that plateaus (even at 15%) indicates a retained core segment; a curve that keeps falling to zero indicates no retained segment.
 
 ### Churn signal identification

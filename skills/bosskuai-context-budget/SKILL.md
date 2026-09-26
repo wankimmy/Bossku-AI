@@ -17,7 +17,6 @@ Analyze token overhead across every loaded component in a Claude Code session an
 - You've recently added many skills, agents, or MCP servers
 - You want to know how much context headroom you actually have
 - Planning to add more components and need to know if there's room
-- Auditing what the BosskuAI runtime pipeline injects per LLM call (personas, memory, route context)
 
 ## How It Works
 
@@ -50,8 +49,7 @@ Scan all component directories and estimate token consumption:
 - Flag: combined total >300 lines
 
 **BosskuAI agent contracts** (`agents/*.md`)
-- Hosts inject only the `<!-- runtime-core:start -->...<!-- runtime-core:end -->` block of each contract per call; the rest of the file is editor-side documentation
-- Flag: runtime-core blocks >250 tokens per role, or a contract missing the block
+- Claude Code uses the whole body of each agent file as that subagent's system prompt; count full files, not only the runtime-core block.
 - Verify with `python -m bossku validate --root .` after editing contracts
 
 ### Phase 2: Classify

@@ -75,12 +75,12 @@ Every DESIGN.md follows this structure. Use it for generation and auditing:
 - Do not skip component states — every interactive element needs all state definitions.
 - Do not generate a DESIGN.md without confirming brand inputs with the user first.
 - If the project already has a design system, audit and enhance it rather than replacing it.
-- Verify all text-background color pairs pass WCAG AA contrast (4.5:1 body text, 3:1 large text).
+- Verify all text-background color pairs pass WCAG AA contrast (4.5:1 body text, 3:1 large text = 24px, or 18.7px bold; compute pairs with skills/antislop-human/contrast-check.py).
 - When fetching reference DESIGN.md files, use WebFetch to retrieve from `getdesign.md/{company}/design-md`. If offline or unavailable, describe the 9-section structure and work from user-provided brand inputs.
 
 ## Output format
 
-- **Generation mode**: Complete DESIGN.md in the 9-section Google Stitch format, ready to drop into a project root.
+- **Generation mode**: Complete DESIGN.md in the 9-section Google Stitch format, written to .bossku/DESIGN.md (or the project root if the repo already keeps one there).
 - **Audit mode**: Gap analysis report with severity-tagged findings (missing tokens, incomplete states, contrast failures, absent responsive rules) and specific remediation steps.
 
 ## References

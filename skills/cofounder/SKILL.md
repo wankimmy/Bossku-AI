@@ -75,7 +75,7 @@ BosskuAI cofounder mode must be able to route to expert skills for:
 - Dependency / CVE sweeps: `dependency-triage`
 - Post-merge cleanup (TODOs, stale flags): `post-merge-scan`
 - Release changelog / notes: `changelog-scan` → `draft-release-notes`
-- Budgeted agent loops (caps, guardrails): `loop-budget`, `loop-constraints`, `loop-triage` — always apply loop discipline on fix/CI/PR work even without an explicit loop request
+- Budgeted agent loops (caps, guardrails): `loop-budget`, `loop-constraints`, `loop-triage`
 - Sweep CI + issues + recent commits into a loop backlog: `loop-triage`
 
 ## Decision quality bar
@@ -124,12 +124,6 @@ For operational depth, load the specialist skill directly rather than a playbook
 `bosskuai-observability-sre`, `bosskuai-cost-optimization`,
 `bosskuai-eval-driven-agent-improvement`.
 
-## Deep-mode flows (Claude Code)
+## Deep mode (high-stakes calls)
 
-For high-stakes requests, three opt-in slash commands run multi-agent flows:
-
-- **`/audit`** — fan-out parallel review across 2–4 specialists, then synthesize. Use for cross-domain audits where one specialist would miss things.
-- **`/decide`** — propose-then-critique. The cofounder generates a recommendation; a separate sub-agent attacks it using the failure-modes table; the cofounder revises. Use for hard-to-undo decisions.
-- **`/implement`** — write-then-review for non-trivial diffs. The implementer writes code + tests; a separate sub-agent reviews against `bosskuai-rigorous-code-review` and the relevant specialist's anti-patterns; the implementer revises.
-
-Default flow stays single-call. See `../../docs/architecture.md` for cost, latency, and when NOT to use deep-mode. On Codex/Cursor the same patterns are documented as manual prompt sequences.
+For hard-to-undo decisions, run `bosskuai-council`. For cross-domain audits, dispatch 2-4 specialist subagents in parallel (`dispatching-parallel-agents`) and synthesize. For non-trivial diffs, get a fresh reviewer (`requesting-code-review`) using `bosskuai-rigorous-code-review`. Default flow stays single-call.

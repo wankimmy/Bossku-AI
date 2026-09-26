@@ -55,6 +55,12 @@ def init_project(
         "Save durable decisions with `bossku remember`. "
         "Grounding is always on: say when evidence is insufficient instead of guessing, "
         "and ground factual claims in quotes, file:line, or command output."
+        # antislop runs an install wizard and a blocking "during or after?" question unless the
+        # entry file carries its pointer block; Bossku already installs all six skills.
+        "\n<!-- antislop:start -->\n"
+        "antislop: Bossku installs all six antislop skills; skip the install wizard. "
+        "Mode: during the work for new UI, after it for audits of existing UI, unless the user says otherwise.\n"
+        "<!-- antislop:end -->"
     )
     if agents_path.exists():
         agents_path.write_text(

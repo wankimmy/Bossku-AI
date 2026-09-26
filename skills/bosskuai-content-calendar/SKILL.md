@@ -7,8 +7,13 @@ description: Use this for content calendar planning, platform-specific posts, ho
 
 Use this skill when the output is a content plan, posting calendar, campaign sequence, or social media operating rhythm.
 
+## How this differs from nearby skills
+
+- **`social`**: platform strategy, hook formulas, carousels, short-form scripts, listening; load it for post craft. This skill owns the dated calendar, audience split, per-post CTA and metric, and Malay-English tone.
+
 ## Operating principles
 
+- Read `.agents/product-marketing.md` first if it exists, for ICP, positioning, and voice already defined.
 - Start from audience, objective, offer, and CTA.
 - Separate customer-facing content from vendor/partner-facing content.
 - Use content pillars, not random daily topics.

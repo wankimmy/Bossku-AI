@@ -11,7 +11,7 @@ from bossku.hooks import install_hooks, run_sync_hook, uninstall_hooks
 from bossku.init_project import init_project
 from bossku.install import install_user, uninstall_user, update_user
 from bossku.memory import remember, sync_project
-from bossku.index import write_index
+from bossku.index import load_index, write_index
 from bossku.skills import (
     audit_skills,
     find_skill,
@@ -54,11 +54,11 @@ def main(argv: list[str] | None = None) -> int:
 
     p_remember = sub.add_parser("remember", help="Save curated memory", parents=[parent])
     p_remember.add_argument("--kind", required=True, choices=["decision", "plan", "learning", "project"])
-    p_remember.add_argument("--project", type=Path, required=True)
+    p_remember.add_argument("--project", type=Path, default=Path("."), help="project root (default: current directory)")
     p_remember.add_argument("note")
 
     p_sync = sub.add_parser("sync", help="Export project memory to Obsidian", parents=[parent])
-    p_sync.add_argument("--project", type=Path, required=True)
+    p_sync.add_argument("--project", type=Path, default=Path("."), help="project root (default: current directory)")
 
     p_sync_hook = sub.add_parser(
         "sync-hook",
@@ -143,6 +143,19 @@ def main(argv: list[str] | None = None) -> int:
                 matches = rank_skills(args.task, root, limit=max(args.limit, 1))
                 stack = recommend_skill_stack(args.task, root, limit=max(args.limit, 1))
                 runner_up = matches[1][1] if len(matches) > 1 else 0.0
+                indexed = (load_index(root) or {}).get("skills", {})
+                user_only = sorted(
+                    {s for s, _ in [*matches, *stack] if indexed.get(s, {}).get("user_invoked")}
+                )
+                extra = (
+                    {
+                        "user_invoked": user_only,
+                        "user_invoked_note": "Slash commands only: ask the user to run /<id>; "
+                        "never load these through the Skill tool.",
+                    }
+                    if user_only
+                    else {}
+                )
                 print(
                     json.dumps(
                         {
@@ -163,6 +176,7 @@ def main(argv: list[str] | None = None) -> int:
                                 "Primary plus prompt-explicit complements; read descriptions and "
                                 "remove overlapping skills before loading."
                             ),
+                            **extra,
                         },
                         indent=2,
                     )

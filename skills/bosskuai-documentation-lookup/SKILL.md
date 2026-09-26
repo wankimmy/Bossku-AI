@@ -20,13 +20,13 @@ description: Use this for version-specific framework or library documentation lo
 - **Training data vs Context7:** Always prefer Context7 for version-specific behavior, configuration options, and exact API signatures. Use training data only as fallback when Context7 is unavailable.
 
 ## MCP requirements
-- **Context7 (required).** This skill cannot function without it.
-- Graceful degradation: if Context7 is unavailable, answer from training data and explicitly state: "This is from training data and may not reflect your installed version. Verify against official docs."
+- **Context7 (preferred).**
+- Graceful degradation: if Context7 is unavailable, fetch the official docs page or read the installed package's source and type definitions; only if both fail, answer from training data and state: "This is from training data and may not reflect your installed version. Verify against official docs."
 
 ## Workflow
 
 ### 1. Resolve the library ID
-Use Context7 `resolve-library-id` with the library name.
+Use Context7 `resolve-library-id` with `libraryName` and the task as `query`.
 - Input: library name as the user stated it (e.g., "next.js", "prisma", "fastapi")
 - Review results: match by name, ecosystem, and version if provided
 - If multiple matches: select the highest-confidence match with the correct package registry
@@ -38,7 +38,7 @@ From the resolution results, confirm:
 - Score/confidence is acceptable
 
 ### 3. Fetch docs via query
-Use Context7 `get-library-docs` with the resolved library ID and a focused query string.
+Use Context7 `query-docs` with the resolved `libraryId` and a focused `query`.
 - Query should be specific: "middleware configuration", "streaming response API", "authentication setup"
 - If the first query is too broad, narrow and re-query
 

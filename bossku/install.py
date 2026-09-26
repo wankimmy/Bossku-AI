@@ -15,6 +15,7 @@ from bossku.skills import (
     copy_skills_to,
     is_managed_skill_name,
     make_path_writable,
+    prune_stale_skills,
     remove_tree,
     write_routing_cache,
 )
@@ -69,8 +70,12 @@ def install_user(
     claude_dest = claude_skills_dir(h)
     installed_agents = copy_skills_to(agents_dest, r, profile)
     installed_claude = copy_skills_to(claude_dest, r, profile)
+    pruned = prune_stale_skills((agents_dest, claude_dest), set(installed_agents), r)
     installed_agents_references = copy_support_files(r / "references", agents_dest.parent / "references")
     installed_claude_references = copy_support_files(r / "references", claude_dest.parent / "references")
+    # hallmark links resolve ../../site/css/tokens.css from its skill folder.
+    for dest in (agents_dest, claude_dest):
+        copy_support_files(r / "site", dest.parent / "site")
     agents_n = len(installed_agents)
     claude_n = len(installed_claude)
     if agents_n == 0 or claude_n == 0:
@@ -99,6 +104,7 @@ def install_user(
         "agents_count": agents_n,
         "claude_count": claude_n,
         "installed_count": agents_n,
+        "pruned_skills": pruned,
         "agents_reference_count": len(installed_agents_references),
         "claude_reference_count": len(installed_claude_references),
         "tools": tools_coverage_map(agents_dest, claude_dest),

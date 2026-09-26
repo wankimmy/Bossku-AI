@@ -12,7 +12,7 @@ Use this skill when the task is to **create or improve BosskuAI skills**: new sk
 - **`bosskuai-skill-stocktake`**: audits the whole roster for overlap and maintenance quality; this skill builds or revises individual skills.
 - **`bosskuai-rules-distill`**: promotes repeated behavior into rules; this skill packages repeatable domain workflows into skill form.
 - **`bosskuai-continuous-learning`**: decides where a lesson belongs; this skill applies the decision when the target is a skill.
-- **`bosskuai-workspace-assistant`**: routes across the workspace; this skill handles the craft of skill design.
+- **`cofounder`**: routes across the workspace; this skill handles the craft of skill design.
 
 ## Mindset
 
@@ -63,7 +63,7 @@ Do nothing when the lesson is a one-off outcome, temporary debug note, or alread
 
 ### Phase 2 - Write the router
 
-5. Write the frontmatter `description` in trigger language: "Use this for..." plus concrete task examples.
+5. Write the frontmatter `description` as: "Use when <trigger situations>." Aim for <=300 chars (validator max 1200).
 6. Include exclusions or nearby skill pointers if ambiguity is likely.
 7. Keep the description broad enough to trigger naturally but narrow enough to avoid hijacking unrelated tasks.
 

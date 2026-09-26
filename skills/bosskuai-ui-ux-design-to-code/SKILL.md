@@ -21,7 +21,7 @@ Use this skill for **screens, flows, and implementation-ready UI guidance** — 
 - States are as important as the happy path — loading, empty, error, and partial-data states all need design decisions.
 - Accessibility is not optional — it is part of implementation correctness.
 - Anti-generic-AI aesthetics: if it looks like every other AI-generated landing page, redesign it. Reject generic system fonts, predictable purple gradients, and cookie-cutter layouts.
-- Distinctive design: intentional typography pairings, orchestrated motion, asymmetric spatial composition, and visual depth through gradients, textures, and layered effects.
+- Distinctive design: intentional typography pairings, orchestrated motion, asymmetric spatial composition, and visual depth through type, spacing, imagery and restrained texture.
 
 ## Anti-AI UI Gate
 
@@ -56,7 +56,7 @@ Prefer product-specific visual evidence: screenshots, CLI output, file trees, di
 
 1. **Identify the user's goal on this screen** — Not the product's goal, the user's goal. What are they trying to accomplish and what is the success state?
 
-1b. **Check for a project DESIGN.md** — If one exists in the project root, load it and use its tokens, components, and rules as the baseline for all critique and handoff. If none exists, note this gap and recommend creating one via `bosskuai-design-systems`.
+1b. **Check for a project DESIGN.md** — Check .bossku/DESIGN.md first, then DESIGN.md at the project root. If one exists, load it and use its tokens, components, and rules as the baseline for all critique and handoff. If none exists, note this gap and recommend creating one via `bosskuai-design-systems`.
 
 2. **Break the interface into a component hierarchy**:
    - Layout containers (page, section, card, modal)
@@ -80,7 +80,7 @@ Prefer product-specific visual evidence: screenshots, CLI output, file trees, di
    - Touch targets: minimum 44×44px tap area
    - Text: minimum 16px body, legible line-height
 
-5. **Check accessibility (WCAG 2.1 AA minimum)**:
+5. **Check accessibility (WCAG 2.2 AA minimum; formal audits load accessibility)**:
    - Color contrast: 4.5:1 for body text, 3:1 for large text and UI components
    - Keyboard navigation: all interactive elements reachable and operable by keyboard alone
    - Focus management: visible focus ring, logical focus order, focus trapped in modals
@@ -100,7 +100,7 @@ Prefer product-specific visual evidence: screenshots, CLI output, file trees, di
 
 8. **UX writing** — Craft microcopy for UI elements: button labels, error messages, empty states, tooltips, confirmation dialogs, and onboarding copy. Voice and tone should match the product personality.
 
-9. **Accessibility audit** — Beyond the WCAG checks in step 5, run a structured audit: color contrast, keyboard navigation, screen reader flow, focus management, motion preferences, and form labeling. Use WCAG 2.1 AA as the minimum bar.
+9. **Accessibility audit** - for a formal WCAG 2.2 AA audit load accessibility; compute contrast with skills/antislop-human/contrast-check.py, never by eye.
 
 10. **Call out ambiguity** — Do not invent silent design decisions. Flag: "This mockup doesn't show the empty state — define it before building."
 
@@ -138,6 +138,7 @@ Ambiguities to resolve: [list]
 - `../../references/playbooks/ui-delivery-playbook.md`
 - `../../references/checklists/ui-fidelity-checklist.md`
 - `../../references/checklists/anti-ai-ui-checklist.md`
+- `../../references/checklists/expert-cofounder-stack-checklist.md`
 
 ## Anti-AI UI/UX audit matrix
 
@@ -178,9 +179,8 @@ pnpm build
 
 ### Output expectation
 
-Report findings by user impact, not taste:
+For review-only requests, report findings by user impact, not taste:
 
 ```text
 P0/P1/P2 — [screen/component] — [user problem] — [fix] — [verification]
 ```
-- `../../references/checklists/expert-cofounder-stack-checklist.md`

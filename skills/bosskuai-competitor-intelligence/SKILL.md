@@ -1,6 +1,6 @@
 ---
 name: bosskuai-competitor-intelligence
-description: Use this skill for structured competitor tracking — feature comparison matrices, pricing intelligence, messaging changes, hiring signals, and strategic implications. Repeatable, cadence-friendly monitoring with delta detection.
+description: Use this for recurring competitor monitoring: a dated comparison matrix, pricing/feature/messaging/hiring deltas since the last check, and what they mean. For a first deep profile use competitor-profiling; for vs/alternative pages use competitors.
 ---
 
 # BosskuAI Competitor Intelligence
@@ -19,6 +19,7 @@ description: Use this skill for structured competitor tracking — feature compa
 - **`bosskuai-market-analysis`**: defines positioning strategy and TAM/SAM/SOM. Competitor intelligence is the structured, repeatable tracking layer — raw data and comparison matrices — that informs that strategy but doesn't make the strategic call.
 - **`bosskuai-deep-research`**: a one-time deep-dive on any topic. Competitor intelligence is cadence-driven, structured around fixed tracking dimensions, and optimised for delta detection over time.
 - **`bosskuai-browser-automation`**: the execution layer. Load browser-automation alongside this skill when a competitor's site is JS-rendered and Exa/Firecrawl cannot extract the needed data.
+- **`competitor-profiling`**: first, one-off deep profile per competitor URL (Firecrawl + DataForSEO, dated raw data under `competitor-profiles/`); run it for the baseline, then use this skill for the recurring delta. **`competitors`**: publishing vs and alternative pages.
 
 ## MCP requirements
 
@@ -44,7 +45,7 @@ description: Use this skill for structured competitor tracking — feature compa
 
 4. **Build the comparison matrix** — Populate a structured table: rows = competitors, columns = tracking dimensions. Include a "Last verified" date per cell. Flag cells where data could not be confirmed.
 
-5. **Identify changes since last check** — Compare against the previous snapshot (if one exists in `.bossku/memory/project.md`). Highlight changes: new feature, price change, messaging shift, funding event, key hire.
+5. **Identify changes since last check** — Compare against the previous snapshot (the latest `competitor-profiles/*-matrix.md`). Highlight changes: new feature, price change, messaging shift, funding event, key hire.
 
 6. **Draw strategic implications** — For each significant change, state: "This means we should consider..." Keep implications concrete and actionable, not generic.
 
@@ -77,7 +78,7 @@ description: Use this skill for structured competitor tracking — feature compa
 - Respect robots.txt on all scraped domains.
 - Rate-limit scraping: minimum 2 seconds between requests per domain.
 - Do not republish scraped content verbatim — summarise and attribute.
-- Keep competitor matrices in `.bossku/memory/project.md` (`bossku remember --kind project`) so delta detection works across sessions.
+- Save each dated matrix to `competitor-profiles/<YYYY-MM-DD>-matrix.md`; record only a one-line pointer and the top deltas with `bossku remember --kind project`, so project memory stays small and delta detection still works.
 - Never present inferred pricing as confirmed without a direct source.
 
 ## Further reading

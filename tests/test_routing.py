@@ -76,8 +76,8 @@ ROUTING_CASES = [
     ("add retries with a circuit breaker to the payment client", {"error-handling"}),
     ("de-flake our playwright e2e suite in ci", {"e2e-testing", "bosskuai-browser-automation", "bosskuai-qa-automation-strategy"}),
     ("remove generic AI slop from this responsive landing page", {"antislop", "antislop-ui", "bosskuai-taste", "taste-skill", "hallmark"}),
-    ("rewrite this copy without em dashes fake claims or chatbot filler", {"antislop-copywriting", "bosskuai-human-output", "copywriting", "copy-editing"}),
-    ("clean obvious AI comments without changing the code", {"antislop-human"}),
+    ("rewrite this copy without em dashes fake claims or chatbot filler", {"antislop-copywriting", "copywriting", "copy-editing"}),
+    ("clean obvious AI comments without changing the code", {"antislop-code"}),
     ("audit keyboard focus contrast and missing UI states", {"accessibility", "bosskuai-ui-ux-design-to-code"}),
     ("fix mobile overflow responsive reflow and small tap targets", {"antislop-layoutmobile", "accessibility", "bosskuai-ui-ux-design-to-code"}),
     ("use Headroom to compress this huge tool output and retrieve the original", {"bosskuai-headroom"}),
@@ -88,6 +88,49 @@ ROUTING_CASES = [
 ]
 
 NEW_SKILL_ROUTING_CASES = ROUTING_CASES[-9:]
+
+# 2026-09-26 skill review: requests each lane found routed to the wrong skill.
+REVIEW_ROUTING_CASES = [
+    ("add a frame animation to the loading spinner", {"animate"}),
+    ("micro-interactions for the settings page", {"animate"}),
+    ("hover animation on cards", {"animate"}),
+    ("improve INP on my next.js app", {"bosskuai-web-performance"}),
+    ("toast notifications in react", {"ask-sonner"}),
+    ("write a discovery call script for my B2B SaaS", {"sales-enablement"}),
+    ("weekly pipeline review of my deals", {"bosskuai-sales-strategy"}),
+    ("follow-up cadence after a demo", {"bosskuai-sales-strategy"}),
+    ("set up cold email deliverability SPF DKIM DMARC", {"bosskuai-lead-intelligence"}),
+    ("SAFE vs priced round and cap table dilution", {"bosskuai-investor-prep"}),
+    ("build a lead list of dental clinics in Kuala Lumpur", {"prospecting"}),
+    ("check for sql injection in this code", {"bosskuai-cybersecurity-risk"}),
+    ("dockerize my node app", {"bosskuai-docker"}),
+    ("nuxt 4 data fetching", {"bosskuai-nuxt-development"}),
+    ("dependency injection in laravel", {"bosskuai-laravel-development"}),
+    ("expo sdk upgrade", {"bosskuai-expo-react-native"}),
+    ("improve our SEO", {"seo-audit"}),
+    ("run Google Ads for our app", {"ads"}),
+    ("answer engine optimization for our docs", {"ai-seo"}),
+    ("product hunt launch plan", {"launch"}),
+    ("write landing page copy for our SaaS", {"copywriting"}),
+    ("do a competitive analysis of our top 3 competitors", {"competitor-profiling"}),
+    ("do a pr review of #123", {"bosskuai-rigorous-code-review"}),
+    ("address the review comments on my PR", {"receiving-code-review"}),
+    ("the checkout page is broken", {"bosskuai-diagnose-loop"}),
+    ("use tdd to add a discount feature", {"bosskuai-tdd-loop"}),
+    ("shorter answers please", {"bosskuai-token-saver"}),
+    ("audit this UI for AI slop before we ship", {"antislop"}),
+    ("build an admin dashboard for our product", {"bosskuai-ui-ux-design-to-code"}),
+    ("turn this Figma screenshot into React code", {"bosskuai-ui-ux-design-to-code"}),
+    ("generate a brand kit and logo system", {"brandkit"}),
+]
+
+# Each query must keep the named skill out of both the top 3 and the recommended stack.
+REVIEW_EXCLUSION_CASES = [
+    ("make this project open source", "open-source"),
+    ("deploy my app to the cloud", "cloud"),
+    ("design the schema for a multi-tenant postgres app", "schema"),
+    ("build a 3d world landing page with react three fiber", "scroll-world"),
+]
 
 
 class TokenizerTests(unittest.TestCase):
@@ -237,6 +280,49 @@ class RoutingTests(unittest.TestCase):
     def test_unrelated_pdf_operations_do_not_route_to_odl(self):
         top = {sid for sid, _ in rank_skills("merge split and rotate these PDF pages", ROOT, limit=3)}
         self.assertNotIn("odl-pdf", top)
+
+    def test_review_misroutes_stay_fixed(self):
+        misses = [
+            (q, find_skill(q, ROOT)[0])
+            for q, expected in REVIEW_ROUTING_CASES
+            if find_skill(q, ROOT)[0] not in expected
+        ]
+        self.assertEqual(misses, [])
+
+    def test_wrong_skills_stay_out_of_the_stack(self):
+        leaks = []
+        for query, banned in REVIEW_EXCLUSION_CASES:
+            surfaced = {s for s, _ in rank_skills(query, ROOT, limit=3)}
+            surfaced |= {s for s, _ in recommend_skill_stack(query, ROOT)}
+            if banned in surfaced:
+                leaks.append((query, banned))
+        self.assertEqual(leaks, [])
+
+    def test_stack_holds_one_design_direction_skill(self):
+        # Direction skills disagree on dials, fake data, and logo walls; stacking them conflicts.
+        stack = {
+            sid
+            for sid, _ in recommend_skill_stack(
+                "make this landing page not look AI generated, bold and editorial", ROOT, limit=8
+            )
+        }
+        directions = {"bosskuai-taste", "taste-skill", "hallmark", "soft-skill", "minimalist-skill", "brutalist-skill"}
+        self.assertLessEqual(len(stack & directions), 1, stack)
+
+    def test_hyphenated_query_matches_spaced_trigger(self):
+        # Users write "founder-led"; the curated trigger says "founder led".
+        self.assertEqual(
+            find_skill("founder-led sales playbook for my first 10 customers", ROOT)[0],
+            "bosskuai-sales-strategy",
+        )
+
+    def test_user_invoked_skills_are_flagged(self):
+        # Claude Code refuses model calls to disable-model-invocation skills, so the
+        # router must say they are slash commands instead of sending the model there.
+        skills = build_index(ROOT)["skills"]
+        for sid in ("review-animations", "pick-ui-library", "prototype", "i-have-adhd"):
+            self.assertTrue(skills[sid].get("user_invoked"), sid)
+        self.assertNotIn("user_invoked", skills["animate"])
 
     def test_unmatched_query_falls_back_without_crashing(self):
         sid, score = find_skill("zzzz qqqq vvvv", ROOT)

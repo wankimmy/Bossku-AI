@@ -32,6 +32,8 @@ Check each path independently. A correct controller does not imply a correct exp
 - **Aggregates and analytics**: counts and dashboards computed across the whole table.
 - **File and object storage**: predictable paths or signed URLs without tenant checks.
 - **Admin and impersonation**: elevated roles that silently widen scope.
+- **Row-level security itself**: table owners and superusers bypass RLS unless `FORCE ROW LEVEL SECURITY` is set; a tenant id set with session-level `SET` leaks to the next borrower under transaction pooling (use `SET LOCAL` inside the transaction); on Supabase/PostgREST a table with RLS disabled is readable with the public anon key.
+- **Vector stores and RAG retrieval**: a shared embedding index without a tenant filter at query time returns another tenant's chunks to the model.
 
 ## Guardrails
 

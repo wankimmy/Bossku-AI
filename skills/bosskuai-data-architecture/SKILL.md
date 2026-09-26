@@ -12,6 +12,7 @@ Use this skill when the main question is **how data should be shaped, owned, mig
 - **`bosskuai-software-architecture`**: decides broader component and service boundaries; this skill focuses on the structure and lifecycle of the data itself.
 - **`bosskuai-business-logic-review`**: checks whether rules are correct; this skill checks whether schemas and pipelines support those rules safely.
 - **`bosskuai-engineering-delivery`**: implements migrations or models; this skill decides the right data direction first.
+- **`bosskuai-database-engineering`**: indexes, plans, locking, and online-migration mechanics; this skill decides ownership, lifecycle, and pipelines.
 
 ## Mindset
 

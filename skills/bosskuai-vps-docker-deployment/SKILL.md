@@ -26,6 +26,7 @@ Use this skill when deploying a Laravel, Nuxt, Node, Go, or multi-service app to
 
 1. Ubuntu LTS; `deploy` user with sudo; SSH keys only; `PermitRootLogin no`, `PasswordAuthentication no`.
 2. UFW (SSH, 80, 443) and fail2ban; `unattended-upgrades`; swap sized for the plan; `vm.overcommit_memory=1` if Redis runs here.
+- UFW does not filter ports Docker publishes (Docker writes its own iptables rules): publish only the proxy, bind anything else to `127.0.0.1:PORT:PORT`, and check exposure from outside the box.
 3. Docker CE from the official repository; `deploy` in the `docker` group (this is root-equivalent; treat the user accordingly); daemon `log-driver: json-file` with `max-size`/`max-file`.
 4. A private registry token (GHCR, ECR, Docker Hub) for pulls; no build tools on the box.
 
@@ -48,7 +49,7 @@ Use this skill when deploying a Laravel, Nuxt, Node, Go, or multi-service app to
 
 ## Stack notes
 
-- **Laravel**: `config:cache`, `route:cache`, `view:cache` at image build; `storage/` and uploads on a volume; `queue:work --tries=3 --max-time=3600` under compose restart; scheduler as `while true; do php artisan schedule:run; sleep 60; done` or supercronic; Reverb/Horizon as separate services.
+- **Laravel**: `route:cache` and `view:cache` at image build; `config:cache` in the container entrypoint at start, once the runtime env exists (at build it bakes build-time values, or secrets if `.env` is in the build context); `storage/` and uploads on a volume; `queue:work --tries=3 --max-time=3600` under compose restart; scheduler as `while true; do php artisan schedule:run; sleep 60; done` or supercronic; Reverb/Horizon as separate services.
 - **Nuxt / Node**: run the Nitro/Node server as a non-root user; `NITRO_PORT`, `NUXT_*` runtime config from env; no `pnpm install` at runtime.
 - **Go**: static binary on a scratch or distroless image; `GOMEMLIMIT` set to the container limit.
 - **Database**: `POSTGRES_*`/`MYSQL_*` from `.env`; tuned `shared_buffers`/`innodb_buffer_pool_size` to the plan; never publish the port.

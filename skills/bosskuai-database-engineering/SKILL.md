@@ -14,6 +14,7 @@ Use this skill when schema, query behavior, indexes, migrations, locking, data c
 - **`bosskuai-mongodb`** / **`bosskuai-redis-caching-queues`**: engine-specific depth; this skill covers relational engines in depth and MongoDB at design level.
 - **`bosskuai-tenant-isolation-security`**: authorization boundaries; this skill provides the schema and index shape that make isolation cheap.
 - **`bosskuai-laravel-development`** / **`bosskuai-go-development`**: the application's data-access layer; this skill owns what the engine does with it.
+- **`mysql-patterns`** / **`database-migrations`** (ecc): MySQL/MariaDB engine specifics and ORM migration files; this skill owns engine-neutral design and the online-migration plan.
 
 ## Mindset
 

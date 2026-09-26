@@ -1,11 +1,18 @@
 ---
 name: bosskuai-laravel-development
-description: Use this for expert Laravel backend development, audits, queues, Eloquent, migrations, validation, service boundaries, testing, security, performance, and production readiness.
+description: Use when building, refactoring, or auditing Laravel code: Eloquent, validation, policies, jobs, events, migrations, service boundaries, and performance. Security hardening, test-first work, and pre-deploy checks have their own Laravel skills.
 ---
 
 # BosskuAI Laravel Development
 
 Use this skill when building, auditing, or refactoring Laravel applications.
+
+## How this differs from nearby skills
+
+- **`bosskuai-laravel-security`**: security review and hardening before a sensitive merge or release.
+- **`bosskuai-laravel-tdd`**: writing Pest/PHPUnit tests first.
+- **`bosskuai-laravel-verification`**: the pre-PR and pre-deploy check loop.
+- **`bosskuai-redis-caching-queues`**: Redis, Horizon, queue and cache operations.
 
 ## Operating principles
 

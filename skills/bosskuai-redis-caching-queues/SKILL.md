@@ -7,13 +7,19 @@ description: Use this for Redis caching, Laravel queues, cache invalidation, loc
 
 Use this skill when Redis, queues, caching, sessions, distributed locks, rate limits, or background workers affect correctness or performance.
 
+## How this differs from nearby skills
+
+- **`bosskuai-database-engineering`**: database-backed queues (`SKIP LOCKED`) and the slow query a cache would hide.
+- **`bosskuai-performance-profiling`**: proves a cache is needed.
+- **`bosskuai-aws-deployment`**: ElastiCache and SQS provisioning.
+
 ## Operating principles
 
 - Cache only when the source of truth and invalidation rule are clear.
 - Make queued jobs idempotent, observable, and safe to retry.
 - Use locks for coordination, not as a substitute for database constraints.
 - Separate queue names by priority and workload type.
-- Size Redis memory and eviction policy intentionally.
+- Queues, locks, and sessions need `maxmemory-policy noeviction`; caches use `allkeys-lru`. Split them when they share memory, or jobs vanish under pressure.
 
 ## Checklist
 
@@ -21,6 +27,7 @@ Use this skill when Redis, queues, caching, sessions, distributed locks, rate li
 - TTL and invalidation rule are defined.
 - Job timeout, retry count, backoff, uniqueness, and failure handling are explicit.
 - Workers are supervised and can be restarted safely during deployment.
+- Each job's `timeout` is shorter than the connection's `retry_after` (with a margin), or the job runs twice.
 - Long-running jobs chunk work and do not serialize heavy Eloquent models blindly.
 - Rate limits protect expensive endpoints and third-party APIs.
 - Redis is not publicly exposed and has persistence/backup settings appropriate to its role.

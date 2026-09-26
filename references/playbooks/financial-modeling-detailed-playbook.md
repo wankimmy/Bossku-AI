@@ -91,7 +91,7 @@ G&A: Finance, legal, HR, office, insurance
 
 **Customer Acquisition Cost (CAC):**
 ```
-CAC = Total Sales + Marketing Spend / New Customers Acquired
+CAC = (Total Sales + Marketing Spend) / New Customers Acquired
 (in same period — use prior quarter's spend if there's a lag)
 ```
 
@@ -104,7 +104,7 @@ Or: LTV = ACV × Gross Margin % × Average Customer Lifetime (in years)
 
 **LTV:CAC ratio:**
 - < 1:1 — destroying value
-- 1:3 — breakeven / marginal
+- 1:1 to 3:1: marginal (CAC recovered, little left to reinvest)
 - 3:1 — target for healthy growth
 - > 5:1 — underinvesting in growth
 

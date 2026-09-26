@@ -1,6 +1,6 @@
 ---
 name: bosskuai-investor-prep
-description: "Investor-facing materials — pitch decks, one-pagers, investor memos, financial models, accelerator applications — packaged with consistent, defensible numbers."
+description: "Use this for fundraising materials and process: pitch decks, one-pagers, investor memos, monthly investor updates, accelerator applications, the investor pipeline, and SAFE or priced-round basics, with every number consistent across documents."
 ---
 
 # BosskuAI Investor Prep
@@ -20,6 +20,8 @@ description: "Investor-facing materials — pitch decks, one-pagers, investor me
 - **`bosskuai-product-strategy`**: shapes what to build and the product roadmap. Investor prep packages the existing strategy and traction into a narrative for external capital. Load product-strategy first if the strategy itself is not yet settled.
 - **`bosskuai-market-analysis`**: produces market sizing and competitive intelligence. Load market-analysis to generate TAM/SAM/SOM and competitive context, then investor-prep to frame it for a deck.
 - **`bosskuai-launch-commercialization`**: full go-to-market readiness. Investor prep focuses on the fundraising story, not launch execution.
+- **`bosskuai-financial-modeling`**: builds the model (projections, runway, scenarios); this skill packages its outputs. Build or fix the model there first.
+- **`bosskuai-lead-intelligence`**: builds the investor list, warm-intro paths, and intro requests; this skill tracks the raise and writes the materials.
 
 ## MCP requirements
 
@@ -60,6 +62,12 @@ No MCP required for core deck / memo creation.
 | 10 | Financials — 3-year projection, key assumptions visible |
 | 11 | Ask — raise amount, use of funds, milestones it buys |
 | 12 | Appendix / backup slides — unit economics, cohort data, product roadmap |
+
+## Investor pipeline, updates, and round basics
+
+- **Pipeline table**: | Firm | Partner | Stage and check fit | Thesis fit | Warm path | Status (researching / intro asked / first meeting / partner meeting / diligence / committed / passed) | Next step + date |
+- **Monthly update** (same headings every month): headline metric vs last month, highlights, lowlights and what changes, cash and runway, specific asks.
+- **Round basics**: name the instrument (post-money SAFE, the YC standard since 2018, or a priced round) and show dilution with a before/after cap table. Valuation, terms, and securities-law questions go to qualified counsel; never draft final legal terms.
 
 ## Output format
 

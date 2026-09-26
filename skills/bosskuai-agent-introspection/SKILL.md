@@ -30,7 +30,7 @@ Activate this skill for:
 - producing a structured human-readable debug report
 
 Do not use this skill as the primary source for:
-- feature verification after code changes; use `bosskuai-laravel-verification` (app/) or the matching loop skill
+- feature verification after code changes; use the project's verification gate (`bosskuai-laravel-verification` for Laravel)
 - framework-specific debugging when a narrower bosskuai skill already exists (e.g. `bosskuai-diagnose-loop`)
 - runtime promises the current harness cannot enforce automatically
 
@@ -140,12 +140,11 @@ Good pattern:
 
 ## Integration with BosskuAI
 
-- Use `bosskuai-laravel-verification` (or the project's verification gate) after recovery if code was changed.
-- Use `bosskuai-continuous-learning` when the failure pattern is worth turning into an instinct or durable memory entry.
+- Use the project's verification gate (`bosskuai-laravel-verification` for Laravel) after recovery if code was changed.
+- Use `bosskuai-continuous-learning` when the failure pattern is worth turning into a durable memory entry.
 - Use `bosskuai-council` when the issue is not technical failure but decision ambiguity.
 - Use `bosskuai-project-understanding` if the failure came from conflicting local state or repo drift.
 - Use `bosskuai-agent-architecture-audit` when symptoms point at the wrapper stack itself (persona injection, model fallback, memory admission) rather than this run.
-- BosskuAI pipeline runs: check `storage/logs/laravel.log` for the run_id, per-agent token counts, and the `ModelFallbackService` chain — a stage that "completed" with a near-empty output (e.g. 133 tokens from a fallback model) is a degraded run, not a success.
 
 ## Output Standard
 

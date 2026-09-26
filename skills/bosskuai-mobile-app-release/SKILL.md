@@ -26,8 +26,8 @@ Use this skill when an app must reach the App Store or Google Play, or when an e
 - Crash-free sessions ≥ 99.5% on the beta track; no ANRs on the test devices; cold start under ~2s on a mid-range Android.
 - In-app account deletion for any app with sign-up (Apple 5.1.1(v), Google account deletion policy); privacy policy URL live.
 - Every permission has a purpose string and is requested in context; no unused permissions declared.
-- Sign in with Apple offered if any third-party social login is offered.
-- Digital goods sold only through IAP / Play Billing; subscription terms and price disclosed on the paywall.
+- If a third-party or social login is offered, also offer an equivalent login that limits data to name and email, lets users keep their email private, and does no ad tracking without consent (Sign in with Apple qualifies) - guideline 4.8.
+- Digital goods: IAP / Play Billing by default. US-storefront iOS apps may also link or button out to external purchase (3.1.1(a)); other storefronts need Apple's entitlement. Disclose subscription terms and price on the paywall.
 - Demo account and review notes prepared when login is required.
 - Deep links, push notifications, and payments tested on physical devices with production credentials.
 - Crash reporting (Sentry/Crashlytics) and analytics tagged with the release version; source maps uploaded.
@@ -50,7 +50,7 @@ Use this skill when an app must reach the App Store or Google Play, or when an e
 
 ## Common rejections and how to avoid them
 
-- Apple 2.1 (crashes/incomplete), 2.3 (metadata mismatch), 4.2 (minimum functionality: a wrapped website), 5.1.1 (data collection without purpose), 3.1.1 (external payment for digital goods), missing demo account, login walls without value preview.
+- Apple 2.1 (crashes/incomplete), 2.3 (metadata mismatch), 4.2 (minimum functionality: a wrapped website), 5.1.1 (data collection without purpose), 3.1.1 (external payment for digital goods outside the US-storefront allowance), missing demo account, login walls without value preview.
 - Google: Data safety form contradicting SDK behavior, missing target API level, sensitive permission declarations (SMS, call log, background location) without a form, deceptive behavior, broken links in the listing.
 - Both: age rating answers, export compliance (encryption) declaration, privacy policy reachable without login.
 

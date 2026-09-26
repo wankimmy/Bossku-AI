@@ -8,6 +8,10 @@
     "bosskuai-agent-security-hardening": "bosskuai-prompt-injection-defense",
     "bosskuai-grill-me": "bosskuai-grill-with-docs",
     "bosskuai-zoom-out": "bosskuai-codebase-analysis",
-    "destructive_command_guard": "dcg"
+    "destructive_command_guard": "dcg",
+    "bosskuai-human-output": "antislop-copywriting",
+    "bosskuai-recipes": "bosskuai-prompt-optimizer",
+    "bosskuai-engineering-principles": "bosskuai-engineering-delivery",
+    "bosskuai-workspace-assistant": "cofounder"
   }
 }

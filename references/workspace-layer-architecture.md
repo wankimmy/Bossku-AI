@@ -30,7 +30,7 @@ BosskuAI separates skills into three practical tiers:
 
 These are the lightweight defaults that should handle most routing:
 
-- `bosskuai-workspace-assistant`
+- `cofounder`
 - `bosskuai-project-understanding`
 - `bosskuai-search-first`
 - `bosskuai-engineering-delivery`

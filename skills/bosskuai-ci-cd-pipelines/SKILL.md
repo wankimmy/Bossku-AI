@@ -83,7 +83,7 @@ Use this skill when the pipeline itself is the work: its shape, speed, gates, se
 
 ## Stack presets
 
-- **Laravel**: PHP matrix, `composer` cache, Pint, PHPStan, Pest with a Postgres/MySQL service, `php artisan config:cache` in the build image, frontend build in a separate job.
+- **Laravel**: PHP matrix, `composer` cache, Pint, PHPStan, Pest with a Postgres/MySQL service, `route:cache`/`view:cache` in the build image (`config:cache` runs at container start), frontend build in a separate job.
 - **Nuxt / React**: pnpm store cache, typecheck, ESLint, Vitest, Playwright with browser cache, build with bundle-size check.
 - **Go**: module and build cache, `golangci-lint` action, `go test -race`, `govulncheck`, static binary artifact.
 - **Expo**: `eas build` with `EXPO_TOKEN`, preview builds per PR, production on tag; see `bosskuai-mobile-app-release`.

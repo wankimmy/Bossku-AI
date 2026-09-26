@@ -19,15 +19,17 @@ description: Use this skill for browser-level testing, UI verification, automate
 - **`bosskuai-integration-testing`**: covers API contracts, service-to-service calls, and backend integration correctness. Browser automation covers the browser layer — rendered UI, DOM interactions, network from the client perspective, visual output.
 - **`bosskuai-rigorous-code-review`**: static analysis of code. Browser automation executes the running application.
 - **`bosskuai-competitor-intelligence`**: strategic tracking of competitor changes. Browser automation is the execution layer that can serve that skill but has its own engineering focus (test stability, selectors, retries).
+- **`e2e-testing`** (ecc): Playwright suites committed to the repo (page objects, config, CI); this skill runs ad-hoc QA passes, visual diffs, and scraping against a live URL.
+- **`browser-use`** / **`remote-browser`**: an agent driving a browser interactively through the browser-use CLI; this skill produces repeatable scripts and a QA report.
 
 ## MCP requirements
 
 | Tool | Role | Degradation |
 |------|------|-------------|
-| Playwright MCP | Browser automation (required) | Without Playwright MCP, provide script templates for manual execution; note Pencil is available in Cursor as an alternative |
+| Playwright MCP | Browser automation (required) | Without Playwright MCP, provide script templates for manual execution |
 | Chrome DevTools MCP (Google) | Runtime inspection, performance profiling, network analysis, accessibility audits (optional) | Without DevTools MCP, use Playwright's built-in tracing and Lighthouse CLI as alternatives |
 
-Note: When working in Cursor, Pencil (Cursor's built-in browser tool) can substitute for Playwright MCP for inspection tasks. For headless scripting and CI, Playwright is required.
+Note: For headless scripting and CI, Playwright is required.
 
 ## Workflow
 
@@ -37,14 +39,14 @@ Choose one or more modes based on the task:
 1. Navigate to the target URL and capture a full-page screenshot.
 2. Check browser console for errors (level: error, warn).
 3. Intercept network requests — flag any 4xx/5xx responses.
-4. Measure Core Web Vitals (LCP, CLS, FID/INP) if performance is in scope.
+4. Measure Core Web Vitals (LCP, CLS; INP needs field data or a scripted interaction; hand CWV work to `bosskuai-web-performance`) if performance is in scope.
 5. Verify critical above-the-fold elements are visible.
 6. Output: pass/fail per check, screenshots, console log excerpt.
 
 ### Mode 2 — Interaction Testing
 1. Map the user flow to test (e.g., signup → verify email → first use).
 2. Write Playwright steps: fill inputs, click, assert DOM state.
-3. Handle async waits with `waitForSelector` or `waitForResponse` — never fixed `sleep`.
+3. Wait with locator assertions (`await expect(page.getByRole(...)).toBeVisible()`) or `waitForResponse`; never fixed sleeps or `networkidle`.
 4. Test happy path first, then at least one error path (bad input, network failure).
 5. Output: step-by-step pass/fail, failure screenshots.
 

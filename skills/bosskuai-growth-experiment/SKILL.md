@@ -1,6 +1,6 @@
 ---
 name: bosskuai-growth-experiment
-description: Use this for designing, sizing, running, and analyzing growth experiments, including A/B tests, channel tests, referral loops, onboarding tests, pricing tests, sample size, guardrails, and decision criteria.
+description: Use this to pre-register an experiment's decision rules (MDE, sample size, ship/kill/iterate), choose holdout, bandit or pre/post designs, test channels on CAC, and read out results. For standard page A/B test setup and ICE backlogs use ab-testing.
 ---
 
 # Growth Experiment
@@ -17,6 +17,7 @@ description: Use this for designing, sizing, running, and analyzing growth exper
 - **vs marketing-growth:** marketing-growth defines channel strategy, content plans, and growth loops at a strategic level. growth-experiment designs rigorous, statistically grounded experiments with sample sizes, stopping rules, and decision criteria before running anything.
 - **vs paid-acquisition-monetization:** paid-acquisition optimizes spend and CAC/LTV ratios operationally. growth-experiment creates the measurement structure that validates whether a new channel or creative actually works.
 - **vs analytics-metrics:** analytics-metrics tracks and interprets existing data. growth-experiment designs the conditions under which valid causal conclusions can be drawn.
+- **vs ab-testing:** page and copy test setup, sample-size tables, testing tools, ICE backlog and cadence live there; load it for the build and this skill for the decision rules and non-A/B designs.
 
 ## MCP requirements
 - **Exa (optional):** Benchmark conversion rates and experiment durations from industry sources. Graceful degradation: fall back to stated industry norms if Exa unavailable.

@@ -50,7 +50,7 @@ Email / LinkedIn / Warm intro / Event / DM
 ```
 Angle 1 (direct fit): "<title> at <company type> in <geography>"
 Angle 2 (intent signal): "<company type> hiring <role> — infers growth and pain"
-Angle 3 (event signal): "<company type> raised Series A 2025"
+Angle 3 (event signal): "<company type> raised Series A <current year>"
 Angle 4 (community): "founder posting about <pain point> on LinkedIn"
 Angle 5 (directory): "<industry> conference speaker list OR award list"
 ```
@@ -60,7 +60,7 @@ Angle 5 (directory): "<industry> conference speaker list OR award list"
 Angle 1: "<stage> investor <vertical> portfolio"
 Angle 2: "seed fund invested in <comparable company>"
 Angle 3: "VC partner wrote about <your market or problem>"
-Angle 4: "<firm> recent investments 2024 2025"
+Angle 4: "<firm> recent investments <last 12 months>"
 Angle 5: "angel investor <domain expertise> check size <range>"
 ```
 
@@ -145,7 +145,7 @@ Find one specific, non-generic reason to reach out:
 
 | Name | Title | Company | Fit | Timing | Warm | Total | Priority | Hook |
 |------|-------|---------|-----|--------|------|-------|----------|------|
-| Jane | VP Eng | Acme | 4 | 4 | 3 | 11 | P1 | Series B announcement |
+| <name> | VP Eng | <company> | 4 | 4 | 3 | 11 | P2 | Series B announcement |
 | ... |
 
 ### Priority 1 Leads (reach this week)
@@ -154,7 +154,7 @@ Find one specific, non-generic reason to reach out:
 ### Signal Log
 | Date | Signal Type | Lead | Detail |
 |------|-------------|------|--------|
-| ... | Job posting | Acme | Hiring 5 engineers — growth signal |
+| ... | Job posting | <company> | Hiring 5 engineers — growth signal |
 
 ### Warm Paths Identified
 - Mutual: <name> knows <lead> from <context> — ask for intro by <date>
@@ -185,10 +185,10 @@ Find one specific, non-generic reason to reach out:
 
 **Scoring without signals** — a lead with no timing signals is a cold fit match. Without urgency or intent, conversion is low regardless of fit score.
 
-**Skipping the warm path check** — even a weak warm path (shared community mention) can double response rates. Always check before going cold.
+**Skipping the warm path check**: check for a warm path before going cold, even a weak one (shared community mention).
 
 **Generic personalization** — "I really enjoyed your LinkedIn post about leadership" is not personalization. Name the specific post and the specific point that is relevant to your pitch.
 
-**No follow-up plan** — 80% of sales happen on follow-up, not first touch. Every outreach needs a pre-planned sequence before you send the first message.
+**No follow-up plan**: every outreach needs a pre-planned sequence before you send the first message.
 
 **CRM discipline failure** — if touchpoints aren't logged, you'll double-contact, lose context, and look disorganized. Update CRM after every touch, not at the end of the week.

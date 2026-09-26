@@ -36,11 +36,11 @@ Simplest thing that works: YAGNI → stdlib → native → installed dep → min
 
 ## Anti-slop (always on)
 
-Use `antislop` as the final delivery gate when output quality is a material concern. Add only the relevant specialist: `antislop-ui` for generic visual patterns, `antislop-layoutmobile` for small-screen reflow, `antislop-copywriting` for prose, `antislop-human` for generated comments, or `antislop-code` for code artifacts. Use `bosskuai-taste` or a design-direction skill before UI generation; Anti-Slop audits the result. For motion, use `emil-design-eng` or `animate` (`animate-expo` in React Native).
+Use `antislop` as the final delivery gate when output quality is a material concern. Add only the relevant specialist: `antislop-ui` for generic visual patterns, `antislop-layoutmobile` for small-screen reflow, `antislop-copywriting` for prose, `antislop-human` for contrast, keyboard, focus, and states, or `antislop-code` for code comments. Use `bosskuai-taste` or a design-direction skill before UI generation; Anti-Slop audits the result. For motion, use `emil-design-eng` or `animate` (`animate-expo` in React Native).
 
 ## Superpowers process
 
-For multi-step development, use the phase-specific Superpowers skill: brainstorm before ambiguous design, write a plan before broad edits, apply TDD for behavior changes, use systematic debugging for unknown failures, and run verification before completion. Process skills complement the domain skill; they do not replace it.
+For multi-step development, use the phase-specific Superpowers skill: brainstorm before ambiguous or architectural design (bounded, clearly specified changes skip its approval gate and follow Risk pauses), write a plan before broad edits (`writing-plans`), and run verification before completion. Test-first work uses `bosskuai-tdd-loop` and debugging uses `bosskuai-diagnose-loop`; `test-driven-development` and `systematic-debugging` apply when a Superpowers plan names them. Activation above replaces `using-superpowers`. In vendored text, `superpowers:<name>` means the installed `<name>` skill. Process skills complement the domain skill; they do not replace it.
 
 ## Loop engineering (always on)
 
@@ -91,28 +91,32 @@ Vendored packs are reviewed on a 180-day window — run `bossku skills stocktake
 
 | Task | Primary skill(s) |
 |---|---|
-| New product / UI that must not look AI-generated | `taste-skill` or `hallmark` (+ `bosskuai-taste` for Bossku anti-slop content rules) |
+| Landing / marketing UI that must not look AI-generated | one of `bosskuai-taste` (lean), `taste-skill` (full), or `hallmark`, never several; gate with `antislop` + `antislop-ui` |
 | Final anti-AI-slop audit for UI, mobile, copy, comments, or code | antislop — `antislop` plus only the relevant specialist skill(s) |
 | Large logs, files, searches, or tool output exhausting context | `bosskuai-headroom` (runtime installed/configured separately) |
 | Soft / minimal / brutalist UI direction | taste-skill — `soft-skill`, `minimalist-skill`, or `brutalist-skill` |
-| Redesign existing UI / image → code | taste-skill — `redesign-skill`, `image-to-code-skill` |
-| Marketing, CRO, SEO, copy, GTM | marketingskills — start with `product-marketing` |
-| Brainstorm → plan → TDD → debug → review process | superpowers — `using-superpowers`, `brainstorming`, `writing-plans`, `systematic-debugging` |
+| Redesign existing UI | `taste-skill` (marketing sites) or `redesign-skill` (app UI) |
+| Screenshot / mockup / Figma → code; dashboards and app screens | `bosskuai-ui-ux-design-to-code` (`image-to-code-skill` and `imagegen-*` only when an image-generation tool is available) |
+| Marketing, CRO, SEO, copy, GTM | marketingskills: start with `product-marketing`; primary by request: `seo-audit` (fix SEO), `ai-seo` (AI citations), `ads` / `ad-creative` (paid), `analytics` (tracking), `ab-testing`, `launch`, `competitor-profiling`, `antislop-copywriting` (de-AI copy); `bosskuai-*` marketing skills are one-pass strategy and readiness gates |
+| Brainstorm → plan → execute → verify process | superpowers — `brainstorming`, `writing-plans`, `subagent-driven-development` / `executing-plans`, `verification-before-completion` (TDD: `bosskuai-tdd-loop`; debugging: `bosskuai-diagnose-loop`) |
 | Codebase map, call tracing, where-does-X-live (source code) | `graft` (requires `@nanonets/graft` CLI + `graft build`) |
-| Mixed-media corpus → knowledge graph (docs, papers, video, Neo4j/Obsidian export) | `graphify` (requires `graphifyy` CLI) |
-| Browser automation agent | `browser-use` (prefer over `bosskuai-browser-automation` when installed) |
+| Mixed-media corpus → knowledge graph (docs, papers, video, Neo4j/Obsidian export) | `graphify`, only when `graphify-out/` exists or the user asks for a graph (requires `graphifyy` CLI); ordinary codebase questions go to `bosskuai-project-understanding` or `graft` |
+| Agent drives a live browser (navigate, fill, extract) | `browser-use` (`remote-browser` when sandboxed); Playwright suites in the repo: `e2e-testing`; QA smoke, visual regression, or scraping report: `bosskuai-browser-automation` |
+| Browser Use Cloud API/SDK or the `browser_use` Python library | `cloud` / `open-source` (`x402` is not installed: it handles wallet keys and moves money) |
 | Office/PDF/HTML → Markdown | `markitdown` (requires `markitdown[all]` pip package) |
 | Structured PDF extraction, scanned OCR, tables, bounding boxes, or citation-ready RAG | `odl-pdf` (OpenDataLoader runtime installed separately; use `markitdown` for generic conversion) |
 | Factual answers from documents, citations, accuracy or hallucination concerns | `bosskuai-grounding` (always on; + `bosskuai-deep-research` for multi-source synthesis, `odl-pdf` for citation-ready PDF extraction) |
-| Agent loops: CI/PR/issue sweeps, budgeted triage | loop-engineering — `loop-triage`, `loop-verifier`, `minimal-fix` (+ pattern skills: `ci-triage`, `pr-review-triage`, etc.) |
+| Agent loops: CI/PR/issue sweeps, budgeted triage | loop-engineering — `loop-triage`, `loop-verifier`, `minimal-fix` (+ pattern skills: `ci-triage`, `pr-review-triage`, etc.); release notes: `draft-release-notes` has no local contract, so follow `bosskuai-github-workflow` (Releases and dependencies) |
 | Scroll-scrub fly-through / diorama cinematic landing | `scroll-world` (Higgsfield + portable scrub engine; not generic GSAP-only heroes) |
 | Agent shell/git safety / destructive command hooks | `dcg` (Destructive Command Guard; install upstream binary separately) |
-| Motion craft / easing / gesture / UI polish | emil-skills — `animate` to build, `/review-animations` to critique (user-invoked), `improve-animations` to audit a codebase (`emil-design-eng` / `apple-design` for philosophy) |
+| Motion craft / easing / gesture / UI polish | emil-skills — `animate` to build (`animate-expo` in Expo), `apple-design` for drag/sheet/momentum physics, `/review-animations` to critique (user-invoked; a model-run critique uses `emil-design-eng`'s Before/After/Why table), `improve-animations` to audit a codebase; never load `animate` and `emil-design-eng` together |
 | Frontend library choice (toast, DnD, charts, OTP, …) | `/pick-ui-library` (user-invoked) |
-| UI variant exploration behind a live picker | `/prototype` (user-invoked; vs `bosskuai-throwaway-prototype` for logic spikes / `bosskuai-rapid-prototype` for MVP scaffolds) |
+| UI variant exploration behind a live picker | `/prototype` (user-invoked); model-run: `bosskuai-throwaway-prototype` (its UI.md builds switchable variants); `bosskuai-rapid-prototype` for MVP scaffolds |
 | Sonner toasts / Swift or SwiftUI code | emil-skills — `ask-sonner`, `write-swift` |
-| Reader wants action-first, numbered, no-preamble answers | `i-have-adhd` (explicit `/i-have-adhd`; persists until "stop adhd mode" / "normal mode") |
-| MySQL/MariaDB tuning, schema or data migrations | ecc — `mysql-patterns`, `database-migrations` (Bossku `bosskuai-database-engineering` for generic design) |
+| Reader wants action-first, numbered, no-preamble answers | `i-have-adhd` (explicit `/i-have-adhd`; persists until "stop adhd mode" / "normal mode"); the model cannot load it, so suggest `/i-have-adhd` and use `bosskuai-token-saver` meanwhile |
+| Schema, index, and query-plan design; online migrations incl. Laravel/MariaDB | `bosskuai-database-engineering` |
+| MySQL/MariaDB engine specifics (InnoDB, replication, pools) | ecc — `mysql-patterns` |
+| ORM migration files (Prisma, Drizzle, Kysely, Django, golang-migrate) | ecc — `database-migrations` |
 | Python code or pytest | ecc — `python-patterns`, `python-testing` |
 | Vue 3 / Pinia outside Nuxt | ecc — `vue-patterns` (`bosskuai-nuxt-development` for Nuxt) |
 | Build an MCP server, Playwright E2E, WCAG 2.2 audit, ADR, error/retry design | ecc — `mcp-server-patterns`, `e2e-testing`, `accessibility`, `architecture-decision-records`, `error-handling` |

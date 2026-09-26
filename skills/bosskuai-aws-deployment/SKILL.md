@@ -1,6 +1,6 @@
 ---
 name: bosskuai-aws-deployment
-description: "Use when deploying or operating on AWS across ECS, App Runner, Lambda, EC2, EKS, Amplify, VPC, CloudFront, RDS, S3, queues, IAM, secrets, Terraform or CDK, OIDC deploys, CloudWatch, backups, disaster recovery, regional choices, and cost guardrails."
+description: "Use when deploying or operating on AWS: compute choice (ECS Fargate, ECS Express Mode, Lambda, EC2, EKS; App Runner only for existing services), IAM, VPC, CloudFront, RDS, S3, SQS, secrets, OIDC deploys, Terraform or CDK, CloudWatch, DR, and cost guardrails."
 ---
 
 # BosskuAI AWS Deployment
@@ -27,7 +27,7 @@ Use this skill when the target is AWS and the answer depends on which managed se
 
 | Workload | Pick | Because |
 |---|---|---|
-| Container web app, small team, minimal ops | App Runner | Build-to-URL with autoscaling and TLS; limited networking control |
+| Container web app, small team, minimal ops | ECS Express Mode | One call provisions a Fargate service, ALB, TLS, and autoscaling; App Runner is closed to new customers (existing services only) |
 | Web services, workers, schedulers with predictable traffic | ECS Fargate | Containers without node management; sidecars, long-running tasks, private networking |
 | Event-driven, spiky, short jobs | Lambda | Pay per invocation; watch cold starts, 15-minute limit, DB connection storms (use RDS Proxy) |
 | Static or SSR frontend (Next.js, Nuxt) | Amplify Hosting or S3 + CloudFront | CDN-first, preview branches |
@@ -62,7 +62,7 @@ Route 53 → CloudFront (static, WAF) → ALB (TLS from ACM) → ECS Fargate ser
 3. Register a new task definition and update the service: rolling with minimum healthy 100% and circuit breaker on, or blue/green through CodeDeploy for high-risk services.
 4. ALB health checks decide readiness; alarms on 5xx and p99 gate the promotion.
 5. Rollback is re-deploying the previous task definition revision; the previous image stays in ECR (lifecycle policy keeps the last N).
-6. Terraform: remote state in S3 with DynamoDB locking, `plan` on pull requests, `apply` from main with a manual approval environment; CDK: `cdk diff` in PR, `cdk deploy` with `--require-approval` for IAM changes.
+6. Terraform: remote state in S3 with native S3 locking (`use_lockfile = true`; DynamoDB locking is deprecated), `plan` on pull requests, `apply` from main with a manual approval environment; CDK: `cdk diff` in PR, `cdk deploy` with `--require-approval` for IAM changes.
 
 ## Observability
 

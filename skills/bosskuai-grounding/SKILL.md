@@ -56,4 +56,4 @@ Not: a confident "yes, it is GDPR compliant" with no quote.
 - `../../references/checklists/grounding-checklist.md`
 - `../bosskuai-deep-research/SKILL.md` — multi-source synthesis with citations
 - `../bosskuai-documentation-lookup/SKILL.md` — live docs instead of remembered APIs
-- `../bosskuai-engineering-principles/SKILL.md` — don't assume; ask when uncertain
+- `../bosskuai-engineering-delivery/SKILL.md` — turn a vague task into a verifiable goal; ask when uncertain

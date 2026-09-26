@@ -10,7 +10,7 @@ Use this skill when the task involves **security, privacy, abuse, or operational
 ## How this differs from nearby skills
 
 - **`bosskuai-rigorous-code-review`**: reviews code quality and correctness; load alongside this skill when a diff touches auth, payments, PII, or external APIs.
-- **`bosskuai-prompt-injection-defense`**: secures the AI-agent harness itself (instructions, MCP, memory, hooks); load when the concern is the agent workspace, not the application.
+- **`bosskuai-prompt-injection-defense`**: any LLM instruction channel, whether the agent harness (instructions, MCP, memory, hooks) or an LLM feature in the product (RAG, chatbots, tool calling).
 - **`bosskuai-business-logic-review`**: catches wrong rules; load alongside when authorization or approval logic may be exploitable.
 
 ## Mindset
@@ -41,17 +41,17 @@ Apply STRIDE systematically for each trust boundary and sensitive flow:
 
 3. **Apply STRIDE** — Work through each threat for each sensitive flow and trust boundary.
 
-4. **Check the OWASP Top 10 baseline** (for web/API surfaces):
-   - A01 Broken Access Control — can users reach resources they should not?
-   - A02 Cryptographic Failures — weak algorithms, improper key management, unencrypted sensitive data?
-   - A03 Injection — SQL, NoSQL, shell, LDAP, template, path traversal?
-   - A04 Insecure Design — missing rate limits, trust assumptions baked in, no abuse cases considered?
-   - A05 Security Misconfiguration — default creds, open cloud storage, verbose error messages?
-   - A06 Vulnerable Dependencies — outdated packages with known CVEs? Is there a SBOM? Are transitive dependencies pinned?
-   - A07 Authentication Failures — broken session management, weak credentials, no MFA where needed?
-   - A08 Data Integrity Failures — unsigned updates, deserializing untrusted data?
-   - A09 Logging and Monitoring Failures — no audit trail for sensitive operations, no alerting on anomalies?
-   - A10 SSRF — can the server be made to fetch attacker-controlled URLs?
+4. **Check the OWASP Top 10:2025 baseline** (for web/API surfaces):
+   - A01 Broken Access Control - can users (or the server, via SSRF) reach resources they should not?
+   - A02 Security Misconfiguration - default creds, open storage, verbose errors, permissive CORS?
+   - A03 Software Supply Chain Failures - unpinned or unvetted dependencies, actions, images; no SBOM? (see Supply chain security)
+   - A04 Cryptographic Failures - weak algorithms, key management, unencrypted sensitive data?
+   - A05 Injection - SQL, NoSQL, shell, template, path traversal, XSS?
+   - A06 Insecure Design - missing rate limits, abuse cases, trust assumptions?
+   - A07 Authentication Failures - session handling, weak credentials, missing MFA?
+   - A08 Software or Data Integrity Failures - unsigned updates, unsafe deserialization?
+   - A09 Security Logging and Alerting Failures - no audit trail or alert on sensitive actions?
+   - A10 Mishandling of Exceptional Conditions - errors that fail open, leak internals, or skip cleanup?
 
 5. **Check auth and authorization specifically**:
    - Authentication: how is identity established? Is it verifiable and unforgeable?
@@ -133,6 +133,7 @@ Confirmed vs inferred: [label each]
 - `../../references/checklists/security-risk-checklist.md`
 - `../../references/checklists/agent-security-hardening-checklist.md`
 - `../../references/pitfalls/security-pitfalls.md`
+- `../../references/checklists/expert-cofounder-stack-checklist.md`
 
 ## Application security addendum
 
@@ -356,4 +357,3 @@ A founder will face a security incident at some point. Have these BEFORE the inc
 3. **Written disclosure policy**: "we acknowledge in 48h, fix critical in 7d" — not because you have to, because the lack of one slows you down at the worst time.
 4. **Customer communication template** for "we had an incident, here's what happened, here's what we did" — drafted while calm, not at 2 AM.
 5. **Rollback procedures** for the last 7 deploys, tested by drill (not just documented).
-- `../../references/checklists/expert-cofounder-stack-checklist.md`

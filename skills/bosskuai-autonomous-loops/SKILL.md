@@ -9,7 +9,7 @@ metadata:
 
 # Autonomous Loops Skill
 
-Patterns, architectures, and reference implementations for running coding agents autonomously in loops. Covers everything from simple `claude -p` pipelines to full RFC-driven multi-agent DAG orchestration — plus BosskuAI's own runtime revise loop.
+Patterns, architectures, and reference implementations for running coding agents autonomously in loops. Covers everything from simple `claude -p` pipelines to full RFC-driven multi-agent DAG orchestration.
 
 ## When to Use
 
@@ -27,7 +27,6 @@ From simplest to most sophisticated:
 | Pattern | Complexity | Best For |
 |---------|-----------|----------|
 | [Sequential Pipeline](#1-sequential-pipeline-claude--p) | Low | Daily dev steps, scripted workflows |
-| [BosskuAI Runtime Revise Loop](#2-bosskuai-runtime-revise-loop) | Built-in | The Docker/Laravel pipeline's own autonomous loop |
 | [Infinite Agentic Loop](#3-infinite-agentic-loop) | Medium | Parallel content generation, spec-driven work |
 | [Continuous Claude PR Loop](#4-continuous-claude-pr-loop) | Medium | Multi-day iterative projects with CI gates |
 | [De-Sloppify Pattern](#5-the-de-sloppify-pattern) | Add-on | Quality cleanup after any Implementer step |
@@ -137,8 +136,7 @@ learning capture is manual: `bossku remember` via `bosskuai-continuous-learning`
 - **Budget before handoff.** State the pass signal and max iterations in the
   executor brief. One retry is the sane default for attended runs; raise it for
   unattended runs so REVISE verdicts actually loop.
-- Personas injected per role come from the `runtime-core` blocks in
-  `agents/*.md`. Keep them compact — loop depth multiplies persona cost
+- Each role's persona is the full body of its `agents/*.md` file. Keep them compact — loop depth multiplies persona cost
   (`bosskuai-context-budget` measures it).
 - Watch for degraded iterations: a fallback model returning a near-empty
   response can pass as "Completed". Use `bosskuai-agent-introspection` when a
@@ -206,8 +204,8 @@ PHASE 5 (infinite mode): Loop in waves of 3-5 until context is low.
 
 **Invoke:**
 ```bash
-/project:infinite specs/component-spec.md src/ 5
-/project:infinite specs/component-spec.md src/ infinite
+/infinite specs/component-spec.md src/ 5
+/infinite specs/component-spec.md src/ infinite
 ```
 
 ### Batching Strategy

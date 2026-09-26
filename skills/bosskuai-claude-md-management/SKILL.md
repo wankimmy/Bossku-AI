@@ -12,7 +12,7 @@ Use this skill when the task is to **audit or improve Claude instructions**: `CL
 - **`bosskuai-rules-distill`**: promotes repeated lessons into shared rules; this skill maintains Claude-facing rule surfaces.
 - **`bosskuai-continuous-learning`**: triages durable learning; this skill captures learning into Claude instruction artifacts when that is the right destination.
 - **`bosskuai-prompt-injection-defense`**: reviews agent trust boundaries; this skill applies those concerns to Claude configuration and instructions.
-- **`bosskuai-workspace-assistant`**: coordinates across tools; this skill focuses on Claude-specific instruction hygiene.
+- **`cofounder`**: routes work across domains and tools; this skill focuses on Claude-specific instruction hygiene.
 
 ## Mindset
 

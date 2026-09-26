@@ -1,6 +1,6 @@
 ---
 name: bosskuai-3d-web-development
-description: "Immersive 3D web work — Three.js/React Three Fiber, WebGL, scroll-driven 3D, GSAP 3D motion, post-processing, Spline, particle systems, Awwwards-level experiences."
+description: "Use for Three.js, React Three Fiber, WebGL/WebGPU, shaders, Spline, and scroll-driven 3D scenes: scene graph, lighting, models, post-processing, perf tiers. Not 2D DOM motion (bosskuai-gsap-animation) or video fly-throughs (scroll-world)."
 ---
 
 # BosskuAI 3D Web Development Expert
@@ -24,12 +24,14 @@ For 2D DOM/SVG motion without WebGL, use `bosskuai-gsap-animation`. For smooth s
 | **OGL** | Lightweight WebGL (~5x smaller than Three.js), studios like Active Theory use it | Less ecosystem, more manual work |
 | **Troika-three-text** | High-quality SDF text rendering in 3D | Better than Text3D for dynamic text |
 
+Versions: R3F v9 is the React 19 compatibility release; match the project's React major before installing. Its `gl` prop may return a promise, which is how `THREE.WebGPURenderer` is wired (`gl={async (props) => { const r = new THREE.WebGPURenderer(props); await r.init(); return r }}`).
+
 ### Animation & motion
 
 | Library | Use case |
 |---------|----------|
 | **GSAP + ScrollTrigger** | Scroll-synced animations, timeline sequencing, complex easing, scrub-based 3D transforms |
-| **Framer Motion / Motion** | React-native animations, layout transitions, gesture-driven motion, AnimatePresence |
+| **Motion** (`motion` package, `import { motion } from "motion/react"`; formerly Framer Motion) | React animations, layout transitions, gesture-driven motion, AnimatePresence |
 | **Lenis** | Smooth scroll (buttery 60fps scrolling that syncs with GSAP ScrollTrigger) |
 | **Maath (easing)** | Smooth damped camera follow, interpolation utilities inside useFrame |
 | **Spring physics** | useSpring + useMotionValue for organic, physics-based transitions |
@@ -82,7 +84,7 @@ For 2D DOM/SVG motion without WebGL, use `bosskuai-gsap-animation`. For smooth s
    Awwwards-quality lighting recipe:
    - ambientLight: low intensity (0.1-0.3), tinted color for mood
    - 1 key spotLight: dominant directional, high intensity
-   - 1-2 accent spotLights: colored (purple #9d4edd, blue #4cc9f0, warm #ff6b35)
+   - 1-2 accent spotLights: tinted with the project's accent token from DESIGN.md (never a default purple/cyan pair)
    - 1 rectAreaLight: soft fill from above/side
    - 1-2 pointLights: atmospheric glow, deep colors
    - Environment map: for realistic reflections on metallic/glass surfaces
@@ -152,9 +154,9 @@ For 2D DOM/SVG motion without WebGL, use `bosskuai-gsap-animation`. For smooth s
 
 11. **Apply Awwwards-quality visual design principles**:
     - **Typography**: Large, bold display fonts contrasting with 3D depth
-    - **Color**: Limited palette (2-3 accent colors) with dark/moody backgrounds
+    - **Color**: the project's DESIGN.md palette; one accent used consistently (see `bosskuai-taste`); light or dark as the brand dictates
     - **Spacing**: Generous whitespace, sections breathe
-    - **Transitions**: Every state change is animated (page, section, element)
+    - **Transitions**: animate state changes that pass the frequency gate in `animate` (never keyboard or 100+/day actions)
     - **Loading**: Preloader with progress animation (not just a spinner)
     - **Cursor**: Custom cursor that changes on interactive elements
     - **Sound**: Optional ambient sound or interaction feedback (with user opt-in)
@@ -236,7 +238,7 @@ function Rig() {
   return useFrame((state, delta) => {
     easing.damp3(
       state.camera.position,
-      [state.mouse.x / 10, 1 + state.mouse.y / 10, 3],
+      [state.pointer.x / 10, 1 + state.pointer.y / 10, 3], // state.mouse is deprecated in R3F
       0.5,
       delta
     );
@@ -302,7 +304,7 @@ function Particles({ count = 100 }) {
 }
 ```
 
-### Smooth scroll setup (Lenis + GSAP)
+### Smooth scroll setup (Lenis; for ScrollTrigger sync use the GSAP-ticker pattern in bosskuai-lenis-smooth-scroll)
 ```jsx
 import { ReactLenis } from "lenis/react";
 
@@ -419,7 +421,7 @@ For complex scenes where real-time lighting is too expensive:
 6. **Interactivity** — Users can influence the 3D (hover, scroll, click, drag) — it responds
 7. **Sound design** — Optional but impactful ambient audio or interaction sounds (always with user opt-in toggle)
 8. **Typography** — Bold, oversized type (often 8-15vw) that plays with 3D depth. Premium display fonts (Neue Montreal, Clash Display, PP Mori, Satoshi)
-9. **Dark/moody aesthetic** — Most awarded 3D sites use dark themes for contrast and drama
+9. **Brand-led palette** - dark themes flatter emissive 3D, but choose light or dark from the brand and DESIGN.md, not by default
 10. **Attention to detail** — Custom cursors that react to 3D hover states, micro-interactions, smooth transitions between states
 11. **At least one "wow moment"** in the first 5 seconds
 12. **Strategic restraint** — Selective use of 3D for key moments often beats "3D everywhere"
@@ -438,7 +440,3 @@ For complex scenes where real-time lighting is too expensive:
 - `../../references/checklists/3d-web-development-checklist.md`
 - `../../references/playbooks/ui-delivery-playbook.md`
 - `../../references/checklists/ui-fidelity-checklist.md`
-
-## Further reading
-
-- `../../references/playbooks/3d-web-development-detailed-playbook.md` — extended step-by-step workflow and detailed templates that complement this playbook.

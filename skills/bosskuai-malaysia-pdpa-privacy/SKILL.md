@@ -25,17 +25,17 @@ Malaysia's PDPA is built on principles that map to concrete product decisions:
 - **Data integrity**: keep it accurate and current.
 - **Access**: users can access and correct their data.
 
-Note that the PDPA has been amended in recent years, including changes around breach notification and data protection officers. Verify current obligations against the official source rather than relying on this summary.
+Amendment duties in force since 1 June 2025 (PDPA (Amendment) Act 2024): notify the Personal Data Protection Commissioner within 72 hours of becoming aware of a personal data breach, and affected individuals within 7 days where significant harm is likely; appoint a Data Protection Officer and register them with the Commissioner where processing is large-scale; honour data portability requests. Thresholds and forms come from the Commissioner's guidelines: confirm them with counsel.
 
 ## Design decisions this drives
 
 - **Minimize at the form**: the cheapest privacy control is not collecting the field. Challenge every optional field, especially IC number, full address, and date of birth.
-- **Sensitive data**: health, religion, political opinion, and similar categories carry stricter conditions. Avoid storing them unless the product genuinely requires it.
+- **Sensitive data**: health, biometric, religion, political opinion, and similar categories carry stricter conditions. Avoid storing them unless the product genuinely requires it.
 - **Retention schedule**: define per data type, with an actual deletion job, not an intention.
 - **Access, correction, export, deletion**: build the workflow before scale makes it manual and painful.
 - **Processors and vendors**: every third party receiving personal data (analytics, support, email, AI APIs) needs a purpose and an agreement. Sending customer records to an external model API is a disclosure.
 - **Cross-border transfer**: know where data physically lands, including your hosting region and each vendor's.
-- **Breach readiness**: know in advance who assesses, who notifies, and within what window.
+- **Breach readiness**: a tested runbook that meets the 72-hour Commissioner deadline: who assesses harm, who notifies, and what evidence is kept.
 
 ## Guardrails
 
@@ -60,6 +60,8 @@ Findings:
 User rights workflow: [access / correct / export / delete - built or missing]
 Retention enforcement: [job or process that actually deletes]
 Needs legal review: [items]
+DPO: [appointed and registered / not required, why]
+Breach path: [owner, last 72h drill]
 ```
 
 ## References

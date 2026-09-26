@@ -1,13 +1,13 @@
 ---
 name: bosskuai-lead-intelligence
-description: Use this for lead intelligence, prospect research, investor/customer/partner/press list building, lead qualification, warm-intro path research, and personalized outreach drafts.
+description: Use this for named-contact research: investor, partner, press, and key-account contact lists, pre-meeting research on a person or company, warm-intro paths, outreach drafts, and the pre-send deliverability and consent check.
 ---
 
 # Lead Intelligence
 
 ## When to use
 - User wants to find specific leads: investors, customers, partners, or press contacts
-- "Who should I reach out to for X?" or "Find me 20 potential enterprise customers"
+- "Who should I reach out to for X?" or "Find the right person to contact at these 20 target accounts"
 - Building an outreach list for a launch, fundraise, or partnership campaign
 - Qualifying an existing list of companies or contacts
 - Researching a specific person or company before a meeting
@@ -18,6 +18,8 @@ description: Use this for lead intelligence, prospect research, investor/custome
 - **vs marketing-growth:** marketing-growth plans channels and campaigns. lead-intelligence finds specific named individuals and companies to contact.
 - **vs market-analysis:** market-analysis maps the competitive landscape. lead-intelligence finds actionable contacts within that landscape.
 - **vs deep-research:** deep-research conducts broad topic research. lead-intelligence is focused, structured prospecting with scoring and outreach drafts.
+- **vs prospecting:** prospecting builds and verifies account-level customer lists at volume (SaaS, B2B, local SMB, demand-signal branches; email verification; CSV). This skill goes to named people: investor, partner, press, and key-account contacts, pre-meeting research, and warm intros.
+- **vs revops:** revops scores inbound leads in the CRM (fit + engagement, MQL threshold); this skill scores an outbound research list.
 
 ## MCP requirements
 - **Exa (required):** Primary tool for finding matching people and companies via semantic and structured search. This skill has significantly reduced capability without Exa.
@@ -43,28 +45,22 @@ Construct targeted Exa searches:
 Run multiple searches with varied query angles to avoid single-source bias.
 
 ### 3. Score each lead
-Apply signal weights to rank results:
-
-| Signal | Weight |
-|---|---|
-| Role match (title, seniority, department) | 30% |
-| Industry / vertical match | 25% |
-| Recency of activity / signal | 20% |
-| Influence / reach (followers, company size) | 15% |
-| Geography / location fit | 10% |
-
-Score each lead 0-100. Tier: A (80-100), B (60-79), C (40-59). Default to Tier A leads for outreach.
+Score 1-5 on three dimensions and add them:
+- **Fit**: role, seniority, company size, industry, and stage against the ICP. Fit below 3 = do not contact, whatever the other scores.
+- **Timing**: a dated intent signal (funding, hiring in the relevant area, launch, a post about the problem).
+- **Warm path**: 5 direct mutual who will intro, 4 two degrees through a strong tie, 3 shared community you can name, 2 engaged with shared content, 1 none.
+Total 12-15 = P1 (this week), 9-11 = P2 (this month), 6-8 = P3 (nurture), below 6 = drop. Default outreach to P1.
 
 ### 4. Find warm paths
-For each Tier A lead:
+For each P1 lead:
 - Mutual LinkedIn connections (manual check or Playwright)
 - Shared communities, Slack groups, alumni networks, investors in common
 - Prior interactions (commented on same post, attended same event)
 - Portfolio company connections if targeting investors
-Document any warm path found — warm outreach converts 3-5x better than cold.
+Document any warm path found; it decides the channel.
 
 ### 5. Draft personalized outreach per channel
-For each Tier A lead, produce a draft message:
+For each P1 lead, produce a draft message:
 
 | Channel | Format |
 |---|---|
@@ -78,10 +74,10 @@ Personalize each draft to the specific lead's signals — no generic templates i
 ## Output format
 
 **Ranked lead list:**
-| Rank | Name | Title | Company | Score | Tier | Warm Path | Source |
-|---|---|---|---|---|---|---|---|
+| Rank | Name | Title | Company | Fit | Timing | Warm | Total | Priority | Warm path | Source |
+|---|---|---|---|---|---|---|---|---|---|---|
 
-**Per-lead detail (Tier A):**
+**Per-lead detail (P1):**
 - Contact info (LinkedIn URL, email if found)
 - Score breakdown by signal
 - Warm path details
@@ -96,6 +92,15 @@ Personalize each draft to the specific lead's signals — no generic templates i
 - Flag any contact where outreach may be legally sensitive (regulated industries, jurisdiction-specific rules).
 - If Exa returns irrelevant results, refine queries and state what was changed — do not pad the list with low-quality leads.
 - Minimum viable list: 10 quality Tier A leads is better than 100 unscored contacts.
+
+## Send gate (before anything goes out)
+
+Drafts stay drafts until each line is confirmed; copy work goes to `cold-email`.
+- Authentication: SPF or DKIM on the sending domain for any Gmail volume. Above 5,000 messages a day to Gmail or Outlook.com consumer inboxes: SPF and DKIM and DMARC (p=none is enough), with the From: domain aligned.
+- Spam rate in Gmail Postmaster Tools: keep under 0.10%, never reach 0.30%.
+- Every commercial email: accurate headers and subject, a clear disclosure that it is an ad, the sender's physical postal address, and an opt-out honoured within 10 business days (US CAN-SPAM has no B2B exemption). Bulk marketing mail also needs one-click unsubscribe plus a visible unsubscribe link.
+- The recipient's country sets the consent rule: EU/UK and Canada are stricter than CAN-SPAM (`../prospecting/references/compliance.md`); for Malaysian contacts load `bosskuai-malaysia-pdpa-privacy`.
+- Keep source URL and date per contact, and suppress every opt-out from future lists.
 
 ## Further reading
 

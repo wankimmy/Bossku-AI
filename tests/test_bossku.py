@@ -97,6 +97,37 @@ class InstallTests(unittest.TestCase):
             removed = uninstall_user(root=ROOT, home=home)
             self.assertTrue(len(removed["removed_skills"]) >= 0)
 
+    def test_init_block_skips_the_antislop_wizard(self):
+        # Without its pointer block, antislop asks install and usage questions that
+        # subagents cannot answer.
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp) / "proj"
+            init_project(project, root=ROOT)
+            agents = (project / "AGENTS.md").read_text(encoding="utf-8")
+            self.assertIn("<!-- antislop:start -->", agents)
+            self.assertIn("<!-- antislop:end -->", agents)
+
+    def test_install_prunes_stale_managed_skills_only(self):
+        # A skill removed from the repo must not live on in every host's listing,
+        # but the user's own skills stay untouched.
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            dests = (home / ".agents" / "skills", home / ".claude" / "skills")
+            for dest in dests:
+                for name in ("bosskuai-retired-example", "x402", "my-own-skill"):
+                    (dest / name).mkdir(parents=True)
+                    (dest / name / "SKILL.md").write_text(
+                        "---\nname: x\ndescription: y\n---\n", encoding="utf-8"
+                    )
+            result = install_user(root=ROOT, home=home, profile="core")
+            self.assertIn("bosskuai-retired-example", result["pruned_skills"])
+            self.assertIn("x402", result["pruned_skills"])
+            for dest in dests:
+                self.assertFalse((dest / "bosskuai-retired-example").exists())
+                self.assertFalse((dest / "x402").exists())
+                self.assertTrue((dest / "my-own-skill").exists())
+                self.assertTrue((dest / "cofounder").exists())
+
     def test_full_install_includes_vendored_packs(self):
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp)

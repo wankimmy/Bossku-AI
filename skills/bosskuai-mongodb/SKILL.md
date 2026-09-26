@@ -120,18 +120,6 @@ Recommended path:
 - `../../references/checklists/mongodb-checklist.md`
 - `../../references/checklists/security-risk-checklist.md`
 
-## MongoDB expert coverage addendum
-
-For MongoDB document model review, cover:
-
-- document shape and bounded aggregate root,
-- compound index order for equality, sort, and range fields,
-- aggregation pipeline memory and `$lookup` risk,
-- schema validation for required fields,
-- write concern/read concern for durability,
-- unbounded arrays and hot document growth,
-- backup and restore test.
-
 ---
 
 ## Worked anti-patterns and fixes
@@ -306,13 +294,7 @@ function loadUser(id) {
 
 ### 5. Wrong write concern on critical writes
 
-**Wrong**
-
-```js
-db.orders.insertOne(order)   // default write concern, returns once the primary acknowledges
-```
-
-If the primary crashes after acknowledging but before replicating, the order is lost.
+**Wrong** - lowering durability for speed: `db.orders.insertOne(order, { writeConcern: { w: 1 } })` or `w=1` in the connection string, or a replica set with an arbiter where the implicit default drops to `{ w: 1 }`. Since MongoDB 5.0 the implicit default is `w: "majority"`.
 
 **Right** — for financially critical writes:
 
@@ -324,7 +306,7 @@ db.orders.insertOne(order, { writeConcern: { w: "majority", j: true, wtimeout: 5
 
 For non-critical, high-volume writes (analytics events), the looser default is the right call — performance matters more than the rare lost event.
 
-**Verify** — kill the primary mid-write in staging. With majority + journal, the next election preserves the write. Without, you'll see lost orders.
+**Verify** — kill the primary mid-write in staging. With majority + journal, the next election preserves the write. Without, you'll see lost orders. `db.adminCommand({ getDefaultRWConcern: 1 })` shows the cluster default.
 
 ### 6. Migration without resumability
 

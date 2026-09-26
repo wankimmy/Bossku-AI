@@ -1,6 +1,6 @@
 ---
 name: bosskuai-customer-success-support
-description: Use this for support SOPs, onboarding, ticket triage, customer success playbooks, retention, churn reduction, and feedback loops.
+description: Use this for support SOPs, ticket triage and SLAs, human-led onboarding to first value, account health, renewals, and turning repeated tickets into product fixes. Cancel flows and dunning live in churn-prevention.
 ---
 
 # BosskuAI Customer Success & Support
@@ -47,6 +47,12 @@ Review the top repeated tickets on a regular cadence and assign each an exit rou
 - Repeat-contact rate, which reveals answers that did not actually resolve.
 - Expansion and renewal signals, so success work is not purely reactive.
 
+## Account health and renewals
+
+- Health score: reuse the weighted model in `churn-prevention` (usage, support sentiment, billing) instead of inventing one; agree the action for each band with the account owner.
+- Renewal review at least 30 days before each renewal: value delivered against the goals set at kickoff, open risks, expansion signals; the renewal email carries that recap.
+- Sales-to-success handoff: goals, stakeholders, promised features, and deadlines move from the deal record into the success plan before kickoff.
+
 ## Guardrails
 
 - Do not promise timelines for fixes that engineering has not committed to.
@@ -72,6 +78,7 @@ Ticket loop:
   [repeated ticket] - [root cause] - [exit route: product / docs / automation]
 
 Metrics tracked: [list, with current baseline where known]
+Health and renewals: [health inputs and bands, next renewal date and owner per key account, handoff fields]
 Risks: [what breaks at 10x customers]
 ```
 

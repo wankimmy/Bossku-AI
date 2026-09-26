@@ -10,7 +10,7 @@ Use this skill when the repo has learned useful principles across multiple skill
 ## How this differs from nearby skills
 
 - **`bosskuai-skill-stocktake`**: audits skill quality and coverage; this skill extracts cross-cutting principles from skills and promotes them into shared rules.
-- **`bosskuai-workspace-assistant`**: applies rules during execution; this skill improves the rules that govern that execution.
+- **`cofounder`**: routes work under those rules; this skill improves the rules that govern that execution.
 
 ## Mindset
 

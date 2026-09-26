@@ -1,6 +1,6 @@
 ---
 name: bosskuai-gsap-animation
-description: "GSAP animation — timelines, ScrollTrigger, responsive matchMedia, React useGSAP/context cleanup, SplitText/Flip interactions, performance-safe motion, Lenis smooth-scroll coordination."
+description: "Use for GSAP work: timelines, ScrollTrigger pins/scrubs, SplitText, Flip, MorphSVG, matchMedia, useGSAP cleanup, Lenis/ScrollSmoother sync, and deciding when native CSS scroll-driven animation suffices. UI micro-motion: animate."
 ---
 
 # BosskuAI GSAP Animation
@@ -28,7 +28,7 @@ Use this skill when the task is to create, audit, or refactor GSAP-powered motio
 
 1. Identify the motion job: entrance, hover, scroll-linked, scroll-triggered, pinned story, text reveal, route transition, gesture, or 3D sync.
 2. Identify the target environment: vanilla JS, React, Next/Nuxt, Vue, Webflow, Astro, or a canvas/WebGL hybrid.
-3. Check whether the project already uses GSAP, `@gsap/react`, ScrollTrigger, SplitText, Flip, or Lenis.
+3. Check whether the project already uses GSAP, `@gsap/react`, ScrollTrigger, SplitText, Flip, or Lenis. If it does not and the job is scroll-linked progress with no pinning or cross-element sequencing, use CSS scroll-driven animations (`animation-timeline: scroll()` / `view()`) inside `@supports (animation-timeline: scroll())` with a static fallback (Chrome/Edge 115+, Safari 26; not in Firefox stable, so not Baseline), and the View Transitions API for route crossfades; stop there.
 4. Define the fallback: no-JS, reduced motion, mobile simplification, or static end state.
 
 ### Phase 2 - Build the sequence
@@ -83,6 +83,7 @@ ctx.revert()
 - Do not create animations that depend on unstable selectors if component refs are available.
 - Do not leave ScrollTriggers or ticker callbacks alive after a route/component unmount.
 - Do not assume GSAP docs from memory for version-sensitive plugin behavior; check official docs when exact API details matter.
+- Licensing (checked 2026-09-26, gsap.com/licensing and gsap.com/docs/v3/Installation): GSAP and all plugins, including the formerly members-only SplitText and MorphSVG, are free for commercial use and ship in the public `gsap` npm package; replace any `npm.greensock.com` `.npmrc` setup with `npm install gsap`. The Standard 'No Charge' License bars use in no-code visual animation builders that compete with Webflow; raise that with the user before building one.
 
 ## Output format
 

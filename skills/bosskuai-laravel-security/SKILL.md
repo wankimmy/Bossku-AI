@@ -11,6 +11,8 @@ metadata:
 
 Comprehensive security guidelines for Laravel applications to protect against common vulnerabilities.
 
+> Laravel 11+ apps have no `app/Http/Kernel.php`, `RouteServiceProvider`, `AuthServiceProvider`, or `VerifyCsrfToken` class. Register middleware, CSRF exceptions, and trusted proxies in `bootstrap/app.php` (`->withMiddleware(function (Middleware $middleware) { $middleware->validateCsrfTokens(except: ['stripe/*']); })`) and gates, policies, and rate limiters in `AppServiceProvider::boot()`. Snippets below that name those classes apply only to Laravel 10 and earlier: check `bootstrap/app.php` first.
+
 ## When to Activate
 
 - Setting up Laravel authentication and authorization (Sanctum, Passport, Jetstream, Breeze)
@@ -558,7 +560,7 @@ class SecurityHeaders
 
         $response->headers->set('X-Content-Type-Options', 'nosniff');
         $response->headers->set('X-Frame-Options', 'DENY');
-        $response->headers->set('X-XSS-Protection', '1; mode=block');
+        $response->headers->set('X-XSS-Protection', '0'); // legacy auditor off; the CSP below does the work
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
         $response->headers->set(
             'Content-Security-Policy',
@@ -590,7 +592,7 @@ final class StorePostRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'title' => ['required', 'string', 'max:255', 'sanitize_html'],
+            'title' => ['required', 'string', 'max:255'],
             'content' => ['required', 'string', 'max:10000'],
             'image' => [
                 'required',
@@ -820,9 +822,6 @@ composer audit
 "laravel/framework": "^11.0",
 "spatie/laravel-permission": "^6.0"
 
-# Check for abandoned packages
-composer why-not
-
 # Keep lock file in version control (it pins exact versions)
 # Run `composer update` deliberately, never in CI/CD
 ```
@@ -839,7 +838,7 @@ STRIPE_KEY=sk_live_...
 SANCTUM_TOKEN_PREFIX=myapp_
 
 # For production: Use a secret manager
-# Deploy with: env $(aws secretsmanager get-secret-value --secret-id prod/db | jq ...) php artisan serve
+# Inject secrets from the secret manager into the process env at deploy (task-definition secrets, systemd EnvironmentFile); never run 'php artisan serve' in production
 
 # Validate secrets at boot (AppServiceProvider::boot)
 $secrets = ['services.stripe.key', 'services.stripe.webhook_secret'];
@@ -942,6 +941,16 @@ SecurityLogger::log('suspicious_activity', ['reason' => 'multiple_attempts_from_
 | Security headers middleware | CSP, X-Frame-Options, X-Content-Type-Options |
 | Logged security events | Audit log for auth failures, role changes, suspicious activity |
 | `.env` not committed | Verify `.gitignore` includes `.env` |
+| `APP_KEY` exposure | A leaked key lets attackers forge encrypted cookies and payloads; rotate with `APP_PREVIOUS_KEYS` (Laravel 11+) so sessions survive |
+
+## Review output
+
+```text
+Laravel: [version] - Skeleton: [10-style Kernel | 11+ bootstrap/app.php]
+Findings: P0/P1/P2 - [file:line] - [issue] - [fix]
+Verification: composer audit; php artisan route:list -v (auth and throttle middleware on every sensitive route); grep for `$guarded = []`, `{!!`, `$request->all()` into create/update, raw SQL with interpolation
+Unverified: [...]
+```
 
 ## Related Skills
 

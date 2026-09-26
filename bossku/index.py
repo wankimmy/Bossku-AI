@@ -15,6 +15,7 @@ from pathlib import Path
 
 from bossku.paths import repo_root
 from bossku.skills import (
+    _parse_frontmatter,
     list_skill_ids,
     load_aliases,
     load_vendored,
@@ -41,9 +42,9 @@ also e.g i.e etc via across whether including include includes something anythin
 # or description. Everything else is derived automatically.
 CURATED_TRIGGERS: dict[str, list[str]] = {
     "bosskuai-diagnose-loop": [
-        "bug", "broken", "failing", "crash", "throws", "exception", "stack trace",
-        "returns 500", "error", "intermittent", "flaky", "regression", "not working",
-        "why is this", "reproduce",
+        "bug", "broken", "failing", "crash", "throws", "exception", "stack trace", "returns 500",
+        "error", "intermittent", "flaky", "regression", "not working", "why is this", "reproduce",
+        "is broken", "stopped working", "debug this", "test is failing", "tests are failing",
     ],
     "bosskuai-performance-profiling": [
         "slow", "faster", "speed up", "latency", "sluggish", "takes too long",
@@ -81,11 +82,11 @@ CURATED_TRIGGERS: dict[str, list[str]] = {
     ],
     "bosskuai-rigorous-code-review": [
         "review this code", "code review", "review my changes", "review the diff",
-        "review this pull request", "critique this implementation",
+        "review this pull request", "critique this implementation", "pr review", "review this pr",
     ],
     "bosskuai-tdd-loop": [
-        "write tests first", "test first", "tdd", "red green refactor",
-        "write tests before",
+        "write tests first", "test first", "tdd", "red green refactor", "write tests before",
+        "use tdd", "with tdd", "using tdd", "write a failing test",
     ],
     "bosskuai-database-engineering": [
         "database schema", "sql", "index", "query plan", "migration", "postgres",
@@ -95,10 +96,13 @@ CURATED_TRIGGERS: dict[str, list[str]] = {
         "rest api", "graphql", "endpoint design", "api contract", "versioning",
         "pagination", "idempotency",
     ],
-    "bosskuai-docker": ["dockerfile", "docker compose", "containerize"],
+    "bosskuai-docker": ["dockerfile", "docker compose", "containerize", "dockerize", "dockerise"],
     "bosskuai-gsap-animation": [
-        "gsap", "scrolltrigger", "timeline animation", "scroll animation",
-        "pinned section", "scroll storytelling", "gsap timeline",
+        "gsap", "scrolltrigger", "timeline animation", "scroll animation", "pinned section",
+        "scroll storytelling", "gsap timeline", "scrollsmoother", "splittext", "morphsvg", "drawsvg",
+        "svg morph", "morph svg", "svg shapes", "pin a section", "animate on scroll",
+        "horizontal scroll section", "parallax scrolling", "parallax effect", "parallax hero",
+        "text reveal", "scroll-driven animation", "animation-timeline",
     ],
     "bosskuai-throwaway-prototype": [
         "throwaway spike", "throwaway prototype", "prove it works",
@@ -109,8 +113,12 @@ CURATED_TRIGGERS: dict[str, list[str]] = {
         "poc scaffold",
     ],
     "animate": [
-        "add a transition", "animate this component", "build an animation",
-        "make a transition", "component feel alive",
+        "add a transition", "animate this component", "build an animation", "make a transition",
+        "component feel alive", "entrance animation", "exit animation", "hover animation",
+        "hover effect", "micro-interaction", "micro-interactions", "staggered list",
+        "stagger animation", "framer motion", "animatepresence", "layout animation", "page transition",
+        "page transitions", "route transition", "view transition", "view transitions",
+        "micro interactions",
     ],
     "review-animations": [
         "review this animation", "motion review", "animation code review",
@@ -146,38 +154,41 @@ CURATED_TRIGGERS: dict[str, list[str]] = {
     ],
     "bosskuai-laravel-security": [
         "secure laravel", "laravel security", "mass assignment", "csrf", "policy gate",
-        "secure", "harden", "vulnerability",
+        "harden laravel", "laravel hardening", "laravel production config",
     ],
     "bosskuai-context-limit-continuation": [
         "running out of context", "context limit", "token limit", "compact", "out of tokens",
     ],
     "ci-triage": ["ci failing", "ci pipeline", "build failing", "github actions failing", "red build", "ci is red", "ci is failing", "ci failed", "red on main", "build is red", "failing check", "failed run", "workflow failed", "why did ci fail", "tests failing in ci", "red pipeline"],
-    "pr-review-triage": [
-        "pr comments", "review comments", "address feedback", "unresolved comments",
-        "pull request", "pull requests", "open prs", "review queue",
-    ],
+    "pr-review-triage": ["pull requests", "open prs", "review queue", "pr babysitter", "stale prs"],
     "issue-triage": ["triage issues", "backlog of issues", "label issues"],
     "dependency-triage": ["dependabot", "bump dependencies", "outdated packages", "cve in dependency"],
-    "brainstorming": ["brainstorm", "ideas for", "explore options", "come up with"],
+    "brainstorming": [
+        "brainstorm", "brainstorm ideas", "explore options", "design this feature", "before we build",
+    ],
     "systematic-debugging": ["debug", "root cause", "narrow down the cause"],
-    "test-driven-development": ["tdd", "write a failing test"],
     "writing-plans": ["write a plan", "implementation plan", "spec into a plan"],
     "executing-plans": ["execute the plan", "work through the plan"],
     "taste-skill": [
-        "landing page", "does not look ai", "doesn't look ai generated", "ai slop",
-        "make it look good", "design taste", "beautiful ui", "marketing site",
-        "anti-slop ui", "premium landing", "design dials", "portfolio site", "avoid inter",
+        "landing page", "does not look ai", "doesn't look ai generated", "make it look good",
+        "design taste", "beautiful ui", "marketing site", "premium landing", "design dials",
+        "portfolio site", "avoid inter",
     ],
     "marketing-plan": [
-        "go to market", "gtm plan", "growth plan", "marketing roadmap", "aarrr",
-        "12 month plan", "90 day plan",
+        "gtm plan", "growth plan", "marketing roadmap", "aarrr", "12 month plan", "90 day plan",
     ],
-    "seo-audit": ["seo audit", "audit our seo", "technical seo", "crawl issues"],
+    "seo-audit": [
+        "seo audit", "audit our seo", "technical seo", "crawl issues", "improve our seo",
+        "help with seo", "not ranking", "traffic dropped",
+    ],
     "ab-testing": ["ab test", "a/b test", "split test", "which version wins", "statistical significance"],
     "analytics": ["event tracking", "ga4", "google analytics", "tracking plan", "utm", "gtm container"],
     "cold-email": ["cold email", "outreach email", "outbound email", "email prospects"],
     "onboarding": ["user onboarding", "activation rate", "first run experience", "onboarding conversion"],
-    "pricing": ["pricing tiers", "how much should i charge", "packaging", "freemium"],
+    "pricing": [
+        "pricing tiers", "how much should i charge", "packaging", "freemium", "usage-based pricing",
+        "usage based pricing", "ai pricing", "credits pricing",
+    ],
     "churn-prevention": [
         "churn", "churning", "cancellations", "win back", "retention", "downgrade",
         "users are leaving",
@@ -204,11 +215,21 @@ CURATED_TRIGGERS: dict[str, list[str]] = {
         "rm -rf", "destructive command", "dangerous command", "shell safety",
         "guard rails for shell", "block dangerous", "force push protection",
     ],
-    "bosskuai-investor-prep": ["investor update", "pitch deck", "fundraising", "due diligence", "data room"],
+    "bosskuai-investor-prep": [
+        "investor update", "pitch deck", "fundraising", "due diligence", "data room",
+        "investor pipeline", "investor outreach", "safe note", "post-money safe", "term sheet",
+        "cap table", "dilution", "priced round", "valuation cap", "seed round",
+    ],
     "using-git-worktrees": ["worktree", "git worktree", "parallel branches"],
     "bosskuai-mongodb": ["mongodb", "mongo", "aggregation pipeline", "document store"],
-    "bosskuai-nuxt-development": ["nuxt", "nitro", "vue app"],
-    "bosskuai-browser-automation": ["playwright", "puppeteer", "headless browser", "e2e test"],
+    "bosskuai-nuxt-development": [
+        "nuxt", "nitro", "nuxt 3", "nuxt 4", "usefetch", "useasyncdata", "nuxt.config", "routerules",
+        "server routes",
+    ],
+    "bosskuai-browser-automation": [
+        "headless browser", "puppeteer", "smoke test", "visual regression", "scrape", "qa report",
+        "console errors",
+    ],
     "bosskuai-malaysia-pdpa-privacy": ["pdpa", "personal data protection", "malaysia privacy"],
     "bosskuai-legal-compliance": ["gdpr", "terms of service", "privacy policy", "compliance"],
     "draft-release-notes": ["release notes", "changelog for release", "what shipped"],
@@ -223,7 +244,8 @@ CURATED_TRIGGERS: dict[str, list[str]] = {
     ],
     "bosskuai-cybersecurity-risk": [
         "security review", "threat model", "vulnerability", "auth bypass", "abuse case",
-        "trust boundary", "is this secure", "pentest",
+        "trust boundary", "is this secure", "pentest", "sql injection", "xss", "owasp", "ssrf", "idor",
+        "security audit", "secure my", "api security", "secure this",
     ],
 
     # --- reliability, quality, delivery ---
@@ -239,15 +261,13 @@ CURATED_TRIGGERS: dict[str, list[str]] = {
         "ship this", "implement this", "build this feature", "delivery plan", "ready to hand off",
     ],
     "bosskuai-coding-best-practices": [
-        "code quality", "clean this up", "is this good code", "naming", "error handling", "maintainability",
+        "code quality", "clean this up", "is this good code", "naming", "maintainability",
     ],
     "bosskuai-devops-iac": [
-        "ci/cd", "pipeline", "terraform", "deployment workflow", "secrets management",
-        "rollback", "environment promotion",
+        "infrastructure as code", "iac", "terraform", "opentofu", "pulumi", "canary deploy",
+        "blue green", "environment promotion", "rollback", "drift", "secrets management",
     ],
-    "bosskuai-github-workflow": [
-        "github actions", "pull request workflow", "dependabot", "repo settings", "branch protection",
-    ],
+    "bosskuai-github-workflow": ["pull request workflow", "dependabot", "repo settings"],
 
     # --- architecture and data ---
     "bosskuai-software-architecture": [
@@ -281,7 +301,10 @@ CURATED_TRIGGERS: dict[str, list[str]] = {
         "delegate", "subagent", "parallelize this", "spawn agents", "fan out",
     ],
     "bosskuai-context-budget": ["context window", "too much context", "token bloat", "trim context"],
-    "bosskuai-token-saver": ["save tokens", "reduce tokens", "cheaper session"],
+    "bosskuai-token-saver": [
+        "save tokens", "reduce tokens", "cheaper session", "shorter answers", "too much text",
+        "get to the point", "no preamble", "terse",
+    ],
     "bosskuai-cross-model-escalation": ["stuck", "escalate to another model", "try a different model"],
     "bosskuai-permanent-memory-orchestration": ["remember this", "bossku remember", "save a decision", "record a decision", "record this decision", "project memory", "durable memory", "memory design", "obsidian", "sync memory to obsidian", "export memory to obsidian", "obsidian export", "bossku sync"],
 
@@ -290,37 +313,72 @@ CURATED_TRIGGERS: dict[str, list[str]] = {
         "research", "due diligence", "evaluate options", "compare tools", "with citations", "investigate",
     ],
     "bosskuai-market-analysis": ["market size", "tam", "demand validation", "market research"],
-    "bosskuai-competitor-intelligence": ["competitor", "competitive analysis", "what are they shipping"],
-    "bosskuai-customer-discovery": ["user interviews", "customer interviews", "survey design", "personas"],
+    "bosskuai-competitor-intelligence": [
+        "competitor monitoring", "track competitors", "competitor pricing changes",
+        "what are they shipping",
+    ],
+    "bosskuai-customer-discovery": [
+        "user interviews", "customer interviews", "interview script", "discovery interviews",
+    ],
     "bosskuai-product-strategy": ["roadmap", "what should we build", "prioritize", "product direction"],
     "bosskuai-planning-execution": ["milestones", "sequencing", "delivery plan", "who owns what"],
     "bosskuai-growth-experiment": ["growth experiment", "test this channel", "activation experiment"],
-    "bosskuai-marketing-growth": ["go to market", "gtm", "distribution", "positioning", "growth loops"],
-    "bosskuai-paid-acquisition-monetization": ["google ads", "cac", "paid acquisition", "monetization"],
-    "bosskuai-sales-strategy": ["icp", "pipeline", "objection handling", "founder led sales"],
-    "bosskuai-lead-intelligence": ["lead list", "prospect research", "warm intro", "qualify leads"],
-    "bosskuai-seo-geo": ["seo", "geo", "search intent", "answer engine", "discoverability"],
-    "bosskuai-launch-commercialization": ["launch plan", "go live", "commercialize"],
-    "bosskuai-customer-success-support": ["support sop", "ticket triage", "sla", "time to first value"],
+    "bosskuai-marketing-growth": [
+        "go to market", "gtm", "marketing strategy", "growth strategy", "distribution", "growth loops",
+    ],
+    "bosskuai-paid-acquisition-monetization": [
+        "cac", "ltv to cac", "payback period", "paid acquisition", "monetization model",
+    ],
+    "bosskuai-sales-strategy": [
+        "icp", "pipeline", "objection handling", "founder led sales", "pipeline review", "deal review",
+        "sales forecast", "meddic", "deal qualification", "follow up after demo", "follow-up cadence",
+        "after a demo",
+    ],
+    "bosskuai-lead-intelligence": [
+        "investor list", "warm intro", "press list", "partner list", "research this person",
+        "before my meeting", "email deliverability", "cold email deliverability", "spf", "dkim",
+        "dmarc", "spam rate", "one-click unsubscribe", "can-spam", "bulk sender",
+    ],
+    "bosskuai-seo-geo": [
+        "seo geo readiness", "launch seo check", "ssr seo", "ai crawlers", "robots.txt for ai",
+        "faq schema", "rich results", "discoverability",
+    ],
+    "bosskuai-launch-commercialization": ["launch readiness", "ready to launch", "go live", "commercialize"],
+    "bosskuai-customer-success-support": [
+        "support sop", "ticket triage", "sla", "time to first value", "health score",
+        "customer health", "renewal", "qbr", "account management",
+    ],
     "bosskuai-operations": ["vendor management", "process docs", "capacity planning", "sop"],
-    "bosskuai-analytics-metrics": ["north star metric", "event tracking", "funnel", "kpi", "instrumentation"],
+    "bosskuai-analytics-metrics": [
+        "north star metric", "metric definitions", "measurement plan", "kpi", "instrumentation",
+        "attribution model", "cohort retention",
+    ],
 
     # --- frontend and UI ---
     "bosskuai-ui-ux-design-to-code": [
-        "ui review", "interface critique", "accessibility", "wcag", "responsive", "design to code",
+        "ui review", "interface critique", "responsive", "design to code", "screenshot to code",
+        "screenshot into code", "figma to code", "mockup to code", "implement this design",
+        "admin dashboard", "dashboard ui", "admin panel", "settings page", "app screen", "product ui",
     ],
     "bosskuai-design-systems": ["design system", "design tokens", "component library", "DESIGN.md"],
     "bosskuai-taste": ["looks ai generated", "make it not look generic", "design direction", "anti-slop"],
     "bosskuai-3d-web-development": ["three.js", "react three fiber", "webgl", "3d scene", "shader"],
     "bosskuai-lenis-smooth-scroll": ["lenis", "smooth scroll", "scroll sync"],
-    "bosskuai-hyperframes": ["hyperframes", "frame animation"],
+    "bosskuai-hyperframes": ["hyperframes", "hyperframes composition", "hyperframes render", "html to mp4"],
 
     # --- stack specific ---
-    "bosskuai-laravel-development": ["laravel", "eloquent", "artisan", "blade"],
+    "bosskuai-laravel-development": [
+        "laravel", "eloquent", "artisan", "blade", "service container", "dependency injection",
+        "form request", "laravel job", "livewire", "filament", "inertia", "laravel migration",
+    ],
     "bosskuai-laravel-tdd": ["laravel test", "pest", "phpunit"],
-    "bosskuai-laravel-verification": ["verify laravel", "laravel check"],
+    "bosskuai-laravel-verification": ["verify laravel", "laravel check", "laravel checks", "before a pr"],
     "bosskuai-polyglot-engineering": ["which language", "language tradeoff", "ecosystem choice"],
-    "bosskuai-vps-docker-deployment": ["vps", "deploy to server", "ship to production", "provision", "nginx", "self host"],
+    "bosskuai-vps-docker-deployment": [
+        "vps", "deploy to server", "ship to production", "provision", "nginx", "self host",
+        "harden my server", "server hardening", "harden the server", "ufw", "fail2ban",
+        "ssh hardening",
+    ],
     "bosskuai-redis-caching-queues": ["redis", "cache", "queue", "worker", "pub sub", "rate limit", "job backlog"],
 
     # --- meta: the toolkit itself ---
@@ -331,45 +389,44 @@ CURATED_TRIGGERS: dict[str, list[str]] = {
     "bosskuai-claude-code-setup": ["claude code setup", "mcp servers", "hooks", "slash commands"],
     "bosskuai-rules-distill": ["distill rules", "extract principles", "consolidate guidance"],
     "bosskuai-continuous-learning": ["capture this lesson", "learn from this", "save this learning", "save learning", "lesson learned", "what did we learn", "post task learning"],
-    "bosskuai-workspace-assistant": ["workspace", "across projects", "what am i working on"],
     "bosskuai-handoff": ["handoff", "hand off", "hand this off", "pass to another agent", "continue in a new session", "next session", "handoff doc", "write a handoff"],
-    "bosskuai-recipes": ["recipe", "how do i do x with bossku"],
     "bosskuai-council": ["council", "debate this", "go or no go", "multiple perspectives"],
     "bosskuai-search-first": ["is there a library", "build or buy", "existing package", "reinvent"],
     "bosskuai-documentation-lookup": ["official docs", "context7", "look up the docs"],
     "bosskuai-grill-with-docs": ["grill", "verify against docs", "check my understanding"],
-    "bosskuai-engineering-principles": ["engineering principles", "why do we do it this way"],
-    "bosskuai-ponytail": ["simplest thing", "yagni", "minimal code", "over-engineered"],
+    "bosskuai-ponytail": [
+        "simplest thing", "yagni", "minimal code", "over-engineered", "unnecessary abstraction",
+        "verbose code",
+    ],
     "bosskuai-grounding": [
         "hallucination", "hallucinating", "don't make things up", "making things up",
         "cite the source", "cite sources", "only use the provided documents",
         "only from these documents", "verify every claim", "is this accurate",
         "quote the source", "ground the answer", "fact check",
     ],
-    "bosskuai-human-output": ["sound human", "less robotic", "rewrite naturally"],
     "antislop": [
-        "anti slop", "antislop", "remove ai slop", "generic ai output",
-        "delivery gate", "quality gate",
+        "anti slop", "antislop", "remove ai slop", "generic ai output", "delivery gate",
+        "quality gate", "ai slop", "slop audit", "audit for slop",
     ],
     "antislop-ui": [
         "generic ai ui", "ai generated ui", "gradient cards", "landing page slop",
         "dashboard slop", "distinctive interface", "template looking ui",
     ],
     "antislop-copywriting": [
-        "ai copy", "copy slop", "em dashes", "fake claims", "chatbot filler",
-        "rewrite naturally", "marketing copy cleanup",
+        "ai copy", "copy slop", "em dashes", "fake claims", "chatbot filler", "rewrite naturally",
+        "marketing copy cleanup", "sound human", "less robotic",
     ],
     "antislop-human": [
-        "ai comments", "remove ai comments", "clean generated comments",
-        "humanize code comments", "comment cleanup",
+        "contrast checker", "check contrast", "text over image", "grey on grey", "focus indicator",
+        "color-only feedback",
     ],
     "antislop-layoutmobile": [
         "mobile overflow", "mobile reflow", "responsive layout", "tap targets",
         "small screen", "horizontal scroll", "mobile audit",
     ],
     "antislop-code": [
-        "ai generated code", "code slop", "unnecessary abstraction",
-        "verbose code", "generated code cleanup",
+        "ai comments", "remove ai comments", "comment cleanup", "clean up comments",
+        "humanize code comments", "comment slop",
     ],
     "bosskuai-headroom": [
         "headroom", "compress tool output", "context compression", "retrieve original",
@@ -377,7 +434,10 @@ CURATED_TRIGGERS: dict[str, list[str]] = {
     ],
     "bosskuai-autonomous-loops": ["autonomous loop", "loop architecture", "multi step pipeline"],
     "bosskuai-ratchet-loop": ["ratchet", "incremental tightening", "no backsliding"],
-    "bosskuai-pr-check": ["check this pr", "pr review", "review my changes"],
+    "bosskuai-pr-check": [
+        "check this pr", "is my pr ready", "pr ready to merge", "pr status",
+        "unresolved review threads", "failing checks on my pr",
+    ],
     "bosskuai-greptile-review-loop": ["greptile"],
     "bosskuai-go-development": [
         "golang", "go service", "go microservice", "goroutine", "goroutines", "channels",
@@ -388,7 +448,8 @@ CURATED_TRIGGERS: dict[str, list[str]] = {
     "bosskuai-expo-react-native": [
         "react native", "expo", "expo router", "eas build", "eas update", "expo go",
         "development build", "config plugin", "reanimated", "flashlist", "mobile app",
-        "ios and android app", "push notifications", "deep link", "app.json", "eas.json",
+        "ios and android app", "push notifications", "deep link", "app.json", "eas.json", "expo sdk",
+        "upgrade expo", "expo upgrade", "new architecture",
     ],
     "bosskuai-mobile-app-release": [
         "app store", "play store", "google play", "testflight", "app review", "submit the app",
@@ -397,9 +458,10 @@ CURATED_TRIGGERS: dict[str, list[str]] = {
         "privacy nutrition", "versioncode", "build number", "ota update",
     ],
     "bosskuai-aws-deployment": [
-        "aws", "ecs", "fargate", "lambda", "app runner", "eks", "ec2", "rds", "aurora",
-        "s3", "cloudfront", "alb", "vpc", "iam", "secrets manager", "cloudwatch", "terraform aws",
-        "cdk", "deploy to aws", "amplify", "sqs", "ses", "ecr", "ap-southeast-5",
+        "aws", "ecs", "fargate", "lambda", "app runner", "eks", "ec2", "rds", "aurora", "s3",
+        "cloudfront", "alb", "vpc", "iam", "secrets manager", "cloudwatch", "terraform aws", "cdk",
+        "deploy to aws", "amplify", "sqs", "ses", "ecr", "ap-southeast-5", "ecs express mode",
+        "express mode",
     ],
     "bosskuai-hostinger-hosting": [
         "hostinger", "hpanel", "kvm vps", "hostinger vps", "hostinger shared hosting",
@@ -413,10 +475,12 @@ CURATED_TRIGGERS: dict[str, list[str]] = {
         "actions cache", "matrix build", "flaky ci", "actionlint",
     ],
     "bosskuai-web-performance": [
-        "core web vitals", "web vitals", "lcp", "inp", "cls", "lighthouse", "pagespeed",
-        "page speed", "bundle size", "code splitting", "hydration", "time to interactive",
-        "first contentful paint", "largest contentful paint", "layout shift", "slow page",
-        "page load", "website slow", "frontend performance", "crux", "rum",
+        "core web vitals", "web vitals", "lcp", "inp", "cls", "lighthouse", "pagespeed", "page speed",
+        "bundle size", "code splitting", "hydration", "time to interactive", "first contentful paint",
+        "largest contentful paint", "layout shift", "slow page", "page load", "website slow",
+        "frontend performance", "crux", "rum", "improve inp", "improve lcp", "improve cls", "lcp is",
+        "inp is", "interaction to next paint", "lighthouse score", "site is slow", "page is slow",
+        "slow website",
     ],
     "bosskuai-cto-strategy": [
         "cto", "as a cto", "chief technology officer", "tech strategy", "technology strategy",
@@ -446,11 +510,17 @@ CURATED_TRIGGERS: dict[str, list[str]] = {
 
     # --- emil-skills additions ---
     "animate-expo": ["animate in expo", "react native animation", "reanimated", "gesture handler", "expo haptics", "sheet animation react native", "stutters on device", "screen transition expo", "press feedback", "haptics"],
-    "ask-sonner": ["sonner", "sonner toast", "toaster component", "toasts not showing", "toast appears twice", "toast behind modal", "toast dark mode", "promise toast"],
+    "ask-sonner": [
+        "sonner", "sonner toast", "toaster component", "toasts not showing", "toast appears twice",
+        "toast behind modal", "toast dark mode", "promise toast", "toast notification",
+        "toast notifications", "react toast",
+    ],
     "write-swift": ["swift", "swift 6", "swiftui", "swift concurrency", "actor isolation", "data race", "retain cycle", "swift testing", "swift macros", "some vs any", "sendable", "main actor", "xcode"],
 
     # --- i-have-adhd ---
-    "i-have-adhd": ["adhd", "adhd mode", "i have adhd", "action first", "no preamble", "just tell me what to do", "stop burying the answer", "numbered steps", "shorter answers", "too much text", "get to the point"],
+    "i-have-adhd": [
+        "adhd", "adhd mode", "i have adhd", "just tell me what to do", "stop burying the answer",
+    ],
 
     # --- ecc (curated subset) ---
     "mysql-patterns": ["mysql", "mariadb", "innodb", "mysql index", "mariadb schema", "replica lag", "replication lag", "mysql connection pool", "mysql query slow", "utf8mb4", "explain analyze"],
@@ -463,6 +533,32 @@ CURATED_TRIGGERS: dict[str, list[str]] = {
     "vue-patterns": ["vue", "vue 3", "composition api", "pinia", "vue router", "ref vs reactive", "composable", "vue component", "watcheffect", "defineprops", "vite vue", "script setup"],
     "python-patterns": ["python", "pythonic", "pep 8", "type hints", "dataclass", "pydantic", "python idioms", "python code review", "mypy", "asyncio", "python packaging", "python script"],
     "python-testing": ["pytest", "python tests", "pytest fixture", "parametrize", "monkeypatch", "unittest mock", "pytest coverage", "conftest", "test this python"],
+    # --- 2026-09-26 skill review: routing for requests that had no owner ---
+    "sales-enablement": ["discovery call", "discovery call script", "sales call script", "sales deck"],
+    "prospecting": ["lead list", "qualify leads", "prospect list"],
+    "cloud": ["browser use cloud", "browser-use-sdk", "browser use sdk", "browser use api key"],
+    "open-source": [
+        "browser_use library", "browser-use library", "browser use library", "browser use agent",
+    ],
+    "ai-seo": ["answer engine", "ai overviews", "llms.txt", "cited by chatgpt", "cited by perplexity"],
+    "ads": ["google ads", "meta ads", "facebook ads", "linkedin ads", "ppc", "performance max"],
+    "launch": ["product hunt", "launch plan", "launch day", "feature announcement", "beta launch"],
+    "copywriting": ["landing page copy", "homepage copy", "hero copy", "write copy", "value proposition"],
+    "competitor-profiling": ["competitive analysis", "competitor analysis", "competitor profile"],
+    "receiving-code-review": [
+        "address feedback", "address the review comments", "review comments", "pr comments",
+        "unresolved comments", "reviewer feedback", "respond to review",
+    ],
+    "brandkit": [
+        "brand kit", "brand guidelines", "logo system", "logo concept", "identity board",
+        "visual identity",
+    ],
+    "output-skill": [
+        "full file", "complete file", "without truncating", "don't truncate", "no placeholders",
+    ],
+    # --- 2026-09-26 skill review: routing for requests that had no owner ---
+    "content-strategy": ["blog posts", "blog post ideas", "content ideas"],
+    "cro": ["isn't converting", "not converting", "conversion rate", "landing page conversion"],
 }
 
 # High-confidence task boundaries. These live in the generated index so agents can
@@ -473,6 +569,35 @@ CURATED_EXCLUSIONS: dict[str, list[str]] = {
         "office conversion", "word to pdf", "docx to pdf", "docx or pdf",
         "xlsx or pdf", "pptx or pdf", "pdf/ua tagging",
     ],
+    # --- 2026-09-26 skill review: routing for requests that had no owner ---
+    "animate": ["react native", "expo", "reanimated"],
+    "animate-expo": ["hover animation", "hover effect", "website", "web page", "next.js"],
+    "scroll-world": ["three.js", "react three fiber", "r3f", "webgl", "gsap", "scrolltrigger", "lenis"],
+    "cloud": [
+        "deploy my app", "to the cloud", "cloud bill", "cloud cost", "cloud provider", "aws", "gcp",
+        "azure",
+    ],
+    "open-source": [
+        "open source license", "license", "make this project open source", "open-source this",
+        "contributing guide",
+    ],
+    "bosskuai-prompt-injection-defense": [
+        "sql injection", "nosql injection", "command injection", "dependency injection",
+    ],
+    "schema": [
+        "database schema", "db schema", "schema migration", "sql schema", "prisma schema",
+        "graphql schema", "table schema", "schema design", "json schema", "postgres", "mysql",
+    ],
+    "bosskuai-taste": [
+        "admin dashboard", "admin panel", "this dashboard", "build a dashboard", "dashboard ui",
+        "data table",
+    ],
+    "taste-skill": [
+        "admin dashboard", "admin panel", "this dashboard", "build a dashboard", "dashboard ui",
+        "data table",
+    ],
+    # --- 2026-09-26 skill review: routing for requests that had no owner ---
+    "pricing": ["a/b test", "ab test", "split test"],
 }
 
 # Explicit role assignments; the rest fall back to keyword heuristics.
@@ -516,6 +641,8 @@ CURATED_ROLES: dict[str, str] = {
     "antislop-code": "reviewer",
     "bosskuai-headroom": "coder",
     "odl-pdf": "coder",
+    # --- 2026-09-26 skill review: routing for requests that had no owner ---
+    "bosskuai-hyperframes": "coder",
 }
 
 _ROLE_HINTS: tuple[tuple[str, tuple[str, ...]], ...] = (
@@ -726,6 +853,9 @@ def build_index(root: Path | None = None) -> dict:
             "model_role": _derive_role(sid, description),
             "pack": vendored.get(sid, "bossku"),
         }
+        # Claude Code refuses model calls to these; the user runs them as /<id>.
+        if str(_parse_frontmatter(text).get("disable-model-invocation", "")).lower() == "true":
+            entries[sid]["user_invoked"] = True
 
     return {
         "version": INDEX_VERSION,

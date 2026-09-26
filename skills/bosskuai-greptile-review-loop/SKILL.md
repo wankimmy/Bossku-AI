@@ -113,7 +113,7 @@ Then poll for the Greptile check run to complete:
 ```bash
 HEAD_SHA=$(gh pr view <PR_NUMBER> --json headRefOid -q .headRefOid)
 
-while true; do
+for attempt in $(seq 1 60); do
   GREPTILE_CHECK=$(gh api "repos/{owner}/{repo}/commits/$HEAD_SHA/check-runs" \
     --jq '.check_runs[] | select(.name | test("greptile"; "i"))' 2>/dev/null)
   
@@ -140,6 +140,8 @@ while true; do
 done
 ```
 
+If Greptile never reported, stop and report it as not installed or not responding.
+
 **GitLab** — check if Greptile is already running before posting a trigger comment:
 
 ```bash
@@ -162,7 +164,7 @@ Then poll for the Greptile pipeline job to complete (see [GitLab API reference](
 ```bash
 HEAD_SHA=$(glab mr view <MR_IID> --output json | jq -r '.sha')
 
-while true; do
+for attempt in $(seq 1 60); do
   PIPELINES=$(glab api "projects/:fullpath/merge_requests/<MR_IID>/pipelines")
   # Find the most recent pipeline for this SHA
   PIPELINE_ID=$(echo "$PIPELINES" | jq -r --arg sha "$HEAD_SHA" \
@@ -194,6 +196,8 @@ while true; do
   sleep 10
 done
 ```
+
+If Greptile never reported, stop and report it as not installed or not responding.
 
 #### B. Fetch Greptile review results
 
@@ -301,7 +305,7 @@ For each unresolved Greptile comment:
 1. Read the file and understand the comment in context.
 2. Determine if it's actionable (code change needed) or informational.
 3. If actionable, make the fix.
-4. If informational or a false positive, note it but still resolve the thread.
+4. If informational or a false positive, reply with the reason and resolve only Greptile-bot threads; list every thread resolved without a code change in the report. Never resolve a human reviewer's thread.
 
 #### E. Resolve threads
 
@@ -353,11 +357,13 @@ glab api --method PUT \
 
 Repeat for each unresolved discussion ID. (GitLab has no batch resolution — loop through each one.)
 
+Before pushing, run the project's tests and lint for the touched files; if red, fix or stop and report. Ask once before the first push in the session (Bossku never auto-pushes).
+
 #### F. Commit and push / re-shelve
 
 **GitHub/GitLab:**
 ```bash
-git add -A
+git add <files changed for these comments>
 git commit -m "address greptile review feedback (greploop iteration N)"
 git push
 ```

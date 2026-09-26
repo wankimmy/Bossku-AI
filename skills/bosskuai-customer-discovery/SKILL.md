@@ -1,6 +1,6 @@
 ---
 name: bosskuai-customer-discovery
-description: Use this skill for user interview planning, customer discovery, survey design, interview transcript analysis, and persona building from primary research. Gathers and structures the evidence that product strategy acts on.
+description: Use this to plan and run customer discovery interviews: hypothesis, recruiting segment, JTBD script, transcript tagging, persona and insight cards. To mine existing reviews, tickets, surveys or VOC at scale use customer-research.
 ---
 
 # BosskuAI Customer Discovery
@@ -8,7 +8,7 @@ description: Use this skill for user interview planning, customer discovery, sur
 ## When to use
 
 - Planning user interviews (who to recruit, what to ask)
-- Designing a discovery survey or screener
+- Designing a recruiting screener for interviews
 - Analysing interview transcripts for patterns
 - Building evidence-backed personas from primary research
 - Validating or invalidating a product hypothesis with real users
@@ -20,6 +20,7 @@ description: Use this skill for user interview planning, customer discovery, sur
 - **`bosskuai-product-strategy`**: synthesises all evidence (customer, market, competitive) into what to build and why. Customer discovery gathers primary evidence from users — it is the input, not the conclusion.
 - **`bosskuai-market-analysis`**: works with secondary market data (analyst reports, search volume, public signals). Customer discovery works with primary data — direct user conversations and first-hand observations.
 - **`bosskuai-deep-research`**: broad multi-source investigation. Customer discovery is specifically about understanding specific users and their behaviours, motivations, and unmet needs.
+- **`customer-research`**: analyzes existing assets (transcripts, surveys, tickets, reviews, Reddit/G2) and builds VOC quote banks and personas; this skill designs and runs new interviews.
 
 ## MCP requirements
 

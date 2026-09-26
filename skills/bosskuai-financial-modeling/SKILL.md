@@ -1,6 +1,6 @@
 ---
 name: bosskuai-financial-modeling
-description: Use this for financial modeling, revenue projections, ARR/MRR forecasts, runway, burn rate, unit economics, pricing model math, scenarios, sensitivity analysis, month-end close, reconciliation, journal entries, and SOX-style controls.
+description: Use this for forward-looking startup finance: revenue and ARR/MRR projections, runway and burn, unit economics, pricing model math, fundraising scenarios, and sensitivity analysis.
 ---
 
 # Financial Modeling
@@ -18,6 +18,8 @@ description: Use this for financial modeling, revenue projections, ARR/MRR forec
 - **vs paid-acquisition-monetization:** paid-acquisition optimizes CAC/LTV and channel ROI in an operational context. financial-modeling builds the underlying numeric model — projections, scenarios, and sensitivity analysis — that informs those decisions.
 - **vs product-strategy:** product-strategy sets direction and prioritizes bets. financial-modeling quantifies the financial consequences of those bets.
 - **vs planning-execution:** planning-execution structures the work. financial-modeling answers "does the business math work?"
+- **vs investor-prep:** investor-prep packages this model's outputs into decks and memos and checks the figures match; build or fix the model here first.
+- **Out of scope:** bookkeeping, month-end close, reconciliations, journal entries, and audit or SOX controls. Say so and point to a qualified accountant instead of improvising entries.
 
 ## MCP requirements
 - None required. All modeling is done analytically from stated assumptions.
@@ -30,7 +32,7 @@ Identify which model(s) the task requires:
 - Revenue forecast (subscription, usage-based, marketplace, transactional)
 - Unit economics snapshot (CAC, LTV, payback, contribution margin)
 - Runway calculator (burn rate vs cash on hand)
-- Pricing model design (tier structure, price elasticity, packaging)
+- Pricing model design (tier structure, price elasticity, packaging, gross margin per tier for usage-priced or AI features)
 - Full P&L projection (revenue, COGS, OpEx, net margin)
 
 ### 2. State all assumptions explicitly
@@ -56,7 +58,7 @@ Cash on Hand / Monthly Burn = Runway (months)
 Build each layer before moving to the next. No skipping.
 
 ### 4. Run bear / base / bull scenarios
-- **Bear:** Pessimistic assumptions (growth -40%, churn +50%, costs +20%)
+- **Bear:** Pessimistic revenue (growth -40%, churn +50%) with costs at base; add costs +20% only as a labelled stress case.
 - **Base:** Most likely assumptions
 - **Bull:** Optimistic assumptions (growth +40%, churn -30%, better conversion)
 Present all three in a side-by-side table.
@@ -70,6 +72,12 @@ Identify the 3-5 assumptions with highest impact on the output metric. Show how 
 
 ### 6. Output clean tables
 Produce structured, readable output (see Output Format below). Every cell must trace to a labeled assumption.
+
+### 7. Check before presenting
+- Cash rolls forward: each month's opening cash equals the prior month's closing cash.
+- Runway recomputed from the table matches the stated runway.
+- Growth, churn, and ARPU use the same period (monthly or annual, never mixed).
+- Annual prepayments show cash and recognized revenue separately.
 
 ## Output format
 

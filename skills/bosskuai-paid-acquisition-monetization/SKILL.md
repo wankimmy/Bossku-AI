@@ -1,6 +1,6 @@
 ---
 name: bosskuai-paid-acquisition-monetization
-description: Use this for Google Ads, paid acquisition strategy, campaign structure, CAC logic, pricing and packaging decisions, and monetization planning tied to business reality.
+description: Use this to decide whether paid acquisition is worth it yet: CAC/LTV/payback gates, stop-loss rules, channel choice by budget, and monetization model. To build or optimize Google/Meta/LinkedIn campaigns use ads; ad copy ad-creative; tier design pricing.
 ---
 
 # BosskuAI Paid Acquisition and Monetization
@@ -12,6 +12,7 @@ Use this skill when the task involves spending money to acquire users or custome
 - **`bosskuai-marketing-growth`**: organic demand generation and overall GTM strategy; this skill handles paid channels and monetization specifically.
 - **`bosskuai-sales-strategy`**: closing individual deals; this skill handles the paid channel and pricing strategy that feeds the pipeline.
 - **`bosskuai-launch-commercialization`**: full launch plan; this skill supplies the paid acquisition and monetization components.
+- **`ads`** / **`ad-creative`**: campaign build and optimization (structure, RSAs, Meta and LinkedIn playbooks, kill rules) and ad copy at scale; this skill decides whether and how much to spend. **`pricing`**: pricing research and tier design in depth.
 
 ## Maintenance (time-sensitive)
 
@@ -81,9 +82,11 @@ Campaign structure principles:
 | **Last-touch** | 100% to the last channel before conversion | Simple, easy — misleads on multi-touch journeys |
 | **First-touch** | 100% to the channel that first acquired the user | Useful for awareness spend evaluation |
 | **Linear** | Equal credit across all touchpoints | Balanced view for multi-channel |
-| **Data-driven** | ML-based, proportional to actual contribution | Best — requires sufficient conversion data (>50/month) |
+| **Data-driven** | ML-based, proportional to actual contribution | Default in GA4 and Google Ads; needs steady conversion volume |
 
 For early-stage: use last-touch but also track first-touch. Avoid over-optimizing based on one attribution model.
+
+Platform note: since Nov 2023 GA4 and Google Ads offer only data-driven and last-click models (first-click, linear, time-decay and position-based were removed). Build first-touch or linear views in a warehouse or CDP, or use GA4's user-acquisition (first user) report as a first-touch proxy.
 
 ## Monetization matrix
 
@@ -106,6 +109,8 @@ Choose the model that matches the buyer's willingness to pay and the product's v
 
 ## Workflow
 
+Read `.agents/product-marketing.md` first if it exists, for ICP, positioning, and voice already defined.
+
 1. **Define the goal and constraints**: What conversion action? Country? Budget? Timeline? Current CAC/LTV baseline?
 2. **Check unit economics**: Is the current LTV high enough to support paid acquisition? If not, fix pricing or retention first.
 3. **Select the channel**: Match channel to ICP intent stage and budget.
@@ -121,7 +126,7 @@ Choose the model that matches the buyer's willingness to pay and the product's v
 Stop a campaign if after the test budget:
 - CTR < 1% on search (likely wrong keywords or weak ad copy)
 - Landing page conversion rate < 2% (intent mismatch or UX failure)
-- CAC > 2× LTV (spend is destroying value)
+- CAC > LTV (every new customer loses money; the scaling target stays CAC < LTV / 3)
 - Zero conversions after 3× target CPA spend
 
 ## Guardrails
@@ -130,6 +135,7 @@ Stop a campaign if after the test budget:
 - Do not run paid to a generic homepage — landing pages must match ad intent.
 - Do not launch LinkedIn campaigns under USD 1000/month budget — cost per click is too high to learn at lower budgets.
 - Do not use last-touch attribution for strategic decisions — always layer in first-touch and multi-touch data.
+- Do not start spend until one test conversion shows up in both the ad platform and GA4.
 
 ## Output format
 

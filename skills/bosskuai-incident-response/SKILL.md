@@ -102,6 +102,7 @@ Define these for your org before the next incident:
 
 - Who is the primary on-call for each service tier?
 - Who is notified for SEV-1 (leadership, external comms, legal if data breach)?
+- Personal-data breaches start regulator clocks (Malaysia PDPA: Commissioner within 72 hours); load `bosskuai-malaysia-pdpa-privacy` or `bosskuai-legal-compliance`.
 - What is the external status page update SLA?
 - What is the customer communication template for SEV-1/2?
 

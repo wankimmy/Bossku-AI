@@ -1,6 +1,6 @@
 ---
 name: bosskuai-marketing-growth
-description: Use this for marketing strategy, distribution, positioning, go-to-market planning, channels, messaging, growth loops, turning attention into adoption, and building executable social content calendars.
+description: Use this for a one-pass go-to-market or growth strategy: audience, positioning line, stage-fit channels, AARRR gap, growth loop, first experiments. For a full 12-month plan use marketing-plan; tactic lists marketing-ideas; posting calendars bosskuai-content-calendar.
 ---
 
 # BosskuAI Marketing and Growth
@@ -14,6 +14,7 @@ Use this skill when the task is about **getting attention, demand, adoption, or 
 - **`bosskuai-launch-commercialization`**: orchestrates the full launch across engineering, marketing, and sales; this skill supplies the marketing component.
 - **`bosskuai-paid-acquisition-monetization`**: paid channels and monetization specifically; load alongside when the growth strategy includes paid spend.
 - **`bosskuai-seo-geo`**: organic discoverability through search and generative engines; load alongside for content and SEO strategy.
+- **`marketing-plan`**: exhaustive 13-section fCMO plan with resumable files; use it for a full plan, this skill when one answer is enough. **`product-marketing`**: owns `.agents/product-marketing.md` (ICP, positioning, voice); read that file first if it exists. **`bosskuai-content-calendar`** / **`social`**: dated calendars and post craft; the calendar section below is the quick version.
 
 ## Mindset
 
@@ -206,5 +207,4 @@ Iteration rule:
 
 ## Further reading
 
-- `marketing-growth-detailed-playbook.md` — extended step-by-step workflow and detailed templates that complement this playbook.
 - `../../references/checklists/expert-cofounder-stack-checklist.md`

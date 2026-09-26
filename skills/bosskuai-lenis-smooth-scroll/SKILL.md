@@ -1,6 +1,6 @@
 ---
 name: bosskuai-lenis-smooth-scroll
-description: "Lenis smooth-scroll — setup, React/Vue/Nuxt integration, RAF loops, GSAP ScrollTrigger sync, anchors, nested containers, scroll snap, horizontal/infinite scroll, cleanup, perf/accessibility."
+description: "Use for Lenis smooth scroll: setup, React/Vue/Nuxt, GSAP ticker sync, anchors, nested/modal scroll, snap, horizontal/infinite scroll, cleanup, reduced motion, and whether smooth scroll is warranted."
 ---
 
 # BosskuAI Lenis Smooth Scroll
@@ -13,6 +13,7 @@ Use this skill when the task involves Lenis smooth scrolling: installing it, wir
 - **`bosskuai-ui-ux-design-to-code`**: owns UX and accessibility decisions. Use both when smooth scroll changes navigation, focus, or reduced-motion behavior.
 - **`bosskuai-3d-web-development`**: owns WebGL and 3D scroll choreography. Use Lenis here only for the scroll layer.
 - **`bosskuai-performance-profiling`**: load when scroll performance is the main defect.
+- **GSAP ScrollSmoother** (free with GSAP's no-charge license): an alternative smoother; pick one, never both.
 
 ## Source posture
 
@@ -47,10 +48,10 @@ This skill was shaped from the upstream [Lenis](https://github.com/darkroomengin
 
 10. Confirm scroll events, progress, direction, velocity, and target scroll behave as expected.
 11. Recalculate dimensions when content changes if auto resize is disabled or dynamic layout confuses measurements.
-12. Use `prevent` for targeted native scroll exceptions; use `allowNestedScroll` only when the performance tradeoff is acceptable.
+12. Use the `data-lenis-prevent` attribute (or the `prevent` option) for modals and other native-scroll areas; use `allowNestedScroll` only when the performance tradeoff is acceptable.
 13. Sync ScrollTrigger with Lenis by updating ScrollTrigger on Lenis scroll and driving Lenis from GSAP ticker.
 14. On teardown, call `destroy()` or unmount the provider cleanly, remove ticker callbacks, and stop custom RAF loops.
-15. Verify reduced motion, mobile touch, keyboard focus, anchor links, modals, and route changes.
+15. Verify reduced motion, mobile touch, keyboard focus, anchor links, modals, and route changes. Current Lenis (README v1.3.26) already disables smoothing under `prefers-reduced-motion`; verify it rather than re-implementing it.
 
 ## Common patterns
 
@@ -75,8 +76,10 @@ gsap.registerPlugin(ScrollTrigger)
 const lenis = new Lenis({ autoRaf: false })
 
 lenis.on('scroll', ScrollTrigger.update)
-gsap.ticker.add((time) => lenis.raf(time * 1000))
+const tick = (time) => lenis.raf(time * 1000) // named so teardown can remove it
+gsap.ticker.add(tick)
 gsap.ticker.lagSmoothing(0)
+// teardown: gsap.ticker.remove(tick); lenis.destroy()
 ```
 
 ## Guardrails

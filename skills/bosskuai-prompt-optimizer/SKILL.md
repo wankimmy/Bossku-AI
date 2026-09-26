@@ -52,7 +52,7 @@ Before analyzing the prompt, detect the current project context:
 
 1. Check `CLAUDE.md` / `AGENTS.md` in the working directory — read for project conventions
 2. Detect tech stack from project files:
-   - `composer.json` + `artisan` → Laravel / PHP (the BosskuAI `app/` backend is this)
+   - `composer.json` + `artisan` → Laravel / PHP
    - `nuxt.config.*` → Nuxt / Vue
    - `package.json` → Node.js / TypeScript / React / Next.js
    - `docker-compose.yml` → containerized stack (note services: db, redis, queue workers)
@@ -150,8 +150,8 @@ whether Phase 0 auto-detected it or the user must supply it:
 - [ ] **Source of truth** — which files, docs, or data must the answer be grounded in, and may the model use general knowledge?
 
 **If 3+ critical items are missing**, ask the user up to 3 clarification
-questions before generating the optimized prompt (this mirrors the
-`clarification` agent contract). Then incorporate the answers.
+questions before generating the optimized prompt (the `clarification`
+indicator state). Then incorporate the answers.
 
 ### Phase 5: Workflow & Model Recommendation
 
@@ -181,7 +181,7 @@ payments, privacy, tenant isolation, migrations, production, or secrets.
 
 - Prompt 1: research + plan (`bosskuai-search-first`, then planner agent)
 - Prompt 2-N: implement one phase per prompt, each ending with the
-  verification gate (`bosskuai-laravel-verification` for app/, or the stack's gate)
+  verification gate (the stack's verification gate)
 - Final prompt: integration test + `bosskuai-rigorous-code-review` across phases
 - Between sessions: `bosskuai-handoff` writes the pickup doc;
   `bosskuai-context-limit-continuation` + `.bossku/memory/handoff.md`
@@ -265,15 +265,15 @@ Add a REST API endpoint for user profile updates with validation
 ```
 Add a REST API endpoint for user profile updates (PATCH /api/users/{id}).
 
-Tech stack: Laravel 11 (detected from project)
+Tech stack: Laravel 12 (detected from project)
 
 Requirements:
 - PATCH /api/users/{id} — partial update of user profile
 - Form Request validation for: name, email, avatar_url, bio
 - Auth: Sanctum token required; users can only update their own profile (policy)
 - 200 with updated user on success; 422 with validation errors; 401/403 for auth failures
-- Follow existing controller/resource patterns in app/app/Http/
-- Ground in: existing controllers under app/app/Http/ and the users migration; say so if a rule cannot be confirmed from them.
+- Follow existing controller/resource patterns in app/Http/
+- Ground in: existing controllers under app/Http/ and the users migration; say so if a rule cannot be confirmed from them.
 
 Workflow:
 1. Plan the endpoint structure, policy, and validation rules (planner agent, reasoning model)
@@ -292,7 +292,7 @@ Do not:
 
 | Component | When to Reference |
 |-----------|------------------|
-| `bosskuai-workspace-assistant` | User hasn't routed the task yet |
+| `cofounder` | User hasn't routed the task yet |
 | `bosskuai-skill-stocktake` | Audit which components exist (use instead of a hardcoded catalog) |
 | `bosskuai-search-first` | Research phase in optimized prompts |
 | `bosskuai-planning-execution` | EPIC-scope multi-session plans |

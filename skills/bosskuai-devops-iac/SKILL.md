@@ -1,6 +1,6 @@
 ---
 name: bosskuai-devops-iac
-description: Use this for CI/CD, containers, deployment workflows, infrastructure as code, secrets handling, environment promotion, rollback design, and delivery reliability across operational systems.
+description: Use for infrastructure as code (Terraform/OpenTofu, Pulumi), environment promotion, release strategies (canary, blue-green, feature flags), drift, and rollback design. Pipeline YAML goes to bosskuai-ci-cd-pipelines; Dockerfiles and Compose to bosskuai-docker.
 ---
 
 # BosskuAI DevOps / IaC
@@ -13,6 +13,10 @@ Use this skill when the main question is **how software is built, shipped, confi
 - **`bosskuai-docker`**: owns concrete `Dockerfile`, Docker Compose, `.env`, volume, network, and one-command local container startup work.
 - **`bosskuai-polyglot-engineering`**: explains stack-specific tooling; this skill designs and reviews the operational lifecycle around those tools.
 - **`bosskuai-cybersecurity-risk`**: analyzes security risk; this skill uses that lens specifically for CI/CD, infra, secrets, runners, and supply chain.
+- **`bosskuai-ci-cd-pipelines`**: owns the workflow files that drive builds and promotion; this skill owns the infrastructure, runtime, and rollback design they operate against.
+- **`bosskuai-aws-deployment`**: maps these principles to concrete AWS services; this skill stays platform-agnostic.
+- **`bosskuai-vps-docker-deployment`**: the single-box implementation; this skill supplies the pipeline and infra principles behind it.
+- **`bosskuai-observability-sre`**: instrumentation, SLOs, and burn-rate alerting; this skill only checks that a deploy gate reads them.
 
 ## Mindset
 
@@ -65,6 +69,14 @@ Use this skill when the main question is **how software is built, shipped, confi
 6. **Review failure and recovery** — partial deploys, failed migrations, unhealthy pods/services, and rollback or roll-forward strategy.
 7. **Recommend the smallest operational hardening slice** — improve reliability and safety without inventing platform theater.
 
+## Verification
+
+```bash
+terraform fmt -check && terraform validate
+terraform plan -detailed-exitcode   # exit 2 means pending changes or drift
+# plus the repo's IaC linters/scanners: tflint, trivy, checkov
+```
+
 ## Guardrails
 
 - Do not add platform complexity that the current team cannot operate.
@@ -92,27 +104,9 @@ Rollback and failure handling:
   [current state] — [gap] — [improvement]
 ```
 
-## Observability instrumentation
+## Observability
 
-Use this section when the task involves adding or reviewing observability coverage, not just checking that alerts exist.
-
-### Structured logging
-- Every log line should carry: `timestamp`, `level`, `service`, `trace_id`, `request_id`, and a human-readable `message`.
-- Logs should be machine-parseable (JSON). Avoid free-form concatenated strings in hot paths.
-- Never log PII, secrets, or tokens — even in debug level.
-- Log at the boundary, not inside business logic: entry and exit of service calls, errors, and state transitions.
-
-### Distributed tracing (OpenTelemetry)
-- Instrument at service entry points: HTTP handlers, queue consumers, cron triggers.
-- Propagate the trace context across async boundaries: message queue headers, job payloads, outgoing HTTP headers.
-- Add span attributes for: tenant/user ID (non-PII safe), operation name, and outcome (success/error).
-- Use sampling for high-volume paths; never sample on errors — always capture error traces.
-
-### SLOs and error budgets
-- Define SLOs per service before instrumentation: availability (%), latency (p99 threshold), and error rate (%).
-- Derive alerts from SLO burn rates, not raw thresholds — burn-rate alerts reduce noise and catch slow burns.
-- Track error budget consumption as a deployment gate: if error budget is exhausted, require manual approval for new deployments.
-- SLO targets should be agreed with the product team, not set unilaterally by engineering.
+Instrumentation, SLOs, and burn-rate alerting live in `bosskuai-observability-sre`; this skill only checks that a deploy gate reads them.
 
 ## Deployment verification
 

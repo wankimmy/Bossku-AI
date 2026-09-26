@@ -34,7 +34,7 @@ Canonical skills live in [`skills/`](../skills/). Each folder contains `SKILL.md
 | emil-skills | 12 motion craft / design engineering skills (web + Expo animation, Sonner, Swift) | — |
 | i-have-adhd | Action-first, numbered, no-preamble output shape (explicit `/i-have-adhd`) | — |
 | ecc | 10 curated engineering skills: MySQL/MariaDB, migrations, error handling, MCP servers, Playwright E2E, WCAG 2.2, ADRs, Vue 3, Python, pytest | — |
-| antislop | 6 delivery gates for general output, UI, mobile layout, copy, code comments, and code artifacts | — |
+| antislop | 6 delivery gates for general output, UI, mobile layout, copy, people/accessibility, and code comments | — |
 
 `bosskuai-headroom` routes context-compression work but does not install or configure the optional Headroom runtime. Use it only for bulky tool output; normal concise answers belong to `bosskuai-token-saver`.
 
@@ -53,9 +53,9 @@ Attribution: [`docs/third-party.md`](third-party.md). Optional deps: [`requireme
 | `bosskuai-diagnose-loop`, `bosskuai-ratchet-loop` | `loop-triage`, `loop-verifier`, `minimal-fix` | Loop-engineering agent loops (CI/PR/issue sweeps) |
 | `bosskuai-gsap-animation`, `bosskuai-lenis-smooth-scroll` | `scroll-world` | Higgsfield scroll-scrub fly-through world landing; use Bossku GSAP/Lenis for code-only motion |
 | `bosskuai-taste`, `taste-skill`, `hallmark` | `emil-design-eng`, `animate`, `apple-design` | Motion craft (easing, duration, interruption, gesture); keep taste/hallmark for layout, type, color, content |
-| `bosskuai-throwaway-prototype`, `bosskuai-rapid-prototype` | `prototype` | UI variants behind a live picker; keep Bossku skills for logic spikes / MVP scaffolds |
+| `bosskuai-throwaway-prototype`, `bosskuai-rapid-prototype` | `prototype` | `/prototype` is user-invoked; the model-run path for UI variants is `bosskuai-throwaway-prototype` (its UI.md builds switchable variants); `bosskuai-rapid-prototype` for MVP scaffolds |
 | `bosskuai-expo-react-native` | `animate-expo` | Motion, gestures, sheets, haptics in Expo; keep the Bossku skill for app structure, EAS, and release |
-| `bosskuai-human-output`, `bosskuai-token-saver` | `i-have-adhd` | Reader asked for action-first output; it is an explicit mode that persists until "stop adhd mode" |
+| `antislop-copywriting`, `bosskuai-token-saver` | `i-have-adhd` | Reader asked for action-first output; it is an explicit mode that persists until "stop adhd mode" |
 | `bosskuai-database-engineering` | `mysql-patterns`, `database-migrations` | MySQL/MariaDB specifics (InnoDB, replica lag) or a zero-downtime migration plan |
 | `bosskuai-browser-automation`, `bosskuai-qa-automation-strategy` | `e2e-testing` | Writing or de-flaking a Playwright suite (POM, config, CI artifacts) |
 | `bosskuai-ui-ux-design-to-code` | `accessibility` | Formal WCAG 2.2 AA build or audit |

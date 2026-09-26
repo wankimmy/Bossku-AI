@@ -10,7 +10,7 @@ Use this skill when a task is large enough, parallel enough, or risky enough tha
 ## How this differs from nearby skills
 
 - **`bosskuai-context-limit-continuation`**: stops and hands off to a *new serial session* when context is nearly exhausted. **This skill** delegates work to *parallel subagents before* context runs out — it is proactive, not reactive.
-- **`bosskuai-workspace-assistant`**: orchestrates skill selection within one session. **This skill** extends that orchestration to multi-agent execution.
+- **`cofounder`**: orchestrates skill selection within one session. **This skill** extends that orchestration to multi-agent execution.
 - **`bosskuai-cross-model-escalation`**: brings in another model when the current workstream is blocked or brittle. **This skill** is for parallelizable workstreams, not a single stuck one.
 
 ## Auto-trigger logic (apply without being asked)
@@ -21,9 +21,8 @@ Delegate to subagents automatically when **any** of the following are true:
 |--------|-----------|--------|
 | Independent files | ≥ 5 files that can be changed without shared state | Delegate to parallel subagents |
 | Parallel workstreams | ≥ 2 fully independent tasks | One subagent per workstream |
-| Context budget | Pre-task estimate > 1,200 lines | Delegate heavy subtasks; keep main session lean |
-| Risky or destructive scope | Any task with irreversible side effects | Isolate in a worktree-scoped subagent |
-| Batch operations | Same operation repeated across N targets (N ≥ 3) | Parallelize with N subagents |
+| Risky or destructive scope | Irreversible side effects (push, deploy, DB write, external API call) | Do not delegate; pause and ask (AGENTS.md Risk pauses). A worktree isolates file edits only |
+| Batch operations | Same small edit across N targets | One subagent with the full list, or inline; one subagent per target only when each needs its own judgment or tests |
 
 **Pre-delegation check:** Before delegating, verify subtasks are truly independent — shared state, ordering dependencies, or write conflicts between parallel subagents will cause failures or corruption.
 
@@ -66,15 +65,9 @@ Use the built-in `Agent` tool to spawn subagents. Each runs autonomously with it
 - Include relevant constraints (`"do not modify X"`, `"use the existing Y pattern"`)
 - State the **model to use** if it matters for the subtask
 
-### Cursor — Parallel Composer tabs
+### Cursor - subagents and parallel agents
 
-Cursor does not have a native Agent tool. Use multiple Composer sessions to parallelize:
-
-1. **Open a new Composer tab** for each independent workstream (Cmd+T or equivalent)
-2. **Give each tab a scoped prompt** — include only the files, goal, and constraints for that workstream
-3. **Run tabs simultaneously** — Cursor allows multiple Composers to run in parallel
-4. **Synchronize manually** — after all tabs complete, review each set of changes before applying
-5. **Conflict check** — if two tabs touch the same file, run them sequentially instead
+Use Cursor subagents (own context, prompt, tools, model) for delegated subtasks, or run parallel agents, each in its own worktree. Review each branch before merging; if two agents touch the same file, run them sequentially.
 
 **When to use parallel Composer tabs:**
 - Same transformation across N files (migration, rename, lint pass)
@@ -87,11 +80,7 @@ Codex supports multiple simultaneous runs. Use the agent role system:
 
 1. **Launch parallel runs** for independent subtasks — one run per workstream
 2. **Scope each run tightly** — minimum context, one goal per run
-3. **Use the right agent role per run:**
-   - `explorer`: read-only research and codebase mapping
-   - `planner`: architecture and implementation planning
-   - `reviewer`: correctness and security review
-   - `tdd-guide`: test-first development pass
+3. **Use subagents**: built-in `explorer` (read-heavy) and `worker` (implementation); define other roles in `.codex/agents/<role>.toml`.
 4. **Collect outputs** — after all runs complete, synthesize in a final aggregator run if needed
 
 ## Delegation output format
@@ -125,6 +114,6 @@ Dependency check: [shared state, write conflicts, or ordering dependencies to wa
 ## References
 
 - Pair with **`bosskuai-context-limit-continuation`** when context budget is the delegation trigger
-- Pair with **`bosskuai-workspace-assistant`** for orchestration and skill routing decisions
+- Pair with **`cofounder`** for orchestration and skill routing decisions
 - Pair with **`bosskuai-ai-model-selection`** to choose the right model per subagent role
 - Pair with **`bosskuai-cross-model-escalation`** when the main workstream is blocked and needs a helper model before or instead of full parallelization

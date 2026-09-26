@@ -1,6 +1,6 @@
 ---
 name: bosskuai-tdd-loop
-description: Test-driven development with red-green-refactor loop. Use when user wants to build features or fix bugs using TDD, mentions "red-green-refactor", wants integration tests, or asks for test-first development.
+description: Use when the user asks for TDD, test-first, or red-green-refactor work on a feature or bug fix. Suite strategy and seam or contract tests belong to bosskuai-qa-automation-strategy and bosskuai-integration-testing.
 ---
 
 # Test-Driven Development
@@ -68,6 +68,8 @@ RED:   Write test for first behavior → test fails
 GREEN: Write minimal code to pass → test passes
 ```
 
+Run the test and confirm it fails for the expected reason (the assertion on the missing behavior, not a typo, import error, or setup crash). A test that passes immediately is testing existing behavior: fix the test before writing code.
+
 This is your tracer bullet - proves the path works end-to-end.
 
 ### 3. Incremental Loop
@@ -97,6 +99,8 @@ After all tests pass, look for [refactor candidates](refactoring.md):
 - [ ] Run tests after each refactor step
 
 **Never refactor while RED.** Get to GREEN first.
+
+**Done** means the full suite passes with clean output (no new warnings or errors), run in this session.
 
 ## Checklist Per Cycle
 

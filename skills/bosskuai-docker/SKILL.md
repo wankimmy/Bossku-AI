@@ -13,6 +13,7 @@ Use this skill when the task involves Dockerizing an app, creating or reviewing 
 - **`bosskuai-cybersecurity-risk`**: load alongside this skill when container config touches secrets, public ports, auth, PII, or production infrastructure.
 - **`bosskuai-engineering-delivery`**: owns feature implementation and verification; this skill owns container runtime packaging and startup contract.
 - **`bosskuai-performance-profiling`**: load when image build time, hot reload, filesystem sync, or runtime resource use is the main problem.
+- **`bosskuai-vps-docker-deployment`**: puts these files on a server and keeps them running.
 
 ## Non-negotiable Bossku Docker contract
 
@@ -40,6 +41,7 @@ Use this skill when the task involves Dockerizing an app, creating or reviewing 
 5. Use a specific base image suitable for the stack; avoid `latest`.
 6. Set `WORKDIR`.
 7. Copy lockfiles before source to preserve dependency cache.
+7a. Create `.dockerignore` before any `COPY . .`: exclude `.git`, `.env*`, dependency and build directories, and local secrets.
 8. Install dependencies inside the image.
 9. Copy source after dependencies.
 10. Build inside the image when the app has a build step.
@@ -94,7 +96,8 @@ services:
     networks:
       - app_network
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   db:
     image: postgres:16
@@ -104,6 +107,10 @@ services:
       - db_data:/var/lib/postgresql/data
     networks:
       - app_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 5s
+      retries: 10
 
 volumes:
   app_node_modules:
@@ -115,6 +122,8 @@ networks:
 ```
 
 Adapt this pattern to the stack. Do not copy Node-specific `node_modules` volumes into non-Node projects.
+
+Postgres 18+ images mount at `/var/lib/postgresql`, not `/data`; moving 16/17 to 18 needs a dump/restore or `pg_upgrade`, not a tag bump.
 
 ## Guardrails
 

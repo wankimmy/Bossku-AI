@@ -93,7 +93,7 @@ Use this checklist when creating or reviewing any 3D website or WebGL experience
 
 - [ ] Typography: bold display fonts, proper contrast with 3D background
 - [ ] Color palette: limited (2-3 accent colors), consistent with lighting
-- [ ] Dark/moody aesthetic leveraged for 3D depth and contrast
+- [ ] Palette and theme come from DESIGN.md / brand tokens, not a default dark-purple look
 - [ ] Custom cursor on interactive 3D elements
 - [ ] Transitions between sections are choreographed (not abrupt)
 - [ ] Spacing generous — sections breathe, not cramped

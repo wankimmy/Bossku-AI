@@ -12,7 +12,7 @@ Use this skill when building, auditing, or debugging a React Native app, with or
 - **`bosskuai-react-development`**: React on the web; hooks and state advice carry over, DOM and routing advice does not.
 - **`bosskuai-mobile-app-release`**: credentials, store review, rollouts, and OTA policy; this skill gets the app correct on device.
 - **`bosskuai-api-design`** / backend skills: the API the app calls.
-- **`animate`** (emil-skills): motion decisions; this skill implements them with Reanimated and Gesture Handler.
+- **`animate-expo`** (emil-skills): motion, gestures, sheets, and haptics, including the Reanimated and Gesture Handler code; this skill owns app structure, native behavior, and builds.
 
 ## Mindset
 
@@ -24,7 +24,7 @@ Use this skill when building, auditing, or debugging a React Native app, with or
 ## Orient before changing anything
 
 1. `npx expo-doctor` and `npx expo install --check`: SDK version, mismatched native dependencies.
-2. `app.json` / `app.config.ts`: bundle id / package, scheme, permissions, plugins, `runtimeVersion` policy, New Architecture flag, Hermes.
+2. `app.json` / `app.config.ts`: bundle id / package, scheme, permissions, plugins, `runtimeVersion` policy, Hermes, and on SDK 54 or older the New Architecture flag.
 3. `eas.json`: build profiles (development, preview, production), channels, env per profile.
 4. Navigation: Expo Router (file-based, groups, layouts) or React Navigation; auth gating approach.
 5. Data and storage: TanStack Query, MMKV, SQLite/expo-sqlite, SecureStore; offline expectations.
@@ -46,7 +46,7 @@ Use this skill when building, auditing, or debugging a React Native app, with or
 - Deep links: `scheme` for custom links, Universal Links (AASA) and App Links (assetlinks.json) for HTTPS; test cold start and warm start paths.
 - Notifications: request permission in context, not at launch; test on physical devices with production credentials; Android needs a channel.
 - OTA (EAS Update): only JS and assets; any native change (new module, permission, SDK upgrade) requires a new build and a new `runtimeVersion`.
-- New Architecture: check each native library's compatibility before enabling; Fabric/TurboModules break old bridge-based modules.
+- New Architecture: mandatory from React Native 0.82 / Expo SDK 55 (SDK 54 is the last with a legacy option). Before upgrading past SDK 54, confirm every native library supports it; replace legacy-only modules instead of pinning the SDK. Fabric/TurboModules break old bridge-based modules.
 - Platform targets: Play requires a recent `targetSdkVersion` each year; Apple requires current Xcode SDK and privacy manifests for listed APIs.
 
 ## Architecture that holds up
@@ -61,7 +61,7 @@ Use this skill when building, auditing, or debugging a React Native app, with or
 
 - Profile release builds on a mid-range Android device, not the iOS simulator.
 - Startup: lazy-require heavy screens, avoid top-level work in modules, measure with `expo-atlas` for bundle composition.
-- Frames: React DevTools / Flipper / Perf Monitor; move heavy work to worklets or native; avoid bridging in loops.
+- Frames: React Native DevTools / Perf Monitor; move heavy work to worklets or native; avoid bridging in loops.
 - Memory: unsubscribe listeners on unmount, cap image cache, page data.
 
 ## Testing
@@ -85,12 +85,12 @@ eas build --profile preview --platform all   # then install on devices
 - Do not ship native changes through EAS Update.
 - Do not store tokens in AsyncStorage or ship secrets in `EXPO_PUBLIC_*`.
 - Do not test only on simulators before a release candidate.
-- Do not enable the New Architecture without checking every native dependency.
+- Do not upgrade to Expo SDK 55+ / React Native 0.82+ until every native dependency supports the New Architecture.
 
 ## Output format
 
 ```text
-Expo SDK: [xx] - RN: [x.y] - Workflow: [managed | dev build | bare] - New Arch: [on/off]
+Expo SDK: [xx] - RN: [x.y] - Workflow: [managed | dev build | bare] - Legacy-arch deps: [none / list]
 Router: [Expo Router | React Navigation] - Data: [...] - Storage: [...]
 
 Findings:

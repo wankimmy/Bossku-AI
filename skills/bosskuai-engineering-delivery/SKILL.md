@@ -38,6 +38,15 @@ Use this skill when the task is **implementation-heavy** and needs a reliable en
    - What is the test strategy?
    - What is the rollback strategy?
    - Are there feature flags needed for risky changes?
+   - What check proves each step? Turn a vague task into a verifiable goal:
+
+     | Vague task | Verifiable goal |
+     |---|---|
+     | Add validation | Write tests for invalid inputs, then make them pass |
+     | Fix the bug | Write a test that reproduces it, then make it pass |
+     | Refactor X | Tests pass before and after; no behavior change |
+     | Speed up the query | EXPLAIN ANALYZE shows X ms before, Y ms after; pick the threshold |
+     | Make it more secure | Name the threat model; write tests that prove the mitigation works |
 
 ### Phase 3 — Test-guide, then implement
 
@@ -52,6 +61,7 @@ Use this skill when the task is **implementation-heavy** and needs a reliable en
 
 11. Before marking done, review your own diff:
     - Correctness: does it do what it claims?
+    - Scope: every changed line traces to the request. No drive-by reformatting or renames; mention unrelated dead code instead of deleting it, but remove what your own change orphaned.
     - Regressions: does it break anything nearby?
     - Security: any new trust boundaries, secrets exposure, or auth gaps?
     - Business logic: are the rules encoded correctly?

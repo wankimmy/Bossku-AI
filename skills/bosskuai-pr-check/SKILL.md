@@ -70,7 +70,7 @@ Key field differences between platforms:
 **GitHub:**
 ```bash
 gh pr view <PR_NUMBER> --json title,body,state,reviews,comments,headRefName,statusCheckRollup
-gh api repos/{owner}/{repo}/pulls/<PR_NUMBER>/comments
+gh api --paginate "repos/{owner}/{repo}/pulls/<PR_NUMBER>/comments?per_page=100"
 gh api --paginate "repos/{owner}/{repo}/issues/<PR_NUMBER>/comments?per_page=100"
 ```
 
@@ -92,13 +92,21 @@ p4 describe -s <CL_NUMBER>
 
 # Get shelved files (for in-review CLs)
 p4 describe -S <CL_NUMBER>
-
-# Get the diff of the shelved changelist
-p4 diff2 //...@=<CL_NUMBER> //...@=<CL_NUMBER>
-
-# List review comments (if using p4 review workflow)
-p4 review -c <CL_NUMBER>
 ```
+
+If your installation uses a review tool such as Helix Swarm, fetch review comments via its API:
+
+Example (Swarm API):
+GET /api/v11/comments?topic=reviews/<REVIEW_ID>
+
+Response fields of interest typically include:
+- user (author username)
+- body (comment text)
+- flags/state indicating whether the comment is resolved
+
+Filter to comments authored by the Greptile bot:
+- Prefer exact username match if known
+- Otherwise, use a heuristic where the author name contains "greptile" (case-insensitive)
 
 Key Perforce CL fields:
 - `Change`: changelist number
@@ -174,9 +182,9 @@ Present a summary table:
 
 If there are actionable items:
 
-1. Switch to the PR/MR's branch (git) or ensure files are open in the correct CL (Perforce) if not already.
-2. Ask the user if they want to fix the issues.
-3. If yes, make the fixes, then:
+1. Ask the user if they want to fix the issues.
+2. Switch to the PR/MR's branch (git) or ensure files are open in the correct CL (Perforce) if not already.
+3. If yes, make the fixes. Ask separately before pushing, then:
 
 **GitHub/GitLab:** commit and push:
 ```bash
@@ -196,12 +204,19 @@ p4 shelve -f -c <CL_NUMBER>
 
 After addressing comments, resolve the corresponding review threads.
 
-**Perforce** — Perforce does not have a native "resolve thread" concept. Instead, mark comments as addressed by updating the CL description or by responding in the review tool being used (Swarm, etc.). If using `p4 review`:
+**Perforce** — Perforce does not have a native "resolve thread" concept. Instead, mark comments as addressed by updating the CL description or by responding in the review tool being used (Swarm, etc.).
 
-```bash
-# Mark files as reviewed after addressing feedback
-p4 review -c <CL_NUMBER>
-```
+Example (Swarm API):
+GET /api/v11/comments?topic=reviews/<REVIEW_ID>
+
+Response fields of interest typically include:
+- user (author username)
+- body (comment text)
+- flags/state indicating whether the comment is resolved
+
+Filter to comments authored by the Greptile bot:
+- Prefer exact username match if known
+- Otherwise, use a heuristic where the author name contains "greptile" (case-insensitive)
 
 **GitHub** — fetch unresolved thread IDs (paginate if needed — see [the GraphQL reference](references/graphql-queries.md)):
 

@@ -14,6 +14,7 @@ Use this skill when the real question is: "Can we launch this product successful
 - **`bosskuai-seo-geo`**: organic discoverability in depth; this skill calls into it for launch SEO/GEO readiness.
 - **`bosskuai-paid-acquisition-monetization`**: paid channels and pricing in depth; this skill calls into it for the monetization component.
 - **`bosskuai-product-strategy`**: defines what to build; this skill assesses whether what exists is ready to launch.
+- **`launch`**: launch marketing in depth (ORB channels, five phases, Product Hunt, announcement tiers); load it for Gate 3 and the launch plan.
 
 Load this skill when you need the full launch picture. Load individual component skills when you need depth in one area.
 
@@ -78,11 +79,13 @@ Measure: D1/D7/D30 retention, NPS/CSAT, referral source attribution, support tic
 
 ## Workflow
 
+Read `.agents/product-marketing.md` first if it exists, for ICP, positioning, and voice already defined.
+
 1. **Assess engineering readiness**: Run Gate 1 checklist. Flag any blockers.
 2. **Define target market and country**: ICP, buyer, user, trigger for purchase, geographic priority.
 3. **Clarify positioning**: One-sentence "for [ICP]..." statement. Test it against 3 real users.
 4. **SEO/GEO readiness**: Run Gate 2. Flag gaps. Load `bosskuai-seo-geo` if depth is needed.
-5. **Marketing plan**: Audience, messaging, channels for launch day and first 30 days. Load `bosskuai-marketing-growth` for depth.
+5. **Marketing plan**: Audience, messaging, channels for launch day and first 30 days. Load `launch` for launch-day marketing and `bosskuai-marketing-growth` for channel strategy.
 6. **Sales and monetization**: Pricing structure, conversion path, top objection responses. Load `bosskuai-sales-strategy` for depth.
 7. **PMF measurement plan**: Define which signals to measure and at what cadence.
 8. **Recommend the smallest launch plan**: What is the minimum needed to validate demand without overbuilding?

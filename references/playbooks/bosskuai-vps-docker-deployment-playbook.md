@@ -346,9 +346,7 @@ Restart the daemon: `systemctl restart docker`. Add a disk-usage alert (Healthch
 set -euo pipefail
 
 cd /opt/app
-git pull --ff-only
 docker compose pull
-docker compose build --pull
 docker compose up -d --remove-orphans
 
 # Wait for app health

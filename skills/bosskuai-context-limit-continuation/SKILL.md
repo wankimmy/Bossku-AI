@@ -1,6 +1,6 @@
 ---
 name: bosskuai-context-limit-continuation
-description: "Use when context/token/quota limits threaten mid-task — write progress to .bossku/memory/handoff.md, pick the completion model with bosskuai-ai-model-selection, and tell the user to resume in a fresh session."
+description: "Use when context, token, or quota limits threaten to cut off a task mid-way. A handoff requested while context is healthy belongs to bosskuai-handoff."
 ---
 
 # BosskuAI Context-Limit Continuation
@@ -11,30 +11,15 @@ Use this skill when a task is long enough that the current model session may run
 
 If the user simply *asks* for a handoff while context is still healthy, use **`bosskuai-handoff`**; this skill is the budget-forced variant, and both write the same `.bossku/memory/handoff.md`.
 
-## Trigger thresholds — when to activate this skill
+## When to activate
 
-Activate this skill (stop and hand off) when **any** of the following are true:
+Activate when any is true: the host reports context usage near its limit (about 80%) or warns that auto-compaction is imminent; a compaction already dropped details the task still needs; a usage, quota, or rate-limit warning appeared; or the user says they are running out. File, line, and turn counts are not signals on 200K-1M windows.
 
-| Signal | Threshold | Action |
-|--------|-----------|--------|
-| Files read this session | > 8 files | Trigger handoff check |
-| Total lines read this session | > 1,500 lines | Trigger handoff check |
-| Conversation turns | > 15 back-and-forth turns | Trigger handoff check |
-| Remaining task phases | ≥ 3 phases still to go | Trigger handoff check |
-| Single file size | > 400 lines before reading | Read targeted range only; warn if full read needed |
-
-**Pre-task budget estimation (mandatory before any multi-file task):**
-Before starting a task that touches ≥ 3 files or has ≥ 3 phases, estimate:
-1. Count files to read × ~200 lines average = estimated lines consumed
-2. Add skills to load × ~150 lines average
-3. Add expected output size (~200–500 lines for meaningful tasks)
-4. If total > 1,200 lines: warn the user upfront, propose a phased plan, and confirm scope before starting
-
-If the estimate is tight (1,000–1,500 lines), explicitly note this at the start of the task and plan a clean stopping point.
+Before a task you expect to outgrow the window, name a clean stopping point in the plan. Do not stop to confirm scope for budget reasons alone.
 
 ## Continuation workflow
 
-1. Check trigger thresholds above — activate this skill if any threshold is met or the pre-task budget estimate is tight.
+1. Confirm one of the signals in "When to activate" is present; if context is still healthy and the user wants a handoff, use `bosskuai-handoff` instead.
 2. **Before stopping to hand off: check if remaining work has ≥ 2 independent workstreams.** If so, consider delegating them in parallel using `bosskuai-subagent-delegation` instead — parallel subagents can complete independent work without consuming the main session context. Only stop and hand off if the remaining work is fundamentally serial or subagents cannot complete it independently.
 3. Stop before truncation instead of letting the work end abruptly.
 4. Summarize what has already been completed, what remains, and any key decisions already made.
@@ -55,37 +40,6 @@ If the estimate is tight (1,000–1,500 lines), explicitly note this at the star
 - explicit **user instruction**: new session/chat + which model + paste block
 - confirmation that **`.bossku/memory/handoff.md`** was updated (or why skipping is justified)
 - short retry / continue instruction for the user
-
----
-
-## Token-budget guidance for efficient agent sessions
-
-Apply these practices to keep sessions lean and avoid premature context exhaustion.
-
-### Prompt hygiene
-
-- **Load skills on demand** — only read a skill file when the task explicitly calls for it. Do not bulk-load all skills at the start of a session.
-- **Read targeted file ranges** — when a file is large, read only the relevant section (use line offsets) rather than the entire file.
-- **Prefer grep over full reads** — search for symbols, patterns, or function names before reading the surrounding context.
-- **Summarize before appending** — when prior research output is large, summarize the relevant findings into a compact note before continuing rather than carrying the full raw output forward.
-
-### Context preservation
-
-- **Compact handoff state** — before stopping on a long task, write a 5–10 line summary of: goal, progress, next step, key file paths, open risks. This is the only content the next session needs; it avoids re-reading everything.
-- **Avoid re-reading unchanged files** — if a file was read earlier in the session and has not changed, refer to your earlier notes instead of re-reading.
-- **Inline evidence, not full files** — when citing code to support a finding or decision, quote the 3–5 relevant lines, not the whole function or file.
-
-### Skill and instruction loading
-
-- **Root `AGENTS.md` / `CLAUDE.md`** are always loaded — keep them lean (core rules + skill routing pointer only).
-- **Memory files** — read only the files relevant to the current task, not the entire memory directory.
-- **Checklists** — load a checklist only when actively working through it; skip if you can apply the judgment directly.
-
-### Model selection for token efficiency
-
-- Take the current roster from `bosskuai-ai-model-selection`; do not hardcode model ids in this skill or in handoff notes.
-- Use the lighter execution-tier model for implementation and mechanical phases (formatting, boilerplate, simple edits) — faster and cheaper per token.
-- Reserve the strongest reasoning-tier model for planning, ambiguous analysis, and architecture decisions where deeper reasoning has clear payoff.
 
 ## Guardrails
 

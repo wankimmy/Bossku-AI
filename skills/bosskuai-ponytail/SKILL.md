@@ -17,7 +17,7 @@ intensity: **full**. Switch with `/ponytail lite|full|ultra` or plain language.
 
 This is a BosskuAI **default persona trait**, not just an on-demand skill: the
 ladder below applies to the executor and every code-producing agent unless the
-user opts out. It complements [`bosskuai-engineering-principles`] and
+user opts out. It complements [`bosskuai-engineering-delivery`] and
 [`bosskuai-coding-best-practices`] (it is the bias they default to) and
 [`bosskuai-token-saver`] (which governs prose, not code).
 

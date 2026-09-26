@@ -45,6 +45,18 @@ def load_vendored_ids(root: Path | None = None) -> set[str]:
     return set(load_vendored(root).keys())
 
 
+def load_excluded_vendored(root: Path | None = None) -> set[str]:
+    """Upstream skills deliberately not vendored; recorded so a re-vendor leaves them out."""
+    path = vendored_path(root)
+    if not path.is_file():
+        return set()
+    return set(json.loads(path.read_text(encoding="utf-8")).get("excluded", {}))
+
+
+# Kept in the repo but never installed: x402 prints generated wallet keys and auto-tops-up spend.
+NOT_INSTALLED = frozenset({"x402"})
+
+
 DEFAULT_REVIEW_DAYS = 180
 
 
@@ -288,7 +300,7 @@ def find_skill(task: str, root: Path | None = None) -> tuple[str, float]:
             return target, 1.5
 
     ranked = rank_skills(task, root, limit=1)
-    fallback = COFOUNDER_SKILL if COFOUNDER_SKILL in known else "bosskuai-workspace-assistant"
+    fallback = COFOUNDER_SKILL
     if not ranked or ranked[0][1] <= 0:
         return fallback, 0.0
     return resolve_skill_id(ranked[0][0], root), round(ranked[0][1], 3)
@@ -328,11 +340,19 @@ def recommend_skill_stack(
             for trigger in triggers
         )
         strong = score >= 4.0 and score >= top_score * 0.55
+        # Design-direction skills conflict when stacked (dials, fake-data and logo rules): one per stack.
+        if sid in DIRECTION_SKILLS and any(s in DIRECTION_SKILLS for s, _ in selected):
+            continue
         if position == 0 or explicit or strong:
             selected.append((resolve_skill_id(sid, root), round(score, 3)))
         if len(selected) >= limit:
             break
     return selected
+
+
+DIRECTION_SKILLS = frozenset(
+    {"bosskuai-taste", "taste-skill", "hallmark", "soft-skill", "minimalist-skill", "brutalist-skill"}
+)
 
 
 def _contains(haystack: str, phrase: str) -> bool:
@@ -360,7 +380,13 @@ def _score_entry(
     trigger_words = {w for t in triggers for w in tokenize(t)}
     keywords = set(entry.get("keywords", []))
 
-    if any(_contains(task_l, phrase) for phrase in entry.get("exclusions", [])):
+    # Users write "founder-led" where a trigger says "founder led": compare both spellings.
+    task_flat = task_l.replace("-", " ")
+
+    def says(phrase: str) -> bool:
+        return _contains(task_l, phrase) or _contains(task_flat, phrase.replace("-", " "))
+
+    if any(says(phrase) for phrase in entry.get("exclusions", [])):
         return 0.0
 
     # How much of the query's information mass does this skill account for?
@@ -379,7 +405,7 @@ def _score_entry(
     for field, weight in (("triggers", 5.0), ("phrases", 1.8)):
         for phrase in entry.get(field, []):
             words = phrase.split()
-            if len(words) >= 2 and _contains(task_l, phrase):
+            if len(words) >= 2 and says(phrase):
                 score += weight + 0.9 * len(words)
 
     if _contains(task_l, sid) or _contains(task_l, ident):
@@ -411,7 +437,7 @@ def write_routing_cache(dest: Path, root: Path | None = None) -> None:
             for sid, entry in sorted(entries.items())
         ],
         "aliases": load_aliases(root),
-        "default_skill_id": COFOUNDER_SKILL if COFOUNDER_SKILL in entries else "bosskuai-workspace-assistant",
+        "default_skill_id": COFOUNDER_SKILL,
     }
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(json.dumps(payload, indent=2), encoding="utf-8")
@@ -463,13 +489,30 @@ def copy_skills_to(dest_dir: Path, root: Path | None = None, profile: str = "ful
     return installed
 
 
+def prune_stale_skills(dests: tuple[Path, ...], keep: set[str], root: Path | None = None) -> list[str]:
+    """Remove managed copies this install no longer ships (retired, excluded, or off-profile).
+
+    Without this, a skill deleted from the repo lives on in every host's listing.
+    Unmanaged folders (the user's own skills) are never touched.
+    """
+    pruned: set[str] = set()
+    for dest in dests:
+        if not dest.is_dir():
+            continue
+        for child in dest.iterdir():
+            if child.is_dir() and child.name not in keep and is_managed_skill_name(child.name, root):
+                remove_tree(child)
+                pruned.add(child.name)
+    return sorted(pruned)
+
+
 def _profile_skills(profile: str, root: Path | None) -> list[str]:
     core = [
         COFOUNDER_SKILL,
-        "bosskuai-workspace-assistant",
         "bosskuai-project-understanding",
         "bosskuai-search-first",
-        "bosskuai-human-output",
+        "antislop",
+        "antislop-copywriting",
         "bosskuai-continuous-learning",
         "bosskuai-context-limit-continuation",
         "bosskuai-permanent-memory-orchestration",
@@ -491,13 +534,18 @@ def _profile_skills(profile: str, root: Path | None) -> list[str]:
             seen.add(sid)
             combined.append(sid)
         return [s for s in combined if (base_dir / s).is_dir()]
-    return list_skill_ids(root)
+    return [s for s in list_skill_ids(root) if s not in NOT_INSTALLED]
 
 
 def is_managed_skill_name(name: str, root: Path | None = None) -> bool:
     if name == COFOUNDER_SKILL or name.startswith(MANAGED_SKILL_PREFIX):
         return True
-    return name in load_vendored_ids(root)
+    # Retired ids (aliases) and dropped vendored skills were ours once, so stale copies are ours to prune.
+    return (
+        name in load_vendored_ids(root)
+        or name in load_aliases(root)
+        or name in load_excluded_vendored(root)
+    )
 
 
 def count_managed_skills(dest_dir: Path, root: Path | None = None) -> int:

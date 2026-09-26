@@ -11,8 +11,8 @@
       "last_synced": "2026-09-07"
     },
     "hallmark": {
-      "upstream": "togethercomputer/hallmark",
-      "last_synced": "2026-09-07"
+      "upstream": "Nutlope/hallmark",
+      "last_synced": "2026-09-26"
     },
     "browser-use": {
       "upstream": "browser-use/browser-use",
@@ -165,15 +165,12 @@
     ],
     "taste-skill": [
       "taste-skill",
-      "taste-skill-v1",
-      "gpt-tasteskill",
       "image-to-code-skill",
       "redesign-skill",
       "soft-skill",
       "output-skill",
       "minimalist-skill",
       "brutalist-skill",
-      "stitch-skill",
       "imagegen-frontend-web",
       "imagegen-frontend-mobile",
       "brandkit"
@@ -311,15 +308,12 @@
     "changelog-scan": "loop-engineering",
     "draft-release-notes": "loop-engineering",
     "taste-skill": "taste-skill",
-    "taste-skill-v1": "taste-skill",
-    "gpt-tasteskill": "taste-skill",
     "image-to-code-skill": "taste-skill",
     "redesign-skill": "taste-skill",
     "soft-skill": "taste-skill",
     "output-skill": "taste-skill",
     "minimalist-skill": "taste-skill",
     "brutalist-skill": "taste-skill",
-    "stitch-skill": "taste-skill",
     "imagegen-frontend-web": "taste-skill",
     "imagegen-frontend-mobile": "taste-skill",
     "brandkit": "taste-skill",
@@ -356,5 +350,10 @@
     "antislop-layoutmobile": "antislop",
     "antislop-ui": "antislop",
     "odl-pdf": "opendataloader-pdf"
+  },
+  "excluded": {
+    "taste-skill-v1": "taste-skill: legacy v1 kept upstream for exact-v1 compatibility; conflicts with the default stack",
+    "gpt-tasteskill": "taste-skill: GPT/Codex variant; prints simulated RNG output and prefers a centered dark hero",
+    "stitch-skill": "taste-skill: DESIGN.md template fails WCAG contrast; bosskuai-design-systems owns the Stitch format"
   }
 }

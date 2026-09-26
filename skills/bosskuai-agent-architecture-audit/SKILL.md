@@ -36,7 +36,7 @@ A diagnostic workflow for agent systems that hide failures behind wrapper layers
 - Agent performance benchmarking — use `bosskuai-eval-driven-agent-improvement`
 - Writing new features — use the appropriate workflow skill
 
-**BosskuAI grounding:** when the target is this repo's own pipeline (a Python CLI plus skill library; there is no runtime service), the 12 layers map to real components — system prompt + persona injection (`runtime-core` blocks in `agents/*.md`, which hosts inject per role), tool/route selection (`find_skill` in `bossku/skills.py` over `skills/skill-index.json` plus `CURATED_TRIGGERS` in `bossku/index.py`; a `confident: false` top hit acted on as if certain is a finding), long-term memory admission (`remember` in `bossku/memory.py` writing `.bossku/memory/` through `bossku/redact.py`), and contract drift (`bossku/validate.py`). Anything that names a Laravel service class describes BosskuAI 1.x and is stale.
+**BosskuAI grounding:** when the target is this repo's own pipeline (a Python CLI plus skill library; there is no runtime service), the 12 layers map to real components — system prompt + persona injection (the full body of each `agents/*.md` file, which Claude Code uses as the subagent system prompt), tool/route selection (`find_skill` in `bossku/skills.py` over `skills/skill-index.json` plus `CURATED_TRIGGERS` in `bossku/index.py`; a `confident: false` top hit acted on as if certain is a finding), long-term memory admission (`remember` in `bossku/memory.py` writing `.bossku/memory/` through `bossku/redact.py`), and contract drift (`bossku/validate.py`). Anything that names a Laravel service class describes BosskuAI 1.x and is stale.
 
 ## The 12-Layer Stack
 

@@ -13,6 +13,10 @@ Use this skill when the task is about **converting interest into revenue** — c
 - **`bosskuai-launch-commercialization`**: the full launch plan; this skill supplies the sales strategy component.
 - **`bosskuai-product-strategy`**: shapes what the product is; this skill shapes how to sell what exists.
 - **`bosskuai-market-analysis`**: provides competitive intelligence; load first if positioning relative to competitors is unclear.
+- **`sales-enablement`**: builds reusable assets (discovery and demo scripts, objection library, decks, proposals); this skill picks the motion, qualifies deals, and runs the pipeline. Load it when the deliverable is a script or document.
+- **`revops`**: configures CRM stages, scoring, routing, and SLAs; this skill runs the weekly deal review and forecast on top of them.
+- **`prospecting`** / **`bosskuai-lead-intelligence`** build the list and **`cold-email`** writes first touches; this skill owns what happens once a prospect replies.
+- **`pricing`** / **`offers`** set price and packaging; this skill writes the pricing narrative inside a deal.
 
 ## Mindset
 
@@ -46,7 +50,7 @@ Use this skill when the task is about **converting interest into revenue** — c
 
 3. **Select the right sales motion for the stage** (see table above).
 
-4. **Apply MEDDIC-lite for deal qualification**:
+4. **Run discovery, then apply MEDDIC-lite** (call structure and questions: `../sales-enablement/references/demo-scripts.md`, Discovery Call Script). No quantified pain, no path to the economic buyer, or no timeline means nurture, not pipeline:
    - **M**etrics: what does success look like in numbers for the buyer?
    - **E**conomic Buyer: do we have access to the person who controls budget?
    - **D**ecision Criteria: what does the buyer use to evaluate options?
@@ -71,9 +75,9 @@ Use this skill when the task is about **converting interest into revenue** — c
 
 When the task is operational (managing active deals) rather than strategic:
 
-**Call summary**: Transform call notes or transcripts into structured summaries — key discussion points, decisions made, objections raised, action items with owners, and draft follow-up email.
+**Call summary**: Transform call notes or transcripts into structured summaries — key discussion points, decisions made, objections raised, action items with owners, and draft follow-up email. Send it the same day. If the buyer goes quiet, follow up twice with something new each time (about +5 and +10 days), then close the loop; no open deal sits without a dated next step.
 
-**Pipeline review**: Analyze pipeline health — total pipeline value, stage distribution, deal velocity, stale deals (no activity in 14+ days), deals at risk (past close date, champion gone quiet). Generate a weekly action plan with the top 3 deals to advance.
+**Pipeline review**: Analyze pipeline health — total pipeline value, stage distribution, deal velocity, stale deals (no activity in 14+ days), deals at risk (past close date, champion gone quiet). Generate a weekly action plan with the top 3 deals to advance. A moved close date needs a written reason; a deal with no identified Economic Buyer or Pain stays out of the forecast.
 
 **Forecasting**: Generate weighted sales forecasts in best/likely/worst scenarios from pipeline data. Weight by stage probability and deal-specific confidence. Flag concentration risk (>30% of forecast in one deal).
 
@@ -93,33 +97,26 @@ Buyer map:
   ICP: [profile]
   Buyer / Champion / User / Blocker: [roles]
 Value framing: [outcome in buyer's terms + quantification]
+Pricing narrative: [price justified against the cost of the problem]
 Sales motion: [which motion + why for this stage]
+Outreach: [channel + one-line message; copy via cold-email]
 MEDDIC qualification:
   Metrics / Economic Buyer / Decision Criteria / Decision Process / Pain / Champion
+  Disqualify if: [rules]
 Objections and responses:
   [objection] → [response + asset needed]
 Pipeline stages:
   [stage] → [exit criteria]
+  Hygiene: [dated next step on every deal; stale after 14 days; close-date moves need a reason]
+Proposal and close plan: [proposal sections; steps to signature with dates]
+Deal table (when deals exist):
+  | Deal | Stage | Amount | Close date | Next step + date | MEDDIC gaps | Best / likely / worst |
+Metrics: [pipeline value, stage conversion, cycle length, win/loss reasons]
 Sales assets needed: [list]
-Next pipeline or conversion move: [specific action]
+Tradeoff and smallest proof step: [what is deferred; cheapest test of the motion]
+This week: [top 3 actions with dates] + draft [discovery questions or follow-up email for the top deal]
 ```
 
 ## References
 
 - `../../references/checklists/sales-strategy-checklist.md`
-## Founder-led sales benchmark layer
-
-A sales strategy review must cover:
-
-- ICP and buyer/user/champion split,
-- lead qualification rules,
-- outreach channel and message,
-- objection handling,
-- pricing narrative,
-- proposal structure,
-- pipeline stages,
-- CRM hygiene,
-- close plan,
-- metric selection,
-- tradeoff and smallest proof step.
-- `../../references/checklists/expert-cofounder-stack-checklist.md`

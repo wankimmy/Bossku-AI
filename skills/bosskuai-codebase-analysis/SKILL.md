@@ -25,6 +25,8 @@ Use this skill when the first task is understanding the codebase correctly befor
 
 ### Phase 1 — Orient
 
+With a `graft/` index, use `graft callers` or `map` first (see the `graft` skill).
+
 1. Identify the **entry points**: HTTP server, CLI entrypoint, main function, event listener, cron schedule.
 2. Read the top-level structure: directory organization, major modules/packages, config files, test structure.
 3. Identify the **stack**: language, runtime, framework, major dependencies, build system.
